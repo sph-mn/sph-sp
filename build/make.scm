@@ -3,7 +3,7 @@
 
 (import (sph))
 
-(define optimise 3)
+(define optimise 1)
 (define debugging-symbols #f)
 (if (not (file-exists? "temp")) (mkdir "temp"))
 (define source-files (list (list "source/" "main")))
@@ -21,6 +21,6 @@
 (exit
   (system
     (string-append "gcc" (if debugging-symbols " -g" "")
-      " -std=c11 -funsigned-char -Wall -Werror -Wfatal-errors -O" (number->string optimise)
+      " -funsigned-char -Wall -Werror -Wfatal-errors -O" (number->string optimise)
       " -shared -fPIC $(guile-config compile)"
-      "  $(guile-config link) -o temp/libguile-sp.so temp/main.c -Wl,--version-script=build/export && chmod 755 -R temp")))
+      "  $(guile-config link) -lasound -o temp/libguile-sp.so temp/main.c -Wl,--version-script=build/export && chmod 755 -R temp")))

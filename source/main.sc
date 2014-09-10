@@ -16,7 +16,7 @@
 
 (define (scm-sp-init-alsa samples-per-second device-name channel-count latency)
   (SCM SCM SCM SCM SCM) init-status
-  (define io sph-io-alsa-t* (malloc (sizeof sph-io-alsa-t)))
+  (define io sp-io-alsa-t* (malloc (sizeof sp-io-alsa-t)))
   (if (= 0 io) (debug-log "not enough memory available"))
   (define device-name-c b8* (scm->locale-string device-name))
   (set s (snd-pcm-open (struct-ref (deref io) out) device-name-c SND_PCM_STREAM_PLAYBACK 0))
@@ -53,9 +53,7 @@
 
 (define (scm-sp-deinit-alsa) SCM
   init-status
-  (set s
-    (snd-pcm-close
-      (convert-type (struct-ref (convert-type (struct-ref sp-state io) sp-io-alsa-t) out))))
+  (set s (snd-pcm-close (struct-ref (convert-type (struct-ref sp-state io) sp-io-alsa-t) out)))
   (if (< s 0) (begin (debug-log "write error: %s" (snd-strerror s)) (return SCM-BOOL-F))
     (return SCM-BOOL-T)))
 
