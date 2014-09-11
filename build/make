@@ -1,0 +1,16 @@
+#!/usr/bin/guile
+!#
+
+(import (sph) (sph process))
+
+(define* (compile-sp format? optimisation-level #:optional debug-symbols?)
+  "boolean integer boolean -> gcc-exit-code" (if (not (file-exists? "temp")) (mkdir "temp"))
+  (execute "sc" "source/main.sc" "temp/main.c") (if format? (execute "astyle" "temp/main.c"))
+  (status:exit-val
+    (shell-eval
+      (string-append "gcc" (if debug-symbols? " -g" "")
+        " -Wall -Werror -Wfatal-errors -O" (number->string optimisation-level)
+        " -shared -fPIC $(guile-config compile)"
+        " $(guile-config link) -lasound -o temp/libguile-sp.so temp/main.c -Wl,--version-script=build/export && chmod 755 -R temp"))))
+
+(exit (compile-sp (not (null? (tail (program-arguments)))) 1))

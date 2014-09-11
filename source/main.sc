@@ -1,9 +1,10 @@
 ;a signal processing loop for guile
 
-(includep "alsa/asoundlib.h")
-(includep "sph.c")
-(includep "libguile.h")
 (includep "stdio.h")
+(includep "libguile.h")
+(includep "alsa/asoundlib.h")
+(include-sc "../lib/sph")
+(include-sc "../lib/sph/scm")
 (define-macro init-status (define s b8-s))
 (define-macro latency-ms 25)
 (define-macro sw-resampling 0)
@@ -18,8 +19,8 @@
   (SCM SCM SCM SCM SCM) init-status
   (define io sp-io-alsa-t* (malloc (sizeof sp-io-alsa-t)))
   (if (= 0 io) (debug-log "not enough memory available"))
-  (define device-name-c b8* (scm->locale-string device-name))
-  (set s (snd-pcm-open (struct-ref (deref io) out) device-name-c SND_PCM_STREAM_PLAYBACK 0))
+  (define device-name-c char* (scm->locale-string device-name))
+  (set s (snd-pcm-open (address-of (struct-ref (deref io) out)) device-name-c SND_PCM_STREAM_PLAYBACK 0))
   (if (< s 0) (goto error))
   (set s
     (snd-pcm-set-params (struct-ref (deref io) out) SND_PCM_FORMAT_U32
@@ -35,7 +36,7 @@
 (define (scm-sp-loop-alsa proc) (SCM SCM)
   init-status (define buffer SCM)
   (define frames-per-buffer-c b32 (scm->uint32 (struct-ref sp-state frames-per-buffer)))
-  (define io sp-io-alsa-t (deref (struct-ref sp-state io)))
+  (define io sp-io-alsa-t (deref (convert-type (struct-ref sp-state io) sp-io-alsa-t*)))
   (label loop
     (set buffer
       (scm-call-2 proc (struct-ref sp-state samples-per-second)
@@ -53,7 +54,7 @@
 
 (define (scm-sp-deinit-alsa) SCM
   init-status
-  (set s (snd-pcm-close (struct-ref (convert-type (struct-ref sp-state io) sp-io-alsa-t) out)))
+  (set s (snd-pcm-close (struct-ref (deref (convert-type (struct-ref sp-state io) sp-io-alsa-t*)) out)))
   (if (< s 0) (begin (debug-log "write error: %s" (snd-strerror s)) (return SCM-BOOL-F))
     (return SCM-BOOL-T)))
 
