@@ -9,4 +9,6 @@
     (only (guile) load-extension))
 
   (load-extension "libguile-sp" "init_sp")
-  (define-syntax-rule (sp-use-alsa body ...) (if (sp-init-alsa) (begin body ... (sp-deinit-alsa)))))
+
+  (define-syntax-rule (sp-use-alsa (init-arg ...) body ...)
+    (if (sp-init-alsa init-arg ...) (begin body ... (sp-deinit-alsa)) #f)))
