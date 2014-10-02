@@ -1,4 +1,4 @@
-;a signal processing loop for guile
+;an audio signal processing loop for guile
 
 (define-macro debug-log? #t)
 (includep "stdio.h")
@@ -45,7 +45,7 @@
   (set (struct-ref sp-state time)
     (scm-sum (struct-ref sp-state time) (struct-ref sp-state frames-per-buffer))))
 
-(define (scm-sp-loop-alsa proc) (SCM SCM)
+(define (scm-sp-create-alsa proc) (SCM SCM)
   (define frames-per-buffer-c snd_pcm_uframes_t
     (scm->uint32 (struct-ref sp-state frames-per-buffer)))
   (define buffer SCM
