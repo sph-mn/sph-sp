@@ -1,0 +1,13 @@
+#!/bin/sh
+
+mkdir -p temp
+sc source/main.sc temp/main.c
+
+if [ -n $1 ]
+then
+  astyle temp/main.c
+fi
+
+gcc -std=c11 -funsigned-char -Wall -Werror -Wfatal-errors -o3 -shared -fpic \
+$(guile-config compile) $(guile-config link) -lasound -lsndfile -o temp/libguile-sp.so \
+temp/main.c -Wl,--version-script=other/export && chmod -R 755 temp

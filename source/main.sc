@@ -1,5 +1,3 @@
-;an audio signal processing loop for guile
-
 (define-macro debug-log? #t)
 (includep "stdio.h")
 (includep "libguile.h")
@@ -7,45 +5,21 @@
 (include-sc "../lib/sph")
 (include-sc "../lib/sph/scm")
 (define-macro init-status (define s b8-s))
+(include-sc "io")
 (define-macro sw-resampling 0)
-(define-macro bits-per-sample 32)
+(define-macro default-bits-per-sample 32)
 
 (define-type sp-state-t
   (struct (samples-per-second SCM) (time SCM) (frames-per-buffer SCM) (channel-count SCM) (io b0*)))
 
-(define-type sp-io-alsa-t (struct (out snd-pcm-t*) (in snd-pcm-t*)))
 (define sp-state sp-state-t)
-
-(define (scm-sp-init-alsa samples-per-second device-name channel-count latency)
-  (SCM SCM SCM SCM SCM) init-status
-  (define io sp-io-alsa-t* (malloc (sizeof sp-io-alsa-t)))
-  (if (= 0 io) (debug-log "%s" "not enough memory available"))
-  (define device-name-c char*
-    (if* (= SCM-UNDEFINED device-name) "default" (scm->locale-string device-name)))
-  (set s
-    (snd-pcm-open (address-of (struct-ref (deref io) out)) device-name-c SND_PCM_STREAM_PLAYBACK 0))
-  (if (< s 0) (goto error))
-  (struct-set sp-state io
-    io frames-per-buffer
-    (scm-from-uint32 1024) time
-    (scm-from-uint8 0) channel-count
-    (if* (= SCM-UNDEFINED channel-count) (scm-from-uint8 2) channel-count))
-  (set s
-    (snd-pcm-set-params (struct-ref (deref io) out) SND_PCM_FORMAT_U32
-      SND_PCM_ACCESS_RW_INTERLEAVED
-      (if* (= SCM-UNDEFINED channel-count) 2 (scm->uint32 channel-count))
-      (if* (= SCM-UNDEFINED samples-per-second) 48000 (scm->uint32 samples-per-second)) sw-resampling
-      (if* (= SCM-UNDEFINED samples-per-second) 25 (scm->uint8 latency))))
-  (if (< s 0) (goto error)) (if (not (= SCM-UNDEFINED device-name)) (free device-name-c))
-  (return SCM-BOOL-T)
-  (label error (debug-log "alsa init error: %s" (snd-strerror s))
-    (if (not (= SCM-UNDEFINED device-name)) (free device-name-c)) (free io) (return SCM-BOOL-F)))
 
 (define-macro (increment-time sp-state)
   (set (struct-ref sp-state time)
     (scm-sum (struct-ref sp-state time) (struct-ref sp-state frames-per-buffer))))
 
-(define (scm-sp-create-alsa proc) (SCM SCM)
+(define (scm-sp-io-stream input-ports output-ports prepared-segment-count proc)
+  (SCM SCM SCM SCM SCM)
   (define frames-per-buffer-c snd_pcm_uframes_t
     (scm->uint32 (struct-ref sp-state frames-per-buffer)))
   (define buffer SCM
@@ -68,15 +42,9 @@
             (begin (increment-time sp-state) (goto loop)))))
       (return SCM-BOOL-T))))
 
-(define (scm-sp-deinit-alsa) SCM
-  init-status
-  (set s
-    (snd-pcm-close (struct-ref (deref (convert-type (struct-ref sp-state io) sp-io-alsa-t*)) out)))
-  (if (< s 0) (begin (debug-log "write error: %s" (snd-strerror s)) (return SCM-BOOL-F))
-    (return SCM-BOOL-T)))
-
 (define (init-sp) b0
-  (define scm-temp SCM)
+  (set scm-type-sp-port (scm-make-smob-type "sp-port" 0))
+  (scm-set-smob-free scm-type-sp-port scm-type-sp-port-free) (define scm-temp SCM)
   (scm-c-define-c scm-temp "sp-loop-alsa"
     1 0 0 scm-sp-loop-alsa "procedure:{buffer time} -> boolean")
   (scm-c-define-c scm-temp "sp-deinit-alsa" 0 0 0 scm-sp-deinit-alsa "->")
