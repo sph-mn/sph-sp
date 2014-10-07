@@ -5,14 +5,14 @@
 (include-sc "../lib/sph")
 (include-sc "../lib/sph/scm")
 (define-macro init-status (define s b8-s))
+
+(define-macro (optional-samples-per-second a)
+  (if (= SCM-UNDEFINED a) 96000 (scm->uint32 a)))
+
+(include-sc "error")
 (include-sc "io")
 (define-macro sw-resampling 0)
 (define-macro default-bits-per-sample 32)
-
-(define-type sp-state-t
-  (struct (samples-per-second SCM) (time SCM) (frames-per-buffer SCM) (channel-count SCM) (io b0*)))
-
-(define sp-state sp-state-t)
 
 (define-macro (increment-time sp-state)
   (set (struct-ref sp-state time)

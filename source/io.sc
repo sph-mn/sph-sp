@@ -50,7 +50,7 @@
 
 (define (file-au-read-header file encoding samples-per-second channel-count)
   (b8-s b32-s b32* b32* b32*)
-  ;when successful, the reader is positioned at the start of the audio data
+  ;when successful, the reader is positioned to the start of the audio data
   (define ssize-t s) (define header b32[6])
   (set s (read file (address-of header) 24)) (if (not (= s 24)) (return -1))
   (if (not (= (deref header) 779316836)) (return -1)) (seek file (deref header 1) SEEK_SET)
@@ -69,6 +69,9 @@
   (if (not (= s 24)) (return -1)) (return 0))
 
 (define (scm-sp-io-file-open path mode channel-count samples-per-second) (SCM SCM SCM)
+  (if-typecheck
+    (and (scm-is-string path) (scm-is-integer mode)
+      (scm-is-integer channel-count) (scm-is-integer samples-per-second)))
   init-status (define mode b32-s (scm->int32 mode))
   (define b32-s file) (define path-c char* (scm->locale-string path))
   (if (file-exists? path)
@@ -84,12 +87,11 @@
         (scm-create-sp-port (or (bit-and O_READ mode) (bit-and O_RDRW mode)) sp-port-type-file
           port-info)))
     (begin (set file (open path (bit-or O_CREAT mode))) (if (< file 0) (goto error))
-      (set s
-        (file-au-write-header 6 (optional-samples-per-second samples-per-second)
-          (optional-samples-per-second samples-per-second)
-          (address-of (struct-ref port-info channels))))
       (define port-info port-info-t* (malloc (sizeof file-info-t))) (if (not port-info) (goto error))
-      (define encoding b32) (if (or s (not (= encoding 6))) (begin (free port-info) (goto error)))
+      (struct-set port-info samples-per-second
+        (optional-samples-per-second samples-per-second) channels (scm->uint32 channel-count))
+      (set s (file-au-write-header 6 samples-per-second-c channel-count-c)) (define encoding b32)
+      (if (or s (not (= encoding 6))) (begin (free port-info) (goto error)))
       (set r
         (scm-create-sp-port (or (bit-and O_READ mode) (bit-and O_RDRW mode)) sp-port-type-file
           port-info))))
