@@ -15,3 +15,32 @@
 (define-macro _noalias restrict)
 (define-macro (increment-one a) (set a (+ 1 a)))
 (define-macro (decrement-one a) (set a (- a 1)))
+
+(define-macro (local-memory-init size) (define _local-memory-addresses[size] b0*)
+  (define _local-memory-index b8))
+
+(define-macro (local-memory-add pointer)
+  (set (deref _local-memory-addresses _local-memory-index) pointer
+    _local-memory-index (+ 1 _local-memory-index)))
+
+(define-macro (local-memory-free)
+  (while _local-memory-index (decrement-one _local-memory-index)
+    (free (+ _local-memory-addresses _local-memory-index))))
+
+(define-macro local-error-init (define local-error-number b32-s))
+(define-macro (local-error identifier) (set local-error-number identifier) (goto error))
+(define-macro local-error-assert-enable #t)
+
+(pre-if local-error-assert-enable
+  (define-macro (local-error-assert identifier expr) (if (not expr) (local-error identifier)))
+  (define-macro (local-error-assert identifier expr) null))
+
+(define-macro error-memory -1)
+(define-macro error-input -2)
+
+(define (error-description n) (b8-s* b32-s)
+  (return (case* ((= error-memory n) "memory") ((= error-input n) "input") "unknown")))
+
+(define-macro (local-define-malloc variable-name type)
+  (define variable-name type* (malloc (sizeof type)))
+  (if (not variable-name) (local-error error-memory)))

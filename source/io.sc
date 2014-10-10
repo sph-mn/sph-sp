@@ -46,7 +46,7 @@
 
 (define-type sp-io-alsa-t (struct (data snd-pcm-t*) ()))
 (define-macro sp-io-file-au-type-f32 6)
-(define-type port-info-t (struct samples-per-second b32 channel-count b32))
+(define-type port-data-t (struct samples-per-second b32 channel-count b32))
 
 (define (file-au-read-header file encoding samples-per-second channel-count)
   (b8-s b32-s b32* b32* b32*)
@@ -68,34 +68,56 @@
   (set (deref header 6) 0) (set s (write file (address-of header) 28))
   (if (not (= s 24)) (return -1)) (return 0))
 
+(define-macro (sp-malloc r size) (b0* size-t)
+  (set r b0* (malloc size)) (if (not r) (sp-scm-return-error-from-number error-memory)))
+
+(define-macro (sp-define-malloc name type) (define name type* (malloc (sizeof type)))
+  (if (not name) (sp-scm-return-error-from-number error-memory)))
+
 (define (scm-sp-io-file-open path mode channel-count samples-per-second) (SCM SCM SCM)
-  (if-typecheck
+  local-error-init
+  (local-error-assert error-input
     (and (scm-is-string path) (scm-is-integer mode)
       (scm-is-integer channel-count) (scm-is-integer samples-per-second)))
-  init-status (define mode b32-s (scm->int32 mode))
-  (define b32-s file) (define path-c char* (scm->locale-string path))
-  (if (file-exists? path)
-    (begin (set file (open path mode)) (if (< file 0) (goto error))
-      (define port-info port-info-t* (malloc (sizeof file-info-t))) (if (not port-info) (goto error))
-      (define encoding b32)
+  (local-memory-init 3)
+  init-status
+  (define file b32-s r SCM)
+  (define mode b32-s (scm->int32 mode))
+  (define path-c char* (scm->locale-string path))
+  (local-memory-add path-c)
+  (if (file-exists? path-c)
+    (begin (set file (open path-c mode))
+      (if (< file 0) (local-error "access" ""))
+      (define encoding b32 port-data port-data-t*) (sp-define-malloc port-data port-data-t)
       (set s
         (file-au-read-header (address-of encoding)
-          (address-of (struct-ref port-info samples-per-second))
-          (address-of (struct-ref port-info channels))))
-      (if (or s (not (= encoding 6))) (begin (free port-info) (goto error)))
+          (address-of (struct-ref port-data samples-per-second))
+          (address-of (struct-ref port-data channels))))
+      (if (or s (not (= encoding 6)))
+        (local-error "read-header" ""))
       (set r
-        (scm-create-sp-port (or (bit-and O_READ mode) (bit-and O_RDRW mode)) sp-port-type-file
-          port-info)))
-    (begin (set file (open path (bit-or O_CREAT mode))) (if (< file 0) (goto error))
-      (define port-info port-info-t* (malloc (sizeof file-info-t))) (if (not port-info) (goto error))
-      (struct-set port-info samples-per-second
+        (scm-create-sp-port (or (bit-and O_REAhD mode) (bit-and O_RDRW mode)) sp-port-type-file
+          port-data)))
+    (begin (set file (open path-c (bit-or O_CREAT mode)))
+      (if (< file 0) (local-error "create" ""))
+      (local-define-malloc port-data port-data-t)
+      (struct-set port-data samples-per-second
         (optional-samples-per-second samples-per-second) channels (scm->uint32 channel-count))
       (set s (file-au-write-header 6 samples-per-second-c channel-count-c)) (define encoding b32)
-      (if (or s (not (= encoding 6))) (begin (free port-info) (goto error)))
+      (if (or s (not (= encoding 6))) (local-error "encoding" ""))
       (set r
         (scm-create-sp-port (or (bit-and O_READ mode) (bit-and O_RDRW mode)) sp-port-type-file
-          port-info))))
-  (free path-c) (return) (label error (free path-c) (return SCM-BOOL-F)))
+          port-data))))
+  (free path-c) (return)
+  (label error
+    (if (< 0 local-error-number)
+      (error-description local-error-number)
+      (case
+        ((= 0) )
+        )
+      )
+    (sp-scm-return-error local-error-string local-error-description)
+    (free path-c) (return SCM-BOOL-F)))
 
 (define (scm-ports-close a) (SCM SCM))
 

@@ -1,19 +1,25 @@
 ;error handling is done with scm-exceptions and c-integers for error-numbers.
-(define error-number-type-check 0)
+(define-macro error-type-check 0)
+(define-macro error-no-memory 1)
 
-(define-macro (sp-exception-arguments symbol string)
-  (scm-list-2 (scm-from-locale-symbol symbol) (scm-from-locale-string string)))
+(define-macro (sp-error-values symbol string)
+  (scm-values SCM-BOOL-F (scm-from-locale-symbol symbol) (scm-from-locale-string string)))
 
-(define (sp-exception-from-number a) (SCM b32)
-  (scm-apply-0 scm-throw
-    (case* ((= n 0) (sp-exception-arguments "type-check" "wrong type for argument")))))
+(define (sp-scm-error key description) (scm-values key description))
 
-(define-macro (sp-exception key text)
-  (scm-throw (scm-from-locale-symbol key) (scm-list-1 (scm-from-locale-string text))))
+(define (sp-scm-error-from-number a) (SCM b32)
+  (case ((= n sp-error-type-check) (sp-error-values "type-check" "wrong type for argument"))
+    ((= n sp-error-no-memory) (sp-error-values "memory" "could not allocate memory"))))
+
+(define-macro (sp-scm-return-error-from-number a)
+  (return (sp-scm-error-from-number a)))
+
+(define-macro (sp-scm-return-error k d)
+  (return (sp-scm-error k d)))
 
 (define-macro scm-typechecks #t)
 
 (pre-if scm-typechecks
   (define-macro (if-typecheck expr)
-    (if (not expr) (sp-exception-from-number error-number-type-check)))
+    (if (not expr) (return (sp-scm-error-from-number error-number-type-check))))
   (define-macro (if-typecheck expr) null))
