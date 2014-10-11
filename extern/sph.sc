@@ -27,13 +27,17 @@
   (while _local-memory-index (decrement-one _local-memory-index)
     (free (+ _local-memory-addresses _local-memory-index))))
 
-(define-macro local-error-init (define local-error-number b32-s))
-(define-macro (local-error identifier) (set local-error-number identifier) (goto error))
+(define-macro local-error-init (define local-error-number b32-s local-error-module b8))
+
+(define-macro (local-error module-identifier error-identifier)
+  (set local-error-module module-identifier) (set local-error-number error-identifier) (goto error))
+
 (define-macro local-error-assert-enable #t)
+(define-macro sph 1)
 
 (pre-if local-error-assert-enable
-  (define-macro (local-error-assert identifier expr) (if (not expr) (local-error identifier)))
-  (define-macro (local-error-assert identifier expr) null))
+  (define-macro (local-error-assert module number expr) (if (not expr) (local-error module number)))
+  (define-macro (local-error-assert module number expr) null))
 
 (define-macro error-memory -1)
 (define-macro error-input -2)
@@ -43,4 +47,4 @@
 
 (define-macro (local-define-malloc variable-name type)
   (define variable-name type* (malloc (sizeof type)))
-  (if (not variable-name) (local-error error-memory)))
+  (if (not variable-name) (local-error sph error-memory)))
