@@ -3,17 +3,17 @@
 (define-macro sp-port-type-file 1)
 
 (define-type port-data-t
-  (struct (samples-per-second b32) (channel-count b32) (open-mode b32) (type b8) (data pointer)))
+  (struct (samples-per-second b32) (channel-count b32) (open-flags b32) (type b8) (data pointer)))
 
-(define (scm-c-create-sp-port type open-mode samples-per-second channel-count data)
+(define (scm-c-create-sp-port type open-flags samples-per-second channel-count data)
   (SCM b8 b32-s b32 b32 pointer)
   (define port-data port-data-t* (scm-gc-malloc (sizeof port-data-t) "sp-port-data"))
   (struct-set (deref port-data) channel-count
-    channel-count samples-per-second samples-per-second type type open-mode open-mode)
+    channel-count samples-per-second samples-per-second type type open-flags open-flags)
   (return (scm-new-smob scm-type-sp-port data)))
 
 (define-macro (scm-c-require-success-alsa a) (set s a)
-  (if s (scm-c-local-error "alsa" (snd-strerror s))))
+  (if s (scm-c-local-error "alsa" (scm-from-locale-string (snd-strerror s)))))
 
 (define (scm-sp-io-alsa-open input-port? channel-count device-name samples-per-second latency)
   (SCM SCM SCM SCM SCM SCM) scm-c-local-error-init
@@ -40,46 +40,49 @@
   (b8-s b32-s b32* b32* b32*)
   ;when successful, the reader is positioned to the start of the audio data
   (define s ssize-t header[6] b32) (set s (read file (address-of header) 24))
-  (if (not (= s 24)) (return -1)) (if (not (= (deref header) 779316836)) (return -1))
-  (lseek file (deref header 1) SEEK_SET)
-  (set (deref encoding) (deref header 3)
-    (deref samples-per-second) (deref header 4) (deref channel-count) (deref header 5))
+  (if (not (and (= s 24) (= (deref header) (__builtin-bswap32 779316836)))) (return -1))
+  (lseek file (__builtin-bswap32  (deref header 1)) SEEK_SET)
+  (set (deref encoding) (__builtin-bswap32 (deref header 3))
+    (deref samples-per-second) (__builtin-bswap32 (deref header 4)) (deref channel-count) (__builtin-bswap32 (deref header 5)))
   (return 0))
 
 (define (file-au-write-header file encoding samples-per-second channel-count)
   (b8-s b32-s b32 b32 b32)
   ;assumes file to be positioned at the beginning
-  (define s ssize-t header[7] b32) (set (deref header) 779316836)
-  (set (deref header 1) 28) (set (deref header 2) 4294967295)
-  (set (deref header 3) encoding) (set (deref header 4) samples-per-second)
-  (set (deref header 5) channel-count) (set (deref header 6) 0)
+  (define s ssize-t header[7] b32) (set (deref header) (__builtin-bswap32 779316836))
+  (set (deref header 1) (__builtin-bswap32 28)) (set (deref header 2) (__builtin-bswap32 4294967295))
+  (set (deref header 3) (__builtin-bswap32 encoding)) (set (deref header 4) (__builtin-bswap32 samples-per-second))
+  (set (deref header 5) (__builtin-bswap32 channel-count)) (set (deref header 6) 0)
   (set s (write file (address-of header) 28)) (if (not (= s 24)) (return -1)) (return 0))
 
-(define (scm-sp-io-file-open path mode channel-count samples-per-second) (SCM SCM SCM SCM SCM)
-  scm-c-local-error-init
+(define (scm-sp-io-file-open path open-flags channel-count samples-per-second)
+  (SCM SCM SCM SCM SCM) scm-c-local-error-init
   (scm-c-local-error-assert "input"
-    (and (scm-is-string path) (scm-is-integer mode)
+    (and (scm-is-string path) (scm-is-integer open-flags)
       (scm-is-integer channel-count) (scm-is-integer samples-per-second)))
   (local-memory-init 1) init-status
-  (define file b32-s r SCM) (define mode-c b32-s (scm->int32 mode))
+  (define file b32-s r SCM) (define open-flags-c b32-s (scm->int32 open-flags))
   (define samples-per-second-c b32 channel-count-c b32)
   (define path-c char* (scm->locale-string path)) (local-memory-add path-c)
   (if (file-exists? path-c)
-    (begin (set file (open path-c mode-c)) (if (< file 0) (scm-c-local-error-glibc file))
+    (begin (set file (open path-c open-flags-c)) (scm-c-require-success-glibc file)
       (define encoding b32)
       (set s
         (file-au-read-header file (address-of encoding)
           (address-of samples-per-second-c) (address-of channel-count-c)))
-      (if (or s (not (= encoding 6))) (scm-c-local-error "encoding" ""))
+      (if (or s (not (= encoding 6))) (scm-c-local-error "encoding" (scm-from-uint32 encoding)))
       (set r
-        (scm-c-create-sp-port sp-port-type-file mode-c samples-per-second-c channel-count-c file)))
-    (begin (set file (open path-c (bit-or O_CREAT mode-c)))
-      (if (< file 0) (scm-c-local-error-glibc file))
+        (scm-c-create-sp-port sp-port-type-file open-flags-c
+          samples-per-second-c channel-count-c file)))
+    (begin (set file (open path-c (bit-or O_CREAT open-flags-c) #o600))
+      (scm-c-require-success-glibc file)
       (set samples-per-second-c (optional-samples-per-second samples-per-second))
       (set channel-count-c (scm->uint32 channel-count))
       (set s (file-au-write-header file 6 samples-per-second-c channel-count-c))
+      (if (< s 0) (scm-c-local-error "write-header" 0))
       (set r
-        (scm-c-create-sp-port sp-port-type-file mode-c samples-per-second-c channel-count-c file))))
+        (scm-c-create-sp-port sp-port-type-file open-flags-c
+          samples-per-second-c channel-count-c file))))
   (local-memory-free) (return r) (label error (local-memory-free) (scm-c-local-error-return)))
 
 (define (scm-sp-io-ports-close a) (SCM SCM)
@@ -101,7 +104,7 @@
 (define (scm-c-type-sp-port-free a) (size-t SCM) (scm-sp-io-ports-close (scm-list-1 a)) (return 0))
 
 (define
- (scm-sp-io-stream input-ports output-ports segment-size prepared-segment-count proc user-state)
+  (scm-sp-io-stream input-ports output-ports segment-size prepared-segment-count proc user-state)
   (SCM SCM SCM SCM SCM SCM SCM)
   #;(define frames-per-buffer-c snd_pcm_uframes_t
     (scm->uint32 (struct-ref sp-state frames-per-buffer)))
@@ -109,15 +112,12 @@
   (define time-scm SCM (scm-from-uint8 0))
   (define segment-size-octets SCM (scm-product segment-size (scm-from-uint8 8)))
   (define zero SCM (scm-from-uint8 0))
-  (while i
-    (scm-cons (scm-make-f32vector segment-size-octets zero)
-      prepared-segments)
+  (while i (scm-cons (scm-make-f32vector segment-size-octets zero) prepared-segments)
     (decrement-one i))
   (define output SCM)
   (label loop (set output (scm-apply-2 proc time-scm prepared-segments user-state))
     (if (not (scm-is-true output)) (return SCM-UNSPECIFIED))
-    (set time-scm (scm-sum segment-size time-scm))
-    (goto loop)
+    (set time-scm (scm-sum segment-size time-scm)) (goto loop)
     ;for each output-port
     ;interleave output-channel-count bytevectors from output if necessary
     ;write to port

@@ -1,14 +1,15 @@
 (library (sph sp)
   (export
-    sp-deinit-alsa
-    sp-init-alsa
-    sp-loop-alsa
-    sp-use-alsa)
+    sp-io-alsa-open
+    sp-io-file-open
+    sp-io-ports-close
+    sp-io-stream)
   (import
-    (sph base)
-    (only (guile) load-extension))
+    (sph)
+    (only (guile) load-extension O_WRONLY))
 
   (load-extension "libguile-sp" "init_sp")
 
-  (define-syntax-rule (sp-use-alsa (init-arg ...) body ...)
-    (if (sp-init-alsa init-arg ...) (begin body ... (sp-deinit-alsa)) #f)))
+
+  (debug-log (sp-io-file-open "/tmp/test.au" O_WRONLY 1 8000))
+  )

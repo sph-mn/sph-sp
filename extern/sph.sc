@@ -25,7 +25,7 @@
 
 (define-macro (local-memory-free)
   (while _local-memory-index (decrement-one _local-memory-index)
-    (free (+ _local-memory-addresses _local-memory-index))))
+    (free (deref (+ _local-memory-addresses _local-memory-index)))))
 
 (define-macro local-error-init (define local-error-number b32-s local-error-module b8))
 

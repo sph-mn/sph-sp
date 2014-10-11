@@ -11,6 +11,7 @@
 (include-sc "io")
 
 (define (init-sp) b0
+  (init-scm)
   (set scm-type-sp-port (scm-make-smob-type "sp-port" 0))
   (scm-set-smob-free scm-type-sp-port scm-c-type-sp-port-free) (define t SCM)
   (scm-c-define-procedure-c t "sp-io-stream"
