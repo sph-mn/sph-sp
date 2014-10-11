@@ -19,20 +19,21 @@
 (define-macro (scm-is-integer-false-or-undefined a)
   (or (scm-is-integer a) (= SCM-BOOL-F a) (= SCM-UNDEFINED a)))
 
-(define (scm-bytevector-from-data a) (SCM b8*)
-  (define r SCM (scm-c-make-bytevector size-data)) (memcpy (SCM-BYTEVECTOR-CONTENTS r) a size-data)
-  (return r))
+(define (scm-c-bytevector-take size-octets a) (SCM size-t b8*)
+  (define r SCM (scm-c-make-bytevector size-octets))
+  (memcpy (SCM-BYTEVECTOR-CONTENTS r) a size-octets) (return r))
 
-(define-macro (scm-if-undefined* a b c) (if* (= SCM-UNDEFINED a) b c))
+(define-macro (scm-if-undefined-expr a b c) (if* (= SCM-UNDEFINED a) b c))
 (define-macro (scm-if-undefined a b c) (if (= SCM-UNDEFINED a) b c))
-(define-macro scm-c-local-error-init (define local-error-key b32-s local-error-description))
+(define-macro scm-c-local-error-init (define local-error-name b8* local-error-description b8*))
 
-(define-macro (scm-c-local-error i d) (set local-error-name i local-error-description d)
+(define-macro (scm-c-local-error i d)
+  (set local-error-name (convert-type i b8*) local-error-description (convert-type d b8*))
   (goto error))
 
 (define-macro (scm-c-local-error-create)
-  (scm-make-error (scm-from-locale-symbol local-error-name)
-    (scm-from-locale-string local-error-description)))
+  (scm-call-2 scm-make-error (scm-from-locale-symbol (convert-type local-error-name char*))
+    (scm-from-locale-string (convert-type local-error-description char*))))
 
 (define-macro (scm-c-local-define-malloc variable-name type)
   (define variable-name type* (malloc (sizeof type)))

@@ -17,7 +17,7 @@
 (define-macro (decrement-one a) (set a (- a 1)))
 
 (define-macro (local-memory-init size) (define _local-memory-addresses[size] b0*)
-  (define _local-memory-index b8))
+  (define _local-memory-index b8 0))
 
 (define-macro (local-memory-add pointer)
   (set (deref _local-memory-addresses _local-memory-index) pointer
@@ -42,8 +42,8 @@
 (define-macro error-memory -1)
 (define-macro error-input -2)
 
-(define (error-description n) (b8-s* b32-s)
-  (return (case* ((= error-memory n) "memory") ((= error-input n) "input") "unknown")))
+(define (error-description n) (char* b32-s)
+  (return (cond* ((= error-memory n) "memory") ((= error-input n) "input") (else "unknown"))))
 
 (define-macro (local-define-malloc variable-name type)
   (define variable-name type* (malloc (sizeof type)))
