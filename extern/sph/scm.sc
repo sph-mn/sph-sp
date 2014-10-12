@@ -25,13 +25,18 @@
 
 (define-macro (scm-if-undefined-expr a b c) (if* (= SCM-UNDEFINED a) b c))
 (define-macro (scm-if-undefined a b c) (if (= SCM-UNDEFINED a) b c))
-(define-macro scm-c-local-error-init (define local-error-name SCM local-error-data SCM))
+
+(define-macro scm-c-local-error-init
+  (define local-error-origin SCM local-error-name SCM local-error-data SCM))
 
 (define-macro (scm-c-local-error i d)
-  (set local-error-name (scm-from-locale-symbol i) local-error-data d) (goto error))
+  (set local-error-origin (scm-from-locale-symbol __func__)
+    local-error-name (scm-from-locale-symbol i) local-error-data d)
+  (goto error))
 
 (define-macro (scm-c-local-error-create)
-  (scm-call-2 scm-make-error local-error-name (if* local-error-data local-error-data SCM-BOOL-F)))
+  (scm-call-3 scm-make-error local-error-origin
+    local-error-name (if* local-error-data local-error-data SCM-BOOL-F)))
 
 (define-macro (scm-c-local-define-malloc variable-name type)
   (define variable-name type* (malloc (sizeof type)))
@@ -43,11 +48,13 @@
   (define-macro (scm-c-local-error-assert name expr) (if (not expr) (scm-c-local-error name 0)))
   (define-macro (scm-c-local-error-assert name expr) null))
 
-(define scm-make-error SCM scm-error? SCM scm-error-name SCM scm-error-data SCM)
+(define scm-make-error SCM
+  scm-error? SCM scm-error-origin SCM scm-error-name SCM scm-error-data SCM)
 
 (define (init-scm) b0
   (define m SCM (scm-c-resolve-module "sph"))
   (set scm-make-error (scm-variable-ref (scm-c-module-lookup m "make-error-p")))
+  (set scm-error-origin (scm-variable-ref (scm-c-module-lookup m "error-origin-p")))
   (set scm-error-name (scm-variable-ref (scm-c-module-lookup m "error-name-p")))
   (set scm-error-data (scm-variable-ref (scm-c-module-lookup m "error-data-p")))
   (set scm-error? (scm-variable-ref (scm-c-module-lookup m "error?-p"))))

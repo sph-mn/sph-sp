@@ -2,14 +2,11 @@
   (export
     sp-io-alsa-open
     sp-io-file-open
-    sp-io-ports-close
+    sp-io-port-close
     sp-io-stream)
   (import
-    (sph)
-    (only (guile) load-extension O_WRONLY))
+    (guile)
+    (sph))
 
   (load-extension "libguile-sp" "init_sp")
-
-
-  (debug-log (sp-io-file-open "/tmp/test.au" O_WRONLY 1 8000))
-  )
+  (debug-log (sp-io-port-close (debug-log (sp-io-file-open "/tmp/test.au" O_RDWR 1 8000)))))

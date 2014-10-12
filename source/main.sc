@@ -13,13 +13,15 @@
 (define (init-sp) b0
   (init-scm)
   (set scm-type-sp-port (scm-make-smob-type "sp-port" 0))
-  (scm-set-smob-free scm-type-sp-port scm-c-type-sp-port-free) (define t SCM)
+  (scm-set-smob-free scm-type-sp-port scm-c-type-sp-port-free)
+  (scm-set-smob-print scm-type-sp-port scm-c-type-sp-port-print)
+  (define t SCM)
   (scm-c-define-procedure-c t "sp-io-stream"
     0 1 1
     scm-sp-io-stream
     "list list integer integer procedure ->
     (sp-port ...) (sp-port ...) samples-per-segment prepared-segment-count {integer:time list:prepared-segments user-state ...} ->")
-  (scm-c-define-procedure-c t "sp-io-ports-close" 1 0 0 scm-sp-io-ports-close "(sp-port ...) ->")
+  (scm-c-define-procedure-c t "sp-io-port-close" 1 0 0 scm-sp-io-port-close "sp-port ->")
   (scm-c-define-procedure-c t "sp-io-file-open"
     2 2
     0 scm-sp-io-file-open

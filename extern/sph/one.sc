@@ -37,3 +37,9 @@
           (if* (< (string-length (pre-stringify expr)) 24) (pre-stringify expr) ""))
         action)))
   (define-macro (if-typecheck expr action) null))
+
+(define-macro (octet-write-string-binary target a)
+  (sprintf target "%d%d%d%d%d%d%d%d"
+    (if* (bit-and a 128) 1 0) (if* (bit-and a 64) 1 0)
+    (if* (bit-and a 32) 1 0) (if* (bit-and a 16) 1 0)
+    (if* (bit-and a 8) 1 0) (if* (bit-and a 4) 1 0) (if* (bit-and a 2) 1 0) (if* (bit-and a 1) 1 0)))

@@ -2,18 +2,19 @@
 (define-macro sp-port-type-alsa 0)
 (define-macro sp-port-type-file 1)
 
-(define-type port-data-t
-  (struct (samples-per-second b32) (channel-count b32) (open-flags b32) (type b8) (data pointer)))
+(define-macro (sp-port-type->name a)
+  (cond* ((= sp-port-type-file a) "file") ((= sp-port-type-alsa a) "alsa") (else "unknown")))
 
-(define (scm-c-create-sp-port type open-flags samples-per-second channel-count data)
-  (SCM b8 b32-s b32 b32 pointer)
-  (define port-data port-data-t* (scm-gc-malloc (sizeof port-data-t) "sp-port-data"))
-  (struct-set (deref port-data) channel-count
-    channel-count samples-per-second samples-per-second type type open-flags open-flags)
-  (return (scm-new-smob scm-type-sp-port data)))
+(define-macro (open-flags->string-rw a)
+  (cond* ((bit-and O_RDWR) "rw") ((bit-and O_RDONLY) "r")
+    ((bit-and O_WRONLY) "w") ((bit-and O_APPEND) "a") (else "unknown")))
 
 (define-macro (scm-c-require-success-alsa a) (set s a)
   (if s (scm-c-local-error "alsa" (scm-from-locale-string (snd-strerror s)))))
+
+(define-type port-data-t
+  (struct (samples-per-second b32) (channel-count b32)
+    (open-flags b32) (type b8) (closed? b8) (data pointer)))
 
 (define (scm-sp-io-alsa-open input-port? channel-count device-name samples-per-second latency)
   (SCM SCM SCM SCM SCM SCM) scm-c-local-error-init
@@ -36,24 +37,26 @@
   (label error (if alsa-port (snd-pcm-close alsa-port))
     (local-memory-free) (scm-c-local-error-return)))
 
-(define (file-au-read-header file encoding samples-per-second channel-count)
-  (b8-s b32-s b32* b32* b32*)
-  ;when successful, the reader is positioned to the start of the audio data
-  (define s ssize-t header[6] b32) (set s (read file (address-of header) 24))
-  (if (not (and (= s 24) (= (deref header) (__builtin-bswap32 779316836)))) (return -1))
-  (lseek file (__builtin-bswap32  (deref header 1)) SEEK_SET)
-  (set (deref encoding) (__builtin-bswap32 (deref header 3))
-    (deref samples-per-second) (__builtin-bswap32 (deref header 4)) (deref channel-count) (__builtin-bswap32 (deref header 5)))
-  (return 0))
-
 (define (file-au-write-header file encoding samples-per-second channel-count)
   (b8-s b32-s b32 b32 b32)
   ;assumes file to be positioned at the beginning
   (define s ssize-t header[7] b32) (set (deref header) (__builtin-bswap32 779316836))
   (set (deref header 1) (__builtin-bswap32 28)) (set (deref header 2) (__builtin-bswap32 4294967295))
-  (set (deref header 3) (__builtin-bswap32 encoding)) (set (deref header 4) (__builtin-bswap32 samples-per-second))
+  (set (deref header 3) (__builtin-bswap32 encoding))
+  (set (deref header 4) (__builtin-bswap32 samples-per-second))
   (set (deref header 5) (__builtin-bswap32 channel-count)) (set (deref header 6) 0)
-  (set s (write file (address-of header) 28)) (if (not (= s 24)) (return -1)) (return 0))
+  (set s (write file header 28)) (if (not (= s 24)) (return -1)) (return 0))
+
+(define (file-au-read-header file encoding samples-per-second channel-count)
+  (b8-s b32-s b32* b32* b32*)
+  ;when successful, the reader is positioned to the start of the audio data
+  (define s ssize-t header[6] b32) (set s (read file header 24))
+  (if (not (and (= s 24) (= (deref header) (__builtin-bswap32 779316836)))) (return -1))
+  (set s (lseek file (__builtin-bswap32 (deref header 1)) SEEK_SET)) (if (< s 0) (return -1))
+  (set (deref encoding) (__builtin-bswap32 (deref header 3))
+    (deref samples-per-second) (__builtin-bswap32 (deref header 4))
+    (deref channel-count) (__builtin-bswap32 (deref header 5)))
+  (return 0))
 
 (define (scm-sp-io-file-open path open-flags channel-count samples-per-second)
   (SCM SCM SCM SCM SCM) scm-c-local-error-init
@@ -65,16 +68,19 @@
   (define samples-per-second-c b32 channel-count-c b32)
   (define path-c char* (scm->locale-string path)) (local-memory-add path-c)
   (if (file-exists? path-c)
-    (begin (set file (open path-c open-flags-c)) (scm-c-require-success-glibc file)
-      (define encoding b32)
+    (begin
+      (set file
+        (open path-c (bit-or (bit-and O_RDONLY open-flags-c) (bit-and O_RDWR open-flags-c))))
+      (scm-c-require-success-glibc file) (define encoding b32)
       (set s
         (file-au-read-header file (address-of encoding)
           (address-of samples-per-second-c) (address-of channel-count-c)))
-      (if (or s (not (= encoding 6))) (scm-c-local-error "encoding" (scm-from-uint32 encoding)))
+      (if s (scm-c-local-error "read-header" 0))
+      (if (not (= encoding 6)) (scm-c-local-error "wrong-encoding" (scm-from-uint32 encoding)))
       (set r
         (scm-c-create-sp-port sp-port-type-file open-flags-c
           samples-per-second-c channel-count-c file)))
-    (begin (set file (open path-c (bit-or O_CREAT open-flags-c) #o600))
+    (begin (set file (open path-c (bit-or O_CREAT open-flags-c) 384))
       (scm-c-require-success-glibc file)
       (set samples-per-second-c (optional-samples-per-second samples-per-second))
       (set channel-count-c (scm->uint32 channel-count))
@@ -85,23 +91,26 @@
           samples-per-second-c channel-count-c file))))
   (local-memory-free) (return r) (label error (local-memory-free) (scm-c-local-error-return)))
 
-(define (scm-sp-io-ports-close a) (SCM SCM)
-  scm-c-local-error-init (define e SCM port-data port-data-t*)
+(define (scm-sp-io-port-close a) (SCM SCM)
+  scm-c-local-error-init (define port-data port-data-t*)
   init-status
-  (scm-c-list-each a e
-    (compound-statement
-      (if (SCM-SMOB-PREDICATE scm-type-sp-port e)
-        (begin (set port-data (convert-type (SCM-SMOB-DATA e) port-data-t*))
+  (if (SCM-SMOB-PREDICATE scm-type-sp-port a)
+    (begin (set port-data (convert-type (SCM-SMOB-DATA a) port-data-t*))
+      (if (struct-ref (deref port-data) closed?) (scm-c-local-error "already-closed" 0)
+        (begin
           (cond
             ( (= sp-port-type-alsa (struct-ref (deref port-data) type))
               (scm-c-require-success-alsa
                 (snd-pcm-close (convert-type (struct-ref (deref port-data) data) snd-pcm-t*))))
             ( (= sp-port-type-file (struct-ref (deref port-data) type))
               (scm-c-require-success-glibc
-                (close (convert-type (struct-ref (deref port-data) data) b32)))))))))
-  (label error (scm-c-local-error-return)))
+                (close (convert-type (struct-ref (deref port-data) data) b32)))))
+          (struct-set (deref port-data) closed? 1))))
+    (scm-c-local-error "input" 0))
+  (return SCM-BOOL-T) (label error (scm-c-local-error-return)))
 
-(define (scm-c-type-sp-port-free a) (size-t SCM) (scm-sp-io-ports-close (scm-list-1 a)) (return 0))
+(define (scm-c-type-sp-port-free a) (size-t SCM)
+  (debug-log "%s" "before gc") (scm-sp-io-port-close a) (return 0))
 
 (define
   (scm-sp-io-stream input-ports output-ports segment-size prepared-segment-count proc user-state)
