@@ -42,6 +42,10 @@
   (define variable-name type* (malloc (sizeof type)))
   (if (not variable-name) (scm-c-local-error "memory" 0)))
 
+(define-macro (scm-c-local-define-malloc+size variable-name type size)
+  (define variable-name type* (malloc size))
+  (if (not variable-name) (scm-c-local-error "memory" 0)))
+
 (define-macro (scm-c-local-error-return) (return (scm-c-local-error-create)))
 
 (pre-if local-error-assert-enable

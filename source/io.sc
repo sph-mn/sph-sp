@@ -74,6 +74,7 @@
   (scm-c-require-success-alsa
     (snd-pcm-set-params alsa-port SND_PCM_FORMAT_U32
       SND_PCM_ACCESS_RW_INTERLEAVED channel-count-c samples-per-second-c 0 latency-c))
+  (local-memory-free)
   (return
     (sp-port-create sp-port-type-alsa (if* input-port? O_RDONLY O_WRONLY)
       samples-per-second-c channel-count-c (convert-type alsa-port pointer)))
@@ -132,7 +133,7 @@
         (sp-port-create sp-port-type-file open-flags-c samples-per-second-c channel-count-c file))))
   (local-memory-free) (return r) (label error (local-memory-free) (scm-c-local-error-return)))
 
-(define (interleave-n target source n size) (b0 f32-s* f32-s** b32 b32)
+(define (sp-interleave-n target source n size) (b0 f32-s* f32-s** b32 b32)
   (define temp-n b32)
   (while size (decrement-one size)
     (set temp-n n)
@@ -206,24 +207,40 @@
   ;reads one segment for each channel of each port
   )
 
-(define (scm-sp-io-ports-write a non-interleaved-data) (SCM SCM SCM)
-  ;(sp-port ...) (bytevector ...) -> boolean/error
+(define-macro (port->port-data a) (convert-type (SCM-SMOB-DATA a) port-data-t*))
 
-  (define e SCM ni-data-c f32**)
-  (define ni-data-c f32* (scm->uint32 (scm-length non-interleaved-data)))
-
-    (define scm-t-array-handle array-handle e-sample f32-s* size-t array-size ssize-t array-increment)
-
-  (e-sample (scm-f32vector-elements e (address-of array-handle) (address-of array-size) (address-of array-increment)))
-    (scm-array-handle-release (address-of array-handle))
-
-  (scm-c-list-each a e (compount-statement
-      (SCM-BYTEVECTOR-CONTENTS e)
-
-      ))
-  ;write
-  (scm-c-list-each a e (compount-statement
-
-      ))
-
-  )
+(define (scm-sp-io-ports-write ports segments) (SCM SCM SCM)
+  ;! this is not loop optimised - target write segments are not prepared
+  scm-c-local-error-init (local-memory-init 2)
+  (scm-c-local-error-assert "input"
+    (and (scm-list? ports) (scm-list? segments)
+      (not (or (scm-is-null ports) (scm-is-null segments)))))
+  (define port-count b16 (scm->uint16 (scm-length ports)))
+  (define segment-count b16 (scm->uint16 (scm-length segments)))
+  (define segment-size b32 (scm->uint32 (scm-f32vector-length (scm-first segments))))
+  (scm-c-local-define-malloc+size ports-data port-data-t* (* port-count (sizeof pointer)))
+  (scm-c-local-define-malloc+size ports-channel-count b32 (* port-count (sizeof b32)))
+  (local-memory-add ports-data) (local-memory-add ports-channel-count)
+  (define e SCM) (define index b16 0)
+  (define channel-count-sum b32 0)
+  (scm-c-list-each ports e
+    (compound-statement (set (deref ports-data index) (port->port-data e))
+      (set (deref ports-channel-count index)
+        (struct-ref (deref (deref ports-data index)) channel-count))
+      (set channel-count-sum (+ channel-count-sum (deref ports-channel-count))) (increment-one index)))
+  (if (not (= channel-count-sum segment-count))
+    (scm-c-local-error "missing-segments"
+      (scm-from-locale-string "required is one segment per channel for each output-port")))
+  (scm-c-local-define-malloc+size segments-data f32-s* (* segment-count (sizeof pointer)))
+  (local-memory-add segments-data) (set index 0)
+  (scm-c-list-each segments e
+    (compound-statement
+      (set (deref segments-data index) (convert-type (SCM-BYTEVECTOR-CONTENTS e) f32-s*))
+      (increment-one index)))
+  (set index port-count)
+  (while index (decrement-one index)
+    (sp-interleave-n target segment-data (deref ports-channel-count index))
+    #;(cond ((= sp-port-type-file) (sp-port-file-write port-data data-interleaved size-in-frames))
+      ((= sp-port-type-alsa) (sp-port-alsa-write port-data data-interleaved size-in-frames))))
+  (local-memory-free) (return SCM-BOOL-T)
+  (label error (local-memory-free) (scm-c-local-error-return)))

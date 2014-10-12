@@ -27,4 +27,6 @@
     2 3
     0 scm-sp-io-alsa-open
     "input-port? channel-count device-name samples-per-second latency -> sp-port
-    boolean integer string integer integer"))
+    boolean integer string integer integer")
+  (scm-c-define-procedure-c t "sp-io-ports-write"
+    2 0 0 scm-sp-io-ports-write "(sp-port ...) (f32vector ...) -> boolean/error"))
