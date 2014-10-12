@@ -1,6 +1,16 @@
+;uses a custom type for ports because guiles port api is underdocumented / too complicated for now
 (includep "fcntl.h")
+
+(define-macro (scm-c-require-success-alsa a) (set s a)
+  (if s (scm-c-local-error "alsa" (scm-from-locale-string (snd-strerror s)))))
+
 (define-macro sp-port-type-alsa 0)
 (define-macro sp-port-type-file 1)
+(define sp-port-scm-type scm-t-bits)
+
+(define-type port-data-t
+  (struct (samples-per-second b32) (channel-count b32)
+    (open-flags b32) (type b8) (closed? b8) (data pointer)))
 
 (define-macro (sp-port-type->name a)
   (cond* ((= sp-port-type-file a) "file") ((= sp-port-type-alsa a) "alsa") (else "unknown")))
@@ -9,12 +19,45 @@
   (cond* ((bit-and O_RDWR) "rw") ((bit-and O_RDONLY) "r")
     ((bit-and O_WRONLY) "w") ((bit-and O_APPEND) "a") (else "unknown")))
 
-(define-macro (scm-c-require-success-alsa a) (set s a)
-  (if s (scm-c-local-error "alsa" (scm-from-locale-string (snd-strerror s)))))
+(define (sp-port-print a output-port print-state) (int SCM SCM scm-print-state*)
+  (define port-data port-data-t* (convert-type (SCM-SMOB-DATA a) port-data-t*)) (define r[255] char)
+  (sprintf r
+    "#<sp-port %lx type:%s samples-per-second:%d channel-count:%d closed?:%s open-flags:%s>"
+    (convert-type a pointer) (sp-port-type->name (struct-ref (deref port-data) type))
+    (struct-ref (deref port-data) samples-per-second) (struct-ref (deref port-data) channel-count)
+    (if* (struct-ref (deref port-data) closed?) "#t" "#f")
+    (open-flags->string-rw (struct-ref (deref port-data) open-flags)))
+  (scm-display (scm-from-locale-string r) output-port) (return 0))
 
-(define-type port-data-t
-  (struct (samples-per-second b32) (channel-count b32)
-    (open-flags b32) (type b8) (closed? b8) (data pointer)))
+(define (sp-port-create type open-flags samples-per-second channel-count data)
+  (SCM b8 b32-s b32 b32 pointer)
+  (define port-data port-data-t* (scm-gc-malloc (sizeof port-data-t) "sp-port-data"))
+  (struct-set (deref port-data) channel-count
+    channel-count samples-per-second samples-per-second type type open-flags open-flags data data)
+  (return (scm-new-smob sp-port-scm-type (convert-type port-data scm-t-bits))))
+
+(define-macro (sp-port-scm-type-init)
+  ;create and setup the type
+  (set sp-port-scm-type (scm-make-smob-type "sp-port" 0))
+  (scm-set-smob-print sp-port-scm-type sp-port-print))
+
+(define (scm-sp-io-port-close a) (SCM SCM)
+  scm-c-local-error-init (define port-data port-data-t*)
+  init-status
+  (if (SCM-SMOB-PREDICATE sp-port-scm-type a)
+    (begin (set port-data (convert-type (SCM-SMOB-DATA a) port-data-t*))
+      (if (struct-ref (deref port-data) closed?) (scm-c-local-error "already-closed" 0)
+        (begin
+          (cond
+            ( (= sp-port-type-alsa (struct-ref (deref port-data) type))
+              (scm-c-require-success-alsa
+                (snd-pcm-close (convert-type (struct-ref (deref port-data) data) snd-pcm-t*))))
+            ( (= sp-port-type-file (struct-ref (deref port-data) type))
+              (scm-c-require-success-glibc
+                (close (convert-type (struct-ref (deref port-data) data) b32)))))
+          (struct-set (deref port-data) closed? 1))))
+    (scm-c-local-error "input" 0))
+  (return SCM-BOOL-T) (label error (scm-c-local-error-return)))
 
 (define (scm-sp-io-alsa-open input-port? channel-count device-name samples-per-second latency)
   (SCM SCM SCM SCM SCM SCM) scm-c-local-error-init
@@ -32,7 +75,7 @@
     (snd-pcm-set-params alsa-port SND_PCM_FORMAT_U32
       SND_PCM_ACCESS_RW_INTERLEAVED channel-count-c samples-per-second-c 0 latency-c))
   (return
-    (scm-c-create-sp-port sp-port-type-alsa (if* input-port? O_RDONLY O_WRONLY)
+    (sp-port-create sp-port-type-alsa (if* input-port? O_RDONLY O_WRONLY)
       samples-per-second-c channel-count-c (convert-type alsa-port pointer)))
   (label error (if alsa-port (snd-pcm-close alsa-port))
     (local-memory-free) (scm-c-local-error-return)))
@@ -78,8 +121,7 @@
       (if s (scm-c-local-error "read-header" 0))
       (if (not (= encoding 6)) (scm-c-local-error "wrong-encoding" (scm-from-uint32 encoding)))
       (set r
-        (scm-c-create-sp-port sp-port-type-file open-flags-c
-          samples-per-second-c channel-count-c file)))
+        (sp-port-create sp-port-type-file open-flags-c samples-per-second-c channel-count-c file)))
     (begin (set file (open path-c (bit-or O_CREAT open-flags-c) 384))
       (scm-c-require-success-glibc file)
       (set samples-per-second-c (optional-samples-per-second samples-per-second))
@@ -87,30 +129,8 @@
       (set s (file-au-write-header file 6 samples-per-second-c channel-count-c))
       (if (< s 0) (scm-c-local-error "write-header" 0))
       (set r
-        (scm-c-create-sp-port sp-port-type-file open-flags-c
-          samples-per-second-c channel-count-c file))))
+        (sp-port-create sp-port-type-file open-flags-c samples-per-second-c channel-count-c file))))
   (local-memory-free) (return r) (label error (local-memory-free) (scm-c-local-error-return)))
-
-(define (scm-sp-io-port-close a) (SCM SCM)
-  scm-c-local-error-init (define port-data port-data-t*)
-  init-status
-  (if (SCM-SMOB-PREDICATE scm-type-sp-port a)
-    (begin (set port-data (convert-type (SCM-SMOB-DATA a) port-data-t*))
-      (if (struct-ref (deref port-data) closed?) (scm-c-local-error "already-closed" 0)
-        (begin
-          (cond
-            ( (= sp-port-type-alsa (struct-ref (deref port-data) type))
-              (scm-c-require-success-alsa
-                (snd-pcm-close (convert-type (struct-ref (deref port-data) data) snd-pcm-t*))))
-            ( (= sp-port-type-file (struct-ref (deref port-data) type))
-              (scm-c-require-success-glibc
-                (close (convert-type (struct-ref (deref port-data) data) b32)))))
-          (struct-set (deref port-data) closed? 1))))
-    (scm-c-local-error "input" 0))
-  (return SCM-BOOL-T) (label error (scm-c-local-error-return)))
-
-(define (scm-c-type-sp-port-free a) (size-t SCM)
-  (debug-log "%s" "before gc") (scm-sp-io-port-close a) (return 0))
 
 (define
   (scm-sp-io-stream input-ports output-ports segment-size prepared-segment-count proc user-state)
