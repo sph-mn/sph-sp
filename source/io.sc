@@ -206,7 +206,24 @@
   ;reads one segment for each channel of each port
   )
 
-#;(define (scm-sp-io-ports-write a data) (SCM SCM SCM)
-  ;(sp-port ...) (bytevector ...) ->
-  ;writes one segment for each channel of each port
+(define (scm-sp-io-ports-write a non-interleaved-data) (SCM SCM SCM)
+  ;(sp-port ...) (bytevector ...) -> boolean/error
+
+  (define e SCM ni-data-c f32**)
+  (define ni-data-c f32* (scm->uint32 (scm-length non-interleaved-data)))
+
+    (define scm-t-array-handle array-handle e-sample f32-s* size-t array-size ssize-t array-increment)
+
+  (e-sample (scm-f32vector-elements e (address-of array-handle) (address-of array-size) (address-of array-increment)))
+    (scm-array-handle-release (address-of array-handle))
+
+  (scm-c-list-each a e (compount-statement
+      (SCM-BYTEVECTOR-CONTENTS e)
+
+      ))
+  ;write
+  (scm-c-list-each a e (compount-statement
+
+      ))
+
   )

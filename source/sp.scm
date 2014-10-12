@@ -9,4 +9,6 @@
     (sph))
 
   (load-extension "libguile-sp" "init_sp")
-  (debug-log (sp-io-port-close (debug-log (sp-io-file-open "/tmp/test.au" O_RDWR 1 8000)))))
+  (let (out (sp-io-file-open "/tmp/test.au" O_RDWR 1 8000)) (debug-log out)
+    ()
+    (sp-io-port-close out)))
