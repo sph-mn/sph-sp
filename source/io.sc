@@ -132,6 +132,40 @@
         (sp-port-create sp-port-type-file open-flags-c samples-per-second-c channel-count-c file))))
   (local-memory-free) (return r) (label error (local-memory-free) (scm-c-local-error-return)))
 
+(define (interleave-n target source n size) (b0 f32-s* f32-s** b32 b32)
+  (define temp-n b32)
+  (while size (decrement-one size)
+    (set temp-n n)
+    (while temp-n (decrement-one temp-n) (set (deref target) (deref (deref source size) temp-n)))))
+
+(define (sp-port-file-write port-data data-interleaved size-in-frames)
+  (SCM port-data-t* f32-s* b32) init-status
+  scm-c-local-error-init
+  (scm-c-require-success-glibc
+    (write (convert-type (struct-ref (deref port-data) data) int) data-interleaved
+      (* size-in-frames 4)))
+  (return SCM-BOOL-T) (label error (scm-c-local-error-return)))
+
+(define (sp-port-alsa-write port-data data-interleaved size-in-frames)
+  (SCM port-data-t* f32-s* b32) (define frames-written snd_pcm_sframes_t)
+  scm-c-local-error-init (define retry-count b8 20)
+  (label loop
+    (if retry-count
+      (begin
+        (set frames-written
+          (snd-pcm-writei (convert-type (struct-ref (deref port-data) data) snd-pcm-t*)
+            data-interleaved size-in-frames))
+        (if (= frames-written -EAGAIN) (begin (decrement-one retry-count) (goto loop))
+          (if (< frames-written 0)
+            (if
+              (<
+                (snd-pcm-recover (convert-type (struct-ref (deref port-data) data) snd-pcm-t*)
+                  frames-written 0)
+                0)
+              (scm-c-local-error "alsa" (scm-from-locale-string (snd-strerror frames-written)))))))
+      (scm-c-local-error "max-retries-made" 0)))
+  (return SCM-BOOL-T) (label error (scm-c-local-error-return)))
+
 (define
   (scm-sp-io-stream input-ports output-ports segment-size prepared-segment-count proc user-state)
   (SCM SCM SCM SCM SCM SCM SCM)
@@ -167,12 +201,12 @@
 
 ;sp-io-stream input-ports output-ports new-segments-count user-state ... {time segments ... -> (out-n-channel-n  ...)/false} ->
 
-#;(define (scm-ports-read a) (SCM SCM)
+#;(define (scm-sp-io-ports-read a) (SCM SCM)
   ;(sp-port ...) -> (bytevector ...)
   ;reads one segment for each channel of each port
   )
 
-#;(define (scm-ports-write a data) (SCM SCM SCM)
+#;(define (scm-sp-io-ports-write a data) (SCM SCM SCM)
   ;(sp-port ...) (bytevector ...) ->
   ;writes one segment for each channel of each port
   )
