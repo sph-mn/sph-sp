@@ -2,16 +2,19 @@
 
 (define-macro
   (scm-c-define-procedure-c scm-temp name required optional rest c-function documentation)
+  ;defines and registers/exports a c procedure as scheme procedure with documentation string
   (set scm-temp (scm-c-define-gsubr name required optional rest c-function))
   (scm-set-procedure-property! scm-temp (scm-from-locale-symbol "documentation")
     (scm-from-locale-string documentation)))
 
 (define-macro (scm-c-list-each list e body)
-  ;SCM SCM c-compound-expression
+  ;SCM SCM c-compound-expression ->
   (while (not (scm-is-null list)) (set e (scm-first list)) body (set list (scm-tail list))))
 
 (define-macro (false-if-undefined a) (if* (= SCM-UNDEFINED a) SCM-BOOL-F a))
 (define-macro (null-if-undefined a) (if* (= SCM-UNDEFINED a) 0 a))
+(define-macro (scm-if-undefined-expr a b c) (if* (= SCM-UNDEFINED a) b c))
+(define-macro (scm-if-undefined a b c) (if (= SCM-UNDEFINED a) b c))
 
 (define-macro (scm-is-list-false-or-undefined a)
   (or (scm-is-true (scm-list? a)) (= SCM-BOOL-F a) (= SCM-UNDEFINED a)))
@@ -20,11 +23,11 @@
   (or (scm-is-integer a) (= SCM-BOOL-F a) (= SCM-UNDEFINED a)))
 
 (define (scm-c-bytevector-take size-octets a) (SCM size-t b8*)
+  ;creates a new bytevector of size-octects from a given bytevector
   (define r SCM (scm-c-make-bytevector size-octets))
   (memcpy (SCM-BYTEVECTOR-CONTENTS r) a size-octets) (return r))
 
-(define-macro (scm-if-undefined-expr a b c) (if* (= SCM-UNDEFINED a) b c))
-(define-macro (scm-if-undefined a b c) (if (= SCM-UNDEFINED a) b c))
+;scm-c-local-error is the scheme version of sph.c:local-error. it can create an error object defined in the scheme module (sph)
 
 (define-macro scm-c-local-error-init
   (define local-error-origin SCM local-error-name SCM local-error-data SCM))
@@ -43,8 +46,7 @@
   (if (not variable-name) (scm-c-local-error "memory" 0)))
 
 (define-macro (scm-c-local-define-malloc+size variable-name type size)
-  (define variable-name type* (malloc size))
-  (if (not variable-name) (scm-c-local-error "memory" 0)))
+  (define variable-name type* (malloc size)) (if (not variable-name) (scm-c-local-error "memory" 0)))
 
 (define-macro (scm-c-local-error-return) (return (scm-c-local-error-create)))
 
@@ -56,6 +58,7 @@
   scm-error? SCM scm-error-origin SCM scm-error-name SCM scm-error-data SCM)
 
 (define (init-scm) b0
+  ;the features defined in this file need run-time initialisation. call this once in an application before using the features here
   (define m SCM (scm-c-resolve-module "sph"))
   (set scm-make-error (scm-variable-ref (scm-c-module-lookup m "make-error-p")))
   (set scm-error-origin (scm-variable-ref (scm-c-module-lookup m "error-origin-p")))
