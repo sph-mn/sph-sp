@@ -57,7 +57,7 @@
 (define scm-make-error SCM
   scm-error? SCM scm-error-origin SCM scm-error-name SCM scm-error-data SCM)
 
-(define (init-scm) b0
+(define init-scm b0
   ;the features defined in this file need run-time initialisation. call this once in an application before using the features here
   (define m SCM (scm-c-resolve-module "sph"))
   (set scm-make-error (scm-variable-ref (scm-c-module-lookup m "make-error-p")))

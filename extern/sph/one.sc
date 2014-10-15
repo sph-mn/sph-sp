@@ -43,3 +43,7 @@
     (if* (bit-and a 128) 1 0) (if* (bit-and a 64) 1 0)
     (if* (bit-and a 32) 1 0) (if* (bit-and a 16) 1 0)
     (if* (bit-and a 8) 1 0) (if* (bit-and a 4) 1 0) (if* (bit-and a 2) 1 0) (if* (bit-and a 1) 1 0)))
+
+(define-macro (open-flags->string-rw a)
+  (cond* ((bit-and O_RDWR) "rw") ((bit-and O_RDONLY) "r")
+    ((bit-and O_WRONLY) "w") ((bit-and O_APPEND) "a") (else "unknown")))
