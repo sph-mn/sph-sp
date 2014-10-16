@@ -10,7 +10,7 @@
 (include-sc "io")
 
 (define (init-sp) b0
-  init-scm sp-port-scm-type-init
+  (init-scm) sp-port-scm-type-init
   (define t SCM)
   (scm-c-define-procedure-c t "sp-io-port-close" 1 0 0 scm-sp-io-port-close "sp-port ->")
   (scm-c-define-procedure-c t "sp-io-file-open-input"
@@ -35,9 +35,9 @@
     string integer integer integer -> sp-port")
   (scm-c-define-procedure-c t "sp-io-alsa-write"
     2 0
-    0 scm-sp-io-ports-write
+    0 scm-sp-io-alsa-write
     "(sp-port ...) (f32vector ...) [(f32vector:port-interleaved-buffer ...)] -> boolean/error")
   (scm-c-define-procedure-c t "sp-io-file-write"
     2 0
-    0 scm-sp-io-ports-write
+    0 scm-sp-io-file-write
     "(sp-port ...) (f32vector ...) [(f32vector:port-interleaved-buffer ...)] -> boolean/error"))

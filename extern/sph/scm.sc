@@ -37,7 +37,7 @@
     local-error-name (scm-from-locale-symbol i) local-error-data d)
   (goto error))
 
-(define-macro (scm-c-local-error-create)
+(define-macro scm-c-local-error-create
   (scm-call-3 scm-make-error local-error-origin
     local-error-name (if* local-error-data local-error-data SCM-BOOL-F)))
 
@@ -48,7 +48,7 @@
 (define-macro (scm-c-local-define-malloc+size variable-name type size)
   (define variable-name type* (malloc size)) (if (not variable-name) (scm-c-local-error "memory" 0)))
 
-(define-macro (scm-c-local-error-return) (return (scm-c-local-error-create)))
+(define-macro scm-c-local-error-return (return scm-c-local-error-create))
 
 (pre-if local-error-assert-enable
   (define-macro (scm-c-local-error-assert name expr) (if (not expr) (scm-c-local-error name 0)))
@@ -57,7 +57,7 @@
 (define scm-make-error SCM
   scm-error? SCM scm-error-origin SCM scm-error-name SCM scm-error-data SCM)
 
-(define init-scm b0
+(define (init-scm) b0
   ;the features defined in this file need run-time initialisation. call this once in an application before using the features here
   (define m SCM (scm-c-resolve-module "sph"))
   (set scm-make-error (scm-variable-ref (scm-c-module-lookup m "make-error-p")))

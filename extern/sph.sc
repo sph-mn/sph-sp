@@ -18,7 +18,6 @@
 (define-macro _noalias restrict)
 (define-macro (increment-one a) (set a (+ 1 a)))
 (define-macro (decrement-one a) (set a (- a 1)))
-
 ;local-memory is a allocated heap-memory registry in local variables with automated free so that
 ;different routine end-points, like at error occurences, can free all memory up to the point easily
 
@@ -29,12 +28,11 @@
   (set (deref _local-memory-addresses _local-memory-index) pointer
     _local-memory-index (+ 1 _local-memory-index)))
 
-(define-macro (local-memory-free)
+(define-macro local-memory-free
   (while _local-memory-index (decrement-one _local-memory-index)
     (free (deref (+ _local-memory-addresses _local-memory-index)))))
 
 ;local-error is a way to save errors with information at different places inside routines and to use the information in a single cleanup and error return goto-label
-
 (define-macro local-error-init (define local-error-number b32-s local-error-module b8))
 
 (define-macro (local-error module-identifier error-identifier)
