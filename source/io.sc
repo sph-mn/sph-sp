@@ -93,11 +93,11 @@
       samples-per-second-c channel-count-c (convert-type alsa-port pointer)))
   (label error (if alsa-port (snd-pcm-close alsa-port)) local-memory-free scm-c-local-error-return))
 
-(define (scm-sp-io-alsa-open-input channel-count device-name samples-per-second latency)
+(define (scm-sp-io-alsa-open-input device-name channel-count samples-per-second latency)
   (SCM SCM SCM SCM SCM)
   (return (sp-io-alsa-open 1 device-name channel-count samples-per-second latency)))
 
-(define (scm-sp-io-alsa-open-output channel-count device-name samples-per-second latency)
+(define (scm-sp-io-alsa-open-output device-name channel-count samples-per-second latency)
   (SCM SCM SCM SCM SCM)
   (return (sp-io-alsa-open 0 device-name channel-count samples-per-second latency)))
 
@@ -232,6 +232,7 @@
   (scm-c-local-define-malloc+size data-interleaved f32-s (* sample-count-c channel-count-c 4))
   (local-memory-add data-interleaved)
   (sp-interleave-n data-interleaved channel-data-c channel-count-c sample-count-c)
+  (__builtin-bswap64 )
   (scm-c-require-success-glibc
     (write (convert-type (struct-ref (deref port-data) data) int) data-interleaved
       (* channel-count-c sample-count-c)))
