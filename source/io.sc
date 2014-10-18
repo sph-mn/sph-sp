@@ -1,5 +1,7 @@
 ;uses a custom type for ports because guiles port api is underdocumented / too complicated for now
 (includep "fcntl.h")
+(define-macro (optional-samples-per-second a) (if* (= SCM-UNDEFINED a) 96000 (scm->uint32 a)))
+(define-macro (optional-channel-count a) (if* (= SCM-UNDEFINED a) 1 (scm->uint32 a)))
 
 (define (sp-interleave-n target source n size) (b0 f32-s* f32-s** b32 b32)
   (define temp-n b32)
@@ -15,9 +17,24 @@
     (while temp-n (decrement-one temp-n)
       (set (deref (deref target size) temp-n) (deref source (+ size temp-n))))))
 
+(define (sp-interleave-n+swap-endian target source n size) (b0 f32-s* f32-s** b32 b32)
+  (define temp-n b32)
+  (while size (decrement-one size)
+    (set temp-n n)
+    (while temp-n (decrement-one temp-n)
+      (set (deref target (+ size temp-n)) (__builtin-bswap32 (deref (deref source size) temp-n))))))
+
+(define (sp-deinterleave-n+swap-endian target source n size) (b0 f32-s** f32-s* b32 b32)
+  (define temp-n b32)
+  (while size (decrement-one size)
+    (set temp-n n)
+    (while temp-n (decrement-one temp-n)
+      (set (deref (deref target size) temp-n) (__builtin-bswap32 (deref source (+ size temp-n)))))))
+
 (define-type port-data-t
   (struct (samples-per-second b32) (channel-count b32)
-    (input? b8) (type b8) (closed? b8) (data pointer)))
+    (input? b8) (type b8)
+    (closed? b8) (position? b8) (position b64) (position-offset b16) (data pointer)))
 
 (define-macro sp-port-type-alsa 0)
 (define-macro sp-port-type-file 1)
@@ -43,11 +60,14 @@
     (if* (struct-ref (deref port-data) input?) "#t" "#f"))
   (scm-display (scm-from-locale-string r) output-port) (return 0))
 
-(define (sp-port-create type input? samples-per-second channel-count data)
-  (SCM b8 b32-s b32 b32 pointer)
+(define
+  (sp-port-create type input? samples-per-second channel-count position? position-offset data)
+  (SCM b8 b8 b32 b32 b8 b16 pointer)
   (define port-data port-data-t* (scm-gc-malloc (sizeof port-data-t) "sp-port-data"))
   (struct-set (deref port-data) channel-count
-    channel-count samples-per-second samples-per-second type type input? input? data data)
+    channel-count samples-per-second
+    samples-per-second type
+    type input? input? data data position? position? position 0 position-offset position-offset)
   (return (scm-new-smob sp-port-scm-type (convert-type port-data scm-t-bits))))
 
 (define-macro (scm-c-require-success-alsa a) (set s a)
@@ -90,7 +110,7 @@
   local-memory-free
   (return
     (sp-port-create sp-port-type-alsa input?
-      samples-per-second-c channel-count-c (convert-type alsa-port pointer)))
+      samples-per-second-c channel-count-c 0 0 (convert-type alsa-port pointer)))
   (label error (if alsa-port (snd-pcm-close alsa-port)) local-memory-free scm-c-local-error-return))
 
 (define (scm-sp-io-alsa-open-input device-name channel-count samples-per-second latency)
@@ -123,11 +143,9 @@
   (return 0))
 
 (define (sp-io-file-open path open-flags channel-count samples-per-second) (SCM SCM b32 SCM SCM)
-  scm-c-local-error-init
-  (scm-c-local-error-assert "input"
-    (and (scm-is-string path) (scm-is-integer channel-count) (scm-is-integer samples-per-second)))
-  (local-memory-init 1) init-status
-  (define file b32-s r SCM) (define samples-per-second-c b32 channel-count-c b32)
+  scm-c-local-error-init (local-memory-init 1)
+  init-status (define file b32-s r SCM)
+  (define samples-per-second-c b32 channel-count-c b32)
   (define path-c char* (scm->locale-string path)) (local-memory-add path-c)
   (if (file-exists? path-c)
     (begin (set file (open path-c open-flags)) (scm-c-require-success-glibc file)
@@ -138,22 +156,31 @@
       (if s (scm-c-local-error "read-header" 0))
       (if (not (= encoding 6)) (scm-c-local-error "wrong-encoding" (scm-from-uint32 encoding)))
       (set r
-        (sp-port-create sp-port-type-file open-flags samples-per-second-c channel-count-c file)))
+        (sp-port-create sp-port-type-file open-flags
+          samples-per-second-c channel-count-c 1 (lseek file 0 SEEK-CUR) file)))
     (begin (set file (open path-c (bit-or open-flags O_CREAT) 384))
       (scm-c-require-success-glibc file)
       (set samples-per-second-c (optional-samples-per-second samples-per-second))
-      (set channel-count-c (scm->uint32 channel-count))
+      (set channel-count-c (optional-channel-count channel-count))
       (set s (file-au-write-header file 6 samples-per-second-c channel-count-c))
       (if (< s 0) (scm-c-local-error "write-header" 0))
       (set r
-        (sp-port-create sp-port-type-file open-flags samples-per-second-c channel-count-c file))))
+        (sp-port-create sp-port-type-file open-flags
+          samples-per-second-c channel-count-c 1 (lseek file 0 SEEK-CUR) file))))
   local-memory-free (return r) (label error local-memory-free scm-c-local-error-return))
 
 (define (scm-sp-io-file-open-input path) (SCM SCM)
-  (return (sp-io-file-open path O_RDONLY SCM-UNDEFINED SCM-UNDEFINED)))
+  scm-c-local-error-init (scm-c-local-error-assert "type-check" (scm-is-string path))
+  (return (sp-io-file-open path O_RDONLY SCM-UNDEFINED SCM-UNDEFINED))
+  (label error scm-c-local-error-return))
 
 (define (scm-sp-io-file-open-output path channel-count samples-per-second) (SCM SCM SCM SCM)
-  (return (sp-io-file-open path O_WRONLY channel-count samples-per-second)))
+  scm-c-local-error-init
+  (scm-c-local-error-assert "type-check"
+    (and (scm-is-string path) (or (= SCM-UNDEFINED channel-count) (scm-is-integer channel-count))
+      (or (= SCM-UNDEFINED samples-per-second) (scm-is-integer samples-per-second))))
+  (return (sp-io-file-open path O_WRONLY channel-count samples-per-second))
+  (label error scm-c-local-error-return))
 
 (define (scm-sp-io-alsa-write port sample-count channel-data) (SCM SCM SCM SCM)
   scm-c-local-error-init (local-memory-init 1)
@@ -231,8 +258,7 @@
       (increment-one index)))
   (scm-c-local-define-malloc+size data-interleaved f32-s (* sample-count-c channel-count-c 4))
   (local-memory-add data-interleaved)
-  (sp-interleave-n data-interleaved channel-data-c channel-count-c sample-count-c)
-  (__builtin-bswap64 )
+  (sp-interleave-n+swap-endian data-interleaved channel-data-c channel-count-c sample-count-c)
   (scm-c-require-success-glibc
     (write (convert-type (struct-ref (deref port-data) data) int) data-interleaved
       (* channel-count-c sample-count-c)))
@@ -250,8 +276,37 @@
   (scm-c-require-success-glibc
     (read (convert-type (struct-ref (deref port-data) data) int) data-interleaved
       (* sample-count-c channel-count-c)))
-  (sp-deinterleave-n channel-data data-interleaved channel-count-c sample-count-c)
+  (sp-deinterleave-n+swap-endian channel-data data-interleaved channel-count-c sample-count-c)
   (define r SCM SCM-EOL) (define index b32 channel-count-c)
   (while index (decrement-one index)
     (set r (scm-cons (scm-take-f32vector (deref channel-data index) sample-count-c) r)))
   local-memory-free (return r) (label error local-memory-free scm-c-local-error-return))
+
+(define (scm-sp-io-port-position port) (SCM SCM)
+  (define port-data port-data-t* (sp-port->port-data port))
+  (return
+    (if* (struct-ref (deref port-data) position?)
+      (scm-from-uint64 (struct-ref (deref port-data) position)) SCM-BOOL-F)))
+
+(define (scm-sp-io-port-input? port) (SCM SCM)
+  (return (if* (struct-ref (deref (sp-port->port-data port)) input?) SCM-BOOL-T SCM-BOOL-F)))
+
+(define (scm-sp-io-port? port) (SCM SCM)
+  (return (if* (SCM-SMOB-PREDICATE sp-port-scm-type port) SCM-BOOL-T SCM-BOOL-F)))
+
+(define (scm-sp-io-file-set-position port sample-position) (SCM SCM SCM)
+  scm-c-local-error-init (define port-data port-data-t* (sp-port->port-data port))
+  (define position-c b64-s (* (scm->int64 sample-position) 4)) (define s off-t)
+  (let-macro
+    (file (convert-type (struct-ref (deref port-data) data) int)
+      position-offset (struct-ref (deref port-data) position-offset))
+    (if (>= position-c 0) (set s (lseek file (+ position-offset position-c) SEEK_SET))
+      (begin (define end-position off-t (lseek file 0 SEEK_END))
+        (if (< end-position 0)
+          (scm-c-local-error "lseek" (scm-from-locale-string (strerror errno))))
+        (set position-c (+ end-position position-c))
+        (if (>= position-c position-offset) (set s (lseek file position-c SEEK_SET))
+          (scm-c-local-error "invalid position" 0)))))
+  (if (< s 0) (scm-c-local-error "lseek" (scm-from-locale-string (strerror errno)))
+    (begin (set (struct-ref (deref port-data) position) position-c) (return SCM-BOOL-T)))
+  (label error scm-c-local-error-return))

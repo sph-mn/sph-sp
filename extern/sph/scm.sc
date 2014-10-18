@@ -11,7 +11,7 @@
   ;SCM SCM c-compound-expression ->
   (while (not (scm-is-null list)) (set e (scm-first list)) body (set list (scm-tail list))))
 
-(define-macro (false-if-undefined a) (if* (= SCM-UNDEFINED a) SCM-BOOL-F a))
+(define-macro (scm-false-if-undefined a) (if* (= SCM-UNDEFINED a) SCM-BOOL-F a))
 (define-macro (null-if-undefined a) (if* (= SCM-UNDEFINED a) 0 a))
 (define-macro (scm-if-undefined-expr a b c) (if* (= SCM-UNDEFINED a) b c))
 (define-macro (scm-if-undefined a b c) (if (= SCM-UNDEFINED a) b c))
@@ -26,6 +26,9 @@
   ;creates a new bytevector of size-octects from a given bytevector
   (define r SCM (scm-c-make-bytevector size-octets))
   (memcpy (SCM-BYTEVECTOR-CONTENTS r) a size-octets) (return r))
+
+(define-macro (scm-c-make-error name data)
+  (scm-call-3 scm-make-error (scm-from-locale-symbol __func__) (if* data data SCM-BOOL-F)))
 
 ;scm-c-local-error is the scheme version of sph.c:local-error. it can create an error object defined in the scheme module (sph)
 
