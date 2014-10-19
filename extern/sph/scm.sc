@@ -73,4 +73,8 @@
 (define-macro (scm-c-local-error-glibc error-number)
   (scm-c-local-error "glibc" (scm-from-locale-string (strerror error-number))))
 
+(define-macro scm-c-local-error-system
+  (scm-c-local-error "system" (scm-from-locale-string (strerror errno))))
+
 (define-macro (scm-c-require-success-glibc a) (set s a) (if (< s 0) (scm-c-local-error-glibc s)))
+(define-macro (scm-c-require-success-system a) (if (< a 0) scm-c-local-error-system))

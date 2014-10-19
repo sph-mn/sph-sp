@@ -13,9 +13,16 @@
   (define t SCM)
   (scm-c-define-procedure-c t "sp-io-port-close"
     1 0 0 scm-sp-io-port-close "sp-port -> boolean/error")
+  (scm-c-define-procedure-c t "sp-io-port-input?"
+    1 0 0 scm-sp-io-port-input? "sp-port -> boolean/error")
+  (scm-c-define-procedure-c t "sp-io-port-position?"
+    1 0 0 scm-sp-io-port-position? "sp-port -> boolean/error")
   (scm-c-define-procedure-c t "sp-io-port-position"
-    1 0 0 scm-sp-io-port-position "sp-port -> integer:sample-offset/error")
-  (scm-c-define-procedure-c t "sp-io-port-input?" 1 0 0 scm-sp-io-port-input? "sp-port -> boolean")
+    1 0 0 scm-sp-io-port-position "sp-port -> integer/boolean/error")
+  (scm-c-define-procedure-c t "sp-io-port-channel-count"
+    1 0 0 scm-sp-io-port-channel-count "sp-port -> integer/error")
+  (scm-c-define-procedure-c t "sp-io-port-samples-per-second"
+    1 0 0 scm-sp-io-port-samples-per-second "sp-port -> integer/boolean/error")
   (scm-c-define-procedure-c t "sp-io-port?" 1 0 0 scm-sp-io-port? "sp-port -> boolean")
   (scm-c-define-procedure-c t "sp-io-file-open-input"
     1 2 0 scm-sp-io-file-open-input
