@@ -5,7 +5,7 @@
 
 (define (test-file)
   (delete-file "/tmp/sp-test")
-  (let (file (sp-io-file-open-output "/tmp/sp-test" 3))
+  (let (file (sp-io-file-open-output "/tmp/sp-test.au" 3))
     (test-fail-if-error "open" file
       (l (file)
         (assert-and
