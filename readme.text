@@ -10,5 +10,3 @@ dependencies
 installation + setup
   ./exec/compile
   ./exec/install
-  or
-  ./exec/install /path/prefix

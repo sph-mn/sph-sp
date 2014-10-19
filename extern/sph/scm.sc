@@ -11,10 +11,11 @@
   ;SCM SCM c-compound-expression ->
   (while (not (scm-is-null list)) (set e (scm-first list)) body (set list (scm-tail list))))
 
-(define-macro (scm-false-if-undefined a) (if* (= SCM-UNDEFINED a) SCM-BOOL-F a))
-(define-macro (null-if-undefined a) (if* (= SCM-UNDEFINED a) 0 a))
-(define-macro (scm-if-undefined-expr a b c) (if* (= SCM-UNDEFINED a) b c))
-(define-macro (scm-if-undefined a b c) (if (= SCM-UNDEFINED a) b c))
+(define-macro (scm-is-undefined a) (= SCM-UNDEFINED a))
+(define-macro (scm-false-if-undefined a) (if* (scm-is-undefined a) SCM-BOOL-F a))
+(define-macro (null-if-undefined a) (if* (scm-is-undefined a) 0 a))
+(define-macro (scm-if-undefined-expr a b c) (if* (scm-is-undefined a) b c))
+(define-macro (scm-if-undefined a b c) (if (scm-is-undefined a) b c))
 
 (define-macro (scm-is-list-false-or-undefined a)
   (or (scm-is-true (scm-list? a)) (= SCM-BOOL-F a) (= SCM-UNDEFINED a)))

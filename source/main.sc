@@ -27,9 +27,9 @@
     "string [integer integer] -> sp-port/error
     path [channel-count samples-per-second] -> sp-port/error")
   (scm-c-define-procedure-c t "sp-io-file-write"
-    3 0
+    2 1
     0 scm-sp-io-file-write
-    "sp-port integer:sample-count (f32vector ...):channel-data -> boolean/error")
+    "sp-port (f32vector ...):channel-data [integer:sample-count] -> boolean/error")
   (scm-c-define-procedure-c t "sp-io-file-set-position"
     2 0
     0 scm-sp-io-file-set-position
@@ -48,10 +48,9 @@
     "[string integer integer integer] -> sp-port/error
     [device-name channel-count samples-per-second latency] -> sp-port/error")
   (scm-c-define-procedure-c t "sp-io-alsa-write"
-    3 0
+    2 1
     0 scm-sp-io-alsa-write
-    "sp-port integer (f32vector ...) -> boolean/error
-    port sample-count channel-data -> boolean/error")
+    "sp-port (f32vector ...):channel-data [integer:sample-count] -> boolean/error")
   (scm-c-define-procedure-c t "sp-io-alsa-read"
     2 0
     0 scm-sp-io-alsa-read
