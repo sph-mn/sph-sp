@@ -12,8 +12,7 @@
       (set current-channel channel-count)
       (while current-channel (decrement-one current-channel)
         (decrement-one interleaved-size)
-        (set (deref interleaved interleaved-size) get-source-element)
-        (debug-log "%f" get-source-element)))))
+        (set (deref interleaved interleaved-size) get-source-element)))))
 
 (define-macro (define-sp-deinterleave name get-source-element)
   (define (name non-interleaved interleaved channel-count non-interleaved-size)
@@ -292,7 +291,6 @@
   (scm-c-local-define-malloc+size data-interleaved f32-s (* sample-count-c channel-count 4))
   (local-memory-add data-interleaved)
   (sp-interleave-n+swap-endian data-interleaved channel-data-c channel-count sample-count-c)
-  (debug-log "%f %f" (deref (deref channel-data-c 0)) (deref (deref channel-data-c 0) 20))
   (scm-c-require-success-system
     (write (convert-type (struct-ref (deref port-data) data) int) data-interleaved
       (* channel-count sample-count-c 4)))
