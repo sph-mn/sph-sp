@@ -26,4 +26,16 @@
             (assert-true (equal? data data-read)))
           (require-success "close" (and (sp-io-port-close file-in) (sp-io-port-close file-out))))))))
 
-(execute-tests (ql file))
+;(execute-tests (ql file))
+
+(define (osc segment time)
+  (let loop ((index (f32vector-length segment)))
+    (f32vector-set! segment index (sin (* index time))))
+  (debug-log sement))
+
+(let ((out (sp-io-file-open-output test-env-path 1 8000)) (segment-size 8000))
+  (let loop ((time 0))
+    (if (< time 5)
+      (begin (osc (make-f32vector segment-size) time)
+        ;(sp-io-file-write out (list (osc (make-f32vector segment-size) time)) segment-size)
+        (loop (+ time 1))))))
