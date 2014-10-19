@@ -27,15 +27,23 @@
           (require-success "close" (and (sp-io-port-close file-in) (sp-io-port-close file-out))))))))
 
 ;(execute-tests (ql file))
+;(if (file-exists? test-env-path) (delete-file test-env-path))
 
 (define (osc segment time)
-  (let loop ((index (f32vector-length segment)))
-    (f32vector-set! segment index (sin (* index time))))
-  (debug-log sement))
+  (let (sample-count (f32vector-length segment))
+    (let loop ((index 0))
+      (if (< index sample-count)
+        (begin (f32vector-set! segment index (sin (+ index (* time sample-count))))
+          (loop (+ 1 index)))
+        segment))))
 
-(let ((out (sp-io-file-open-output test-env-path 1 8000)) (segment-size 8000))
+(define (exit-on-error a) (if (error? a) (begin (debug-log a) (exit -1)) a))
+
+(let ((out (exit-on-error (sp-io-file-open-output test-env-path 1 8000))) (segment-size 8000))
   (let loop ((time 0))
     (if (< time 5)
-      (begin (osc (make-f32vector segment-size) time)
-        ;(sp-io-file-write out (list (osc (make-f32vector segment-size) time)) segment-size)
-        (loop (+ time 1))))))
+      (begin
+        (exit-on-error
+          (sp-io-file-write out (list (osc (make-f32vector segment-size) time)) segment-size))
+        (loop (+ time 1)))))
+  (exit-on-error (sp-io-port-close out)))

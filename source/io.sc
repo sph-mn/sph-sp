@@ -12,7 +12,8 @@
       (set current-channel channel-count)
       (while current-channel (decrement-one current-channel)
         (decrement-one interleaved-size)
-        (set (deref interleaved interleaved-size) get-source-element)))))
+        (set (deref interleaved interleaved-size) get-source-element)
+        (debug-log "%f" get-source-element)))))
 
 (define-macro (define-sp-deinterleave name get-source-element)
   (define (name non-interleaved interleaved channel-count non-interleaved-size)
@@ -25,8 +26,13 @@
         (set (deref (deref non-interleaved current-channel) non-interleaved-size)
           get-source-element)))))
 
+(define (word-octets-reverse-f32 a) (f32-s f32-s)
+  (define r f32-s) (define b b8* (convert-type (address-of a) b8*))
+  (define c b8* (convert-type (address-of r) b8*)) (set (deref c) (deref b 3))
+  (set (deref c 1) (deref b 2)) (set (deref c 2) (deref b 1)) (set (deref c 3) (deref b)) (return r))
+
 (define-sp-deinterleave sp-deinterleave-n+swap-endian
-  (__builtin-bswap32 (deref interleaved interleaved-size)))
+  (word-octets-reverse-f32 (deref interleaved interleaved-size)))
 
 (define-sp-deinterleave sp-deinterleave-n (deref interleaved interleaved-size))
 
@@ -34,7 +40,7 @@
   (deref (deref non-interleaved current-channel) non-interleaved-size))
 
 (define-sp-interleave sp-interleave-n+swap-endian
-  (__builtin-bswap32 (deref (deref non-interleaved current-channel) non-interleaved-size)))
+  (word-octets-reverse-f32 (deref (deref non-interleaved current-channel) non-interleaved-size)))
 
 (define-type port-data-t
   (struct (samples-per-second b32) (channel-count b32)
@@ -141,24 +147,23 @@
   ;when successful, the reader is positioned to the start of the audio data
   (define s ssize-t header[6] b32) (set s (read file header 24))
   (if (not (and (= s 24) (= (deref header) (__builtin-bswap32 779316836)))) (return -1))
-  (set s (lseek file (__builtin-bswap32 (deref header 1)) SEEK_SET)) (if (< s 0) (return -1))
+  (if (< (lseek file (__builtin-bswap32 (deref header 1)) SEEK_SET) 0) (return -1))
   (set (deref encoding) (__builtin-bswap32 (deref header 3))
     (deref samples-per-second) (__builtin-bswap32 (deref header 4))
     (deref channel-count) (__builtin-bswap32 (deref header 5)))
   (return 0))
 
-(define (sp-io-file-open path open-flags channel-count samples-per-second) (SCM SCM b32 SCM SCM)
+(define (sp-io-file-open path input? channel-count samples-per-second) (SCM SCM b8 SCM SCM)
   scm-c-local-error-init (local-memory-init 1)
-  init-status (define file b32-s r SCM)
-  (define samples-per-second-c b32 channel-count-c b32)
+  (define file b32-s r SCM) (define samples-per-second-c b32 channel-count-c b32)
   (define path-c char* (scm->locale-string path)) (local-memory-add path-c)
   (if (file-exists? path-c)
-    (begin (set file (open path-c open-flags)) (scm-c-require-success-system file)
+    (begin (set file (open path-c O_RDWR)) (scm-c-require-success-system file)
       (define encoding b32)
-      (set s
+      (if
         (file-au-read-header file (address-of encoding)
-          (address-of samples-per-second-c) (address-of channel-count-c)))
-      (if s (scm-c-local-error "read-header" 0))
+          (address-of samples-per-second-c) (address-of channel-count-c))
+        (scm-c-local-error "read-header" 0))
       (if (not (= encoding 6)) (scm-c-local-error "wrong-encoding" (scm-from-uint32 encoding)))
       (if
         (not (or (scm-is-undefined channel-count) (= channel-count-c (scm->uint32 channel-count))))
@@ -173,22 +178,21 @@
           (scm-from-locale-string
             "file exists but samples per second are different from what was requested")))
       (set r
-        (sp-port-create sp-port-type-file (bit-and open-flags O_RDONLY)
+        (sp-port-create sp-port-type-file input?
           samples-per-second-c channel-count-c 1 (lseek file 0 SEEK-CUR) file)))
-    (begin (set file (open path-c (bit-or open-flags O_CREAT) 384))
-      (scm-c-require-success-system file)
+    (begin (set file (open path-c (bit-or O_RDWR O_CREAT) 384)) (scm-c-require-success-system file)
       (set samples-per-second-c (optional-samples-per-second samples-per-second))
       (set channel-count-c (optional-channel-count channel-count))
-      (set s (file-au-write-header file 6 samples-per-second-c channel-count-c))
-      (if (< s 0) (scm-c-local-error "write-header" 0))
+      (if (< (file-au-write-header file 6 samples-per-second-c channel-count-c) 0)
+        (scm-c-local-error "write-header" 0))
       (set r
-        (sp-port-create sp-port-type-file (bit-and open-flags O_RDONLY)
+        (sp-port-create sp-port-type-file input?
           samples-per-second-c channel-count-c 1 (lseek file 0 SEEK-CUR) file))))
   local-memory-free (return r) (label error local-memory-free scm-c-local-error-return))
 
 (define (scm-sp-io-file-open-input path) (SCM SCM)
   scm-c-local-error-init (scm-c-local-error-assert "type-check" (scm-is-string path))
-  (return (sp-io-file-open path O_RDONLY SCM-UNDEFINED SCM-UNDEFINED))
+  (return (sp-io-file-open path #t SCM-UNDEFINED SCM-UNDEFINED))
   (label error scm-c-local-error-return))
 
 (define (scm-sp-io-file-open-output path channel-count samples-per-second) (SCM SCM SCM SCM)
@@ -196,7 +200,7 @@
   (scm-c-local-error-assert "type-check"
     (and (scm-is-string path) (or (= SCM-UNDEFINED channel-count) (scm-is-integer channel-count))
       (or (= SCM-UNDEFINED samples-per-second) (scm-is-integer samples-per-second))))
-  (return (sp-io-file-open path O_WRONLY channel-count samples-per-second))
+  (return (sp-io-file-open path #f channel-count samples-per-second))
   (label error scm-c-local-error-return))
 
 (define (scm-sp-io-alsa-write port channel-data sample-count) (SCM SCM SCM SCM)
@@ -267,6 +271,7 @@
   scm-c-local-error-init (define port-data port-data-t* (sp-port->port-data port))
   (scm-c-local-error-assert "argument-types"
     (and (scm-c-sp-port? port) (scm-is-true (scm-list? channel-data))
+      (not (scm-is-null channel-data)) (scm-is-true (scm-f32vector? (scm-first channel-data)))
       (or (scm-is-undefined sample-count) (scm-is-integer sample-count))))
   (scm-c-local-error-assert "not-an-output-port" (not (struct-ref (deref port-data) input?)))
   (define channel-count b32 (struct-ref (deref port-data) channel-count))
@@ -274,6 +279,7 @@
     (= (scm->uint32 (scm-length channel-data)) channel-count))
   (define sample-count-c b64
     (scm->uint64
+      ; ! todo: remove optional
       (if* (= SCM-UNDEFINED sample-count) (scm-f32vector-length (scm-first channel-data))
         sample-count)))
   (scm-c-local-define-malloc+size channel-data-c f32-s* (* channel-count (sizeof pointer)))
@@ -286,6 +292,7 @@
   (scm-c-local-define-malloc+size data-interleaved f32-s (* sample-count-c channel-count 4))
   (local-memory-add data-interleaved)
   (sp-interleave-n+swap-endian data-interleaved channel-data-c channel-count sample-count-c)
+  (debug-log "%f %f" (deref (deref channel-data-c 0)) (deref (deref channel-data-c 0) 20))
   (scm-c-require-success-system
     (write (convert-type (struct-ref (deref port-data) data) int) data-interleaved
       (* channel-count sample-count-c 4)))
