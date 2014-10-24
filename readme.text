@@ -10,3 +10,5 @@ dependencies
 installation + setup
   ./exec/compile
   ./exec/install
+use
+  (import (sph sp))

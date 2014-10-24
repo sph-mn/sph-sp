@@ -101,10 +101,12 @@
     (scm-c-local-error "input" 0))
   (return SCM-BOOL-T) (label error scm-c-local-error-return))
 
+(define-macro default-enable-soft-resample)
+
 (define (sp-io-alsa-open input? device-name channel-count samples-per-second latency)
   (SCM b8 SCM SCM SCM SCM) scm-c-local-error-init
   (local-memory-init 1) init-status
-  (define alsa-port snd-pcm-t*) (define device-name-c char*)
+  (define alsa-port snd-pcm-t* 0) (define device-name-c char*)
   (scm-if-undefined device-name (set device-name-c "default")
     (begin (set device-name-c (scm->locale-string device-name)) (local-memory-add device-name-c)))
   (scm-c-require-success-alsa
@@ -114,9 +116,11 @@
   (define channel-count-c b32 (scm-if-undefined-expr channel-count 1 (scm->uint32 channel-count)))
   (define samples-per-second-c b32
     (scm-if-undefined-expr samples-per-second 48000 (scm->uint32 samples-per-second)))
+  (debug-log "%d" samples-per-second-c)
   (scm-c-require-success-alsa
     (snd-pcm-set-params alsa-port SND_PCM_FORMAT_U32
-      SND_PCM_ACCESS_RW_NONINTERLEAVED channel-count-c samples-per-second-c 0 latency-c))
+      SND_PCM_ACCESS_RW_NONINTERLEAVED channel-count-c
+      samples-per-second-c default-enable-soft-resample latency-c))
   local-memory-free
   (return
     (sp-port-create sp-port-type-alsa input?
