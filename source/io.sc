@@ -42,6 +42,9 @@
   (word-octets-reverse-f32 (deref (deref non-interleaved current-channel) non-interleaved-size)))
 
 (define-type port-data-t
+  ;type is any of the sp-port-type-* values
+  ;position? is true when the port supports random access
+  ;position-offset stores the number of octets between the start of the file and the beginning of sample data - the header length
   (struct (samples-per-second b32) (channel-count b32)
     (input? b8) (type b8)
     (closed? b8) (position? b8) (position b64) (position-offset b16) (data pointer)))
@@ -57,13 +60,15 @@
 (define-macro (sp-port->port-data a) (convert-type (SCM-SMOB-DATA a) port-data-t*))
 
 (define (sp-port-print a output-port print-state) (int SCM SCM scm-print-state*)
-  (define port-data port-data-t* (convert-type (SCM-SMOB-DATA a) port-data-t*)) (define r[255] char)
+  (define port-data port-data-t* (convert-type (SCM-SMOB-DATA a) port-data-t*))
+  ;calculated maximum length with 64 bit pointers and 999 types
+  (define r char* (malloc 43))
   (sprintf r "#<sp-port %lx type:%s samples-per-second:%d channel-count:%d closed?:%s input?:%s>"
     (convert-type a pointer) (sp-port-type->name (struct-ref (deref port-data) type))
     (struct-ref (deref port-data) samples-per-second) (struct-ref (deref port-data) channel-count)
     (if* (struct-ref (deref port-data) closed?) "#t" "#f")
     (if* (struct-ref (deref port-data) input?) "#t" "#f"))
-  (scm-display (scm-from-locale-string r) output-port) (return 0))
+  (scm-display (scm-take-locale-string r) output-port) (return 0))
 
 (define-macro sp-port-scm-type-init
   ;create and setup the type
@@ -84,24 +89,27 @@
   (if s (scm-c-local-error "alsa" (scm-from-locale-string (snd-strerror s)))))
 
 (define (scm-sp-io-port-close a) (SCM SCM)
-  scm-c-local-error-init (define port-data port-data-t*)
-  init-status
+  scm-c-local-error-init init-status
+  (define port-data port-data-t*)
   (if (scm-c-sp-port? a)
-    (begin (set port-data (convert-type (SCM-SMOB-DATA a) port-data-t*))
-      (if (struct-ref (deref port-data) closed?) (scm-c-local-error "already-closed" 0)
-        (begin
+    (begin (set port-data (sp-port->port-data a))
+      (if (struct-ref (deref port-data) closed?) (scm-c-local-error "is-closed" 0)
+        (let-macro (type (struct-ref (deref port-data) type))
           (cond
-            ( (= sp-port-type-alsa (struct-ref (deref port-data) type))
+            ( (= sp-port-type-alsa type)
               (scm-c-require-success-alsa
                 (snd-pcm-close (convert-type (struct-ref (deref port-data) data) snd-pcm-t*))))
-            ( (= sp-port-type-file (struct-ref (deref port-data) type))
+            ( (= sp-port-type-file type)
               (scm-c-require-success-system
-                (close (convert-type (struct-ref (deref port-data) data) b32)))))
-          (struct-set (deref port-data) closed? 1))))
-    (scm-c-local-error "input" 0))
+                (close (convert-type (struct-ref (deref port-data) data) int)))))
+          (struct-set (deref port-data) closed? #t))))
+    (scm-c-local-error "type-check" 0))
   (return SCM-BOOL-T) (label error scm-c-local-error-return))
 
-(define-macro default-enable-soft-resample)
+(define-macro default-alsa-enable-soft-resample 1)
+(define-macro default-alsa-latency 50)
+(define-macro default-samples-per-second 16000)
+(define-macro default-channel-count 1)
 
 (define (sp-io-alsa-open input? device-name channel-count samples-per-second latency)
   (SCM b8 SCM SCM SCM SCM) scm-c-local-error-init
@@ -112,15 +120,15 @@
   (scm-c-require-success-alsa
     (snd-pcm-open (address-of alsa-port) device-name-c
       (if* input? SND_PCM_STREAM_CAPTURE SND_PCM_STREAM_PLAYBACK) 0))
-  (define latency-c b32 (scm-if-undefined-expr latency 50 (scm->uint32 latency)))
+  (define latency-c b32 (scm-if-undefined-expr latency default-alsa-latency (scm->uint32 latency)))
   (define channel-count-c b32 (scm-if-undefined-expr channel-count 1 (scm->uint32 channel-count)))
   (define samples-per-second-c b32
-    (scm-if-undefined-expr samples-per-second 48000 (scm->uint32 samples-per-second)))
-  (debug-log "%d" samples-per-second-c)
+    (scm-if-undefined-expr samples-per-second default-samples-per-second
+      (scm->uint32 samples-per-second)))
   (scm-c-require-success-alsa
     (snd-pcm-set-params alsa-port SND_PCM_FORMAT_U32
       SND_PCM_ACCESS_RW_NONINTERLEAVED channel-count-c
-      samples-per-second-c default-enable-soft-resample latency-c))
+      samples-per-second-c default-alsa-enable-soft-resample latency-c))
   local-memory-free
   (return
     (sp-port-create sp-port-type-alsa input?
@@ -136,7 +144,7 @@
   (return (sp-io-alsa-open 0 device-name channel-count samples-per-second latency)))
 
 (define (file-au-write-header file encoding samples-per-second channel-count)
-  (b8-s b32-s b32 b32 b32)
+  (b8-s int b32 b32 b32)
   ;assumes file to be positioned at the beginning
   (define s ssize-t header[7] b32) (set (deref header) (__builtin-bswap32 779316836))
   (set (deref header 1) (__builtin-bswap32 28)) (set (deref header 2) (__builtin-bswap32 4294967295))
@@ -146,8 +154,8 @@
   (set s (write file header 28)) (if (not (= s 28)) (return -1)) (return 0))
 
 (define (file-au-read-header file encoding samples-per-second channel-count)
-  (b8-s b32-s b32* b32* b32*)
-  ;when successful, the reader is positioned to the start of the audio data
+  (b8-s int b32* b32* b32*)
+  ;when successful, the reader is positioned at the start of the audio data
   (define s ssize-t header[6] b32) (set s (read file header 24))
   (if (not (and (= s 24) (= (deref header) (__builtin-bswap32 779316836)))) (return -1))
   (if (< (lseek file (__builtin-bswap32 (deref header 1)) SEEK_SET) 0) (return -1))
@@ -157,40 +165,45 @@
   (return 0))
 
 (define (sp-io-file-open path input? channel-count samples-per-second) (SCM SCM b8 SCM SCM)
-  scm-c-local-error-init (local-memory-init 1)
-  (define file b32-s r SCM) (define samples-per-second-c b32 channel-count-c b32)
-  (define path-c char* (scm->locale-string path)) (local-memory-add path-c)
+  (define file int r SCM samples-per-second-file b32 channel-count-file b32)
+  (define path-c char* (scm->locale-string path)) scm-c-local-error-init
+  (local-memory-init 1) (local-memory-add path-c)
   (if (file-exists? path-c)
     (begin (set file (open path-c O_RDWR)) (scm-c-require-success-system file)
       (define encoding b32)
       (if
         (file-au-read-header file (address-of encoding)
-          (address-of samples-per-second-c) (address-of channel-count-c))
-        (scm-c-local-error "read-header" 0))
+          (address-of samples-per-second-file) (address-of channel-count-file))
+        (scm-c-local-error "header-read" 0))
       (if (not (= encoding 6)) (scm-c-local-error "wrong-encoding" (scm-from-uint32 encoding)))
       (if
-        (not (or (scm-is-undefined channel-count) (= channel-count-c (scm->uint32 channel-count))))
+        (not
+          (or (scm-is-undefined channel-count) (= channel-count-file (scm->uint32 channel-count))))
         (scm-c-local-error "incompatible"
           (scm-from-locale-string
             "file exists but channel count is different from what was requested")))
       (if
         (not
           (or (scm-is-undefined samples-per-second)
-            (= samples-per-second-c (scm->uint32 samples-per-second))))
+            (= samples-per-second-file (scm->uint32 samples-per-second))))
         (scm-c-local-error "incompatible"
           (scm-from-locale-string
             "file exists but samples per second are different from what was requested")))
       (set r
         (sp-port-create sp-port-type-file input?
-          samples-per-second-c channel-count-c 1 (lseek file 0 SEEK-CUR) file)))
+          samples-per-second-file channel-count-file #t (lseek file 0 SEEK-CUR) file)))
     (begin (set file (open path-c (bit-or O_RDWR O_CREAT) 384)) (scm-c-require-success-system file)
-      (set samples-per-second-c (optional-samples-per-second samples-per-second))
-      (set channel-count-c (optional-channel-count channel-count))
-      (if (< (file-au-write-header file 6 samples-per-second-c channel-count-c) 0)
-        (scm-c-local-error "write-header" 0))
+      (set samples-per-second-file
+        (if* (scm-is-undefined samples-per-second) default-samples-per-second
+          (scm->uint32 samples-per-second)))
+      (set channel-count-file
+        (if* (scm-is-undefined samples-per-second) default-channel-count
+          (scm->uint32 channel-count)))
+      (if (< (file-au-write-header file 6 samples-per-second-file channel-count-file) 0)
+        (scm-c-local-error "header-write" 0))
       (set r
         (sp-port-create sp-port-type-file input?
-          samples-per-second-c channel-count-c 1 (lseek file 0 SEEK-CUR) file))))
+          samples-per-second-file channel-count-file #t (lseek file 0 SEEK-CUR) file))))
   local-memory-free (return r) (label error local-memory-free scm-c-local-error-return))
 
 (define (scm-sp-io-file-open-input path) (SCM SCM)
@@ -201,18 +214,19 @@
 (define (scm-sp-io-file-open-output path channel-count samples-per-second) (SCM SCM SCM SCM)
   scm-c-local-error-init
   (scm-c-local-error-assert "type-check"
-    (and (scm-is-string path) (or (= SCM-UNDEFINED channel-count) (scm-is-integer channel-count))
-      (or (= SCM-UNDEFINED samples-per-second) (scm-is-integer samples-per-second))))
+    (and (scm-is-string path) (or (scm-is-undefined channel-count) (scm-is-integer channel-count))
+      (or (scm-is-undefined samples-per-second) (scm-is-integer samples-per-second))))
   (return (sp-io-file-open path #f channel-count samples-per-second))
   (label error scm-c-local-error-return))
 
 (define (scm-sp-io-alsa-write port channel-data sample-count) (SCM SCM SCM SCM)
-  scm-c-local-error-init (local-memory-init 1)
+  scm-c-local-error-init
+  (scm-c-local-error-assert "type-check"
+    (and (scm-c-sp-port? port) (scm-is-true (scm-list? channel-data))
+      (not (scm-is-null channel-data)) (scm-is-integer sample-count)))
   (define port-data port-data-t* (sp-port->port-data port))
   (define channel-count b32 (struct-ref (deref port-data) channel-count))
-  (define sample-count-c b32
-    (scm->uint32
-      (if* (= SCM-UNDEFINED sample-count) (scm-f32vector-length channel-data) sample-count)))
+  (define sample-count-c b32 (scm->uint32 sample-count)) (local-memory-init 1)
   (scm-c-local-define-malloc+size channel-data-c f32-s* (* channel-count (sizeof pointer)))
   (local-memory-add channel-data-c) (define index b32 0)
   (define e SCM)
@@ -220,71 +234,59 @@
     (compound-statement
       (set (deref channel-data-c index) (convert-type (SCM-BYTEVECTOR-CONTENTS e) f32-s*))
       (increment-one index)))
-  (define frames-written snd_pcm_sframes_t) (define retry-count b8 20)
-  (label loop
-    (if retry-count
-      (begin
-        (set frames-written
-          (snd-pcm-writen (convert-type (struct-ref (deref port-data) data) snd-pcm-t*)
-            (convert-type channel-data-c b0**) (convert-type sample-count-c snd_pcm_uframes_t)))
-        (if (= frames-written -EAGAIN) (begin (decrement-one retry-count) (goto loop))
-          (if (< frames-written 0)
-            (if
-              (<
-                (snd-pcm-recover (convert-type (struct-ref (deref port-data) data) snd-pcm-t*)
-                  frames-written 0)
-                0)
-              (scm-c-local-error "alsa" (scm-from-locale-string (snd-strerror frames-written)))))))
-      (scm-c-local-error "max-retries-made" 0)))
+  (define frames-written snd_pcm_sframes_t)
+  (set frames-written
+    (snd-pcm-writen (convert-type (struct-ref (deref port-data) data) snd-pcm-t*)
+      (convert-type channel-data-c b0**) (convert-type sample-count-c snd_pcm_uframes_t)))
+  (if
+    (and (< frames-written 0)
+      (<
+        (snd-pcm-recover (convert-type (struct-ref (deref port-data) data) snd-pcm-t*)
+          frames-written 0)
+        0))
+    (scm-c-local-error "alsa" (scm-from-locale-string (snd-strerror frames-written))))
   (return SCM-BOOL-T) (label error local-memory-free scm-c-local-error-return))
 
 (define (scm-sp-io-alsa-read port sample-count) (SCM SCM SCM)
-  scm-c-local-error-init (local-memory-init 1)
-  (define port-data port-data-t* (sp-port->port-data port))
+  scm-c-local-error-init
+  (scm-c-local-error-assert "type-check" (and (scm-c-sp-port? port) (scm-is-integer sample-count)))
+  (local-memory-init 1) (define port-data port-data-t* (sp-port->port-data port))
   (define channel-count-c b32 (struct-ref (deref port-data) channel-count))
-  (define sample-count-c b32 (scm->uint32 sample-count))
+  (define sample-count-c b64 (scm->uint32 sample-count))
   (scm-c-local-define-malloc+size channel-data f32-s* (* channel-count-c (sizeof pointer)))
   (local-memory-add channel-data) (define index b32 channel-count-c)
   (define data f32-s*)
   (while index (decrement-one index)
     (set data (malloc (* sample-count-c (sizeof f32-s))))
     (if (not data) (scm-c-local-error "memory" 0)) (set (deref channel-data index) data))
-  (define frames-read snd_pcm_sframes_t) (define retry-count b8 20)
-  (label loop
-    (if retry-count
-      (begin
-        (set frames-read
-          (snd-pcm-readn (convert-type (struct-ref (deref port-data) data) snd-pcm-t*)
-            (convert-type channel-data b0**) sample-count-c))
-        (if (= frames-read -EAGAIN) (begin (decrement-one retry-count) (goto loop))
-          (if (< frames-read 0)
-            (if
-              (<
-                (snd-pcm-recover (convert-type (struct-ref (deref port-data) data) snd-pcm-t*)
-                  frames-read 0)
-                0)
-              (scm-c-local-error "alsa" (scm-from-locale-string (snd-strerror frames-read)))))))
-      (scm-c-local-error "max-retries-made" 0)))
+  (define frames-read snd_pcm_sframes_t)
+  (set frames-read
+    (snd-pcm-readn (convert-type (struct-ref (deref port-data) data) snd-pcm-t*)
+      (convert-type channel-data b0**) sample-count-c))
+  (if
+    (and (< frames-read 0)
+      (<
+        (snd-pcm-recover (convert-type (struct-ref (deref port-data) data) snd-pcm-t*) frames-read
+          0)
+        0))
+    (scm-c-local-error "alsa" (scm-from-locale-string (snd-strerror frames-read))))
   (set index channel-count-c) (define r SCM SCM-EOL)
   (while index (decrement-one index)
     (set r (scm-cons (scm-take-f32vector (deref channel-data index) sample-count-c) r)))
   local-memory-free (return r) (label error local-memory-free scm-c-local-error-return))
 
 (define (scm-sp-io-file-write port channel-data sample-count) (SCM SCM SCM SCM)
-  scm-c-local-error-init (define port-data port-data-t* (sp-port->port-data port))
-  (scm-c-local-error-assert "argument-types"
+  scm-c-local-error-init
+  (scm-c-local-error-assert "type-check"
     (and (scm-c-sp-port? port) (scm-is-true (scm-list? channel-data))
       (not (scm-is-null channel-data)) (scm-is-true (scm-f32vector? (scm-first channel-data)))
-      (or (scm-is-undefined sample-count) (scm-is-integer sample-count))))
+      (scm-is-integer sample-count)))
+  (define port-data port-data-t* (sp-port->port-data port))
   (scm-c-local-error-assert "not-an-output-port" (not (struct-ref (deref port-data) input?)))
   (define channel-count b32 (struct-ref (deref port-data) channel-count))
-  (scm-c-local-error-assert "channel-data-length"
+  (scm-c-local-error-assert "channel-data-length-mismatch"
     (= (scm->uint32 (scm-length channel-data)) channel-count))
-  (define sample-count-c b64
-    (scm->uint64
-      ; ! todo: remove optional
-      (if* (= SCM-UNDEFINED sample-count) (scm-f32vector-length (scm-first channel-data))
-        sample-count)))
+  (define sample-count-c b64 (scm->uint64 sample-count))
   (scm-c-local-define-malloc+size channel-data-c f32-s* (* channel-count (sizeof pointer)))
   (local-memory-init 2) (local-memory-add channel-data-c)
   (define index b32 0) (define e SCM)
@@ -301,10 +303,11 @@
   local-memory-free (return SCM-BOOL-T) (label error local-memory-free scm-c-local-error-return))
 
 (define (scm-sp-io-file-read port sample-count) (SCM SCM SCM)
+  scm-c-local-error-init
+  (scm-c-local-error-assert "type-check" (and (scm-c-sp-port? port) (scm-is-integer sample-count)))
   (define port-data port-data-t* (sp-port->port-data port))
   (define channel-count b32 (struct-ref (deref port-data) channel-count))
-  (define sample-count-c b64 (scm->uint64 sample-count)) scm-c-local-error-init
-  (local-memory-init 2)
+  (define sample-count-c b64 (scm->uint64 sample-count)) (local-memory-init 2)
   (scm-c-local-define-malloc+size data-interleaved f32-s (* sample-count-c channel-count 4))
   (local-memory-add data-interleaved)
   (scm-c-require-success-system
@@ -325,9 +328,11 @@
   local-memory-free (return r) (label error local-memory-free scm-c-local-error-return))
 
 (define (scm-sp-io-port-input? port) (SCM SCM)
+  ;type-check has been left out explicitly
   (return (scm-from-bool (struct-ref (deref (sp-port->port-data port)) input?))))
 
 (define (scm-sp-io-port-position port) (SCM SCM)
+  ;returns the current port position in octets
   (return
     (if* (struct-ref (deref (sp-port->port-data port)) position?)
       (scm-from-uint64 (* (struct-ref (deref (sp-port->port-data port)) position) 0.25)) SCM-BOOL-F)))
@@ -341,21 +346,23 @@
 (define (scm-sp-io-port-samples-per-second port) (SCM SCM)
   (return (scm-from-uint32 (struct-ref (deref (sp-port->port-data port)) samples-per-second))))
 
-(define (scm-sp-io-port? port) (SCM SCM) (return (if* (scm-c-sp-port? port) SCM-BOOL-T SCM-BOOL-F)))
+(define (scm-sp-io-port? port) (SCM SCM) (return (scm-from-bool (scm-c-sp-port? port))))
 
 (define (scm-sp-io-file-set-position port sample-position) (SCM SCM SCM)
-  scm-c-local-error-init (define port-data port-data-t* (sp-port->port-data port))
-  (define position-c b64-s (* (scm->int64 sample-position) 4)) (define s off-t)
+  scm-c-local-error-init
+  (scm-c-local-error-assert "type-check"
+    (and (scm-c-sp-port? port) (scm-is-integer sample-position)))
+  (define port-data port-data-t* (sp-port->port-data port))
+  (define position-c b64-s (* (scm->int64 sample-position) 4))
   (let-macro
     (file (convert-type (struct-ref (deref port-data) data) int)
       position-offset (struct-ref (deref port-data) position-offset))
-    (if (>= position-c 0) (set s (lseek file (+ position-offset position-c) SEEK_SET))
+    (if (>= position-c 0)
+      (scm-c-require-success-system (lseek file (+ position-offset position-c) SEEK_SET))
       (begin (define end-position off-t (lseek file 0 SEEK_END))
-        (if (< end-position 0)
-          (scm-c-local-error "lseek" (scm-from-locale-string (strerror errno))))
-        (set position-c (+ end-position position-c))
-        (if (>= position-c position-offset) (set s (lseek file position-c SEEK_SET))
+        (scm-c-require-success-system end-position) (set position-c (+ end-position position-c))
+        (if (>= position-c position-offset)
+          (scm-c-require-success-system (lseek file position-c SEEK_SET))
           (scm-c-local-error "invalid position" 0)))))
-  (if (< s 0) (scm-c-local-error "lseek" (scm-from-locale-string (strerror errno)))
-    (begin (set (struct-ref (deref port-data) position) position-c) (return SCM-BOOL-T)))
+  (set (struct-ref (deref port-data) position) position-c) (return SCM-BOOL-T)
   (label error scm-c-local-error-return))

@@ -21,12 +21,13 @@
               (sp-io-port-position file-out) (sp-io-file-set-position file-out 2)
               (sp-io-port-position file-out)))
           (require-success "file-write"
-            (begin (sp-io-file-set-position file-out 0) (sp-io-file-write file-out data)))
+            (begin (sp-io-file-set-position file-out 0)
+              (sp-io-file-write file-out data test-env-segment-size)))
           (let (data-read (sp-io-file-read file-in test-env-segment-size))
             (assert-true (equal? data data-read)))
           (require-success "close" (and (sp-io-port-close file-in) (sp-io-port-close file-out))))))))
 
-;(execute-tests (ql file))
+(execute-tests (ql file))
 (if (file-exists? test-env-path) (delete-file test-env-path))
 (define samples-per-second 8000)
 (define pi 3.1415926535)
