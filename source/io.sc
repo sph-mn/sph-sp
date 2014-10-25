@@ -63,7 +63,7 @@
 (define (sp-port-print a output-port print-state) (int SCM SCM scm-print-state*)
   (define port-data port-data-t* (convert-type (SCM-SMOB-DATA a) port-data-t*))
   ;calculated maximum length with 64 bit pointers and 999 types
-  (define r char* (malloc 43))
+  (define r char* (malloc 114))
   (sprintf r "#<sp-port %lx type:%s samples-per-second:%d channel-count:%d closed?:%s input?:%s>"
     (convert-type a pointer) (sp-port-type->name (struct-ref (deref port-data) type))
     (struct-ref (deref port-data) samples-per-second) (struct-ref (deref port-data) channel-count)
@@ -250,7 +250,7 @@
 
 (define (scm-sp-io-alsa-read port sample-count) (SCM SCM SCM)
   scm-c-local-error-init
-  (scm-c-local-error-assert "type-check" (and (scm-c-sp-port? port) (scm-is-integer sample-count)))
+ (scm-c-local-error-assert "type-check" (and (scm-c-sp-port? port) (scm-is-integer sample-count)))
   (local-memory-init 1) (define port-data port-data-t* (sp-port->port-data port))
   (define channel-count-c b32 (struct-ref (deref port-data) channel-count))
   (define sample-count-c b64 (scm->uint32 sample-count))
