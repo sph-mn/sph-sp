@@ -10,20 +10,23 @@
 
 (define (init-sp) b0
   (init-scm) sp-port-scm-type-init
-  (define t SCM)
-  (scm-c-define-procedure-c t "sp-io-port-close"
-    1 0 0 scm-sp-io-port-close "sp-port -> boolean/error")
-  (scm-c-define-procedure-c t "sp-io-port-input?"
-    1 0 0 scm-sp-io-port-input? "sp-port -> boolean/error")
-  (scm-c-define-procedure-c t "sp-io-port-position?"
-    1 0 0 scm-sp-io-port-position? "sp-port -> boolean/error")
-  (scm-c-define-procedure-c t "sp-io-port-position"
-    1 0 0 scm-sp-io-port-position "sp-port -> integer/boolean/error")
-  (scm-c-define-procedure-c t "sp-io-port-channel-count"
-    1 0 0 scm-sp-io-port-channel-count "sp-port -> integer/error")
-  (scm-c-define-procedure-c t "sp-io-port-samples-per-second"
-    1 0 0 scm-sp-io-port-samples-per-second "sp-port -> integer/boolean/error")
-  (scm-c-define-procedure-c t "sp-io-port?" 1 0 0 scm-sp-io-port? "sp-port -> boolean")
+  (define t SCM) (define scm-module SCM (scm-c-resolve-module "sph sp"))
+  (set scm-sp-port-type-alsa (scm-from-uint8 sp-port-type-alsa))
+  (set scm-sp-port-type-file (scm-from-uint8 sp-port-type-file))
+  (scm-c-module-define scm-module "sp-port-type-alsa" scm-sp-port-type-alsa)
+  (scm-c-module-define scm-module "sp-port-type-file" scm-sp-port-type-file)
+  (scm-c-define-procedure-c t "sp-port-close" 1 0 0 scm-sp-port-close "sp-port -> boolean/error")
+  (scm-c-define-procedure-c t "sp-port-input?" 1 0 0 scm-sp-port-input? "sp-port -> boolean/error")
+  (scm-c-define-procedure-c t "sp-port-position?"
+    1 0 0 scm-sp-port-position? "sp-port -> boolean/error")
+  (scm-c-define-procedure-c t "sp-port-position"
+    1 0 0 scm-sp-port-position "sp-port -> integer/boolean/error")
+  (scm-c-define-procedure-c t "sp-port-channel-count"
+    1 0 0 scm-sp-port-channel-count "sp-port -> integer/error")
+  (scm-c-define-procedure-c t "sp-port-samples-per-second"
+    1 0 0 scm-sp-port-samples-per-second "sp-port -> integer/boolean/error")
+  (scm-c-define-procedure-c t "sp-port?" 1 0 0 scm-sp-port? "sp-port -> boolean")
+  (scm-c-define-procedure-c t "sp-port-type" 1 0 0 scm-sp-port-type "sp-port -> integer")
   (scm-c-define-procedure-c t "sp-io-file-open-input"
     1 2 0 scm-sp-io-file-open-input
     "string -> sp-port/error

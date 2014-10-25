@@ -1,5 +1,10 @@
 ;uses a custom type for ports because guiles port api is underdocumented / too complicated for now
 (includep "fcntl.h")
+(define-macro sp-port-type-alsa 0)
+(define-macro sp-port-type-file 1)
+(define sp-port-scm-type scm-t-bits)
+(define scm-sp-port-type-alsa SCM)
+(define scm-sp-port-type-file SCM)
 (define-macro (optional-samples-per-second a) (if* (= SCM-UNDEFINED a) 96000 (scm->uint32 a)))
 (define-macro (optional-channel-count a) (if* (= SCM-UNDEFINED a) 1 (scm->uint32 a)))
 (define-macro (scm-c-sp-port? a) (SCM-SMOB-PREDICATE sp-port-scm-type a))
@@ -49,10 +54,6 @@
     (input? b8) (type b8)
     (closed? b8) (position? b8) (position b64) (position-offset b16) (data pointer)))
 
-(define-macro sp-port-type-alsa 0)
-(define-macro sp-port-type-file 1)
-(define sp-port-scm-type scm-t-bits)
-
 (define-macro (sp-port-type->name a)
   ;integer -> string
   (cond* ((= sp-port-type-file a) "file") ((= sp-port-type-alsa a) "alsa") (else "unknown")))
@@ -88,7 +89,7 @@
 (define-macro (scm-c-require-success-alsa a) (set s a)
   (if s (scm-c-local-error "alsa" (scm-from-locale-string (snd-strerror s)))))
 
-(define (scm-sp-io-port-close a) (SCM SCM)
+(define (scm-sp-port-close a) (SCM SCM)
   scm-c-local-error-init init-status
   (define port-data port-data-t*)
   (if (scm-c-sp-port? a)
@@ -327,26 +328,32 @@
     (set r (scm-cons (scm-take-f32vector (deref data-non-interleaved index) sample-count-c) r)))
   local-memory-free (return r) (label error local-memory-free scm-c-local-error-return))
 
-(define (scm-sp-io-port-input? port) (SCM SCM)
+(define (scm-sp-port-input? port) (SCM SCM)
   ;type-check has been left out explicitly
   (return (scm-from-bool (struct-ref (deref (sp-port->port-data port)) input?))))
 
-(define (scm-sp-io-port-position port) (SCM SCM)
+(define (scm-sp-port-position port) (SCM SCM)
   ;returns the current port position in octets
   (return
     (if* (struct-ref (deref (sp-port->port-data port)) position?)
       (scm-from-uint64 (* (struct-ref (deref (sp-port->port-data port)) position) 0.25)) SCM-BOOL-F)))
 
-(define (scm-sp-io-port-position? port) (SCM SCM)
+(define (scm-sp-port-position? port) (SCM SCM)
   (return (scm-from-bool (struct-ref (deref (sp-port->port-data port)) position))))
 
-(define (scm-sp-io-port-channel-count port) (SCM SCM)
+(define (scm-sp-port-channel-count port) (SCM SCM)
   (return (scm-from-uint32 (struct-ref (deref (sp-port->port-data port)) channel-count))))
 
-(define (scm-sp-io-port-samples-per-second port) (SCM SCM)
+(define (scm-sp-port-samples-per-second port) (SCM SCM)
   (return (scm-from-uint32 (struct-ref (deref (sp-port->port-data port)) samples-per-second))))
 
-(define (scm-sp-io-port? port) (SCM SCM) (return (scm-from-bool (scm-c-sp-port? port))))
+(define (scm-sp-port? port) (SCM SCM) (return (scm-from-bool (scm-c-sp-port? port))))
+
+(define (scm-sp-port-type port) (SCM SCM)
+  (let-macro (type (struct-ref (deref (sp-port->port-data port)) type))
+    (return
+      (cond* ((= type sp-port-type-alsa) scm-sp-port-type-alsa)
+        ((= type sp-port-type-file) scm-sp-port-type-file) (else SCM-BOOL-F)))))
 
 (define (scm-sp-io-file-set-position port sample-position) (SCM SCM SCM)
   scm-c-local-error-init

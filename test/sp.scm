@@ -30,28 +30,4 @@
 (execute-tests (ql file))
 (if (file-exists? test-env-path) (delete-file test-env-path))
 (define samples-per-second 8000)
-(define pi 3.1415926535)
 (define (samples->seconds samples samples-per-second) (/ samples samples-per-second))
-
-(define (osc segment time frequency)
-  (let (sample-count (f32vector-length segment))
-    (let loop ((index 0))
-      (if (< index sample-count)
-        (begin
-          (f32vector-set! segment index
-            (* 0.1 (sin (* frequency (samples->seconds (+ time index) 8000)))))
-          (loop (+ 1 index)))
-        segment))))
-
-(define (exit-on-error a) (if (error? a) (begin (debug-log a) (exit -1)) a))
-
-(let
-  ( (out (exit-on-error (sp-io-alsa-open-output "default" 1 samples-per-second)))
-    (segment-size samples-per-second))
-  (let loop ((time 0))
-    (if (< time 1)
-      (begin
-        (exit-on-error
-          (sp-io-alsa-write out (list (osc (make-f32vector segment-size) time 1556)) segment-size))
-        (loop (+ time 1)))))
-  (exit-on-error (sp-io-port-close out)))
