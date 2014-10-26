@@ -38,23 +38,57 @@
   (define pi 3.1415926535)
   (load-extension "libguile-sp" "init_sp")
 
-  (define (sp-sine r sample-offset radians-per-second seconds-per-sample phase-offset)
-    (f32vector-each-index
-      (l (index length)
-        (f32vector-set! r index
-          (sin
-            (* radians-per-second (+ (* (+ sample-offset index) seconds-per-sample) phase-offset)))))
-      r)
-    r)
+  (define (sp-sine length sample-offset radians-per-second seconds-per-sample phase-offset)
+    "integer integer float float float -> f32vector
+    creates a segment of given length with sample values for a sine wave with the specified properties"
+    (let (r (make-f32vector length))
+      (f32vector-each-index
+        (l (index length)
+          (f32vector-set! r index
+            (sin
+              (* radians-per-second (+ (* (+ sample-offset index) seconds-per-sample) phase-offset)))))
+        r)
+      r))
 
-  (define (sp-sum r number) (f32vector-map+one! + number r) r)
-  (define (sp-difference r number) (f32vector-map+one! - number r) r)
-  (define (sp-division r number) (f32vector-map+one! / number r) r)
-  (define (sp-product r number) (f32vector-map+one! * number r) r)
-  (define (sp-sum~ a . b) (apply f32vector-sum! a b) a)
-  (define (sp-difference~ a . b) (apply f32vector-difference! a b) a)
-  (define (sp-division~ a . b) (apply f32vector-division! a b) a)
-  (define (sp-product~ a . b) (apply f32vector-product! a b) a)
+  (define (sp-sum segment number)
+    "f32vector float -> f32vector
+    add number to all elements of the given vector"
+    (f32vector-map+one + number segment) segment)
+
+  (define (sp-difference segment number)
+    "f32vector float -> f32vector
+    subtract number from all elements of the given vector"
+    (f32vector-map+one - number segment))
+
+  (define (sp-division segment number)
+    "f32vector float -> f32vector
+    divide all elements of the given vector with number"
+    (f32vector-map+one / number segment))
+
+  (define (sp-product segment number)
+    "f32vector float -> f32vector
+    multiply number with all elements of the given segment"
+    (f32vector-map+one * number segment))
+
+  (define (sp-sum~ a . b)
+    "f32vector ... -> f32vector
+    sum values at the same indices"
+    (apply f32vector-sum a b))
+
+  (define (sp-difference~ a . b)
+    "f32vector ... -> f32vector
+    subtract values at the same indices"
+    (apply f32vector-difference a b))
+
+  (define (sp-division~ a . b)
+    "f32vector ... -> f32vector
+    divide values at the same indices"
+    (apply f32vector-division a b))
+
+  (define (sp-product~ a . b)
+    "f32vector ... -> f32vector
+    multiply values at the same indices"
+    (apply f32vector-product a b))
 
   (define (sp-port-type->writer a)
     (cond ((= sp-port-type-alsa a) sp-io-alsa-write) ((= sp-port-type-file a) sp-io-file-write)))
@@ -63,12 +97,16 @@
     (cond ((= sp-port-type-alsa a) sp-io-alsa-read) ((= sp-port-type-file a) sp-io-file-read)))
 
   (define (sp-port-write port segments sample-count)
+    "sp-port (f32vector ...) integer -> f32vector
+    write segments to the channels of port, left to right"
     ((sp-port-type->writer (sp-port-type port)) port segments sample-count))
 
-  (define (sp-port-read port sample-count)
+  (define (sp-port-read port sample-count) "sp-port integer -> f32vector"
     ((sp-port-type->reader (sp-port-type port)) sample-count))
 
   (define (sp-ports-write ports segments sample-count)
+    "(sp-sport ...) (f32vector ...) integer ->
+    write segments to channels of the given ports, ports and their channels left to right"
     (fold
       (l (e segments)
         (call-with-values (l () (split-at segments (sp-port-channel-count e)))

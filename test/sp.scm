@@ -34,18 +34,19 @@
 (define (create-signal-duration->file duration-seconds path channels samples-per-second proc)
   (let*
     ( (segment-size samples-per-second)
-      (port (sp-io-file-open-output path channels samples-per-second))
-      (temp-segment (make-f32vector segment-size 0)))
+      (port (sp-io-file-open-output path channels samples-per-second)))
     (sp-io-stream #f port
       segment-size samples-per-second
-      (l (offset)
-        (if (< offset (* duration-seconds samples-per-second)) (proc offset temp-segment) #f)))))
+      (l (offset) (if (< offset (* duration-seconds samples-per-second)) (proc offset) #f)))))
+
+(define samples-per-second 8000)
+(define segment-size samples-per-second)
 
 (create-signal-duration->file 2 test-env-file-path
-  1 8000
-  (l (offset temp-segment)
+  1 segment-size
+  (l (offset)
     (list
       (sp-product
-        (sp-sum~ (sp-sine temp-segment offset 1300 (/ 1 8000) 0)
-          (sp-sine (bytevector-copy temp-segment) offset 2600 (/ 1 8000) 0))
+        (sp-sum~ (sp-sine segment-size offset 1300 (/ 1 samples-per-second) 0)
+          (sp-sine segment-size offset 2600 (/ 1 samples-per-second) 0))
         0.1))))
