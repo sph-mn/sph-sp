@@ -47,6 +47,7 @@
   (l (offset)
     (list
       (sp-product
-        (sp-sum~ (sp-sine segment-size offset 1300 (/ 1 samples-per-second) 0)
+        (sp-sum~
+          (sp-sine segment-size offset 1300 (/ 1 samples-per-second) 0)
           (sp-sine segment-size offset 2600 (/ 1 samples-per-second) 0))
         0.1))))

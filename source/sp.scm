@@ -14,6 +14,7 @@
     sp-io-file-set-position
     sp-io-file-write
     sp-io-stream
+    sp-noise
     sp-port-channel-count
     sp-port-close
     sp-port-input?
@@ -35,12 +36,15 @@
     (sph uniform-vector)
     (except (srfi srfi-1) map))
 
-  (define pi 3.1415926535)
   (load-extension "libguile-sp" "init_sp")
+  (define default-random-state (random-state-from-platform))
+  (define pi 3.1415926535)
 
-  (define (sp-sine length sample-offset radians-per-second seconds-per-sample phase-offset)
+  (define*
+    (sp-sine length sample-offset radians-per-second seconds-per-sample #:optional (phase-offset 0))
     "integer integer float float float -> f32vector
-    creates a segment of given length with sample values for a sine wave with the specified properties"
+    creates a segment of given length with sample values for a sine wave with the specified properties.
+    this uses guiles sin implementation and not a table-lookup oscillator or similarly reduced computations"
     (let (r (make-f32vector length))
       (f32vector-each-index
         (l (index length)
@@ -132,4 +136,20 @@
               (if (and (list? output-segments) (every f32vector? output-segments))
                 (begin (sp-ports-write output-ports output-segments segment-size)
                   (loop (+ sample-offset samples-per-second)))
-                (make-error (q sp-io-stream) (q result-format) "")))))))))
+                (make-error (q sp-io-stream) (q result-format) ""))))))))
+
+  (define (sp-delay sample-offset samples delay-state)
+    "f32vector list:delay-state -> list:delay-state" delay-state)
+
+  ;max, min, ramp, limit, map, segment-delay, sample-delay
+
+  (define (sp-noise length #:optional (random random:uniform) (random-state default-random-state))
+    "integer [{random-state -> real} random-state] -> f32vector
+    creates a vector of random sample values, which corresponds to random frequencies.
+    default is a uniform distribution that does not repeat at every run of the program.
+    guile includes several random number generators, for example: random:normal, random:uniform, random:exp.
+    if the state is the same, the number series will be the same"
+    (let (r (make-f32vector length))
+      (let loop ((index 0))
+        (if (< index length)
+          (begin (f32vector-set! r index (random random-state)) (loop (+ 1 index))) r)))))
