@@ -143,7 +143,7 @@
 
   ;max, min, ramp, limit, map, segment-delay, sample-delay
 
-  (define (sp-noise length #:optional (random random:uniform) (random-state default-random-state))
+  (define* (sp-noise length #:optional (random random:uniform) (random-state default-random-state))
     "integer [{random-state -> real} random-state] -> f32vector
     creates a vector of random sample values, which corresponds to random frequencies.
     default is a uniform distribution that does not repeat at every run of the program.
