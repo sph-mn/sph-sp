@@ -7,4 +7,4 @@ cp -rt $t temp/libguile-sp.so
 t=$1/usr/share/guile/site/sph
 mkdir -p $t
 #link instead of overwriting
-cp -rst $t source/sp.scm
+cp -rst $t $PWD/source/sp.scm
