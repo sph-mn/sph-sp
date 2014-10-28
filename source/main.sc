@@ -7,6 +7,27 @@
 (include-sc "../extern/sph/one")
 (define-macro init-status (define s b8-s))
 (include-sc "io")
+(includep "kiss_fft.h")
+(includep "tools/kiss_fftr.c")
+
+(define (scm-sp-fft a) (SCM SCM)
+  scm-c-local-error-init (scm-c-local-error-assert "type-check" (scm-is-true (scm-f32vector? a)))
+  (debug-log "%d" 1)
+  (define size b32 (/ (SCM-BYTEVECTOR-LENGTH a) 4)) (define size-result b32 (+ 1 (* size 0.5)))
+  (debug-log "size %d %d" size size-result)
+  (define fftr-state kiss-fftr-cfg (kiss-fftr-alloc size 0 0 0))
+  (debug-log "%d" 2)
+  (define out kiss-fft-cpx* (malloc (* size (sizeof kiss-fft-cpx))))
+  (kiss-fftr fftr-state (convert-type (SCM-BYTEVECTOR-CONTENTS a) f32-s*) out)
+  (debug-log "%d" 3)
+  (free fftr-state)
+  (define r SCM (scm-make-f32vector (scm-from-uint32 size-result) (scm-from-uint8 0)))
+  (debug-log "%d" 4)
+  (define r-c f32-s* (convert-type (SCM-BYTEVECTOR-CONTENTS r) f32-s*))
+  (while size-result (decrement-one size-result)
+    (set (deref r-c size-result) (struct-ref out[size-result] r)))
+  (debug-log "%d" 5)
+  (return r) (label error scm-c-local-error-return))
 
 (define (init-sp) b0
   (init-scm) sp-port-scm-type-init
@@ -27,6 +48,16 @@
     1 0 0 scm-sp-port-samples-per-second "sp-port -> integer/boolean/error")
   (scm-c-define-procedure-c t "sp-port?" 1 0 0 scm-sp-port? "sp-port -> boolean")
   (scm-c-define-procedure-c t "sp-port-type" 1 0 0 scm-sp-port-type "sp-port -> integer")
+  (scm-c-define-procedure-c t "sp-fft"
+    1 0
+    0 scm-sp-fft
+    "f32vector:volumes-per-time -> f32vector:frequencies-per-time
+    discrete fourier transform on the input data")
+  #;(scm-c-define-procedure-c t "sp-fft-inverse"
+    1 0
+    0 scm-fft-inverse
+    "f32vector:frequencies-per-time -> f32vector:volumes-per-time
+    inverse discrete fourier transform on the input data")
   (scm-c-define-procedure-c t "sp-io-file-open-input"
     1 2 0 scm-sp-io-file-open-input
     "string -> sp-port/error

@@ -29,6 +29,8 @@
 
 ;(execute-tests (ql file))
 (if (file-exists? test-env-file-path) (delete-file test-env-file-path))
+
+#;(
 (define (samples->seconds samples samples-per-second) (/ samples samples-per-second))
 
 (define (create-signal-duration->file duration-seconds path channels samples-per-second proc)
@@ -47,7 +49,12 @@
   (l (offset)
     (list
       (sp-product
-        (sp-sum~
+        (sp-map +
           (sp-sine segment-size offset 1300 (/ 1 samples-per-second) 0)
           (sp-sine segment-size offset 2600 (/ 1 samples-per-second) 0))
         0.1))))
+)
+
+(import (sph random-data) (sph uniform-vector))
+(define input (f32vector-map (l (e) (- (random 2.0) 1)) (make-f32vector 8 0)))
+(debug-log (sp-fft input))
