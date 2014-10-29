@@ -8,6 +8,6 @@ then
   astyle temp/main.c
 fi
 
-gcc -Wall -funsigned-char -Werror -Wfatal-errors -o1 -mtune=native -march=native -ffast-math -unroll-loops -shared -fpic \
-$(guile-config compile) -Iextern/kissfft $(guile-config link) -lasound -o temp/libguile-sp.so \
-temp/main.c -Wl,--version-script=other/export && chmod -R 755 temp
+gcc -Wall -Werror -funsigned-char -Wfatal-errors -O3 -mtune=native -march=native -ffast-math -unroll-loops -shared -fpic \
+$(guile-config compile) $(guile-config link) -lasound -o temp/libguile-sp.so -Iextern/kissfft \
+temp/main.c extern/kissfft/kiss_fft.c extern/kissfft/tools/kiss_fftr.c -Wl,--version-script=other/export && chmod -R 755 temp

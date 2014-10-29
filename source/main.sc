@@ -7,26 +7,30 @@
 (include-sc "../extern/sph/one")
 (define-macro init-status (define s b8-s))
 (include-sc "io")
-(includep "kiss_fft.h")
-(includep "tools/kiss_fftr.c")
+(include "../extern/kissfft/kiss_fft.h")
+(include "../extern/kissfft/tools/kiss_fftr.h")
 
 (define (scm-sp-fft a) (SCM SCM)
   scm-c-local-error-init (scm-c-local-error-assert "type-check" (scm-is-true (scm-f32vector? a)))
-  (debug-log "%d" 1)
   (define size b32 (/ (SCM-BYTEVECTOR-LENGTH a) 4)) (define size-result b32 (+ 1 (* size 0.5)))
-  (debug-log "size %d %d" size size-result)
   (define fftr-state kiss-fftr-cfg (kiss-fftr-alloc size 0 0 0))
-  (debug-log "%d" 2)
-  (define out kiss-fft-cpx* (malloc (* size (sizeof kiss-fft-cpx))))
+  (define out kiss-fft-cpx* (malloc (* size-result (sizeof kiss-fft-cpx))))
   (kiss-fftr fftr-state (convert-type (SCM-BYTEVECTOR-CONTENTS a) f32-s*) out)
-  (debug-log "%d" 3)
-  (free fftr-state)
   (define r SCM (scm-make-f32vector (scm-from-uint32 size-result) (scm-from-uint8 0)))
-  (debug-log "%d" 4)
-  (define r-c f32-s* (convert-type (SCM-BYTEVECTOR-CONTENTS r) f32-s*))
   (while size-result (decrement-one size-result)
-    (set (deref r-c size-result) (struct-ref out[size-result] r)))
-  (debug-log "%d" 5)
+    (set (deref (convert-type (SCM-BYTEVECTOR-CONTENTS r) f32-s*) size-result)
+      (struct-ref out[size-result] r)))
+  (free fftr-state) (free out) (return r) (label error scm-c-local-error-return))
+
+(define (scm-sp-fft-inverse a) (SCM SCM)
+  scm-c-local-error-init (scm-c-local-error-assert "type-check" (scm-is-true (scm-f32vector? a)))
+  (define size b32 (/ (SCM-BYTEVECTOR-LENGTH a) 4)) (define size-result b32 (* (- size 1) 2))
+  (define fftr-state kiss-fftr-cfg (kiss-fftr-alloc size-result 1 0 0))
+  (define inp kiss-fft-cpx* (malloc (* size (sizeof kiss-fft-cpx))))
+  (while size (decrement-one size)
+    (struct-set inp[size] r (deref (SCM-BYTEVECTOR-CONTENTS a) (* size 4))))
+  (define r SCM (scm-make-f32vector (scm-from-uint32 size-result) (scm-from-uint8 0)))
+  (kiss-fftri fftr-state inp (convert-type (SCM-BYTEVECTOR-CONTENTS r) f32-s*)) (free fftr-state)
   (return r) (label error scm-c-local-error-return))
 
 (define (init-sp) b0
@@ -53,10 +57,10 @@
     0 scm-sp-fft
     "f32vector:volumes-per-time -> f32vector:frequencies-per-time
     discrete fourier transform on the input data")
-  #;(scm-c-define-procedure-c t "sp-fft-inverse"
+  (scm-c-define-procedure-c t "sp-fft-inverse"
     1 0
-    0 scm-fft-inverse
-    "f32vector:frequencies-per-time -> f32vector:volumes-per-time
+    0 scm-sp-fft-inverse
+    "f32vector:frequencies-per-time -> f32vector:volume-per-time
     inverse discrete fourier transform on the input data")
   (scm-c-define-procedure-c t "sp-io-file-open-input"
     1 2 0 scm-sp-io-file-open-input

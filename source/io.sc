@@ -249,9 +249,9 @@
   (return SCM-BOOL-T) (label error local-memory-free scm-c-local-error-return))
 
 (define (scm-sp-io-alsa-read port sample-count) (SCM SCM SCM)
-  scm-c-local-error-init
- (scm-c-local-error-assert "type-check" (and (scm-c-sp-port? port) (scm-is-integer sample-count)))
-  (local-memory-init 1) (define port-data port-data-t* (sp-port->port-data port))
+  (local-memory-init 1) scm-c-local-error-init
+  (scm-c-local-error-assert "type-check" (and (scm-c-sp-port? port) (scm-is-integer sample-count)))
+  (define port-data port-data-t* (sp-port->port-data port))
   (define channel-count-c b32 (struct-ref (deref port-data) channel-count))
   (define sample-count-c b64 (scm->uint32 sample-count))
   (scm-c-local-define-malloc+size channel-data f32-s* (* channel-count-c (sizeof pointer)))
@@ -277,7 +277,7 @@
   local-memory-free (return r) (label error local-memory-free scm-c-local-error-return))
 
 (define (scm-sp-io-file-write port channel-data sample-count) (SCM SCM SCM SCM)
-  scm-c-local-error-init
+  scm-c-local-error-init (local-memory-init 2)
   (scm-c-local-error-assert "type-check"
     (and (scm-c-sp-port? port) (scm-is-true (scm-list? channel-data))
       (not (scm-is-null channel-data)) (scm-is-true (scm-f32vector? (scm-first channel-data)))
@@ -289,8 +289,8 @@
     (= (scm->uint32 (scm-length channel-data)) channel-count))
   (define sample-count-c b64 (scm->uint64 sample-count))
   (scm-c-local-define-malloc+size channel-data-c f32-s* (* channel-count (sizeof pointer)))
-  (local-memory-init 2) (local-memory-add channel-data-c)
-  (define index b32 0) (define e SCM)
+  (local-memory-add channel-data-c) (define index b32 0)
+  (define e SCM)
   (scm-c-list-each channel-data e
     (compound-statement
       (set (deref channel-data-c index) (convert-type (SCM-BYTEVECTOR-CONTENTS e) f32-s*))
@@ -304,11 +304,11 @@
   local-memory-free (return SCM-BOOL-T) (label error local-memory-free scm-c-local-error-return))
 
 (define (scm-sp-io-file-read port sample-count) (SCM SCM SCM)
-  scm-c-local-error-init
+  scm-c-local-error-init (local-memory-init 2)
   (scm-c-local-error-assert "type-check" (and (scm-c-sp-port? port) (scm-is-integer sample-count)))
   (define port-data port-data-t* (sp-port->port-data port))
   (define channel-count b32 (struct-ref (deref port-data) channel-count))
-  (define sample-count-c b64 (scm->uint64 sample-count)) (local-memory-init 2)
+  (define sample-count-c b64 (scm->uint64 sample-count))
   (scm-c-local-define-malloc+size data-interleaved f32-s (* sample-count-c channel-count 4))
   (local-memory-add data-interleaved)
   (scm-c-require-success-system

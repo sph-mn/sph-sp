@@ -1,6 +1,7 @@
 (library (sph sp)
   (export
     sp-fft
+    sp-fft-inverse
     sp-io-alsa-open-input
     sp-io-alsa-open-output
     sp-io-alsa-read

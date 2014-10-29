@@ -55,6 +55,6 @@
         0.1))))
 )
 
-(import (sph random-data) (sph uniform-vector))
+(import (sph uniform-vector))
 (define input (f32vector-map (l (e) (- (random 2.0) 1)) (make-f32vector 8 0)))
-(debug-log (sp-fft input))
+(debug-log (sp-fft-inverse (debug-log (sp-fft input))))
