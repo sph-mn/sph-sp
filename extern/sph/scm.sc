@@ -33,6 +33,18 @@
 
 ;scm-c-local-error is the scheme version of sph.c:local-error. it can create an error object defined in the scheme module (sph)
 
+(define scm-make-error SCM
+  scm-error? SCM scm-error-origin SCM scm-error-name SCM scm-error-data SCM)
+
+(define (init-scm) b0
+  ;the features defined in this file need run-time initialisation. call this once in an application before using the features here
+  (define m SCM (scm-c-resolve-module "sph error"))
+  (set scm-make-error (scm-variable-ref (scm-c-module-lookup m "error-create")))
+  (set scm-error-origin (scm-variable-ref (scm-c-module-lookup m "error-origin")))
+  (set scm-error-name (scm-variable-ref (scm-c-module-lookup m "error-name")))
+  (set scm-error-data (scm-variable-ref (scm-c-module-lookup m "error-data")))
+  (set scm-error? (scm-variable-ref (scm-c-module-lookup m "error?"))))
+
 (define-macro scm-c-local-error-init
   (define local-error-origin SCM local-error-name SCM local-error-data SCM))
 
@@ -57,18 +69,6 @@
 (pre-if local-error-assert-enable
   (define-macro (scm-c-local-error-assert name expr) (if (not expr) (scm-c-local-error name 0)))
   (define-macro (scm-c-local-error-assert name expr) null))
-
-(define scm-make-error SCM
-  scm-error? SCM scm-error-origin SCM scm-error-name SCM scm-error-data SCM)
-
-(define (init-scm) b0
-  ;the features defined in this file need run-time initialisation. call this once in an application before using the features here
-  (define m SCM (scm-c-resolve-module "sph"))
-  (set scm-make-error (scm-variable-ref (scm-c-module-lookup m "make-error-p")))
-  (set scm-error-origin (scm-variable-ref (scm-c-module-lookup m "error-origin-p")))
-  (set scm-error-name (scm-variable-ref (scm-c-module-lookup m "error-name-p")))
-  (set scm-error-data (scm-variable-ref (scm-c-module-lookup m "error-data-p")))
-  (set scm-error? (scm-variable-ref (scm-c-module-lookup m "error?-p"))))
 
 (define-macro (scm-c-local-error-glibc error-number)
   (scm-c-local-error "glibc" (scm-from-locale-string (strerror error-number))))

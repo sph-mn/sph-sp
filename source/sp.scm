@@ -12,7 +12,6 @@
     sp-io-file-set-position
     sp-io-file-write
     sp-io-stream
-    sp-map+one~
     sp-noise
     sp-port-channel-count
     sp-port-close
@@ -28,12 +27,10 @@
     sp-port?
     sp-ports-read
     sp-ports-write
-    sp-sine
-    (rename (f32vector-map+one sp-map+one) (f32vector-map sp-map)))
+    sp-sine)
   (import
     (guile)
     (sph base)
-    (sph uniform-vector)
     (sph uniform-vector)
     (except (srfi srfi-1) map))
 
@@ -49,7 +46,7 @@
 
   (define (sp-port-write port segments sample-count)
     "sp-port (f32vector ...) integer -> f32vector
-    write segments to the channels of port, left to right"
+    write segments to the channels of port. left to right"
     ((sp-port-type->writer (sp-port-type port)) port segments sample-count))
 
   (define (sp-port-read port sample-count) "sp-port integer -> f32vector"
@@ -57,7 +54,7 @@
 
   (define (sp-ports-write ports segments sample-count)
     "(sp-sport ...) (f32vector ...) integer ->
-    write segments to channels of the given ports, ports and their channels left to right"
+    write segments to channels of the given ports. ports and their channels left to right"
     (fold
       (l (e segments)
         (call-with-values (l () (split-at segments (sp-port-channel-count e)))
@@ -69,42 +66,51 @@
     read from multiple ports"
     (apply append (map (l (e) (sp-port-read e sample-count)) ports)))
 
-  (define (sp-io-stream input-ports output-ports segment-size samples-per-second proc . user-state)
-    "boolean/(sp-port ...) boolean/(sp-port ...) integer integer any ... ->"
-    (let
-      ( (input-ports (if (sp-port? input-ports) (list input-ports) input-ports))
-        (output-ports (if (sp-port? output-ports) (list output-ports) output-ports)))
-      (let
-        (proc
-          (if input-ports
-            (l (sample-offset) (apply proc sample-offset (sp-ports-read input-ports segment-size)))
-            (l (sample-offset) (proc sample-offset))))
-        (let loop ((sample-offset 0))
-          (pass-if (proc sample-offset)
-            (l (output-segments)
-              (if (and (list? output-segments) (every f32vector? output-segments))
-                (begin (sp-ports-write output-ports output-segments segment-size)
-                  (loop (+ sample-offset samples-per-second)))
-                (make-error (q sp-io-stream) (q result-format) ""))))))))
+  (define (sp-io-stream-with-segment-size+duration samples-per-second segment-size-divisor c)
+    (let (segment-size (/ samples-per-second segment-size-divisor))
+      (if (integer? segment-size) (c segment-size (/ samples-per-second segment-size))
+        (error-create (q sp-io-stream) (q segment-size-is-not-an-integer)
+          "the argument for segment-size-divisor must fullfill the assertion (integer? (/ samples-per-second segment-size-divisor))"))))
 
-  (define (sp-delay sample-offset samples delay-state)
+  (define (sp-io-stream-with-proc+ports proc input-ports output-ports segment-size c)
+    (c
+      (if input-ports
+        (let (input-ports (if (sp-port? input-ports) (list input-ports) input-ports))
+          (l (sample-offset) (apply proc sample-offset (sp-ports-read input-ports segment-size))))
+        (l (sample-offset) (proc sample-offset)))
+      (if (sp-port? output-ports) (list output-ports) output-ports)))
+
+  (define (sp-io-stream-loop segment-size segment-duration proc output-ports user-state)
+    (let loop ((time 0) (user-state user-state))
+      (pass-if (apply proc time user-state)
+        (l (output-segments)
+          (error-require (and (list? output-segments) (every f32vector? output-segments))
+            (sp-ports-write output-ports output-segments segment-size)
+            (loop (+ time segment-duration)))))))
+
+  (define
+    (sp-io-stream input-ports output-ports samples-per-second segment-size-divisor proc .
+      user-state)
+    "#f/(sp-port ...) #f/(sp-port ...) integer number {time:seconds any ... -> #f/(f32vector:channel-data ...)} any ... ->
+    maps over time to read channel-data from input-ports, if input-ports where given, and use  \"proc\" to create channel-data to be written to output-ports.
+    the assertion (integer? (/ samples-per-seconds segment-size-divisor)) is required to hold true to avoid the number of seconds per sample to be an irrational number.
+    1, 10, 100 or 1000 are example values for segment-size-divisor that work with common sampling rates"
+    (sp-io-stream-with-segment-size+duration samples-per-second segment-size-divisor
+      (l (segment-size segment-duration)
+        (sp-io-stream-with-proc+ports proc input-ports
+          output-ports segment-size
+          (l (proc output-ports)
+            (sp-io-stream-loop segment-size segment-duration proc output-ports user-state))))))
+
+  (define (sp-delay time duration segment delay-state)
     "f32vector list:delay-state -> list:delay-state" delay-state)
 
-  ;ramp, segment-delay, sample-delay
-
-  (define*
-    (sp-sine length sample-offset radians-per-second seconds-per-sample #:optional (phase-offset 0))
+  (define* (sp-sine time seconds-per-sample length radians-per-second #:optional (phase-offset 0))
     "integer integer float float float -> f32vector
     creates a segment of given length with sample values for a sine wave with the specified properties.
-    this uses guiles \"sin\" procedure and not a table-lookup oscillator or similarly reduced computations"
-    (let (r (make-f32vector length))
-      (f32vector-each-index
-        (l (index length)
-          (f32vector-set! r index
-            (sin
-              (* radians-per-second (+ (* (+ sample-offset index) seconds-per-sample) phase-offset)))))
-        r)
-      r))
+    this uses guiles \"sin\" procedure and not a table-lookup oscillator or a similarly reduced computation"
+    (f32vector-create length
+      (l (index) (sin (* radians-per-second (+ time (* index seconds-per-sample) phase-offset))))))
 
   (define* (sp-noise length #:optional (random random:uniform) (random-state default-random-state))
     "integer [{random-state -> real} random-state] -> f32vector
@@ -112,7 +118,4 @@
     default is a uniform distribution that does not repeat at every run of the program.
     guile includes several random number generators, for example: random:normal, random:uniform (the default), random:exp.
     if the state is the same, the number series will be the same"
-    (let (r (make-f32vector length))
-      (let loop ((index 0))
-        (if (< index length)
-          (begin (f32vector-set! r index (random random-state)) (loop (+ 1 index))) r)))))
+    (f32vector-create length (l (index) (random random-state)))))
