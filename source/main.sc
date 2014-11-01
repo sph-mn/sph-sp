@@ -74,7 +74,8 @@
   (scm-c-define-procedure-c t "sp-io-file-write"
     2 1
     0 scm-sp-io-file-write
-    "sp-port (f32vector ...):channel-data [integer:sample-count] -> boolean/error")
+    "sp-port (f32vector ...):channel-data [integer:sample-count] -> boolean/error
+    write sample data to the channels of a file port")
   (scm-c-define-procedure-c t "sp-io-file-set-position"
     2 0
     0 scm-sp-io-file-set-position
@@ -95,7 +96,8 @@
   (scm-c-define-procedure-c t "sp-io-alsa-write"
     2 1
     0 scm-sp-io-alsa-write
-    "sp-port (f32vector ...):channel-data [integer:sample-count] -> boolean/error")
+    "sp-port (f32vector ...):channel-data [integer:sample-count] -> boolean/error
+    write sample data to the channels of an alsa port - to the sound card for sound output for example")
   (scm-c-define-procedure-c t "sp-io-alsa-read"
     2 0
     0 scm-sp-io-alsa-read
