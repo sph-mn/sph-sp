@@ -80,19 +80,26 @@
         (l (sample-offset) (proc sample-offset)))
       (if (sp-port? output-ports) (list output-ports) output-ports)))
 
-  (define (sp-io-stream-loop segment-size segment-duration proc output-ports user-state)
-    (let loop ((time 0) (user-state user-state))
-      (pass-if (apply proc time user-state)
+  (define sp-state-create
+    ;current-time-offset sample-duration
+    pair)
+
+  (define (sp-state-time-set a time) (pair time (tail a)))
+  (define (sp-state-time a) (first a))
+
+  (define (sp-io-stream-loop segment-size segment-duration sp-state proc output-ports user-state)
+    (let loop ((user-state user-state))
+      (pass-if (apply proc s user-state)
         (l (output-segments)
           (error-require (and (list? output-segments) (every f32vector? output-segments))
             (sp-ports-write output-ports output-segments segment-size)
-            (loop (+ time segment-duration)))))))
+            (sp-state-time-set sp-state (+ (sp-state-time time) segment-duration)) (loop))))))
 
   (define
     (sp-io-stream input-ports output-ports samples-per-second segment-size-divisor proc .
       user-state)
     "#f/(sp-port ...) #f/(sp-port ...) integer number {time:seconds any ... -> #f/(f32vector:channel-data ...)} any ... ->
-    maps over time to read channel-data from input-ports, if input-ports where given, and use  \"proc\" to create channel-data to be written to output-ports.
+    maps over time to read channel-data from input-ports, if input-ports were given, and use  \"proc\" to create channel-data to be written to output-ports.
     the assertion (integer? (/ samples-per-seconds segment-size-divisor)) is required to hold true to avoid the number of seconds per sample to be an irrational number.
     1, 10, 100 or 1000 are example values for segment-size-divisor that work with common sampling rates"
     (sp-io-stream-with-segment-size+duration samples-per-second segment-size-divisor
@@ -100,22 +107,30 @@
         (sp-io-stream-with-proc+ports proc input-ports
           output-ports segment-size
           (l (proc output-ports)
-            (sp-io-stream-loop segment-size segment-duration proc output-ports user-state))))))
+            (sp-io-stream-loop segment-size segment-duration
+              (record sp-state 0 (/ segment-duration segment-size) segment-duration-segment-size)
+              proc output-ports user-state))))))
 
   (define (sp-delay time duration segment delay-state)
     "f32vector list:delay-state -> list:delay-state" delay-state)
 
-  (define* (sp-sine time seconds-per-sample length radians-per-second #:optional (phase-offset 0))
+  (define-syntax-rule (duration->sample-count duration sample-duration)
+    (floor (/ duration sample-duration)))
+
+  (define* (sp-sine duration sample-duration radians-per-second #:optional (phase-offset 0))
     "integer integer float float float -> f32vector
     creates a segment of given length with sample values for a sine wave with the specified properties.
     this uses guiles \"sin\" procedure and not a table-lookup oscillator or a similarly reduced computation"
-    (f32vector-create length
-      (l (index) (sin (* radians-per-second (+ time (* index seconds-per-sample) phase-offset))))))
+    (f32vector-create (duration->sample-count duration sample-duration)
+      (l (index) (sin (* radians-per-second (+ (* index sample-duration) phase-offset))))))
 
-  (define* (sp-noise length #:optional (random random:uniform) (random-state default-random-state))
+  (define*
+    (sp-noise duration sample-duration #:optional (random random:uniform)
+      (random-state default-random-state))
     "integer [{random-state -> real} random-state] -> f32vector
     creates a vector of random sample values, which corresponds to random frequencies.
     default is a uniform distribution that does not repeat at every run of the program.
     guile includes several random number generators, for example: random:normal, random:uniform (the default), random:exp.
     if the state is the same, the number series will be the same"
-    (f32vector-create length (l (index) (random random-state)))))
+    (f32vector-create (duration->sample-duration duration sample-duration)
+      (l (index) (random random-state)))))
