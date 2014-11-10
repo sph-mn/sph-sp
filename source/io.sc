@@ -220,7 +220,7 @@
   (return (sp-io-file-open path #f channel-count samples-per-second))
   (label error scm-c-local-error-return))
 
-(define (scm-sp-io-alsa-write port channel-data sample-count) (SCM SCM SCM SCM)
+(define (scm-sp-io-alsa-write port sample-count channel-data) (SCM SCM SCM SCM)
   scm-c-local-error-init
   (scm-c-local-error-assert "type-check"
     (and (scm-c-sp-port? port) (scm-is-true (scm-list? channel-data))
@@ -231,6 +231,7 @@
   (scm-c-local-define-malloc+size channel-data-c f32-s* (* channel-count (sizeof pointer)))
   (local-memory-add channel-data-c) (define index b32 0)
   (define e SCM)
+  (scm-display channel-data (scm-current-output-port))
   (scm-c-list-each channel-data e
     (compound-statement
       (set (deref channel-data-c index) (convert-type (SCM-BYTEVECTOR-CONTENTS e) f32-s*))
@@ -276,7 +277,7 @@
     (set r (scm-cons (scm-take-f32vector (deref channel-data index) sample-count-c) r)))
   local-memory-free (return r) (label error local-memory-free scm-c-local-error-return))
 
-(define (scm-sp-io-file-write port channel-data sample-count) (SCM SCM SCM SCM)
+(define (scm-sp-io-file-write port sample-count channel-data) (SCM SCM SCM SCM)
   scm-c-local-error-init (local-memory-init 2)
   (scm-c-local-error-assert "type-check"
     (and (scm-c-sp-port? port) (scm-is-true (scm-list? channel-data))

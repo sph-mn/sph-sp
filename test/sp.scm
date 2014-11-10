@@ -30,22 +30,21 @@
 ;(execute-tests (ql file))
 (if (file-exists? test-env-file-path) (delete-file test-env-file-path))
 (define samples-per-second 8000)
-(define sample-duration 1/8000)
-(define segment-size (/ samples-per-second 100))
+(define sample-duration (/ 1 samples-per-second))
+(define segment-size (/ samples-per-second 10))
 (define channels 2)
 (define output-path test-env-file-path)
-(define volume 0.1)
+(define volume 0)
+(define (set-volume data) (map (l (e) (f32vector-map+one * volume e)) data))
+(define duration 2)
 
-(define (sp-loop segment-size proc)
-  (let loop ((offset 0)) (if (proc offset) (loop (+ segment-size offset)))))
+(define (create index sample-offset)
+  ( (compose (if (even? (random 255)) reverse identity) list) (make-f32vector segment-size 0)
+    (sp-sine segment-size sample-duration 1200 (* sample-offset sample-duration))))
 
-(define (create offset output-port)
-  (sp-port-write output-port segment-size
-    (make-list 2
-      (f32vector-map+one * volume
-        (f32vector-map + (sp-sine segment-size sample-duration 1300 (* offset sample-duration))
-          (sp-sine segment-size sample-duration 2600 (* offset sample-duration)))))))
-
-(let (port (sp-io-file-open-output output-path channels samples-per-second))
-  (sp-loop segment-size (l (offset) (and (< offset (* 2 samples-per-second)) (create offset port))))
-  (sp-port-close port))
+(let (output-port (sp-io-alsa-open-output "default" channels samples-per-second))
+  (let loop ((index 0) (sample-offset 0))
+    (if (< sample-offset (* duration samples-per-second))
+      (begin (sp-io-alsa-write output-port segment-size (set-volume (create index sample-offset)))
+        (loop (+ 1 index) (+ segment-size sample-offset)))
+      (sp-port-close output-port))))

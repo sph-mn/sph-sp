@@ -49,7 +49,7 @@
   (define (sp-port-write port sample-count segments)
     "sp-port (f32vector ...) integer -> f32vector
     write segments to the channels of port. left to right"
-    ((sp-port-type->writer (sp-port-type port)) port segments sample-count))
+    ((sp-port-type->writer (sp-port-type port)) port sample-count segments))
 
   (define (sp-port-read port sample-count) "sp-port integer -> f32vector"
     ((sp-port-type->reader (sp-port-type port)) sample-count))
@@ -60,7 +60,7 @@
     (fold
       (l (e segments)
         (call-with-values (l () (split-at segments (sp-port-channel-count e)))
-          (l (left right) (sp-port-write e left sample-count) right)))
+          (l (left right) (sp-port-write e sample-count left) right)))
       segments ports))
 
   (define (sp-ports-read ports sample-count)
