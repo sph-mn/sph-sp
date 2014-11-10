@@ -29,31 +29,23 @@
 
 ;(execute-tests (ql file))
 (if (file-exists? test-env-file-path) (delete-file test-env-file-path))
-
-#;(
-(define (samples->seconds samples samples-per-second) (/ samples samples-per-second))
-
-(define (create-signal-duration->file duration-seconds path channels samples-per-second proc)
-  (let*
-    ( (segment-size samples-per-second)
-      (port (sp-io-file-open-output path channels samples-per-second)))
-    (sp-io-stream #f port
-      segment-size samples-per-second
-      (l (offset) (if (< offset (* duration-seconds samples-per-second)) (proc offset) #f)))))
-
 (define samples-per-second 8000)
-(define segment-size samples-per-second)
+(define sample-duration 1/8000)
+(define segment-size (/ samples-per-second 100))
+(define channels 2)
+(define output-path test-env-file-path)
+(define volume 0.1)
 
-(create-signal-duration->file 2 test-env-file-path
-  1 segment-size
-  (l (offset)
-    (list
-      (sp-product
-        (sp-map +
-          (sp-sine segment-size offset 1300 (/ 1 samples-per-second) 0)
-          (sp-sine segment-size offset 2600 (/ 1 samples-per-second) 0))
-        0.1))))
-)
+(define (sp-loop segment-size proc)
+  (let loop ((offset 0)) (if (proc offset) (loop (+ segment-size offset)))))
 
-(define input (f32vector-map (l (e) (- (random 2.0) 1)) (make-f32vector 8 0)))
-(debug-log (sp-fft-inverse (debug-log (sp-fft input))))
+(define (create offset output-port)
+  (sp-port-write output-port segment-size
+    (make-list 2
+      (f32vector-map+one * volume
+        (f32vector-map + (sp-sine segment-size sample-duration 1300 (* offset sample-duration))
+          (sp-sine segment-size sample-duration 2600 (* offset sample-duration)))))))
+
+(let (port (sp-io-file-open-output output-path channels samples-per-second))
+  (sp-loop segment-size (l (offset) (and (< offset (* 2 samples-per-second)) (create offset port))))
+  (sp-port-close port))
