@@ -127,7 +127,7 @@
     (scm-if-undefined-expr samples-per-second default-samples-per-second
       (scm->uint32 samples-per-second)))
   (scm-c-require-success-alsa
-    (snd-pcm-set-params alsa-port SND_PCM_FORMAT_U32
+    (snd-pcm-set-params alsa-port SND_PCM_FORMAT_FLOAT_LE
       SND_PCM_ACCESS_RW_NONINTERLEAVED channel-count-c
       samples-per-second-c default-alsa-enable-soft-resample latency-c))
   local-memory-free
@@ -227,11 +227,10 @@
       (not (scm-is-null channel-data)) (scm-is-integer sample-count)))
   (define port-data port-data-t* (sp-port->port-data port))
   (define channel-count b32 (struct-ref (deref port-data) channel-count))
-  (define sample-count-c b32 (scm->uint32 sample-count)) (local-memory-init 1)
+  (define sample-count-c b32 (scm->uint32 sample-count)) (local-memory-init 2)
   (scm-c-local-define-malloc+size channel-data-c f32-s* (* channel-count (sizeof pointer)))
   (local-memory-add channel-data-c) (define index b32 0)
   (define e SCM)
-  (scm-display channel-data (scm-current-output-port))
   (scm-c-list-each channel-data e
     (compound-statement
       (set (deref channel-data-c index) (convert-type (SCM-BYTEVECTOR-CONTENTS e) f32-s*))
@@ -247,7 +246,7 @@
           frames-written 0)
         0))
     (scm-c-local-error "alsa" (scm-from-locale-string (snd-strerror frames-written))))
-  (return SCM-BOOL-T) (label error local-memory-free scm-c-local-error-return))
+  local-memory-free (return SCM-BOOL-T) (label error local-memory-free scm-c-local-error-return))
 
 (define (scm-sp-io-alsa-read port sample-count) (SCM SCM SCM)
   (local-memory-init 1) scm-c-local-error-init

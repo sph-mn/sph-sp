@@ -34,17 +34,19 @@
 (define segment-size (/ samples-per-second 10))
 (define channels 2)
 (define output-path test-env-file-path)
-(define volume 0)
+(define volume 0.1)
 (define (set-volume data) (map (l (e) (f32vector-map+one * volume e)) data))
-(define duration 2)
+(define duration 8)
 
 (define (create index sample-offset)
   ( (compose (if (even? (random 255)) reverse identity) list) (make-f32vector segment-size 0)
-    (sp-sine segment-size sample-duration 1200 (* sample-offset sample-duration))))
+    (sp-sine segment-size sample-duration 1400 (* sample-offset sample-duration))))
 
-(let (output-port (sp-io-alsa-open-output "default" channels samples-per-second))
+(let (output-port (error-exit (sp-io-alsa-open-output "default" channels samples-per-second)))
   (let loop ((index 0) (sample-offset 0))
     (if (< sample-offset (* duration samples-per-second))
-      (begin (sp-io-alsa-write output-port segment-size (set-volume (create index sample-offset)))
+      (begin
+        (error-exit
+          (sp-io-alsa-write output-port segment-size (set-volume (create index sample-offset))))
         (loop (+ 1 index) (+ segment-size sample-offset)))
       (sp-port-close output-port))))

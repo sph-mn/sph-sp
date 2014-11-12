@@ -28,18 +28,18 @@
   (define r SCM (scm-c-make-bytevector size-octets))
   (memcpy (SCM-BYTEVECTOR-CONTENTS r) a size-octets) (return r))
 
-(define-macro (scm-c-make-error name data)
-  (scm-call-3 scm-make-error (scm-from-locale-symbol __func__) (if* data data SCM-BOOL-F)))
+(define-macro (scm-c-error-create name data)
+  (scm-call-3 scm-error-create (scm-from-locale-symbol __func__) (if* data data SCM-BOOL-F)))
 
 ;scm-c-local-error is the scheme version of sph.c:local-error. it can create an error object defined in the scheme module (sph)
 
-(define scm-make-error SCM
+(define scm-error-create SCM
   scm-error? SCM scm-error-origin SCM scm-error-name SCM scm-error-data SCM)
 
 (define (init-scm) b0
   ;the features defined in this file need run-time initialisation. call this once in an application before using the features here
   (define m SCM (scm-c-resolve-module "sph error"))
-  (set scm-make-error (scm-variable-ref (scm-c-module-lookup m "error-create")))
+  (set scm-error-create (scm-variable-ref (scm-c-module-lookup m "error-create-p")))
   (set scm-error-origin (scm-variable-ref (scm-c-module-lookup m "error-origin")))
   (set scm-error-name (scm-variable-ref (scm-c-module-lookup m "error-name")))
   (set scm-error-data (scm-variable-ref (scm-c-module-lookup m "error-data")))
@@ -54,7 +54,7 @@
   (goto error))
 
 (define-macro scm-c-local-error-create
-  (scm-call-3 scm-make-error local-error-origin
+  (scm-call-3 scm-error-create local-error-origin
     local-error-name (if* local-error-data local-error-data SCM-BOOL-F)))
 
 (define-macro (scm-c-local-define-malloc variable-name type)
