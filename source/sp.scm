@@ -32,7 +32,7 @@
     sp-sine)
   (import
     (guile)
-    (sph base)
+    (sph common)
     (sph uniform-vector)
     (except (srfi srfi-1) map))
 
@@ -59,7 +59,7 @@
     write segments to channels of the given ports. ports and their channels left to right"
     (fold
       (l (e segments)
-        (call-with-values (l () (split-at segments (sp-port-channel-count e)))
+        (call-with-values (thunk (split-at segments (sp-port-channel-count e)))
           (l (left right) (sp-port-write e sample-count left) right)))
       segments ports))
 
