@@ -1,9 +1,0 @@
-#!/bin/sh
-
-t=$1/usr/lib
-mkdir -p $t
-cp -rt $t temp/libguile-sp.so
-
-t=$1/usr/share/guile/site/sph
-mkdir -p $t
-cp -rt $t source/sp.scm

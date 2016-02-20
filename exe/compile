@@ -1,7 +1,7 @@
 #!/bin/sh
 
 mkdir -p temp
-sc source/main.sc temp/main.c
+sc source/sc/main.sc temp/main.c
 
 if [ $1 ]
 then
