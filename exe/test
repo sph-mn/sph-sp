@@ -2,4 +2,6 @@
 !#
 
 (import (sph) (sph test))
-(test-execute-modules-prefix #:path-prefix "source/scheme" (q (test module sph sp)))
+
+(let (s (test-settings-default-custom path-search "source/scheme"))
+  (test-execute-modules-by-prefix #:settings s (q (test module sph sp))))
