@@ -9,5 +9,5 @@ then
 fi
 
 gcc -Wall -Werror -funsigned-char -Wfatal-errors -O3 -mtune=native -march=native -ffast-math -unroll-loops -shared -fpic \
-$(guile-config compile) $(guile-config link) -lasound -o temp/libguile-sp.so -Iextern/kissfft \
-temp/main.c extern/kissfft/kiss_fft.c extern/kissfft/tools/kiss_fftr.c -Wl,--version-script=other/export && chmod -R 755 temp
+$(guile-config compile) $(guile-config link) -lasound -o temp/libguile-sp.so -Iforeign/kissfft \
+temp/main.c foreign/kissfft/kiss_fft.c foreign/kissfft/tools/kiss_fftr.c -Wl,--version-script=other/export && chmod -R 755 temp
