@@ -9,7 +9,7 @@
       ( (file-out (sp-io-file-open-output test-env-file-path test-env-channel-count 8000))
         (file-in (sp-io-file-open-input test-env-file-path test-env-channel-count 8000))
         (data
-          (n-times-map test-env-channel-count
+          (map-integers test-env-channel-count
             (l (n) (make-f32vector test-env-segment-size (+ n 1))))))
       (require-success "open" file-out
         (l (file-out)
