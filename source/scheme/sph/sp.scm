@@ -32,7 +32,7 @@
     sp-sine)
   (import
     (guile)
-    (sph common)
+    (sph base)
     (sph uniform-vector)
     (except (srfi srfi-1) map))
 
@@ -48,7 +48,7 @@
 
   (define (sp-port-write port sample-count segments)
     "sp-port (f32vector ...) integer -> f32vector
-    write segments to the channels of port. left to right"
+     write segments to the channels of port. left to right"
     ((sp-port-type->writer (sp-port-type port)) port sample-count segments))
 
   (define (sp-port-read port sample-count) "sp-port integer -> f32vector"
@@ -56,29 +56,29 @@
 
   (define (sp-ports-write ports sample-count segments)
     "(sp-sport ...) (f32vector ...) integer ->
-    write segments to channels of the given ports. ports and their channels left to right"
+     write segments to channels of the given ports. ports and their channels left to right"
     (fold
       (l (e segments)
-        (call-with-values (thunk (split-at segments (sp-port-channel-count e)))
+        (call-with-values (nullary (split-at segments (sp-port-channel-count e)))
           (l (left right) (sp-port-write e sample-count left) right)))
       segments ports))
 
   (define (sp-ports-read ports sample-count)
     "(sp-port ...) integer -> (f32vector ...)
-    read from multiple ports"
+     read from multiple ports"
     (apply append (map (l (e) (sp-port-read e sample-count)) ports)))
 
   (define* (sp-sine length sample-duration radians-per-second #:optional (phase-offset 0))
     "integer integer float float float -> f32vector
-    creates a segment of given length with sample values for a sine wave with the specified properties.
-    this uses guiles \"sin\" procedure and not a table-lookup oscillator or a similarly reduced computation"
+     creates a segment of given length with sample values for a sine wave with the specified properties.
+     this uses guiles \"sin\" procedure and not a table-lookup oscillator or a similarly reduced computation"
     (f32vector-create length
       (l (index) (sin (* radians-per-second (+ phase-offset (* index sample-duration)))))))
 
   (define* (sp-noise length #:optional (random random:uniform) (random-state default-random-state))
     "integer [{random-state -> real} random-state] -> f32vector
-    creates a vector of random sample values, which corresponds to random frequencies.
-    default is a uniform distribution that does not repeat at every run of the program.
-    guile includes several random number generators, for example: random:normal, random:uniform (the default), random:exp.
-    if the state is the same, the number series will be the same"
+     creates a vector of random sample values, which corresponds to random frequencies.
+     default is a uniform distribution that does not repeat at every run of the program.
+     guile includes several random number generators, for example: random:normal, random:uniform (the default), random:exp.
+     if the state is the same, the number series will be the same"
     (f32vector-create length (l (index) (random random-state)))))

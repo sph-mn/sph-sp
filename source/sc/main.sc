@@ -1,14 +1,11 @@
-(define-macro debug-log? #t)
-(includep "stdio.h")
-(includep "libguile.h")
-(includep "alsa/asoundlib.h")
-(include-sc "../../foreign/sph")
-(include-sc "../../foreign/sph/scm")
-(include-sc "../../foreign/sph/one")
+(pre-define debug-log? #t)
+(pre-include "stdio.h" "libguile.h" "alsa/asoundlib.h")
+
+(sc-include-once foreign-sph "../../foreign/sph"
+  scm "../../foreign/sph/scm" one "../../foreign/sph/one" io "io")
+
 (define-macro init-status (define s b8-s))
-(include-sc "io")
-(include "../../foreign/kissfft/kiss_fft.h")
-(include "../../foreign/kissfft/tools/kiss_fftr.h")
+(pre-include "../../foreign/kissfft/kiss_fft.h" "../../foreign/kissfft/tools/kiss_fftr.h")
 
 (define (scm-sp-fft a) (SCM SCM)
   scm-c-local-error-init (scm-c-local-error-assert "type-check" (scm-is-true (scm-f32vector? a)))
@@ -19,7 +16,7 @@
   (define r SCM (scm-make-f32vector (scm-from-uint32 size-result) (scm-from-uint8 0)))
   (while size-result (decrement-one size-result)
     (set (deref (convert-type (SCM-BYTEVECTOR-CONTENTS r) f32-s*) size-result)
-      (struct-ref out[size-result] r)))
+      (struct-get out[size-result] r)))
   (free fftr-state) (free out) (return r) (label error scm-c-local-error-return))
 
 (define (scm-sp-fft-inverse a) (SCM SCM)
