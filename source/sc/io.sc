@@ -1,13 +1,15 @@
-;uses a custom type for ports because guiles port api is underdocumented / too complicated for now
 (pre-include "fcntl.h")
-(pre-define sp-port-type-alsa 0)
-(pre-define sp-port-type-file 1)
-(define sp-port-scm-type scm-t-bits)
-(define scm-sp-port-type-alsa SCM)
-(define scm-sp-port-type-file SCM)
 (pre-define (optional-samples-per-second a) (if* (= SCM-UNDEFINED a) 96000 (scm->uint32 a)))
 (pre-define (optional-channel-count a) (if* (= SCM-UNDEFINED a) 1 (scm->uint32 a)))
 (pre-define (scm-c-sp-port? a) (SCM-SMOB-PREDICATE sp-port-scm-type a))
+
+(pre-define default-alsa-enable-soft-resample 1
+  default-alsa-latency 50
+  default-samples-per-second 16000 default-channel-count 1 sp-port-type-alsa 0 sp-port-type-file 1)
+
+(define sp-port-scm-type scm-t-bits)
+(define scm-sp-port-type-alsa SCM)
+(define scm-sp-port-type-file SCM)
 
 (pre-define (define-sp-interleave name get-source-element)
   (define (name interleaved non-interleaved channel-count non-interleaved-size)
@@ -47,9 +49,10 @@
   (word-octets-reverse-f32 (deref (deref non-interleaved current-channel) non-interleaved-size)))
 
 (define-type port-data-t
-  ;type is any of the sp-port-type-* values
-  ;position? is true when the port supports random access
-  ;position-offset stores the number of octets between the start of the file and the beginning of sample data - the header length
+  ; type is any of the sp-port-type-* values.
+  ; position? is true when the port supports random access.
+  ; position-offset stores the number of octets between the start
+  ; of the file and the beginning of sample data - the header length
   (struct (samples-per-second b32) (channel-count b32)
     (input? b8) (type b8)
     (closed? b8) (position? b8) (position b64) (position-offset b16) (data pointer)))
@@ -62,7 +65,7 @@
 
 (define (sp-port-print a output-port print-state) (int SCM SCM scm-print-state*)
   (define port-data port-data-t* (convert-type (SCM-SMOB-DATA a) port-data-t*))
-  ;calculated maximum length with 64 bit pointers and 999 types
+  ; calculated maximum length with 64 bit pointers and 999 types
   (define r char* (malloc 114))
   (sprintf r "#<sp-port %lx type:%s samples-per-second:%d channel-count:%d closed?:%s input?:%s>"
     (convert-type a pointer) (sp-port-type->name (struct-get (deref port-data) type))
@@ -72,7 +75,7 @@
   (scm-display (scm-take-locale-string r) output-port) (return 0))
 
 (pre-define sp-port-scm-type-init
-  ;create and setup the type
+  ; create and setup the type
   (set sp-port-scm-type (scm-make-smob-type "sp-port" 0))
   (scm-set-smob-print sp-port-scm-type sp-port-print))
 
@@ -106,11 +109,6 @@
           (struct-set (deref port-data) closed? #t))))
     (scm-c-local-error "type-check" 0))
   (return SCM-BOOL-T) (label error scm-c-local-error-return))
-
-(pre-define default-alsa-enable-soft-resample 1)
-(pre-define default-alsa-latency 50)
-(pre-define default-samples-per-second 16000)
-(pre-define default-channel-count 1)
 
 (define (sp-io-alsa-open input? device-name channel-count samples-per-second latency)
   (SCM b8 SCM SCM SCM SCM) scm-c-local-error-init

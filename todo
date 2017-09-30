@@ -1,3 +1,0 @@
-port sc syntax to current version
-  struct-ref syntax changed, includep -> pre-include, define-macro -> pre-define, etc
-  upgrade foreign libraries

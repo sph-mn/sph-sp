@@ -1,11 +1,7 @@
 (pre-define debug-log? #t)
 (pre-include "stdio.h" "libguile.h" "alsa/asoundlib.h")
-
-(sc-include-once foreign-sph "../../foreign/sph"
-  scm "../../foreign/sph/scm" one "../../foreign/sph/one" io "io")
-
-(define-macro init-status (define s b8-s))
-(pre-include "../../foreign/kissfft/kiss_fft.h" "../../foreign/kissfft/tools/kiss_fftr.h")
+(sc-include-once sph "foreign/sph" one "foreign/sph/one" guile "foreign/sph/guile" io "io")
+(pre-include "foreign/kissfft/kiss_fft.h" "foreign/kissfft/tools/kiss_fftr.h")
 
 (define (scm-sp-fft a) (SCM SCM)
   scm-c-local-error-init (scm-c-local-error-assert "type-check" (scm-is-true (scm-f32vector? a)))
