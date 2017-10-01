@@ -22,7 +22,7 @@
 
 (pre-define (define-sp-interleave name get-source-element)
   (define (name deinterleaved interleaved channel-count deinterleaved-size)
-    (b0 sp-sample-t* sp-sample-t** b32 b32)
+    (b0 sp-sample-t** sp-sample-t* b32 b32)
     (define interleaved-size b32 (* deinterleaved-size channel-count)) (define current-channel b32)
     (while deinterleaved-size (decrement deinterleaved-size)
       (set current-channel channel-count)
@@ -75,7 +75,8 @@
     (if* (struct-pointer-get port-data input?) "#t" "#f"))
   (scm-display (scm-take-locale-string r) output-port) (return 0))
 
-(pre-define sp-port-scm-type-init "initialise the sp port type"
+(pre-define sp-port-scm-type-init
+  ; initialise the sp port type
   (set sp-port-scm-type (scm-make-smob-type "sp-port" 0))
   (scm-set-smob-print sp-port-scm-type sp-port-print))
 
@@ -231,17 +232,14 @@
   (label exit local-memory-free (status->scm-return SCM-UNSPECIFIED)))
 
 (define (scm-sp-io-alsa-read port sample-count) (SCM SCM SCM)
-  (local-memory-init 1) status-init
-  (define port-data port-data-t* (sp-port->port-data port))
-  (define channel-count-c b32 (struct-pointer-get port-data channel-count))
-  (define sample-count-c b64 (scm->uint32 sample-count))
-  (sp-define-malloc channel-data sp-sample-t** (* channel-count-c (sizeof sp-sample-t*)))
-  (local-memory-add channel-data) (define channel b32 channel-count-c)
-  (define data sp-sample-t*)
+  status-init (define port-data port-data-t* (sp-port->port-data port))
+  (define channel-count b32 (struct-pointer-get port-data channel-count))
+  (define sample-count-c b64 (scm->uint32 sample-count)) (local-memory-init (+ 1 channel-count))
+  (sp-define-malloc channel-data sp-sample-t** (* channel-count (sizeof sp-sample-t*)))
+  (local-memory-add channel-data) (define channel b32 channel-count)
   (while channel (decrement channel)
-    (set data (malloc (* sample-count-c (sizeof sp-sample-t))))
-    (if (not data) (status-set-both-goto sp-status-group-sp sp-status-id-memory))
-    (set (deref channel-data channel) data))
+    (sp-define-malloc data sp-sample-t* (* sample-count-c (sizeof sp-sample-t)))
+    (local-memory-add data) (set (deref channel-data channel) data))
   (define frames-read snd_pcm_sframes_t)
   (set frames-read
     (snd-pcm-readn (convert-type (struct-pointer-get port-data data) snd-pcm-t*)
@@ -253,21 +251,19 @@
           0)
         0))
     (status-set-both-goto sp-status-group-alsa frames-read))
-  (set channel channel-count-c) (define result SCM SCM-EOL)
+  (set channel channel-count) (define result SCM SCM-EOL)
   (while channel (decrement channel)
     (set result (scm-cons (scm-take-f32vector (deref channel-data channel) sample-count-c) result)))
-  (label exit (free-elements (convert-type channel-data b0**) channel-count-c)
-    local-memory-free (status->scm-return result)))
+  (label exit local-memory-free (status->scm-return result)))
 
 (define (scm-sp-io-file-write port sample-count channel-data) (SCM SCM SCM SCM)
-  status-init (local-memory-init 2)
-  (define port-data port-data-t* (sp-port->port-data port))
+  status-init (define port-data port-data-t* (sp-port->port-data port))
   (if (struct-pointer-get port-data input?)
     (status-set-both-goto sp-status-group-sp sp-status-id-port-type))
   (define channel-count b32 (struct-pointer-get port-data channel-count))
   (if (not (= (scm->uint32 (scm-length channel-data)) channel-count))
     (status-set-both-goto sp-status-group-sp sp-status-id-file-channel-mismatch))
-  (define sample-count-c b64 (scm->uint64 sample-count))
+  (local-memory-init 2) (define sample-count-c b64 (scm->uint64 sample-count))
   (sp-define-malloc channel-data-c sp-sample-t** (* channel-count (sizeof sp-sample-t*)))
   (local-memory-add channel-data-c) (define channel b32 0)
   (define a SCM)
@@ -275,8 +271,8 @@
     (compound-statement
       (set (deref channel-data-c channel) (convert-type (SCM-BYTEVECTOR-CONTENTS a) sp-sample-t*))
       (increment channel)))
-  (sp-define-malloc data-interleaved sp-sample-t**
-    (* sample-count-c channel-count 4 (sizeof sp-sample-t*)))
+  (sp-define-malloc data-interleaved sp-sample-t*
+    (* sample-count-c channel-count 4 (sizeof sp-sample-t)))
   (local-memory-add data-interleaved)
   (sp-interleave-and-reverse-endian channel-data-c data-interleaved channel-count sample-count-c)
   (sp-system-status-require!
@@ -285,30 +281,29 @@
   (label exit local-memory-free (status->scm-return SCM-UNSPECIFIED)))
 
 (define (scm-sp-io-file-read port sample-count) (SCM SCM SCM)
-  status-init (local-memory-init 2)
-  (define port-data port-data-t* (sp-port->port-data port))
+  status-init (define port-data port-data-t* (sp-port->port-data port))
   (define channel-count b32 (struct-pointer-get port-data channel-count))
-  (define sample-count-c b64 (scm->uint64 sample-count))
-  (sp-define-malloc data-interleaved sp-sample-t (* sample-count-c channel-count 4))
+  (define sample-count-c b64 (scm->uint64 sample-count)) (local-memory-init (+ 2 channel-count))
+  (sp-define-malloc data-interleaved sp-sample-t*
+    (* sample-count-c channel-count 4 (sizeof sp-sample-t)))
   (local-memory-add data-interleaved)
   (sp-system-status-require!
     (read (struct-pointer-get port-data data-int) data-interleaved
       (* sample-count-c channel-count 4)))
   ; prepare deinterleaved memory
-  (sp-define-malloc data-deinterleaved sp-sample-t* (* channel-count (sizeof b0*)))
-  (local-memory-add data-deinterleaved) (define index b32 channel-count)
-  (while index (decrement index)
-    (set (deref data-deinterleaved index) (malloc (* sample-count-c 4)))
-    (if (not (deref data-deinterleaved index))
-      (status-set-both-goto sp-status-group-sp sp-status-id-memory)))
+  (sp-define-malloc data-deinterleaved sp-sample-t** (* channel-count (sizeof sp-sample-t*)))
+  (local-memory-add data-deinterleaved) (define channel b32 channel-count)
+  (while channel (decrement channel)
+    (sp-define-malloc data sp-sample-t* (* sample-count-c 4)) (local-memory-add data)
+    (set (deref data-deinterleaved channel) data))
   ; deinterleave
   (sp-deinterleave-and-reverse-endian data-interleaved data-deinterleaved
     channel-count sample-count-c)
   ; create f32vectors
-  (define result SCM SCM-EOL) (set index channel-count)
-  (while index (decrement index)
+  (define result SCM SCM-EOL) (set channel channel-count)
+  (while channel (decrement channel)
     (set result
-      (scm-cons (scm-take-f32vector (deref data-deinterleaved index) sample-count-c) result)))
+      (scm-cons (scm-take-f32vector (deref data-deinterleaved channel) sample-count-c) result)))
   (label exit local-memory-free (status->scm-return result)))
 
 (define (scm-sp-port-input? port) (SCM SCM)
