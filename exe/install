@@ -3,5 +3,5 @@
 
 (import (sph install))
 
-(install-cli-guile ("/usr/lib" "temp/libguile-sp.so")
+(install-cli-guile ("/usr/lib" "temp/libguile-sph-sp.so")
   (path-lib-scheme "source/scheme/sph" "source/scheme/test"))

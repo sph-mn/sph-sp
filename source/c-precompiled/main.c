@@ -1,30 +1,29 @@
 
 #define debug_log_p 1
-#ifndef sc_included_stdio
+#ifndef sc_included_stdio_h
 #include <stdio.h>
-#define sc_included_stdio
+#define sc_included_stdio_h
 #endif
-#ifndef sc_included_libguile
+#ifndef sc_included_libguile_h
 #include <libguile.h>
-#define sc_included_libguile
+#define sc_included_libguile_h
 #endif
-#ifndef sc_included_kiss_fft
+#ifndef sc_included_kiss_fft_h
 #include <foreign/kissfft/kiss_fft.h>
-#define sc_included_kiss_fft
+#define sc_included_kiss_fft_h
 #endif
-#ifndef sc_included_kiss_fftr
+#ifndef sc_included_kiss_fftr_h
 #include <foreign/kissfft/tools/kiss_fftr.h>
-#define sc_included_kiss_fftr
+#define sc_included_kiss_fftr_h
 #endif
-#ifndef sc_included_fcntl
+#ifndef sc_included_fcntl_h
 #include <fcntl.h>
-#define sc_included_fcntl
+#define sc_included_fcntl_h
 #endif
-#ifndef sc_included_alsa
+#ifndef sc_included_asoundlib_h
 #include <alsa/asoundlib.h>
-#define sc_included_alsa
+#define sc_included_asoundlib_h
 #endif
-#define sp_sample_t f32_s
 #ifndef sc_included_sph
 #define sc_included_sph
 #ifndef sc_included_inttypes_h
@@ -57,6 +56,7 @@
 #define null ((b0)(0))
 #define zero_p(a) (0 == a)
 #endif
+#define sp_sample_t f32_s
 #define sp_define_malloc(id, type, size)                                       \
   type id = malloc(size);                                                      \
   if (!id) {                                                                   \
@@ -72,13 +72,6 @@
   if (!id) {                                                                   \
     status_set_both_goto(sp_status_group_sp, sp_status_id_memory);             \
   }
-/** unset elements in array must be zero */
-b0 free_elements(b0 **array, size_t size) {
-  while (size) {
-    size = (size - 1);
-    free((*(array + size)));
-  };
-};
 #ifndef sc_included_one
 #define sc_included_one
 #ifndef sc_included_sph
@@ -814,7 +807,6 @@ exit:
   local_memory_free;
   status_to_scm_return(result);
 };
-/** type-check has been left out explicitly */
 SCM scm_sp_port_input_p(SCM port) {
   return (scm_from_bool((*sp_port_to_port_data(port)).input_p));
 };
@@ -921,63 +913,62 @@ b0 init_sp() {
   scm_c_module_define(scm_module, "sp-port-type-file", scm_sp_port_type_file);
   scm_c_define_procedure_c_init;
   scm_c_define_procedure_c("sp-port-close", 1, 0, 0, scm_sp_port_close,
-                           "sp-port -> boolean/error");
+                           "sp-port -> boolean");
   scm_c_define_procedure_c("sp-port-input?", 1, 0, 0, scm_sp_port_input_p,
-                           "sp-port -> boolean/error");
+                           "sp-port -> boolean");
   scm_c_define_procedure_c("sp-port-position?", 1, 0, 0, scm_sp_port_position_p,
-                           "sp-port -> boolean/error");
+                           "sp-port -> boolean");
   scm_c_define_procedure_c("sp-port-position", 1, 0, 0, scm_sp_port_position,
-                           "sp-port -> integer/boolean/error");
+                           "sp-port -> integer/boolean");
   scm_c_define_procedure_c("sp-port-channel-count", 1, 0, 0,
-                           scm_sp_port_channel_count,
-                           "sp-port -> integer/error");
+                           scm_sp_port_channel_count, "sp-port -> integer");
   scm_c_define_procedure_c("sp-port-samples-per-second", 1, 0, 0,
                            scm_sp_port_samples_per_second,
-                           "sp-port -> integer/boolean/error");
+                           "sp-port -> integer/boolean");
   scm_c_define_procedure_c("sp-port?", 1, 0, 0, scm_sp_port_p,
                            "sp-port -> boolean");
   scm_c_define_procedure_c("sp-port-type", 1, 0, 0, scm_sp_port_type,
                            "sp-port -> integer");
   scm_c_define_procedure_c("sp-fft", 1, 0, 0, scm_sp_fft,
-                           "f32vector:volumes-per-time -> "
+                           "f32vector:value-per-time -> "
                            "f32vector:frequencies-per-time\n    discrete "
                            "fourier transform on the input data");
   scm_c_define_procedure_c("sp-fft-inverse", 1, 0, 0, scm_sp_fft_inverse,
                            "f32vector:frequencies-per-time -> "
-                           "f32vector:volume-per-time\n    inverse discrete "
+                           "f32vector:value-per-time\n    inverse discrete "
                            "fourier transform on the input data");
-  scm_c_define_procedure_c(
-      "sp-io-file-open-input", 1, 2, 0, scm_sp_io_file_open_input,
-      "string -> sp-port/error\n    path -> sp-port/error");
-  scm_c_define_procedure_c(
-      "sp-io-file-open-output", 1, 2, 0, scm_sp_io_file_open_output,
-      "string [integer integer] -> sp-port/error\n    path [channel-count "
-      "samples-per-second] -> sp-port/error");
+  scm_c_define_procedure_c("sp-io-file-open-input", 1, 2, 0,
+                           scm_sp_io_file_open_input,
+                           "string -> sp-port\n    path -> sp-port");
+  scm_c_define_procedure_c("sp-io-file-open-output", 1, 2, 0,
+                           scm_sp_io_file_open_output,
+                           "string [integer integer] -> sp-port\n    path "
+                           "[channel-count samples-per-second] -> sp-port");
   scm_c_define_procedure_c("sp-io-file-write", 2, 1, 0, scm_sp_io_file_write,
                            "sp-port (f32vector ...):channel-data "
-                           "[integer:sample-count] -> boolean/error\n    write "
+                           "[integer:sample-count] -> boolean\n    write "
                            "sample data to the channels of a file port");
   scm_c_define_procedure_c(
       "sp-io-file-set-position", 2, 0, 0, scm_sp_io_file_set_position,
-      "sp-port integer:sample-offset -> boolean/error\n    sample-offset can "
-      "be negative, in which case it is from the end of the file");
+      "sp-port integer:sample-offset -> boolean\n    sample-offset can be "
+      "negative, in which case it is from the end of the file");
   scm_c_define_procedure_c(
       "sp-io-file-read", 2, 0, 0, scm_sp_io_file_read,
-      "sp-port integer:sample-count -> (f32vector ...):channel-data/error");
+      "sp-port integer:sample-count -> (f32vector ...):channel-data");
   scm_c_define_procedure_c(
       "sp-io-alsa-open-input", 0, 4, 0, scm_sp_io_alsa_open_input,
-      "[string integer integer integer] -> sp-port/error\n    [device-name "
-      "channel-count samples-per-second latency] -> sp-port/error");
+      "[string integer integer integer] -> sp-port\n    [device-name "
+      "channel-count samples-per-second latency] -> sp-port");
   scm_c_define_procedure_c(
       "sp-io-alsa-open-output", 0, 4, 0, scm_sp_io_alsa_open_output,
-      "[string integer integer integer] -> sp-port/error\n    [device-name "
-      "channel-count samples-per-second latency] -> sp-port/error");
+      "[string integer integer integer] -> sp-port\n    [device-name "
+      "channel-count samples-per-second latency] -> sp-port");
   scm_c_define_procedure_c("sp-io-alsa-write", 2, 1, 0, scm_sp_io_alsa_write,
                            "sp-port (f32vector ...):channel-data "
-                           "[integer:sample-count] -> boolean/error\n    write "
+                           "[integer:sample-count] -> boolean\n    write "
                            "sample data to the channels of an alsa port - to "
                            "the sound card for sound output for example");
   scm_c_define_procedure_c("sp-io-alsa-read", 2, 0, 0, scm_sp_io_alsa_read,
-                           "port sample-count -> channel-data/error\n    "
-                           "sp-port integer -> (f32vector ...)/error");
+                           "port sample-count -> channel-data\n    sp-port "
+                           "integer -> (f32vector ...)");
 };

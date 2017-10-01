@@ -1,12 +1,12 @@
 (pre-define debug-log? #t)
 
-(pre-include-once stdio "stdio.h"
-  libguile "libguile.h"
-  kiss-fft "foreign/kissfft/kiss_fft.h"
-  kiss-fftr "foreign/kissfft/tools/kiss_fftr.h" fcntl "fcntl.h" alsa "alsa/asoundlib.h")
+(pre-include-once stdio-h "stdio.h"
+  libguile-h "libguile.h"
+  kiss-fft-h "foreign/kissfft/kiss_fft.h"
+  kiss-fftr-h "foreign/kissfft/tools/kiss_fftr.h" fcntl-h "fcntl.h" asoundlib-h "alsa/asoundlib.h")
 
-(pre-define sp-sample-t f32-s)
 (sc-include-once sph "foreign/sph")
+(pre-define sp-sample-t f32-s)
 
 (pre-define (sp-define-malloc id type size) (define id type (malloc size))
   (if (not id) (status-set-both-goto sp-status-group-sp sp-status-id-memory)))
@@ -16,9 +16,6 @@
 
 (pre-define (sp-define-calloc id type size) (define id type (calloc size 1))
   (if (not id) (status-set-both-goto sp-status-group-sp sp-status-id-memory)))
-
-(define (free-elements array size) (b0 b0** size-t)
-  "unset elements in array must be zero" (while size (set size (- size 1)) (free (deref array size))))
 
 (sc-include-once one "foreign/sph/one"
   guile "foreign/sph/guile"
@@ -55,66 +52,65 @@
   (scm-c-module-define scm-module "sp-port-type-alsa" scm-sp-port-type-alsa)
   (scm-c-module-define scm-module "sp-port-type-file" scm-sp-port-type-file)
   scm-c-define-procedure-c-init
-  (scm-c-define-procedure-c "sp-port-close" 1 0 0 scm-sp-port-close "sp-port -> boolean/error")
-  (scm-c-define-procedure-c "sp-port-input?" 1 0 0 scm-sp-port-input? "sp-port -> boolean/error")
-  (scm-c-define-procedure-c "sp-port-position?" 1
-    0 0 scm-sp-port-position? "sp-port -> boolean/error")
+  (scm-c-define-procedure-c "sp-port-close" 1 0 0 scm-sp-port-close "sp-port -> boolean")
+  (scm-c-define-procedure-c "sp-port-input?" 1 0 0 scm-sp-port-input? "sp-port -> boolean")
+  (scm-c-define-procedure-c "sp-port-position?" 1 0 0 scm-sp-port-position? "sp-port -> boolean")
   (scm-c-define-procedure-c "sp-port-position" 1
-    0 0 scm-sp-port-position "sp-port -> integer/boolean/error")
+    0 0 scm-sp-port-position "sp-port -> integer/boolean")
   (scm-c-define-procedure-c "sp-port-channel-count" 1
-    0 0 scm-sp-port-channel-count "sp-port -> integer/error")
+    0 0 scm-sp-port-channel-count "sp-port -> integer")
   (scm-c-define-procedure-c "sp-port-samples-per-second" 1
-    0 0 scm-sp-port-samples-per-second "sp-port -> integer/boolean/error")
+    0 0 scm-sp-port-samples-per-second "sp-port -> integer/boolean")
   (scm-c-define-procedure-c "sp-port?" 1 0 0 scm-sp-port? "sp-port -> boolean")
   (scm-c-define-procedure-c "sp-port-type" 1 0 0 scm-sp-port-type "sp-port -> integer")
   (scm-c-define-procedure-c "sp-fft" 1
     0 0
     scm-sp-fft
-    "f32vector:volumes-per-time -> f32vector:frequencies-per-time
+    "f32vector:value-per-time -> f32vector:frequencies-per-time
     discrete fourier transform on the input data")
   (scm-c-define-procedure-c "sp-fft-inverse" 1
     0 0
     scm-sp-fft-inverse
-    "f32vector:frequencies-per-time -> f32vector:volume-per-time
+    "f32vector:frequencies-per-time -> f32vector:value-per-time
     inverse discrete fourier transform on the input data")
   (scm-c-define-procedure-c "sp-io-file-open-input" 1
     2 0 scm-sp-io-file-open-input
-    "string -> sp-port/error
-    path -> sp-port/error")
+    "string -> sp-port
+    path -> sp-port")
   (scm-c-define-procedure-c "sp-io-file-open-output" 1
     2 0
     scm-sp-io-file-open-output
-    "string [integer integer] -> sp-port/error
-    path [channel-count samples-per-second] -> sp-port/error")
+    "string [integer integer] -> sp-port
+    path [channel-count samples-per-second] -> sp-port")
   (scm-c-define-procedure-c "sp-io-file-write" 2
     1 0
     scm-sp-io-file-write
-    "sp-port (f32vector ...):channel-data [integer:sample-count] -> boolean/error
+    "sp-port (f32vector ...):channel-data [integer:sample-count] -> boolean
     write sample data to the channels of a file port")
   (scm-c-define-procedure-c "sp-io-file-set-position" 2
     0 0
     scm-sp-io-file-set-position
-    "sp-port integer:sample-offset -> boolean/error
+    "sp-port integer:sample-offset -> boolean
     sample-offset can be negative, in which case it is from the end of the file")
   (scm-c-define-procedure-c "sp-io-file-read" 2
-    0 0 scm-sp-io-file-read "sp-port integer:sample-count -> (f32vector ...):channel-data/error")
+    0 0 scm-sp-io-file-read "sp-port integer:sample-count -> (f32vector ...):channel-data")
   (scm-c-define-procedure-c "sp-io-alsa-open-input" 0
     4 0
     scm-sp-io-alsa-open-input
-    "[string integer integer integer] -> sp-port/error
-    [device-name channel-count samples-per-second latency] -> sp-port/error")
+    "[string integer integer integer] -> sp-port
+    [device-name channel-count samples-per-second latency] -> sp-port")
   (scm-c-define-procedure-c "sp-io-alsa-open-output" 0
     4 0
     scm-sp-io-alsa-open-output
-    "[string integer integer integer] -> sp-port/error
-    [device-name channel-count samples-per-second latency] -> sp-port/error")
+    "[string integer integer integer] -> sp-port
+    [device-name channel-count samples-per-second latency] -> sp-port")
   (scm-c-define-procedure-c "sp-io-alsa-write" 2
     1 0
     scm-sp-io-alsa-write
-    "sp-port (f32vector ...):channel-data [integer:sample-count] -> boolean/error
+    "sp-port (f32vector ...):channel-data [integer:sample-count] -> boolean
     write sample data to the channels of an alsa port - to the sound card for sound output for example")
   (scm-c-define-procedure-c "sp-io-alsa-read" 2
     0 0
     scm-sp-io-alsa-read
-    "port sample-count -> channel-data/error
-    sp-port integer -> (f32vector ...)/error"))
+    "port sample-count -> channel-data
+    sp-port integer -> (f32vector ...)"))

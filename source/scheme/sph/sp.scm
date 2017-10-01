@@ -11,7 +11,6 @@
     sp-io-file-read
     sp-io-file-set-position
     sp-io-file-write
-    sp-io-stream
     sp-noise
     sp-port-channel-count
     sp-port-close
@@ -31,12 +30,16 @@
     sp-ports-write
     sp-sine)
   (import
-    (guile)
-    (sph base)
+    (sph)
+    (sph list)
     (sph uniform-vector)
-    (except (srfi srfi-1) map))
+    (only (guile)
+      load-extension
+      random-state-from-platform
+      random:uniform)
+    (only (srfi srfi-1) split-at))
 
-  (load-extension "libguile-sp" "init_sp")
+  (load-extension "libguile-sph-sp" "init_sp")
   (define default-random-state (random-state-from-platform))
   (define pi 3.1415926535)
 

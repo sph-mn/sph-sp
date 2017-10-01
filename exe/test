@@ -3,5 +3,9 @@
 
 (import (sph) (sph test))
 
-(let (s (test-settings-default-custom path-search "source/scheme"))
-  (test-execute-modules-by-prefix #:settings s (q (test module sph sp))))
+(define settings
+  (test-settings-default-custom
+    ;only (q ((test module sph)))
+    path-search "source/scheme" reporter-name (q compact)))
+
+(test-execute-modules-by-prefix #:settings settings (q (test module sph sp)))

@@ -307,7 +307,6 @@
   (label exit local-memory-free (status->scm-return result)))
 
 (define (scm-sp-port-input? port) (SCM SCM)
-  "type-check has been left out explicitly"
   (return (scm-from-bool (struct-get (deref (sp-port->port-data port)) input?))))
 
 (define (scm-sp-port-position port) (SCM SCM)
