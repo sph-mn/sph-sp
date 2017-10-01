@@ -1,8 +1,30 @@
 
 #define debug_log_p 1
-#include <alsa/asoundlib.h>
-#include <libguile.h>
+#ifndef sc_included_stdio
 #include <stdio.h>
+#define sc_included_stdio
+#endif
+#ifndef sc_included_libguile
+#include <libguile.h>
+#define sc_included_libguile
+#endif
+#ifndef sc_included_kiss_fft
+#include <foreign/kissfft/kiss_fft.h>
+#define sc_included_kiss_fft
+#endif
+#ifndef sc_included_kiss_fftr
+#include <foreign/kissfft/tools/kiss_fftr.h>
+#define sc_included_kiss_fftr
+#endif
+#ifndef sc_included_fcntl
+#include <fcntl.h>
+#define sc_included_fcntl
+#endif
+#ifndef sc_included_alsa
+#include <alsa/asoundlib.h>
+#define sc_included_alsa
+#endif
+#define sp_sample_t f32_s
 #ifndef sc_included_sph
 #define sc_included_sph
 #ifndef sc_included_inttypes_h
@@ -35,6 +57,23 @@
 #define null ((b0)(0))
 #define zero_p(a) (0 == a)
 #endif
+#define sp_define_malloc(id, type, size)                                       \
+  type id = malloc(size);                                                      \
+  if (!id) {                                                                   \
+    status_set_both_goto(sp_status_group_sp, sp_status_id_memory);             \
+  }
+#define sp_define_calloc(id, type, size)                                       \
+  type id = calloc(size, 1);                                                   \
+  if (!id) {                                                                   \
+    status_set_both_goto(sp_status_group_sp, sp_status_id_memory);             \
+  }
+/** unset elements in array must be zero */
+b0 free_elements(b0 **array, size_t size) {
+  while (size) {
+    size = (size - 1);
+    free((*(array + size)));
+  };
+};
 #ifndef sc_included_one
 #define sc_included_one
 #ifndef sc_included_sph
@@ -190,13 +229,166 @@ SCM scm_c_bytevector_take(size_t size_octets, b8 *a) {
     list = scm_tail(list);                                                     \
   }
 #endif
+#ifndef sc_included_status
+#define sc_included_status
+/* return status code and error handling. uses a local variable named "status" and a goto label named "exit".
+   a status has an identifier and a group to discern between status identifiers of different libraries.
+   status id 0 is success, everything else can be considered a failure or special case.
+   status ids are 32 bit signed integers for compatibility with error return codes from many other existing libraries.
+   bindings with a ! suffix update the status from an expression */
+typedef b32_s status_i_t;
+typedef struct {
+  status_i_t id;
+  b8 group;
+} status_t;
+#define status_id_success 0
+#define status_group_undefined 0
+#define status_init                                                            \
+  status_t status = {status_id_success, status_group_undefined}
+/** like status init but sets a default group */
+#define status_init_group(group) status_t status = {status_id_success, group}
+;
+#define status_reset status_set_both(status_group_undefined, status_id_success)
+#define status_success_p (status_id_success == status.id)
+#define status_failure_p !status_success_p
+#define status_goto goto exit
+#define status_set_group(group_id) status.group = group_id
+#define status_set_id(status_id) status.id = status_id
+#define status_set_both(group_id, status_id)                                   \
+  status_set_group(group_id);                                                  \
+  status_set_id(status_id)
+#define status_require                                                         \
+  if (status_failure_p) {                                                      \
+    status_goto;                                                               \
+  }
+/** update status with the result of expression, check for failure and goto
+ * error if so */
+#define status_require_x(expression)                                           \
+  status = expression;                                                         \
+  if (status_failure_p) {                                                      \
+    status_goto;                                                               \
+  }
+;
+/** set the status id and goto error */
+#define status_set_id_goto(status_id)                                          \
+  status_set_id(status_id);                                                    \
+  status_goto
+;
+#define status_set_group_goto(group_id)                                        \
+  status_set_group(group_id);                                                  \
+  status_goto
+#define status_set_both_goto(group_id, status_id)                              \
+  status_set_both(group_id, status_id);                                        \
+  status_goto
+#define status_id_is_p(status_id) (status_id == status.id)
+#endif
+#ifndef sc_included_local_memory
+#define sc_included_local_memory
+/** register memory in a local variable to free all memory allocated at point */
+#define local_memory_init(register_size)                                       \
+  b0 *sph_local_memory_register[register_size];                                \
+  b8 sph_local_memory_index = 0
+;
+/** do not try to add more entries than specified by register-size or a buffer
+ * overflow occurs */
+#define local_memory_add(address)                                              \
+  (*(sph_local_memory_register + sph_local_memory_index)) = address;           \
+  sph_local_memory_index = (1 + sph_local_memory_index)
+;
+#define local_memory_free                                                      \
+  while (sph_local_memory_index) {                                             \
+    sph_local_memory_index = (sph_local_memory_index - 1);                     \
+    free((*(sph_local_memory_register + sph_local_memory_index)));             \
+  }
+#endif
+#ifndef sc_included_sp_status
+#define sc_included_sp_status
+enum {
+  sp_status_id_undefined,
+  sp_status_id_input_type,
+  sp_status_id_not_implemented,
+  sp_status_id_memory,
+  sp_status_id_file_incompatible,
+  sp_status_id_file_encoding,
+  sp_status_id_file_header,
+  sp_status_id_port_closed,
+  sp_status_id_port_position,
+  sp_status_id_file_channel_mismatch,
+  sp_status_id_port_type,
+  sp_status_group_sp,
+  sp_status_group_libc,
+  sp_status_group_alsa
+};
+b8 *sp_status_description(status_t a) {
+  return (
+      ((sp_status_group_sp == a.group)
+           ? ((b8 *)((
+                 (sp_status_id_input_type == a.id)
+                     ? "input argument is of wrong type"
+                     : ((sp_status_id_not_implemented == a.id)
+                            ? "not implemented"
+                            : ((sp_status_id_memory == a.id)
+                                   ? "not enough memory or other memory "
+                                     "allocation error"
+                                   : ((sp_status_id_file_incompatible == a.id)
+                                          ? "file exists but channel count or "
+                                            "sample rate is different from "
+                                            "what was requested"
+                                          : ""))))))
+           : ((sp_status_group_alsa == a.group) ? ((b8 *)(snd_strerror(a.id)))
+                                                : ((b8 *)("")))));
+};
+b8 *sp_status_name(status_t a) {
+  return (((sp_status_group_sp == a.group)
+               ? ((b8 *)(((sp_status_id_input_type == a.id)
+                              ? "input-type"
+                              : ((sp_status_id_not_implemented == a.id)
+                                     ? "not-implemented"
+                                     : ((sp_status_id_memory == a.id)
+                                            ? "memory"
+                                            : "unknown")))))
+               : ((sp_status_group_alsa == a.group) ? ((b8 *)("alsa"))
+                                                    : ((b8 *)("unknown")))));
+};
+#define sp_status_init status_init_group(sp_status_group_sp)
+SCM scm_rnrs_raise;
+#define scm_c_error(name, description)                                         \
+  scm_call_1(scm_rnrs_raise,                                                   \
+             scm_list_3(scm_from_latin1_symbol(name),                          \
+                        scm_cons(scm_from_latin1_symbol("description"),        \
+                                 scm_from_utf8_string(description)),           \
+                        scm_cons(scm_from_latin1_symbol("c-routine"),          \
+                                 scm_from_latin1_symbol(__FUNCTION__))))
+#define status_to_scm_error(a)                                                 \
+  scm_c_error(sp_status_name(a), sp_status_description(a))
+#define status_to_scm(result)                                                  \
+  (status_success_p ? result : status_to_scm_error(status))
+/** call scm-c-error if status is not success or return result */
+#define status_to_scm_return(result) return (status_to_scm(result))
+;
+#define sp_system_status_require_id(id)                                        \
+  if ((id < 0)) {                                                              \
+    status_set_both_goto(sp_status_group_libc, id);                            \
+  }
+#define sp_system_status_require_x(expression)                                 \
+  status_set_id(expression);                                                   \
+  if ((status.id < 0)) {                                                       \
+    status_set_group_goto(sp_status_group_libc);                               \
+  } else {                                                                     \
+    status_reset;                                                              \
+  }
+#endif
 #ifndef sc_included_io
 #define sc_included_io
-#include <fcntl.h>
 #define optional_samples_per_second(a)                                         \
   ((SCM_UNDEFINED == a) ? 96000 : scm_to_uint32(a))
 #define optional_channel_count(a) ((SCM_UNDEFINED == a) ? 1 : scm_to_uint32(a))
 #define scm_c_sp_port_p(a) SCM_SMOB_PREDICATE(sp_port_scm_type, a)
+#define sp_alsa_status_require_x(expression)                                   \
+  status_set_id(expression);                                                   \
+  if (status_failure_p) {                                                      \
+    status_set_group_goto(sp_status_group_alsa);                               \
+  }
 #define default_alsa_enable_soft_resample 1
 #define default_alsa_latency 50
 #define default_samples_per_second 16000
@@ -206,58 +398,58 @@ SCM scm_c_bytevector_take(size_t size_octets, b8 *a) {
 scm_t_bits sp_port_scm_type;
 SCM scm_sp_port_type_alsa;
 SCM scm_sp_port_type_file;
+/** reverse the byte order for one sample */
+sp_sample_t sample_reverse_endian(sp_sample_t a) {
+  sp_sample_t result;
+  b8 *b = ((b8 *)(&a));
+  b8 *c = ((b8 *)(&result));
+  (*c) = (*(b + 3));
+  (*(c + 1)) = (*(b + 2));
+  (*(c + 2)) = (*(b + 1));
+  (*(c + 3)) = (*b);
+  return (result);
+};
 #define define_sp_interleave(name, get_source_element)                         \
-  b0 name(f32_s *interleaved, f32_s **non_interleaved, b32 channel_count,      \
-          b32 non_interleaved_size) {                                          \
-    b32 interleaved_size = (non_interleaved_size * channel_count);             \
+  b0 name(sp_sample_t *deinterleaved, sp_sample_t **interleaved,               \
+          b32 channel_count, b32 deinterleaved_size) {                         \
+    b32 interleaved_size = (deinterleaved_size * channel_count);               \
     b32 current_channel;                                                       \
-    while (non_interleaved_size) {                                             \
-      decrement_one(non_interleaved_size);                                     \
+    while (deinterleaved_size) {                                               \
+      decrement(deinterleaved_size);                                           \
       current_channel = channel_count;                                         \
       while (current_channel) {                                                \
-        decrement_one(current_channel);                                        \
-        decrement_one(interleaved_size);                                       \
+        decrement(current_channel);                                            \
+        decrement(interleaved_size);                                           \
         (*(interleaved + interleaved_size)) = get_source_element;              \
       };                                                                       \
     };                                                                         \
   }
 #define define_sp_deinterleave(name, get_source_element)                       \
-  b0 name(f32_s **non_interleaved, f32_s *interleaved, b32 channel_count,      \
-          b32 non_interleaved_size) {                                          \
-    b32 interleaved_size = (non_interleaved_size * channel_count);             \
+  b0 name(sp_sample_t *interleaved, sp_sample_t **deinterleaved,               \
+          b32 channel_count, b32 deinterleaved_size) {                         \
+    b32 interleaved_size = (deinterleaved_size * channel_count);               \
     b32 current_channel;                                                       \
-    while (non_interleaved_size) {                                             \
-      decrement_one(non_interleaved_size);                                     \
+    while (deinterleaved_size) {                                               \
+      decrement(deinterleaved_size);                                           \
       current_channel = channel_count;                                         \
       while (current_channel) {                                                \
-        decrement_one(current_channel);                                        \
-        decrement_one(interleaved_size);                                       \
-        (*((*(non_interleaved + current_channel)) + non_interleaved_size)) =   \
+        decrement(current_channel);                                            \
+        decrement(interleaved_size);                                           \
+        (*((*(deinterleaved + current_channel)) + deinterleaved_size)) =       \
             get_source_element;                                                \
       };                                                                       \
     };                                                                         \
   }
-f32_s word_octets_reverse_f32(f32_s a) {
-  f32_s r;
-  b8 *b = ((b8 *)(&a));
-  b8 *c = ((b8 *)(&r));
-  (*c) = (*(b + 3));
-  (*(c + 1)) = (*(b + 2));
-  (*(c + 2)) = (*(b + 1));
-  (*(c + 3)) = (*b);
-  return (r);
-};
-define_sp_deinterleave(sp_deinterleave_n_and_swap_endian,
-                       word_octets_reverse_f32((*(interleaved +
-                                                  interleaved_size))));
-define_sp_deinterleave(sp_deinterleave_n, (*(interleaved + interleaved_size)));
-define_sp_interleave(sp_interleave_n,
-                     (*((*(non_interleaved + current_channel)) +
-                        non_interleaved_size)));
+define_sp_deinterleave(sp_deinterleave, (*(interleaved + interleaved_size)));
+define_sp_interleave(sp_interleave, (*((*(deinterleaved + current_channel)) +
+                                       deinterleaved_size)));
+define_sp_deinterleave(sp_deinterleave_and_reverse_endian,
+                       sample_reverse_endian((*(interleaved +
+                                                interleaved_size))));
 define_sp_interleave(
-    sp_interleave_n_and_swap_endian,
-    word_octets_reverse_f32((*((*(non_interleaved + current_channel)) +
-                               non_interleaved_size))));
+    sp_interleave_and_reverse_endian,
+    sample_reverse_endian((*((*(deinterleaved + current_channel)) +
+                             deinterleaved_size))));
 typedef struct {
   b32 samples_per_second;
   b32 channel_count;
@@ -267,11 +459,14 @@ typedef struct {
   b8 position_p;
   b64 position;
   b16 position_offset;
-  pointer data;
+  b0 *data;
+  int data_int;
 } port_data_t;
+/** integer -> string */
 #define sp_port_type_to_name(a)                                                \
   ((sp_port_type_file == a) ? "file"                                           \
                             : ((sp_port_type_alsa == a) ? "alsa" : "unknown"))
+;
 #define sp_port_to_port_data(a) ((port_data_t *)(SCM_SMOB_DATA(a)))
 int sp_port_print(SCM a, SCM output_port, scm_print_state *print_state) {
   port_data_t *port_data = ((port_data_t *)(SCM_SMOB_DATA(a)));
@@ -279,96 +474,94 @@ int sp_port_print(SCM a, SCM output_port, scm_print_state *print_state) {
   sprintf(r,
           "#<sp-port %lx type:%s samples-per-second:%d channel-count:%d "
           "closed?:%s input?:%s>",
-          ((pointer)(a)), sp_port_type_to_name((*port_data).type),
+          ((b0 *)(a)), sp_port_type_to_name((*port_data).type),
           (*port_data).samples_per_second, (*port_data).channel_count,
           ((*port_data).closed_p ? "#t" : "#f"),
           ((*port_data).input_p ? "#t" : "#f"));
   scm_display(scm_take_locale_string(r), output_port);
   return (0);
 };
-#define sp_port_scm_type_init                                                  \
-  sp_port_scm_type = scm_make_smob_type("sp-port", 0);                         \
-  scm_set_smob_print(sp_port_scm_type, sp_port_print)
+#define sp_port_scm_type_init "initialise the sp port type"
+#define set                                                                    \
+  sp_port_scm_type scm_make_smob_type sp -                                     \
+      port 0 scm_set_smob_print(sp_port_scm_type, sp_port_print)
+/** integer boolean integer integer boolean integer pointer integer -> sp-port
+ */
 SCM sp_port_create(b8 type, b8 input_p, b32 samples_per_second,
                    b32 channel_count, b8 position_p, b16 position_offset,
-                   pointer data) {
+                   b0 *data, int data_int) {
   port_data_t *port_data = scm_gc_malloc(sizeof(port_data_t), "sp-port-data");
   (*port_data).channel_count = channel_count;
   (*port_data).samples_per_second = samples_per_second;
   (*port_data).type = type;
   (*port_data).input_p = input_p;
   (*port_data).data = data;
+  (*port_data).data_int = data_int;
   (*port_data).position_p = position_p;
   (*port_data).position = 0;
   (*port_data).position_offset = position_offset;
   return (scm_new_smob(sp_port_scm_type, ((scm_t_bits)(port_data))));
 };
-#define scm_c_require_success_alsa(a)                                          \
-  s = a;                                                                       \
-  if (s) {                                                                     \
-    scm_c_local_error("alsa", scm_from_locale_string(snd_strerror(s)));        \
-  }
 SCM scm_sp_port_close(SCM a) {
-  scm_c_local_error_init;
-  init_status;
+  status_init;
   port_data_t *port_data;
   if (scm_c_sp_port_p(a)) {
     port_data = sp_port_to_port_data(a);
     if ((*port_data).closed_p) {
-      scm_c_local_error("is-closed", 0);
+      status_set_both_goto(sp_status_group_sp, sp_status_id_port_closed);
     } else {
-      let_macro(type((*port_data).type),
-                if ((sp_port_type_alsa == type)) {
-                  scm_c_require_success_alsa(
-                      snd_pcm_close(((snd_pcm_t *)((*port_data).data))));
-                } else {
-                  if ((sp_port_type_file == type)) {
-                    scm_c_require_success_system(
-                        close(((int)((*port_data).data))));
-                  };
-                },
-                (*port_data).closed_p = 1;);
+#define type (*port_data).type
+      if ((sp_port_type_alsa == type)) {
+        sp_alsa_status_require_x(
+            snd_pcm_close(((snd_pcm_t *)((*port_data).data))));
+      } else {
+        if ((sp_port_type_file == type)) {
+          sp_system_status_require_x(close((*port_data).data_int));
+        };
+      };
+      (*port_data).closed_p = 1;
+#undef type
     };
   } else {
-    scm_c_local_error("type-check", 0);
+    status_set_both_goto(sp_status_group_sp, sp_status_id_input_type);
   };
-  return (SCM_BOOL_T);
-error:
-  scm_c_local_error_return;
+exit:
+  status_to_scm_return(SCM_BOOL_T);
 };
 SCM sp_io_alsa_open(b8 input_p, SCM device_name, SCM channel_count,
                     SCM samples_per_second, SCM latency) {
-  scm_c_local_error_init;
+  status_init;
   local_memory_init(1);
-  init_status;
   snd_pcm_t *alsa_port = 0;
   char *device_name_c;
-  scm_if_undefined(device_name, device_name_c = "default",
-                   device_name_c = scm_to_locale_string(device_name);
-                   local_memory_add(device_name_c););
-  scm_c_require_success_alsa(snd_pcm_open(
+  if (scm_is_undefined(device_name)) {
+    device_name_c = "default";
+  } else {
+    device_name_c = scm_to_locale_string(device_name);
+    local_memory_add(device_name_c);
+  };
+  sp_alsa_status_require_x(snd_pcm_open(
       &alsa_port, device_name_c,
       (input_p ? SND_PCM_STREAM_CAPTURE : SND_PCM_STREAM_PLAYBACK), 0));
-  b32 latency_c = scm_if_undefined_expr(latency, default_alsa_latency,
-                                        scm_to_uint32(latency));
+  b32 latency_c = (scm_is_undefined(latency) ? default_alsa_latency
+                                             : scm_to_uint32(latency));
   b32 channel_count_c =
-      scm_if_undefined_expr(channel_count, 1, scm_to_uint32(channel_count));
-  b32 samples_per_second_c =
-      scm_if_undefined_expr(samples_per_second, default_samples_per_second,
-                            scm_to_uint32(samples_per_second));
-  scm_c_require_success_alsa(snd_pcm_set_params(
+      (scm_is_undefined(channel_count) ? 1 : scm_to_uint32(channel_count));
+  b32 samples_per_second_c = (scm_is_undefined(samples_per_second)
+                                  ? default_samples_per_second
+                                  : scm_to_uint32(samples_per_second));
+  sp_alsa_status_require_x(snd_pcm_set_params(
       alsa_port, SND_PCM_FORMAT_FLOAT_LE, SND_PCM_ACCESS_RW_NONINTERLEAVED,
       channel_count_c, samples_per_second_c, default_alsa_enable_soft_resample,
       latency_c));
+  SCM result = sp_port_create(sp_port_type_alsa, input_p, samples_per_second_c,
+                              channel_count_c, 0, 0, ((b0 *)(alsa_port)), 0);
+exit:
   local_memory_free;
-  return (sp_port_create(sp_port_type_alsa, input_p, samples_per_second_c,
-                         channel_count_c, 0, 0, ((pointer)(alsa_port))));
-error:
   if (alsa_port) {
     snd_pcm_close(alsa_port);
   };
-  local_memory_free;
-  scm_c_local_error_return;
+  status_to_scm_return(result);
 };
 SCM scm_sp_io_alsa_open_input(SCM device_name, SCM channel_count,
                               SCM samples_per_second, SCM latency) {
@@ -416,43 +609,38 @@ b8_s file_au_read_header(int file, b32 *encoding, b32 *samples_per_second,
 SCM sp_io_file_open(SCM path, b8 input_p, SCM channel_count,
                     SCM samples_per_second) {
   int file;
-  SCM r;
+  SCM result;
   b32 samples_per_second_file;
   b32 channel_count_file;
   char *path_c = scm_to_locale_string(path);
-  scm_c_local_error_init;
+  sp_status_init;
   local_memory_init(1);
   local_memory_add(path_c);
   if (file_exists_p(path_c)) {
     file = open(path_c, O_RDWR);
-    scm_c_require_success_system(file);
+    sp_system_status_require_id(file);
     b32 encoding;
     if (file_au_read_header(file, &encoding, &samples_per_second_file,
                             &channel_count_file)) {
-      scm_c_local_error("header-read", 0);
+      status_set_id_goto(sp_status_id_file_header);
     };
     if (!(encoding == 6)) {
-      scm_c_local_error("wrong-encoding", scm_from_uint32(encoding));
+      status_set_id_goto(sp_status_id_file_encoding);
     };
     if (!(scm_is_undefined(channel_count) ||
           ((channel_count_file == scm_to_uint32(channel_count))))) {
-      scm_c_local_error(
-          "incompatible",
-          scm_from_locale_string("file exists but channel count is different "
-                                 "from what was requested"));
+      status_set_id_goto(sp_status_id_file_incompatible);
     };
     if (!(scm_is_undefined(samples_per_second) ||
           ((samples_per_second_file == scm_to_uint32(samples_per_second))))) {
-      scm_c_local_error(
-          "incompatible",
-          scm_from_locale_string("file exists but samples per second are "
-                                 "different from what was requested"));
+      status_set_id_goto(sp_status_id_file_incompatible);
     };
-    r = sp_port_create(sp_port_type_file, input_p, samples_per_second_file,
-                       channel_count_file, 1, lseek(file, 0, SEEK_CUR), file);
+    result = sp_port_create(sp_port_type_file, input_p, samples_per_second_file,
+                            channel_count_file, 1, lseek(file, 0, SEEK_CUR), 0,
+                            file);
   } else {
     file = open(path_c, (O_RDWR | O_CREAT), 384);
-    scm_c_require_success_system(file);
+    sp_system_status_require_id(file);
     samples_per_second_file = (scm_is_undefined(samples_per_second)
                                    ? default_samples_per_second
                                    : scm_to_uint32(samples_per_second));
@@ -461,55 +649,38 @@ SCM sp_io_file_open(SCM path, b8 input_p, SCM channel_count,
                                               : scm_to_uint32(channel_count));
     if ((file_au_write_header(file, 6, samples_per_second_file,
                               channel_count_file) < 0)) {
-      scm_c_local_error("header-write", 0);
+      status_set_id_goto(sp_status_id_file_header);
     };
-    r = sp_port_create(sp_port_type_file, input_p, samples_per_second_file,
-                       channel_count_file, 1, lseek(file, 0, SEEK_CUR), file);
+    result = sp_port_create(sp_port_type_file, input_p, samples_per_second_file,
+                            channel_count_file, 1, lseek(file, 0, SEEK_CUR), 0,
+                            file);
   };
+exit:
   local_memory_free;
-  return (r);
-error:
-  local_memory_free;
-  scm_c_local_error_return;
+  status_to_scm_return(result);
 };
 SCM scm_sp_io_file_open_input(SCM path) {
-  scm_c_local_error_init;
-  scm_c_local_error_assert("type-check", scm_is_string(path));
   return (sp_io_file_open(path, 1, SCM_UNDEFINED, SCM_UNDEFINED));
-error:
-  scm_c_local_error_return;
 };
 SCM scm_sp_io_file_open_output(SCM path, SCM channel_count,
                                SCM samples_per_second) {
-  scm_c_local_error_init;
-  scm_c_local_error_assert(
-      "type-check",
-      (scm_is_string(path) &&
-       (scm_is_undefined(channel_count) || scm_is_integer(channel_count)) &&
-       (scm_is_undefined(samples_per_second) ||
-        scm_is_integer(samples_per_second))));
   return (sp_io_file_open(path, 0, channel_count, samples_per_second));
-error:
-  scm_c_local_error_return;
 };
 SCM scm_sp_io_alsa_write(SCM port, SCM sample_count, SCM channel_data) {
-  scm_c_local_error_init;
-  scm_c_local_error_assert(
-      "type-check",
-      (scm_c_sp_port_p(port) && scm_is_true(scm_list_p(channel_data)) &&
-       !scm_is_null(channel_data) && scm_is_integer(sample_count)));
+  status_init;
   port_data_t *port_data = sp_port_to_port_data(port);
   b32 channel_count = (*port_data).channel_count;
   b32 sample_count_c = scm_to_uint32(sample_count);
   local_memory_init(2);
-  scm_c_local_define_malloc_and_size(channel_data_c, f32_s *,
-                                     (channel_count * sizeof(pointer)));
+  sp_define_malloc(channel_data_c, sp_sample_t **,
+                   (channel_count * sizeof(sp_sample_t *)));
   local_memory_add(channel_data_c);
-  b32 index = 0;
-  SCM e;
-  scm_c_list_each(channel_data, e, {
-    (*(channel_data_c + index)) = ((f32_s *)(SCM_BYTEVECTOR_CONTENTS(e)));
-    increment_one(index);
+  b32 channel = 0;
+  SCM a;
+  scm_c_list_each(channel_data, a, {
+    (*(channel_data_c + channel)) =
+        ((sp_sample_t *)(SCM_BYTEVECTOR_CONTENTS(a)));
+    increment(channel);
   });
   snd_pcm_sframes_t frames_written;
   frames_written = snd_pcm_writen(((snd_pcm_t *)((*port_data).data)),
@@ -518,140 +689,127 @@ SCM scm_sp_io_alsa_write(SCM port, SCM sample_count, SCM channel_data) {
   if (((frames_written < 0) &&
        (snd_pcm_recover(((snd_pcm_t *)((*port_data).data)), frames_written, 0) <
         0))) {
-    scm_c_local_error("alsa",
-                      scm_from_locale_string(snd_strerror(frames_written)));
+    status_set_both_goto(sp_status_group_alsa, frames_written);
   };
+exit:
   local_memory_free;
-  return (SCM_BOOL_T);
-error:
-  local_memory_free;
-  scm_c_local_error_return;
+  status_to_scm_return(SCM_UNSPECIFIED);
 };
 SCM scm_sp_io_alsa_read(SCM port, SCM sample_count) {
   local_memory_init(1);
-  scm_c_local_error_init;
-  scm_c_local_error_assert(
-      "type-check", (scm_c_sp_port_p(port) && scm_is_integer(sample_count)));
+  status_init;
   port_data_t *port_data = sp_port_to_port_data(port);
   b32 channel_count_c = (*port_data).channel_count;
   b64 sample_count_c = scm_to_uint32(sample_count);
-  scm_c_local_define_malloc_and_size(channel_data, f32_s *,
-                                     (channel_count_c * sizeof(pointer)));
+  sp_define_malloc(channel_data, sp_sample_t **,
+                   (channel_count_c * sizeof(sp_sample_t *)));
   local_memory_add(channel_data);
-  b32 index = channel_count_c;
-  f32_s *data;
-  while (index) {
-    decrement_one(index);
-    data = malloc((sample_count_c * sizeof(f32_s)));
+  b32 channel = channel_count_c;
+  sp_sample_t *data;
+  while (channel) {
+    decrement(channel);
+    data = malloc((sample_count_c * sizeof(sp_sample_t)));
     if (!data) {
-      scm_c_local_error("memory", 0);
+      status_set_both_goto(sp_status_group_sp, sp_status_id_memory);
     };
-    (*(channel_data + index)) = data;
+    (*(channel_data + channel)) = data;
   };
   snd_pcm_sframes_t frames_read;
   frames_read = snd_pcm_readn(((snd_pcm_t *)((*port_data).data)),
                               ((b0 **)(channel_data)), sample_count_c);
   if (((frames_read < 0) && (snd_pcm_recover(((snd_pcm_t *)((*port_data).data)),
                                              frames_read, 0) < 0))) {
-    scm_c_local_error("alsa",
-                      scm_from_locale_string(snd_strerror(frames_read)));
+    status_set_both_goto(sp_status_group_alsa, frames_read);
   };
-  index = channel_count_c;
-  SCM r = SCM_EOL;
-  while (index) {
-    decrement_one(index);
-    r = scm_cons(scm_take_f32vector((*(channel_data + index)), sample_count_c),
-                 r);
+  channel = channel_count_c;
+  SCM result = SCM_EOL;
+  while (channel) {
+    decrement(channel);
+    result = scm_cons(
+        scm_take_f32vector((*(channel_data + channel)), sample_count_c),
+        result);
   };
+exit:
+  free_elements(((b0 **)(channel_data)), channel_count_c);
   local_memory_free;
-  return (r);
-error:
-  local_memory_free;
-  scm_c_local_error_return;
+  status_to_scm_return(result);
 };
 SCM scm_sp_io_file_write(SCM port, SCM sample_count, SCM channel_data) {
-  scm_c_local_error_init;
+  status_init;
   local_memory_init(2);
-  scm_c_local_error_assert(
-      "type-check",
-      (scm_c_sp_port_p(port) && scm_is_true(scm_list_p(channel_data)) &&
-       !scm_is_null(channel_data) &&
-       scm_is_true(scm_f32vector_p(scm_first(channel_data))) &&
-       scm_is_integer(sample_count)));
   port_data_t *port_data = sp_port_to_port_data(port);
-  scm_c_local_error_assert("not-an-output-port", !(*port_data).input_p);
+  if (!(*port_data).input_p) {
+    status_set_both_goto(sp_status_group_sp, sp_status_id_port_type);
+  };
   b32 channel_count = (*port_data).channel_count;
-  scm_c_local_error_assert(
-      "channel-data-length-mismatch",
-      (scm_to_uint32(scm_length(channel_data)) == channel_count));
+  if ((scm_to_uint32(scm_length(channel_data)) == channel_count)) {
+    status_set_both_goto(sp_status_group_sp,
+                         sp_status_id_file_channel_mismatch);
+  };
   b64 sample_count_c = scm_to_uint64(sample_count);
-  scm_c_local_define_malloc_and_size(channel_data_c, f32_s *,
-                                     (channel_count * sizeof(pointer)));
+  sp_define_malloc(channel_data_c, sp_sample_t **,
+                   (channel_count * sizeof(sp_sample_t *)));
   local_memory_add(channel_data_c);
-  b32 index = 0;
-  SCM e;
-  scm_c_list_each(channel_data, e, {
-    (*(channel_data_c + index)) = ((f32_s *)(SCM_BYTEVECTOR_CONTENTS(e)));
-    increment_one(index);
+  b32 channel = 0;
+  SCM a;
+  scm_c_list_each(channel_data, a, {
+    (*(channel_data_c + channel)) =
+        ((sp_sample_t *)(SCM_BYTEVECTOR_CONTENTS(a)));
+    increment(channel);
   });
-  scm_c_local_define_malloc_and_size(data_interleaved, f32_s,
-                                     (sample_count_c * channel_count * 4));
+  sp_define_malloc(
+      data_interleaved, sp_sample_t **,
+      (sizeof(sp_sample_t *) * sample_count_c * channel_count * 4));
   local_memory_add(data_interleaved);
-  sp_interleave_n_and_swap_endian(data_interleaved, channel_data_c,
-                                  channel_count, sample_count_c);
-  scm_c_require_success_system(write(((int)((*port_data).data)),
-                                     data_interleaved,
-                                     (channel_count * sample_count_c * 4)));
+  sp_interleave_and_reverse_endian(channel_data_c, data_interleaved,
+                                   channel_count, sample_count_c);
+  sp_system_status_require_x(write((*port_data).data_int, data_interleaved,
+                                   (channel_count * sample_count_c * 4)));
+exit:
   local_memory_free;
-  return (SCM_BOOL_T);
-error:
-  local_memory_free;
-  scm_c_local_error_return;
+  status_to_scm_return(SCM_UNSPECIFIED);
 };
 SCM scm_sp_io_file_read(SCM port, SCM sample_count) {
-  scm_c_local_error_init;
+  status_init;
   local_memory_init(2);
-  scm_c_local_error_assert(
-      "type-check", (scm_c_sp_port_p(port) && scm_is_integer(sample_count)));
   port_data_t *port_data = sp_port_to_port_data(port);
   b32 channel_count = (*port_data).channel_count;
   b64 sample_count_c = scm_to_uint64(sample_count);
-  scm_c_local_define_malloc_and_size(data_interleaved, f32_s,
-                                     (sample_count_c * channel_count * 4));
+  sp_define_malloc(data_interleaved, sp_sample_t,
+                   (sample_count_c * channel_count * 4));
   local_memory_add(data_interleaved);
-  scm_c_require_success_system(read(((int)((*port_data).data)),
-                                    data_interleaved,
-                                    (sample_count_c * channel_count * 4)));
-  scm_c_local_define_malloc_and_size(data_non_interleaved, f32_s *,
-                                     (channel_count * sizeof(pointer)));
-  local_memory_add(data_non_interleaved);
+  sp_system_status_require_x(read((*port_data).data_int, data_interleaved,
+                                  (sample_count_c * channel_count * 4)));
+  sp_define_malloc(data_deinterleaved, sp_sample_t *,
+                   (channel_count * sizeof(b0 *)));
+  local_memory_add(data_deinterleaved);
   b32 index = channel_count;
   while (index) {
-    decrement_one(index);
-    (*(data_non_interleaved + index)) = malloc((sample_count_c * 4));
-    if (!(*(data_non_interleaved + index))) {
-      scm_c_local_error("memory", 0);
+    decrement(index);
+    (*(data_deinterleaved + index)) = malloc((sample_count_c * 4));
+    if (!(*(data_deinterleaved + index))) {
+      status_set_both_goto(sp_status_group_sp, sp_status_id_memory);
     };
   };
-  sp_deinterleave_n_and_swap_endian(data_non_interleaved, data_interleaved,
-                                    channel_count, sample_count_c);
-  SCM r = SCM_EOL;
+  sp_deinterleave_and_reverse_endian(data_interleaved, data_deinterleaved,
+                                     channel_count, sample_count_c);
+  SCM result = SCM_EOL;
   index = channel_count;
   while (index) {
-    decrement_one(index);
-    r = scm_cons(
-        scm_take_f32vector((*(data_non_interleaved + index)), sample_count_c),
-        r);
+    decrement(index);
+    result = scm_cons(
+        scm_take_f32vector((*(data_deinterleaved + index)), sample_count_c),
+        result);
   };
+exit:
   local_memory_free;
-  return (r);
-error:
-  local_memory_free;
-  scm_c_local_error_return;
+  status_to_scm_return(result);
 };
+/** type-check has been left out explicitly */
 SCM scm_sp_port_input_p(SCM port) {
   return (scm_from_bool((*sp_port_to_port_data(port)).input_p));
 };
+/** returns the current port position in number of octets */
 SCM scm_sp_port_position(SCM port) {
   return (
       ((*sp_port_to_port_data(port)).position_p
@@ -669,78 +827,77 @@ SCM scm_sp_port_samples_per_second(SCM port) {
 };
 SCM scm_sp_port_p(SCM port) { return (scm_from_bool(scm_c_sp_port_p(port))); };
 SCM scm_sp_port_type(SCM port) {
-  let_macro(type((*sp_port_to_port_data(port)).type),
-            return (((type == sp_port_type_alsa)
-                         ? scm_sp_port_type_alsa
-                         : ((type == sp_port_type_file) ? scm_sp_port_type_file
-                                                        : SCM_BOOL_F))));
+#define type (*sp_port_to_port_data(port)).type
+  return (((type == sp_port_type_alsa)
+               ? scm_sp_port_type_alsa
+               : ((type == sp_port_type_file) ? scm_sp_port_type_file
+                                              : SCM_BOOL_F)));
+#undef type
 };
 SCM scm_sp_io_file_set_position(SCM port, SCM sample_position) {
-  scm_c_local_error_init;
-  scm_c_local_error_assert(
-      "type-check", (scm_c_sp_port_p(port) && scm_is_integer(sample_position)));
+  status_init;
   port_data_t *port_data = sp_port_to_port_data(port);
   b64_s position_c = (scm_to_int64(sample_position) * 4);
-  let_macro(file(((int)((*port_data).data)), position_offset,
-                 (*port_data).position_offset),
-            if ((position_c >= 0)) {
-              scm_c_require_success_system(
-                  lseek(file, (position_offset + position_c), SEEK_SET));
-            } else {
-              off_t end_position = lseek(file, 0, SEEK_END);
-              scm_c_require_success_system(end_position);
-              position_c = (end_position + position_c);
-              if ((position_c >= position_offset)) {
-                scm_c_require_success_system(lseek(file, position_c, SEEK_SET));
-              } else {
-                scm_c_local_error("invalid position", 0);
-              };
-            });
+#define file (*port_data).data_int
+#define position_offset (*port_data).position_offset
+  if ((position_c >= 0)) {
+    sp_system_status_require_x(
+        lseek(file, (position_offset + position_c), SEEK_SET));
+  } else {
+    off_t end_position = lseek(file, 0, SEEK_END);
+    sp_system_status_require_id(end_position);
+    position_c = (end_position + position_c);
+    if ((position_c >= position_offset)) {
+      sp_system_status_require_x(lseek(file, position_c, SEEK_SET));
+    } else {
+      status_set_both_goto(sp_status_group_sp, sp_status_id_port_position);
+    };
+  };
+#undef file
+#undef position_offset
   (*port_data).position = position_c;
-  return (SCM_BOOL_T);
-error:
-  scm_c_local_error_return;
+exit:
+  status_to_scm_return(SCM_BOOL_T);
 };
 #endif
-#include <foreign/kissfft/kiss_fft.h>
-#include <foreign/kissfft/tools/kiss_fftr.h>
 SCM scm_sp_fft(SCM a) {
-  scm_c_local_error_init;
+  status_init;
   scm_c_local_error_assert("type-check", scm_is_true(scm_f32vector_p(a)));
   b32 size = (SCM_BYTEVECTOR_LENGTH(a) / 4);
   b32 size_result = (1 + (size * 0.5));
   kiss_fftr_cfg fftr_state = kiss_fftr_alloc(size, 0, 0, 0);
   kiss_fft_cpx *out = malloc((size_result * sizeof(kiss_fft_cpx)));
-  kiss_fftr(fftr_state, ((f32_s *)(SCM_BYTEVECTOR_CONTENTS(a))), out);
-  SCM r = scm_make_f32vector(scm_from_uint32(size_result), scm_from_uint8(0));
+  kiss_fftr(fftr_state, ((sp_sample_t *)(SCM_BYTEVECTOR_CONTENTS(a))), out);
+  SCM result =
+      scm_make_f32vector(scm_from_uint32(size_result), scm_from_uint8(0));
   while (size_result) {
-    decrement_one(size_result);
-    (*(((f32_s *)(SCM_BYTEVECTOR_CONTENTS(r))) + size_result)) =
-        out[size_result].r;
+    decrement(size_result);
+    (*(((sp_sample_t *)(SCM_BYTEVECTOR_CONTENTS(result))) + size_result)) =
+        out[size_result].result;
   };
   free(fftr_state);
   free(out);
-  return (r);
-error:
-  scm_c_local_error_return;
+exit:
+  status_to_scm_return(result);
 };
 SCM scm_sp_fft_inverse(SCM a) {
-  scm_c_local_error_init;
+  status_init;
   scm_c_local_error_assert("type-check", scm_is_true(scm_f32vector_p(a)));
   b32 size = (SCM_BYTEVECTOR_LENGTH(a) / 4);
   b32 size_result = ((size - 1) * 2);
   kiss_fftr_cfg fftr_state = kiss_fftr_alloc(size_result, 1, 0, 0);
   kiss_fft_cpx *inp = malloc((size * sizeof(kiss_fft_cpx)));
   while (size) {
-    decrement_one(size);
+    decrement(size);
     inp[size].r = (*(SCM_BYTEVECTOR_CONTENTS(a) + (size * 4)));
   };
-  SCM r = scm_make_f32vector(scm_from_uint32(size_result), scm_from_uint8(0));
-  kiss_fftri(fftr_state, inp, ((f32_s *)(SCM_BYTEVECTOR_CONTENTS(r))));
+  SCM result =
+      scm_make_f32vector(scm_from_uint32(size_result), scm_from_uint8(0));
+  kiss_fftri(fftr_state, inp,
+             ((sp_sample_t *)(SCM_BYTEVECTOR_CONTENTS(result))));
   free(fftr_state);
-  return (r);
-error:
-  scm_c_local_error_return;
+exit:
+  status_to_scm_return(result);
 };
 b0 init_sp() {
   init_scm();
@@ -749,6 +906,7 @@ b0 init_sp() {
   SCM scm_module = scm_c_resolve_module("sph sp");
   scm_sp_port_type_alsa = scm_from_uint8(sp_port_type_alsa);
   scm_sp_port_type_file = scm_from_uint8(sp_port_type_file);
+  scm_rnrs_raise = scm_c_public_ref("rnrs exceptions", "raise");
   scm_c_module_define(scm_module, "sp-port-type-alsa", scm_sp_port_type_alsa);
   scm_c_module_define(scm_module, "sp-port-type-file", scm_sp_port_type_file);
   scm_c_define_procedure_c(t, "sp-port-close", 1, 0, 0, scm_sp_port_close,

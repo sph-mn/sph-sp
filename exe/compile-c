@@ -1,18 +1,20 @@
 #!/bin/sh
 
-optimisation=3
+optimisation=0
 warnings="-Wunused-label -Wunused-value -Wunused-variable"
-gcc_options="-Wfatal-errors $warnings -std=c11 -O$optimisation -lguile-2.2 -lgc -lasound"
+gcc_options="-Wfatal-errors $warnings -O$optimisation $(guile-config link) -lasound"
 c=source/c-precompiled
 dir=temp
 file="$dir/libguile-sph-sp.so"
 source="$c/main.c"
 
 compile_libguile_sph_sp() {
+  f=source/c/foreign
   gcc -Wl,--version-script=other/export -shared -fpic "$source" -o "$file" \
-    -Isource/c foreign/kissfft/kiss_fft.c foreign/kissfft/tools/kiss_fftr.c \
-    $gcc_options
+    $gcc_options \
+    -Isource/c \
+    -Isource/c/foreign/kissfft "$f"/kissfft/kiss_fft.c "$f"/kissfft/tools/kiss_fftr.c
 }
 
 mkdir -p "$dir" &&
-compile_libguile_sph_dg
+compile_libguile_sph_sp

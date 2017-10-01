@@ -1,36 +1,55 @@
 (pre-define debug-log? #t)
-(pre-include "stdio.h" "libguile.h" "alsa/asoundlib.h")
-(sc-include-once sph "foreign/sph" one "foreign/sph/one" guile "foreign/sph/guile" io "io")
-(pre-include "foreign/kissfft/kiss_fft.h" "foreign/kissfft/tools/kiss_fftr.h")
+
+(pre-include-once stdio "stdio.h"
+  libguile "libguile.h"
+  kiss-fft "foreign/kissfft/kiss_fft.h"
+  kiss-fftr "foreign/kissfft/tools/kiss_fftr.h" fcntl "fcntl.h" alsa "alsa/asoundlib.h")
+
+(pre-define sp-sample-t f32-s)
+(sc-include-once sph "foreign/sph")
+
+(pre-define (sp-define-malloc id type size) (define id type (malloc size))
+  (if (not id) (status-set-both-goto sp-status-group-sp sp-status-id-memory)))
+
+(pre-define (sp-define-calloc id type size) (define id type (calloc size 1))
+  (if (not id) (status-set-both-goto sp-status-group-sp sp-status-id-memory)))
+
+(define (free-elements array size) (b0 b0** size-t)
+  "unset elements in array must be zero" (while size (set size (- size 1)) (free (deref array size))))
+
+(sc-include-once one "foreign/sph/one"
+  guile "foreign/sph/guile"
+  status "foreign/sph/status" local-memory "foreign/sph/local-memory" sp-status "status" io "io")
 
 (define (scm-sp-fft a) (SCM SCM)
-  scm-c-local-error-init (scm-c-local-error-assert "type-check" (scm-is-true (scm-f32vector? a)))
+  status-init (scm-c-local-error-assert "type-check" (scm-is-true (scm-f32vector? a)))
   (define size b32 (/ (SCM-BYTEVECTOR-LENGTH a) 4)) (define size-result b32 (+ 1 (* size 0.5)))
   (define fftr-state kiss-fftr-cfg (kiss-fftr-alloc size 0 0 0))
   (define out kiss-fft-cpx* (malloc (* size-result (sizeof kiss-fft-cpx))))
-  (kiss-fftr fftr-state (convert-type (SCM-BYTEVECTOR-CONTENTS a) f32-s*) out)
-  (define r SCM (scm-make-f32vector (scm-from-uint32 size-result) (scm-from-uint8 0)))
-  (while size-result (decrement-one size-result)
-    (set (deref (convert-type (SCM-BYTEVECTOR-CONTENTS r) f32-s*) size-result)
-      (struct-get out[size-result] r)))
-  (free fftr-state) (free out) (return r) (label error scm-c-local-error-return))
+  (kiss-fftr fftr-state (convert-type (SCM-BYTEVECTOR-CONTENTS a) sp-sample-t*) out)
+  (define result SCM (scm-make-f32vector (scm-from-uint32 size-result) (scm-from-uint8 0)))
+  (while size-result (decrement size-result)
+    (set (deref (convert-type (SCM-BYTEVECTOR-CONTENTS result) sp-sample-t*) size-result)
+      (struct-get out[size-result] result)))
+  (free fftr-state) (free out) (label exit (status->scm-return result)))
 
 (define (scm-sp-fft-inverse a) (SCM SCM)
-  scm-c-local-error-init (scm-c-local-error-assert "type-check" (scm-is-true (scm-f32vector? a)))
+  status-init (scm-c-local-error-assert "type-check" (scm-is-true (scm-f32vector? a)))
   (define size b32 (/ (SCM-BYTEVECTOR-LENGTH a) 4)) (define size-result b32 (* (- size 1) 2))
   (define fftr-state kiss-fftr-cfg (kiss-fftr-alloc size-result 1 0 0))
   (define inp kiss-fft-cpx* (malloc (* size (sizeof kiss-fft-cpx))))
-  (while size (decrement-one size)
+  (while size (decrement size)
     (struct-set inp[size] r (deref (SCM-BYTEVECTOR-CONTENTS a) (* size 4))))
-  (define r SCM (scm-make-f32vector (scm-from-uint32 size-result) (scm-from-uint8 0)))
-  (kiss-fftri fftr-state inp (convert-type (SCM-BYTEVECTOR-CONTENTS r) f32-s*)) (free fftr-state)
-  (return r) (label error scm-c-local-error-return))
+  (define result SCM (scm-make-f32vector (scm-from-uint32 size-result) (scm-from-uint8 0)))
+  (kiss-fftri fftr-state inp (convert-type (SCM-BYTEVECTOR-CONTENTS result) sp-sample-t*))
+  (free fftr-state) (label exit (status->scm-return result)))
 
 (define (init-sp) b0
   (init-scm) sp-port-scm-type-init
   (define t SCM) (define scm-module SCM (scm-c-resolve-module "sph sp"))
   (set scm-sp-port-type-alsa (scm-from-uint8 sp-port-type-alsa))
   (set scm-sp-port-type-file (scm-from-uint8 sp-port-type-file))
+  (set scm-rnrs-raise (scm-c-public-ref "rnrs exceptions" "raise"))
   (scm-c-module-define scm-module "sp-port-type-alsa" scm-sp-port-type-alsa)
   (scm-c-module-define scm-module "sp-port-type-file" scm-sp-port-type-file)
   (scm-c-define-procedure-c t "sp-port-close" 1 0 0 scm-sp-port-close "sp-port -> boolean/error")
