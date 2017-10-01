@@ -33,7 +33,7 @@
         (begin
           ; reset position and write
           (sp-io-file-set-position file-out 0) (sp-io-file-write file-out segment-size data) #t)
-        ;(assert-true "read" (equal? data (sp-io-file-read file-in segment-size)))
+        (assert-true "read" (equal? data (sp-io-file-read file-in segment-size)))
         (assert-true "close" (and (sp-port-close file-in) (sp-port-close file-out))))))
 
   (define (test-sp-alsa)

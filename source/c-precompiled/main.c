@@ -130,9 +130,6 @@
 #endif
 #define file_exists_p(path) !(access(path, F_OK) == -1)
 #define pointer_equal_p(a, b) (((b0 *)(a)) == ((b0 *)(b)))
-#define free_and_set_zero(a)                                                   \
-  free(a);                                                                     \
-  a = 0
 #define increment(a) a = (1 + a)
 #define decrement(a) a = (a - 1)
 /** set result to a new string with a trailing slash added, or the given string
@@ -304,8 +301,6 @@ typedef struct {
 #define local_memory_free                                                      \
   while (sph_local_memory_index) {                                             \
     sph_local_memory_index = (sph_local_memory_index - 1);                     \
-    debug_log("index %lu freeing %p", sph_local_memory_index,                  \
-              (*(sph_local_memory_register + sph_local_memory_index)));        \
     free((*(sph_local_memory_register + sph_local_memory_index)));             \
   }
 #endif
@@ -749,8 +744,6 @@ SCM scm_sp_io_file_write(SCM port, SCM scm_sample_count, SCM scm_channel_data) {
                          sp_status_id_file_channel_mismatch);
   };
   local_memory_init(2);
-  b32 deinterleaved_size =
-      (scm_to_uint32(scm_sample_count) * sizeof(sp_sample_t));
   sp_define_malloc(data_deinterleaved, sp_sample_t **,
                    (channel_count * sizeof(sp_sample_t *)));
   local_memory_add(data_deinterleaved);
@@ -761,11 +754,13 @@ SCM scm_sp_io_file_write(SCM port, SCM scm_sample_count, SCM scm_channel_data) {
         ((sp_sample_t *)(SCM_BYTEVECTOR_CONTENTS(a)));
     increment(channel);
   });
-  size_t interleaved_size = (channel_count * deinterleaved_size);
+  size_t deinterleaved_count = scm_to_size_t(scm_sample_count);
+  size_t interleaved_size =
+      (channel_count * deinterleaved_count * sizeof(sp_sample_t *));
   sp_define_malloc(data_interleaved, sp_sample_t *, interleaved_size);
   local_memory_add(data_interleaved);
   sp_interleave_and_reverse_endian(data_deinterleaved, data_interleaved,
-                                   deinterleaved_size, channel_count);
+                                   deinterleaved_count, channel_count);
   int count = write((*port_data).data_int, data_interleaved, interleaved_size);
   if (!(interleaved_size == count)) {
     if ((count < 0)) {
@@ -784,8 +779,9 @@ SCM scm_sp_io_file_read(SCM port, SCM scm_sample_count) {
   port_data_t *port_data = scm_to_port_data(port);
   b32 channel_count = (*port_data).channel_count;
   local_memory_init(2);
+  size_t deinterleaved_count = scm_to_size_t(scm_sample_count);
   size_t interleaved_size =
-      (channel_count * scm_to_uint32(scm_sample_count) * sizeof(sp_sample_t));
+      (channel_count * deinterleaved_count * sizeof(sp_sample_t));
   sp_define_malloc(data_interleaved, sp_sample_t *, interleaved_size);
   local_memory_add(data_interleaved);
   int count = read((*port_data).data_int, data_interleaved, interleaved_size);
@@ -798,13 +794,15 @@ SCM scm_sp_io_file_read(SCM port, SCM scm_sample_count) {
     } else {
       if (!(interleaved_size == count)) {
         interleaved_size = count;
+        deinterleaved_count =
+            (interleaved_size / channel_count / sizeof(sp_sample_t));
       };
     };
   };
   sp_define_malloc(data_deinterleaved, sp_sample_t **,
                    (channel_count * sizeof(sp_sample_t *)));
   local_memory_add(data_deinterleaved);
-  b32 deinterleaved_size = (interleaved_size / channel_count);
+  size_t deinterleaved_size = (interleaved_size / channel_count);
   b32 channel = channel_count;
   while (channel) {
     decrement(channel);
@@ -812,13 +810,13 @@ SCM scm_sp_io_file_read(SCM port, SCM scm_sample_count) {
     (*(data_deinterleaved + channel)) = data;
   };
   sp_deinterleave_and_reverse_endian(data_deinterleaved, data_interleaved,
-                                     deinterleaved_size, channel_count);
+                                     deinterleaved_count, channel_count);
   result = SCM_EOL;
   channel = channel_count;
   while (channel) {
     decrement(channel);
     result = scm_cons(scm_take_f32vector((*(data_deinterleaved + channel)),
-                                         deinterleaved_size),
+                                         deinterleaved_count),
                       result);
   };
 exit:

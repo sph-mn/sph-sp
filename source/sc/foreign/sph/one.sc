@@ -1,18 +1,17 @@
 (sc-include-once sph "sph")
 
 (pre-include-once string-h "string.h"
-  ;malloc
+  ; malloc
   stdlib-h "stdlib.h"
-  ;"access"
+  ; access
   unistd-h "unistd.h"
-  ;mkdir
+  ; mkdir
   sys-stat-h "sys/stat.h"
-  ;dirname
+  ; dirname
   libgen-h "libgen.h" errno-h "errno.h")
 
 (pre-define (file-exists? path) (not (equal? (access path F-OK) -1)))
 (pre-define (pointer-equal? a b) (= (convert-type a b0*) (convert-type b b0*)))
-(pre-define (free-and-set-zero a) (free a) (set a 0))
 (pre-define (increment a) (set a (+ 1 a)))
 (pre-define (decrement a) (set a (- a 1)))
 

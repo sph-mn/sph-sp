@@ -8,8 +8,5 @@
     sph-local-memory-index (+ 1 sph-local-memory-index)))
 
 (pre-define local-memory-free
-  (while sph-local-memory-index
-    (set sph-local-memory-index (- sph-local-memory-index 1))
-    (debug-log "index %lu freeing %p" sph-local-memory-index
-      (deref (+ sph-local-memory-register sph-local-memory-index)))
+  (while sph-local-memory-index (set sph-local-memory-index (- sph-local-memory-index 1))
     (free (deref (+ sph-local-memory-register sph-local-memory-index)))))
