@@ -57,8 +57,8 @@
     0 0 scm-sp-port-position "sp-port -> integer/boolean")
   (scm-c-define-procedure-c "sp-port-channel-count" 1
     0 0 scm-sp-port-channel-count "sp-port -> integer")
-  (scm-c-define-procedure-c "sp-port-samples-per-second" 1
-    0 0 scm-sp-port-samples-per-second "sp-port -> integer/boolean")
+  (scm-c-define-procedure-c "sp-port-sample-rate" 1
+    0 0 scm-sp-port-sample-rate "sp-port -> integer/boolean")
   (scm-c-define-procedure-c "sp-port?" 1 0 0 scm-sp-port? "sp-port -> boolean")
   (scm-c-define-procedure-c "sp-port-type" 1 0 0 scm-sp-port-type "sp-port -> integer")
   (scm-c-define-procedure-c "sp-fft" 1
@@ -79,7 +79,7 @@
     2 0
     scm-sp-io-file-open-output
     "string [integer integer] -> sp-port
-    path [channel-count samples-per-second] -> sp-port")
+    path [channel-count sample-rate] -> sp-port")
   (scm-c-define-procedure-c "sp-io-file-write" 2
     1 0
     scm-sp-io-file-write
@@ -96,12 +96,12 @@
     4 0
     scm-sp-io-alsa-open-input
     "[string integer integer integer] -> sp-port
-    [device-name channel-count samples-per-second latency] -> sp-port")
+    [device-name channel-count sample-rate latency] -> sp-port")
   (scm-c-define-procedure-c "sp-io-alsa-open-output" 0
     4 0
     scm-sp-io-alsa-open-output
     "[string integer integer integer] -> sp-port
-    [device-name channel-count samples-per-second latency] -> sp-port")
+    [device-name channel-count sample-rate latency] -> sp-port")
   (scm-c-define-procedure-c "sp-io-alsa-write" 2
     1 0
     scm-sp-io-alsa-write

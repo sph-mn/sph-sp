@@ -307,7 +307,7 @@ typedef struct {
 #ifndef sc_included_sp_config
 #define sc_included_sp_config
 #define sp_sample_t f32_s
-#define sp_default_samples_per_second 16000
+#define sp_default_sample_rate 16000
 #define sp_default_channel_count 1
 #define sp_default_alsa_enable_soft_resample 1
 #define sp_default_alsa_latency 50
@@ -410,14 +410,14 @@ SCM scm_rnrs_raise;
 /** -> boolean
   returns 1 if the header was successfully written, 0 otherwise.
   assumes file is positioned at offset 0 */
-b8_s file_au_write_header(int file, b32 encoding, b32 samples_per_second,
+b8_s file_au_write_header(int file, b32 encoding, b32 sample_rate,
                           b32 channel_count) {
   b32 header[7];
   (*(header + 0)) = __builtin_bswap32(779316836);
   (*(header + 1)) = __builtin_bswap32(28);
   (*(header + 2)) = __builtin_bswap32(4294967295);
   (*(header + 3)) = __builtin_bswap32(encoding);
-  (*(header + 4)) = __builtin_bswap32(samples_per_second);
+  (*(header + 4)) = __builtin_bswap32(sample_rate);
   (*(header + 5)) = __builtin_bswap32(channel_count);
   (*(header + 6)) = 0;
   ssize_t status = write(file, header, 28);
@@ -426,7 +426,7 @@ b8_s file_au_write_header(int file, b32 encoding, b32 samples_per_second,
 /** -> boolean
   when successful, the reader is positioned at the beginning of the sample data
 */
-b8_s file_au_read_header(int file, b32 *encoding, b32 *samples_per_second,
+b8_s file_au_read_header(int file, b32 *encoding, b32 *sample_rate,
                          b32 *channel_count) {
   ssize_t status;
   b32 header[6];
@@ -438,12 +438,12 @@ b8_s file_au_read_header(int file, b32 *encoding, b32 *samples_per_second,
     return (0);
   };
   (*encoding) = __builtin_bswap32((*(header + 3)));
-  (*samples_per_second) = __builtin_bswap32((*(header + 4)));
+  (*sample_rate) = __builtin_bswap32((*(header + 4)));
   (*channel_count) = __builtin_bswap32((*(header + 5)));
   return (1);
 };
-#define optional_samples_per_second(a)                                         \
-  ((SCM_UNDEFINED == a) ? sp_default_samples_per_second : scm_to_uint32(a))
+#define optional_sample_rate(a)                                                \
+  ((SCM_UNDEFINED == a) ? sp_default_sample_rate : scm_to_uint32(a))
 #define optional_channel_count(a)                                              \
   (scm_is_undefined(a) ? sp_default_channel_count : scm_to_uint32(a))
 #define sp_alsa_status_require_x(expression)                                   \
@@ -475,7 +475,7 @@ define_sp_interleave(sp_deinterleave_and_reverse_endian, sp_sample_t, {
   (*((*(a + channel)) + a_size)) = sample_reverse_endian((*(b + b_size)));
 });
 typedef struct {
-  b32 samples_per_second;
+  b32 sample_rate;
   b32 channel_count;
   b8 flags;
   b8 type;
@@ -502,24 +502,23 @@ int sp_port_print(SCM a, SCM output_port, scm_print_state *print_state) {
     return (0);
   };
   sprintf(result,
-          "#<sp-port %lx type:%s samples-per-second:%d channel-count:%d "
-          "closed?:%s input?:%s>",
+          "#<sp-port %lx type:%s sample-rate:%d channel-count:%d closed?:%s "
+          "input?:%s>",
           ((b0 *)(a)), sp_port_type_to_name((*port_data).type),
-          (*port_data).samples_per_second, (*port_data).channel_count,
+          (*port_data).sample_rate, (*port_data).channel_count,
           ((*port_data).closed_p ? "#t" : "#f"),
           ((sp_port_bit_input & (*port_data).flags) ? "#t" : "#f"));
-  scm_dynwind_free(result);
   scm_display(scm_take_locale_string(result), output_port);
   return (0);
 };
 /** integer integer integer integer integer pointer integer -> sp-port
    flags is a combination of sp-port-bits.
   memory is allocated with scm-gc-malloc */
-SCM sp_port_create(b8 type, b8 flags, b32 samples_per_second, b32 channel_count,
+SCM sp_port_create(b8 type, b8 flags, b32 sample_rate, b32 channel_count,
                    b16 position_offset, b0 *data, int data_int) {
   port_data_t *port_data = scm_gc_malloc(sizeof(port_data_t), "sp-port-data");
   (*port_data).channel_count = channel_count;
-  (*port_data).samples_per_second = samples_per_second;
+  (*port_data).sample_rate = sample_rate;
   (*port_data).type = type;
   (*port_data).flags = flags;
   (*port_data).data = data;
@@ -531,46 +530,43 @@ SCM sp_port_create(b8 type, b8 flags, b32 samples_per_second, b32 channel_count,
 #define sp_port_scm_type_init                                                  \
   sp_port_scm_type = scm_make_smob_type("sp-port", 0);                         \
   scm_set_smob_print(sp_port_scm_type, sp_port_print)
-SCM sp_io_alsa_open(b8 input_p, SCM device_name, SCM channel_count,
-                    SCM samples_per_second, SCM latency) {
+SCM sp_io_alsa_open(b8 input_p, SCM scm_device_name, SCM scm_channel_count,
+                    SCM scm_sample_rate, SCM scm_latency) {
   status_init;
-  local_memory_init(1);
   snd_pcm_t *alsa_port = 0;
-  char *device_name_c;
-  if (scm_is_undefined(device_name)) {
-    device_name_c = "default";
+  local_memory_init(1);
+  char *device_name;
+  if (scm_is_undefined(scm_device_name)) {
+    device_name = "default";
   } else {
-    device_name_c = scm_to_locale_string(device_name);
-    local_memory_add(device_name_c);
+    device_name = scm_to_locale_string(scm_device_name);
+    local_memory_add(device_name);
   };
   sp_alsa_status_require_x(snd_pcm_open(
-      &alsa_port, device_name_c,
+      &alsa_port, device_name,
       (input_p ? SND_PCM_STREAM_CAPTURE : SND_PCM_STREAM_PLAYBACK), 0));
-  b32 latency_c = (scm_is_undefined(latency) ? sp_default_alsa_latency
-                                             : scm_to_uint32(latency));
-  b32 channel_count_c = optional_channel_count(channel_count);
-  b32 samples_per_second_c = optional_samples_per_second(samples_per_second);
+  b32 latency = (scm_is_undefined(scm_latency) ? sp_default_alsa_latency
+                                               : scm_to_uint32(scm_latency));
+  b32 channel_count = optional_channel_count(scm_channel_count);
+  b32 sample_rate = optional_sample_rate(scm_sample_rate);
   sp_alsa_status_require_x(snd_pcm_set_params(
       alsa_port, SND_PCM_FORMAT_FLOAT_LE, SND_PCM_ACCESS_RW_NONINTERLEAVED,
-      channel_count_c, samples_per_second_c,
-      sp_default_alsa_enable_soft_resample, latency_c));
-  SCM result = sp_port_create(
-      sp_port_type_alsa, (input_p ? sp_port_bit_input : 0),
-      samples_per_second_c, channel_count_c, 0, ((b0 *)(alsa_port)), 0);
+      channel_count, sample_rate, sp_default_alsa_enable_soft_resample,
+      latency));
+  SCM result =
+      sp_port_create(sp_port_type_alsa, (input_p ? sp_port_bit_input : 0),
+                     sample_rate, channel_count, 0, ((b0 *)(alsa_port)), 0);
 exit:
-  local_memory_free;
-  if (status_failure_p) {
-    if (alsa_port) {
-      snd_pcm_close(alsa_port);
-    };
+  if ((status_failure_p && alsa_port)) {
+    snd_pcm_close(alsa_port);
   };
+  local_memory_free;
   status_to_scm_return(result);
 };
-SCM sp_io_file_open(SCM path, b8 input_p, SCM channel_count,
-                    SCM samples_per_second) {
+SCM sp_io_file_open(SCM path, b8 input_p, SCM channel_count, SCM sample_rate) {
   int file;
   SCM result;
-  b32 samples_per_second_file;
+  b32 sample_rate_file;
   b32 channel_count_file;
   char *path_c = scm_to_locale_string(path);
   sp_status_init;
@@ -582,7 +578,7 @@ SCM sp_io_file_open(SCM path, b8 input_p, SCM channel_count,
     file = open(path_c, O_RDWR);
     sp_system_status_require_id(file);
     b32 encoding;
-    if (!file_au_read_header(file, &encoding, &samples_per_second_file,
+    if (!file_au_read_header(file, &encoding, &sample_rate_file,
                              &channel_count_file)) {
       status_set_id_goto(sp_status_id_file_header);
     };
@@ -593,26 +589,25 @@ SCM sp_io_file_open(SCM path, b8 input_p, SCM channel_count,
           ((channel_count_file == scm_to_uint32(channel_count))))) {
       status_set_id_goto(sp_status_id_file_incompatible);
     };
-    if (!(scm_is_undefined(samples_per_second) ||
-          ((samples_per_second_file == scm_to_uint32(samples_per_second))))) {
+    if (!(scm_is_undefined(sample_rate) ||
+          ((sample_rate_file == scm_to_uint32(sample_rate))))) {
       status_set_id_goto(sp_status_id_file_incompatible);
     };
     off_t offset = lseek(file, 0, SEEK_CUR);
     sp_system_status_require_id(offset);
-    result = sp_port_create(sp_port_type_file, flags, samples_per_second_file,
+    result = sp_port_create(sp_port_type_file, flags, sample_rate_file,
                             channel_count_file, offset, 0, file);
   } else {
     file = open(path_c, (O_RDWR | O_CREAT), 384);
     sp_system_status_require_id(file);
-    samples_per_second_file = optional_samples_per_second(samples_per_second);
+    sample_rate_file = optional_sample_rate(sample_rate);
     channel_count_file = optional_channel_count(channel_count);
-    if (!file_au_write_header(file, 6, samples_per_second_file,
-                              channel_count_file)) {
+    if (!file_au_write_header(file, 6, sample_rate_file, channel_count_file)) {
       status_set_id_goto(sp_status_id_file_header);
     };
     off_t offset = lseek(file, 0, SEEK_CUR);
     sp_system_status_require_id(offset);
-    result = sp_port_create(sp_port_type_file, flags, samples_per_second_file,
+    result = sp_port_create(sp_port_type_file, flags, sample_rate_file,
                             channel_count_file, offset, 0, file);
   };
 exit:
@@ -650,8 +645,8 @@ SCM scm_sp_port_input_p(SCM port) {
 SCM scm_sp_port_channel_count(SCM port) {
   return (scm_from_uint32((*scm_to_port_data(port)).channel_count));
 };
-SCM scm_sp_port_samples_per_second(SCM port) {
-  return (scm_from_uint32((*scm_to_port_data(port)).samples_per_second));
+SCM scm_sp_port_sample_rate(SCM port) {
+  return (scm_from_uint32((*scm_to_port_data(port)).sample_rate));
 };
 SCM scm_sp_port_p(SCM port) { return (scm_from_bool(scm_c_sp_port_p(port))); };
 SCM scm_sp_port_type(SCM port) {
@@ -661,32 +656,25 @@ SCM scm_sp_port_type(SCM port) {
                       ? scm_sp_port_type_file
                       : SCM_BOOL_F)));
 };
-SCM scm_sp_io_file_open_input(SCM path) {
-  return (sp_io_file_open(path, 1, SCM_UNDEFINED, SCM_UNDEFINED));
-};
-SCM scm_sp_io_file_open_output(SCM path, SCM channel_count,
-                               SCM samples_per_second) {
-  return (sp_io_file_open(path, 0, channel_count, samples_per_second));
-};
-SCM scm_sp_io_alsa_write(SCM port, SCM sample_count, SCM channel_data) {
+SCM scm_sp_io_alsa_write(SCM port, SCM scm_sample_count, SCM scm_channel_data) {
   status_init;
   port_data_t *port_data = scm_to_port_data(port);
   b32 channel_count = (*port_data).channel_count;
-  b32 sample_count_c = scm_to_uint32(sample_count);
+  size_t deinterleaved_count = scm_to_size_t(scm_sample_count);
   local_memory_init(1);
-  sp_define_malloc(channel_data_c, sp_sample_t **,
+  sp_define_malloc(deinterleaved, sp_sample_t **,
                    (channel_count * sizeof(sp_sample_t *)));
-  local_memory_add(channel_data_c);
+  local_memory_add(deinterleaved);
   b32 channel = 0;
   SCM a;
-  scm_c_list_each(channel_data, a, {
-    (*(channel_data_c + channel)) =
+  scm_c_list_each(scm_channel_data, a, {
+    (*(deinterleaved + channel)) =
         ((sp_sample_t *)(SCM_BYTEVECTOR_CONTENTS(a)));
     increment(channel);
   });
   snd_pcm_sframes_t frames_written = snd_pcm_writen(
-      ((snd_pcm_t *)((*port_data).data)), ((b0 **)(channel_data_c)),
-      ((snd_pcm_uframes_t)(sample_count_c)));
+      ((snd_pcm_t *)((*port_data).data)), ((b0 **)(deinterleaved)),
+      ((snd_pcm_uframes_t)(deinterleaved_count)));
   if (((frames_written < 0) &&
        (snd_pcm_recover(((snd_pcm_t *)((*port_data).data)), frames_written, 0) <
         0))) {
@@ -696,26 +684,25 @@ exit:
   local_memory_free;
   status_to_scm_return(SCM_UNSPECIFIED);
 };
-SCM scm_sp_io_alsa_read(SCM port, SCM sample_count) {
+SCM scm_sp_io_alsa_read(SCM port, SCM scm_sample_count) {
   status_init;
   port_data_t *port_data = scm_to_port_data(port);
   b32 channel_count = (*port_data).channel_count;
-  b32 sample_count_c = scm_to_uint32(sample_count);
-  local_memory_init((1 + channel_count));
-  sp_define_malloc(channel_data, sp_sample_t **,
+  size_t deinterleaved_count = scm_to_size_t(scm_sample_count);
+  local_memory_init(1);
+  sp_define_malloc(deinterleaved, sp_sample_t **,
                    (channel_count * sizeof(sp_sample_t *)));
-  local_memory_add(channel_data);
+  local_memory_add(deinterleaved);
   b32 channel = channel_count;
+  size_t deinterleaved_size = (deinterleaved_count * sizeof(sp_sample_t));
   while (channel) {
     decrement(channel);
-    sp_define_malloc(data, sp_sample_t *,
-                     (sample_count_c * sizeof(sp_sample_t)));
-    local_memory_add(data);
-    (*(channel_data + channel)) = data;
+    sp_define_malloc(data, sp_sample_t *, deinterleaved_size);
+    (*(deinterleaved + channel)) = data;
   };
   snd_pcm_sframes_t frames_read =
-      snd_pcm_readn(((snd_pcm_t *)((*port_data).data)), ((b0 **)(channel_data)),
-                    sample_count_c);
+      snd_pcm_readn(((snd_pcm_t *)((*port_data).data)),
+                    ((b0 **)(deinterleaved)), deinterleaved_count);
   if (((frames_read < 0) && (snd_pcm_recover(((snd_pcm_t *)((*port_data).data)),
                                              frames_read, 0) < 0))) {
     status_set_both_goto(sp_status_group_alsa, frames_read);
@@ -725,7 +712,7 @@ SCM scm_sp_io_alsa_read(SCM port, SCM sample_count) {
   while (channel) {
     decrement(channel);
     result = scm_cons(
-        scm_take_f32vector((*(channel_data + channel)), sample_count_c),
+        scm_take_f32vector((*(deinterleaved + channel)), deinterleaved_count),
         result);
   };
 exit:
@@ -744,24 +731,24 @@ SCM scm_sp_io_file_write(SCM port, SCM scm_sample_count, SCM scm_channel_data) {
                          sp_status_id_file_channel_mismatch);
   };
   local_memory_init(2);
-  sp_define_malloc(data_deinterleaved, sp_sample_t **,
+  sp_define_malloc(deinterleaved, sp_sample_t **,
                    (channel_count * sizeof(sp_sample_t *)));
-  local_memory_add(data_deinterleaved);
+  local_memory_add(deinterleaved);
   b32 channel = 0;
   SCM a;
   scm_c_list_each(scm_channel_data, a, {
-    (*(data_deinterleaved + channel)) =
+    (*(deinterleaved + channel)) =
         ((sp_sample_t *)(SCM_BYTEVECTOR_CONTENTS(a)));
     increment(channel);
   });
   size_t deinterleaved_count = scm_to_size_t(scm_sample_count);
   size_t interleaved_size =
       (channel_count * deinterleaved_count * sizeof(sp_sample_t *));
-  sp_define_malloc(data_interleaved, sp_sample_t *, interleaved_size);
-  local_memory_add(data_interleaved);
-  sp_interleave_and_reverse_endian(data_deinterleaved, data_interleaved,
+  sp_define_malloc(interleaved, sp_sample_t *, interleaved_size);
+  local_memory_add(interleaved);
+  sp_interleave_and_reverse_endian(deinterleaved, interleaved,
                                    deinterleaved_count, channel_count);
-  int count = write((*port_data).data_int, data_interleaved, interleaved_size);
+  int count = write((*port_data).data_int, interleaved, interleaved_size);
   if (!(interleaved_size == count)) {
     if ((count < 0)) {
       status_set_both_goto(sp_status_group_libc, count);
@@ -782,9 +769,9 @@ SCM scm_sp_io_file_read(SCM port, SCM scm_sample_count) {
   size_t deinterleaved_count = scm_to_size_t(scm_sample_count);
   size_t interleaved_size =
       (channel_count * deinterleaved_count * sizeof(sp_sample_t));
-  sp_define_malloc(data_interleaved, sp_sample_t *, interleaved_size);
-  local_memory_add(data_interleaved);
-  int count = read((*port_data).data_int, data_interleaved, interleaved_size);
+  sp_define_malloc(interleaved, sp_sample_t *, interleaved_size);
+  local_memory_add(interleaved);
+  int count = read((*port_data).data_int, interleaved, interleaved_size);
   if (!count) {
     result = SCM_EOF_VAL;
     goto exit;
@@ -799,25 +786,25 @@ SCM scm_sp_io_file_read(SCM port, SCM scm_sample_count) {
       };
     };
   };
-  sp_define_malloc(data_deinterleaved, sp_sample_t **,
+  sp_define_malloc(deinterleaved, sp_sample_t **,
                    (channel_count * sizeof(sp_sample_t *)));
-  local_memory_add(data_deinterleaved);
+  local_memory_add(deinterleaved);
   size_t deinterleaved_size = (interleaved_size / channel_count);
   b32 channel = channel_count;
   while (channel) {
     decrement(channel);
     sp_define_malloc(data, sp_sample_t *, deinterleaved_size);
-    (*(data_deinterleaved + channel)) = data;
+    (*(deinterleaved + channel)) = data;
   };
-  sp_deinterleave_and_reverse_endian(data_deinterleaved, data_interleaved,
+  sp_deinterleave_and_reverse_endian(deinterleaved, interleaved,
                                      deinterleaved_count, channel_count);
   result = SCM_EOL;
   channel = channel_count;
   while (channel) {
     decrement(channel);
-    result = scm_cons(scm_take_f32vector((*(data_deinterleaved + channel)),
-                                         deinterleaved_count),
-                      result);
+    result = scm_cons(
+        scm_take_f32vector((*(deinterleaved + channel)), deinterleaved_count),
+        result);
   };
 exit:
   local_memory_free;
@@ -851,14 +838,18 @@ exit:
   status_to_scm_return(SCM_BOOL_T);
 };
 SCM scm_sp_io_alsa_open_input(SCM device_name, SCM channel_count,
-                              SCM samples_per_second, SCM latency) {
-  return (sp_io_alsa_open(1, device_name, channel_count, samples_per_second,
-                          latency));
+                              SCM sample_rate, SCM latency) {
+  return (sp_io_alsa_open(1, device_name, channel_count, sample_rate, latency));
 };
 SCM scm_sp_io_alsa_open_output(SCM device_name, SCM channel_count,
-                               SCM samples_per_second, SCM latency) {
-  return (sp_io_alsa_open(0, device_name, channel_count, samples_per_second,
-                          latency));
+                               SCM sample_rate, SCM latency) {
+  return (sp_io_alsa_open(0, device_name, channel_count, sample_rate, latency));
+};
+SCM scm_sp_io_file_open_input(SCM path) {
+  return (sp_io_file_open(path, 1, SCM_UNDEFINED, SCM_UNDEFINED));
+};
+SCM scm_sp_io_file_open_output(SCM path, SCM channel_count, SCM sample_rate) {
+  return (sp_io_file_open(path, 0, channel_count, sample_rate));
 };
 #endif
 SCM scm_sp_fft(SCM a) {
@@ -922,8 +913,8 @@ b0 init_sp() {
                            "sp-port -> integer/boolean");
   scm_c_define_procedure_c("sp-port-channel-count", 1, 0, 0,
                            scm_sp_port_channel_count, "sp-port -> integer");
-  scm_c_define_procedure_c("sp-port-samples-per-second", 1, 0, 0,
-                           scm_sp_port_samples_per_second,
+  scm_c_define_procedure_c("sp-port-sample-rate", 1, 0, 0,
+                           scm_sp_port_sample_rate,
                            "sp-port -> integer/boolean");
   scm_c_define_procedure_c("sp-port?", 1, 0, 0, scm_sp_port_p,
                            "sp-port -> boolean");
@@ -943,7 +934,7 @@ b0 init_sp() {
   scm_c_define_procedure_c("sp-io-file-open-output", 1, 2, 0,
                            scm_sp_io_file_open_output,
                            "string [integer integer] -> sp-port\n    path "
-                           "[channel-count samples-per-second] -> sp-port");
+                           "[channel-count sample-rate] -> sp-port");
   scm_c_define_procedure_c("sp-io-file-write", 2, 1, 0, scm_sp_io_file_write,
                            "sp-port (f32vector ...):channel-data "
                            "[integer:sample-count] -> boolean\n    write "
@@ -958,11 +949,11 @@ b0 init_sp() {
   scm_c_define_procedure_c(
       "sp-io-alsa-open-input", 0, 4, 0, scm_sp_io_alsa_open_input,
       "[string integer integer integer] -> sp-port\n    [device-name "
-      "channel-count samples-per-second latency] -> sp-port");
+      "channel-count sample-rate latency] -> sp-port");
   scm_c_define_procedure_c(
       "sp-io-alsa-open-output", 0, 4, 0, scm_sp_io_alsa_open_output,
       "[string integer integer integer] -> sp-port\n    [device-name "
-      "channel-count samples-per-second latency] -> sp-port");
+      "channel-count sample-rate latency] -> sp-port");
   scm_c_define_procedure_c("sp-io-alsa-write", 2, 1, 0, scm_sp_io_alsa_write,
                            "sp-port (f32vector ...):channel-data "
                            "[integer:sample-count] -> boolean\n    write "
