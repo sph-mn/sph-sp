@@ -5,7 +5,7 @@
     sp-status-id-memory sp-status-id-file-incompatible
     sp-status-id-file-encoding sp-status-id-file-header
     sp-status-id-port-closed sp-status-id-port-position
-    sp-status-id-file-channel-mismatch
+    sp-status-id-file-channel-mismatch sp-status-id-file-incomplete
     sp-status-id-port-type sp-status-group-sp sp-status-group-libc sp-status-group-alsa))
 
 (define (sp-status-description a) (b8* status-t)
@@ -52,6 +52,5 @@
 (pre-define (sp-system-status-require-id id)
   (if (< id 0) (status-set-both-goto sp-status-group-libc id)))
 
-(pre-define (sp-system-status-require! expression)
-  (status-set-id expression)
+(pre-define (sp-system-status-require! expression) (status-set-id expression)
   (if (< status.id 0) (status-set-group-goto sp-status-group-libc) status-reset))

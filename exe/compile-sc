@@ -4,6 +4,15 @@ format_c() {
   clang-format -i "$@"
 }
 
+copy_example_config() {
+  # the config file is not versioned so that users can customise it
+  dir="source/sc/"
+  if [ ! -f "$dir/config.sc" ]
+  then
+    cp "$dir/config.sc.example" "$dir/config.sc"
+  fi
+}
+
 copy_submodules() {
   # copy code files from submodules.
   # to not have the whole submodule in the source directory
@@ -21,6 +30,7 @@ dir=source/c-precompiled
 file="$dir/main.c"
 
 copy_submodules &&
+copy_example_config &&
 mkdir -p "$dir" &&
 sc source/sc/main.sc "$file" &&
 format_c "$file" &&

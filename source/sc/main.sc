@@ -1,12 +1,9 @@
-(pre-define debug-log? #t)
+(sc-include-once sph "foreign/sph")
 
 (pre-include-once stdio-h "stdio.h"
   libguile-h "libguile.h"
   kiss-fft-h "foreign/kissfft/kiss_fft.h"
   kiss-fftr-h "foreign/kissfft/tools/kiss_fftr.h" fcntl-h "fcntl.h" asoundlib-h "alsa/asoundlib.h")
-
-(sc-include-once sph "foreign/sph")
-(pre-define sp-sample-t f32-s)
 
 (pre-define (sp-define-malloc id type size) (define id type (malloc size))
   (if (not id) (status-set-both-goto sp-status-group-sp sp-status-id-memory)))
@@ -17,9 +14,10 @@
 (pre-define (sp-define-calloc id type size) (define id type (calloc size 1))
   (if (not id) (status-set-both-goto sp-status-group-sp sp-status-id-memory)))
 
-(sc-include-once one "foreign/sph/one"
+(sc-include-once sph-one "foreign/sph/one"
   guile "foreign/sph/guile"
-  status "foreign/sph/status" local-memory "foreign/sph/local-memory" sp-status "status" io "io")
+  sph-status "foreign/sph/status"
+  sph-local-memory "foreign/sph/local-memory" sp-config "config" sp-status "status" sp-io "io")
 
 (define (scm-sp-fft a) (SCM SCM)
   status-init (define size b32 (/ (SCM-BYTEVECTOR-LENGTH a) 4))
@@ -46,8 +44,8 @@
 
 (define (init-sp) b0
   sp-port-scm-type-init (define scm-module SCM (scm-c-resolve-module "sph sp"))
-  (set scm-sp-port-type-alsa (scm-from-uint8 sp-port-type-alsa)
-    scm-sp-port-type-file (scm-from-uint8 sp-port-type-file)
+  (set scm-sp-port-type-alsa (scm-from-latin1-symbol "alsa")
+    scm-sp-port-type-file (scm-from-latin1-symbol "file")
     scm-rnrs-raise (scm-c-public-ref "rnrs exceptions" "raise"))
   (scm-c-module-define scm-module "sp-port-type-alsa" scm-sp-port-type-alsa)
   (scm-c-module-define scm-module "sp-port-type-file" scm-sp-port-type-file)
