@@ -22,12 +22,12 @@
 #define b64_s int64_t
 #define f32_s float
 #define f64_s double
-#if debug_log_p
+/** writes values with current routine name and line info to standard output.
+  example: (debug-log "%d" 1)
+  otherwise like printf */
 #define debug_log(format, ...)                                                 \
-  fprintf(stderr, "%s:%d " format "\n", __func__, __LINE__, __VA_ARGS__)
-#else
-#define debug_log(format, ...) null
-#endif
+  fprintf(stdout, "%s:%d " format "\n", __func__, __LINE__, __VA_ARGS__)
+;
 #define null ((b0)(0))
 #define zero_p(a) (0 == a)
 #endif
@@ -95,12 +95,12 @@
 #define b64_s int64_t
 #define f32_s float
 #define f64_s double
-#if debug_log_p
+/** writes values with current routine name and line info to standard output.
+  example: (debug-log "%d" 1)
+  otherwise like printf */
 #define debug_log(format, ...)                                                 \
-  fprintf(stderr, "%s:%d " format "\n", __func__, __LINE__, __VA_ARGS__)
-#else
-#define debug_log(format, ...) null
-#endif
+  fprintf(stdout, "%s:%d " format "\n", __func__, __LINE__, __VA_ARGS__)
+;
 #define null ((b0)(0))
 #define zero_p(a) (0 == a)
 #endif
@@ -304,6 +304,8 @@ typedef struct {
 #define local_memory_free                                                      \
   while (sph_local_memory_index) {                                             \
     sph_local_memory_index = (sph_local_memory_index - 1);                     \
+    debug_log("index %lu freeing %p", sph_local_memory_index,                  \
+              (*(sph_local_memory_register + sph_local_memory_index)));        \
     free((*(sph_local_memory_register + sph_local_memory_index)));             \
   }
 #endif
@@ -449,54 +451,34 @@ b8_s file_au_read_header(int file, b32 *encoding, b32 *samples_per_second,
   ((SCM_UNDEFINED == a) ? sp_default_samples_per_second : scm_to_uint32(a))
 #define optional_channel_count(a)                                              \
   (scm_is_undefined(a) ? sp_default_channel_count : scm_to_uint32(a))
-#define calc_interleaved_size(channel_count, sample_count)                     \
-  (channel_count * sample_count * sizeof(sp_sample_t))
 #define sp_alsa_status_require_x(expression)                                   \
   status_set_id(expression);                                                   \
   if (status_failure_p) {                                                      \
     status_set_group_goto(sp_status_group_alsa);                               \
   }
-#define define_sp_interleave(name, get_source_element)                         \
-  b0 name(sp_sample_t **deinterleaved, sp_sample_t *interleaved,               \
-          b32 channel_count, b32 deinterleaved_size) {                         \
-    b32 interleaved_size = (deinterleaved_size * channel_count);               \
-    b32 current_channel;                                                       \
-    while (deinterleaved_size) {                                               \
-      decrement(deinterleaved_size);                                           \
-      current_channel = channel_count;                                         \
-      while (current_channel) {                                                \
-        decrement(current_channel);                                            \
-        decrement(interleaved_size);                                           \
-        (*(interleaved + interleaved_size)) = get_source_element;              \
+/** a: deinterleaved
+   b: interleaved */
+#define define_sp_interleave(name, type, body)                                 \
+  b0 name(type **a, type *b, size_t a_size, b32 channel_count) {               \
+    size_t b_size = (a_size * channel_count);                                  \
+    b32 channel;                                                               \
+    while (a_size) {                                                           \
+      decrement(a_size);                                                       \
+      channel = channel_count;                                                 \
+      while (channel) {                                                        \
+        decrement(channel);                                                    \
+        decrement(b_size);                                                     \
+        body;                                                                  \
       };                                                                       \
     };                                                                         \
   }
-#define define_sp_deinterleave(name, get_source_element)                       \
-  b0 name(sp_sample_t *interleaved, sp_sample_t **deinterleaved,               \
-          b32 channel_count, b32 deinterleaved_size) {                         \
-    b32 interleaved_size = (deinterleaved_size * channel_count);               \
-    b32 current_channel;                                                       \
-    while (deinterleaved_size) {                                               \
-      decrement(deinterleaved_size);                                           \
-      current_channel = channel_count;                                         \
-      while (current_channel) {                                                \
-        decrement(current_channel);                                            \
-        decrement(interleaved_size);                                           \
-        (*((*(deinterleaved + current_channel)) + deinterleaved_size)) =       \
-            get_source_element;                                                \
-      };                                                                       \
-    };                                                                         \
-  }
-define_sp_deinterleave(sp_deinterleave, (*(interleaved + interleaved_size)));
-define_sp_interleave(sp_interleave, (*((*(deinterleaved + current_channel)) +
-                                       deinterleaved_size)));
-define_sp_deinterleave(sp_deinterleave_and_reverse_endian,
-                       sample_reverse_endian((*(interleaved +
-                                                interleaved_size))));
-define_sp_interleave(
-    sp_interleave_and_reverse_endian,
-    sample_reverse_endian((*((*(deinterleaved + current_channel)) +
-                             deinterleaved_size))));
+;
+define_sp_interleave(sp_interleave_and_reverse_endian, sp_sample_t, {
+  (*(b + b_size)) = sample_reverse_endian((*((*(a + channel)) + a_size)));
+});
+define_sp_interleave(sp_deinterleave_and_reverse_endian, sp_sample_t, {
+  (*((*(a + channel)) + a_size)) = sample_reverse_endian((*(b + b_size)));
+});
 typedef struct {
   b32 samples_per_second;
   b32 channel_count;
@@ -755,40 +737,39 @@ exit:
   local_memory_free;
   status_to_scm_return(result);
 };
-SCM scm_sp_io_file_write(SCM port, SCM sample_count, SCM channel_data) {
+SCM scm_sp_io_file_write(SCM port, SCM scm_sample_count, SCM scm_channel_data) {
   status_init;
   port_data_t *port_data = scm_to_port_data(port);
   if ((sp_port_bit_input & (*port_data).flags)) {
     status_set_both_goto(sp_status_group_sp, sp_status_id_port_type);
   };
   b32 channel_count = (*port_data).channel_count;
-  if (!(scm_to_uint32(scm_length(channel_data)) == channel_count)) {
+  if (!(scm_to_uint32(scm_length(scm_channel_data)) == channel_count)) {
     status_set_both_goto(sp_status_group_sp,
                          sp_status_id_file_channel_mismatch);
   };
   local_memory_init(2);
-  b32 sample_count_c = scm_to_uint32(sample_count);
-  sp_define_malloc(channel_data_c, sp_sample_t **,
+  b32 deinterleaved_size =
+      (scm_to_uint32(scm_sample_count) * sizeof(sp_sample_t));
+  sp_define_malloc(data_deinterleaved, sp_sample_t **,
                    (channel_count * sizeof(sp_sample_t *)));
-  local_memory_add(channel_data_c);
+  local_memory_add(data_deinterleaved);
   b32 channel = 0;
   SCM a;
-  scm_c_list_each(channel_data, a, {
-    (*(channel_data_c + channel)) =
+  scm_c_list_each(scm_channel_data, a, {
+    (*(data_deinterleaved + channel)) =
         ((sp_sample_t *)(SCM_BYTEVECTOR_CONTENTS(a)));
     increment(channel);
   });
-  size_t interleaved_size =
-      calc_interleaved_size(channel_count, sample_count_c);
+  size_t interleaved_size = (channel_count * deinterleaved_size);
   sp_define_malloc(data_interleaved, sp_sample_t *, interleaved_size);
   local_memory_add(data_interleaved);
-  sp_interleave_and_reverse_endian(channel_data_c, data_interleaved,
-                                   channel_count, sample_count_c);
-  int status_2 =
-      write((*port_data).data_int, data_interleaved, interleaved_size);
-  if (!(interleaved_size == status_2)) {
-    if ((status_2 < 0)) {
-      status_set_both_goto(sp_status_group_libc, status_2);
+  sp_interleave_and_reverse_endian(data_deinterleaved, data_interleaved,
+                                   deinterleaved_size, channel_count);
+  int count = write((*port_data).data_int, data_interleaved, interleaved_size);
+  if (!(interleaved_size == count)) {
+    if ((count < 0)) {
+      status_set_both_goto(sp_status_group_libc, count);
     } else {
       status_set_both_goto(sp_status_group_sp, sp_status_id_file_incomplete);
     };
@@ -797,45 +778,48 @@ exit:
   local_memory_free;
   status_to_scm_return(SCM_UNSPECIFIED);
 };
-SCM scm_sp_io_file_read(SCM port, SCM sample_count) {
+SCM scm_sp_io_file_read(SCM port, SCM scm_sample_count) {
   status_init;
+  SCM result;
   port_data_t *port_data = scm_to_port_data(port);
   b32 channel_count = (*port_data).channel_count;
-  b32 sample_count_c = scm_to_uint32(sample_count);
-  local_memory_init((2 + channel_count));
+  local_memory_init(2);
   size_t interleaved_size =
-      calc_interleaved_size(channel_count, sample_count_c);
+      (channel_count * scm_to_uint32(scm_sample_count) * sizeof(sp_sample_t));
   sp_define_malloc(data_interleaved, sp_sample_t *, interleaved_size);
   local_memory_add(data_interleaved);
-  int status_2 =
-      read((*port_data).data_int, data_interleaved, interleaved_size);
-  if (!(interleaved_size == status_2)) {
-    if ((status_2 < 0)) {
-      status_set_both_goto(sp_status_group_libc, status_2);
+  int count = read((*port_data).data_int, data_interleaved, interleaved_size);
+  if (!count) {
+    result = SCM_EOF_VAL;
+    goto exit;
+  } else {
+    if ((count < 0)) {
+      status_set_both_goto(sp_status_group_libc, count);
     } else {
-      status_set_both_goto(sp_status_group_sp, sp_status_id_file_incomplete);
+      if (!(interleaved_size == count)) {
+        interleaved_size = count;
+      };
     };
   };
   sp_define_malloc(data_deinterleaved, sp_sample_t **,
                    (channel_count * sizeof(sp_sample_t *)));
   local_memory_add(data_deinterleaved);
+  b32 deinterleaved_size = (interleaved_size / channel_count);
   b32 channel = channel_count;
   while (channel) {
     decrement(channel);
-    sp_define_malloc(data, sp_sample_t *,
-                     (sample_count_c * sizeof(sp_sample_t)));
-    local_memory_add(data);
+    sp_define_malloc(data, sp_sample_t *, deinterleaved_size);
     (*(data_deinterleaved + channel)) = data;
   };
-  sp_deinterleave_and_reverse_endian(data_interleaved, data_deinterleaved,
-                                     channel_count, sample_count_c);
-  SCM result = SCM_EOL;
+  sp_deinterleave_and_reverse_endian(data_deinterleaved, data_interleaved,
+                                     deinterleaved_size, channel_count);
+  result = SCM_EOL;
   channel = channel_count;
   while (channel) {
     decrement(channel);
-    result = scm_cons(
-        scm_take_f32vector((*(data_deinterleaved + channel)), sample_count_c),
-        result);
+    result = scm_cons(scm_take_f32vector((*(data_deinterleaved + channel)),
+                                         deinterleaved_size),
+                      result);
   };
 exit:
   local_memory_free;
