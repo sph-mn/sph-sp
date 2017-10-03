@@ -25,7 +25,7 @@
   (return #t))
 
 (pre-define (optional-sample-rate a)
-  (if* (= SCM-UNDEFINED a) sp-default-sample-rate (scm->uint32 a)))
+  (if* (scm-is-undefined a) sp-default-sample-rate (scm->uint32 a)))
 
 (pre-define (optional-channel-count a)
   (if* (scm-is-undefined a) sp-default-channel-count (scm->uint32 a)))
@@ -91,7 +91,7 @@
   (set sp-port-scm-type (scm-make-smob-type "sp-port" 0))
   (scm-set-smob-print sp-port-scm-type sp-port-print))
 
-(define (sp-io-alsa-open input? scm-device-name scm-channel-count scm-sample-rate scm-latency)
+(define (sp-alsa-open input? scm-device-name scm-channel-count scm-sample-rate scm-latency)
   (SCM b8 SCM SCM SCM SCM) status-init
   (define alsa-port snd-pcm-t* 0) (local-memory-init 1)
   (define device-name char*)
@@ -114,7 +114,7 @@
   (label exit (if (and status-failure? alsa-port) (snd-pcm-close alsa-port))
     local-memory-free (status->scm-return result)))
 
-(define (sp-io-file-open path input? channel-count sample-rate) (SCM SCM b8 SCM SCM)
+(define (sp-file-open path input? channel-count sample-rate) (SCM SCM b8 SCM SCM)
   (define file int result SCM sample-rate-file b32 channel-count-file b32)
   (define path-c char* (scm->locale-string path)) sp-status-init
   (local-memory-init 1) (local-memory-add path-c)
@@ -184,7 +184,7 @@
       (sp-port-type-alsa scm-sp-port-type-alsa) (sp-port-type-file scm-sp-port-type-file)
       (else SCM-BOOL-F))))
 
-(define (scm-sp-io-alsa-write port scm-sample-count scm-channel-data) (SCM SCM SCM SCM)
+(define (scm-sp-alsa-write port scm-sample-count scm-channel-data) (SCM SCM SCM SCM)
   status-init (define port-data port-data-t* (scm->port-data port))
   (define channel-count b32 (struct-pointer-get port-data channel-count))
   (define deinterleaved-count size-t (scm->size-t scm-sample-count)) (local-memory-init 1)
@@ -207,7 +207,7 @@
     (status-set-both-goto sp-status-group-alsa frames-written))
   (label exit local-memory-free (status->scm-return SCM-UNSPECIFIED)))
 
-(define (scm-sp-io-alsa-read port scm-sample-count) (SCM SCM SCM)
+(define (scm-sp-alsa-read port scm-sample-count) (SCM SCM SCM)
   status-init (define port-data port-data-t* (scm->port-data port))
   (define channel-count b32 (struct-pointer-get port-data channel-count))
   (define deinterleaved-count size-t (scm->size-t scm-sample-count)) (local-memory-init 1)
@@ -232,7 +232,7 @@
       (scm-cons (scm-take-f32vector (deref deinterleaved channel) deinterleaved-count) result)))
   (label exit local-memory-free (status->scm-return result)))
 
-(define (scm-sp-io-file-write port scm-sample-count scm-channel-data) (SCM SCM SCM SCM)
+(define (scm-sp-file-write port scm-sample-count scm-channel-data) (SCM SCM SCM SCM)
   status-init (define port-data port-data-t* (scm->port-data port))
   (if (bit-and sp-port-bit-input (struct-pointer-get port-data flags))
     (status-set-both-goto sp-status-group-sp sp-status-id-port-type))
@@ -257,7 +257,7 @@
       (status-set-both-goto sp-status-group-sp sp-status-id-file-incomplete)))
   (label exit local-memory-free (status->scm-return SCM-UNSPECIFIED)))
 
-(define (scm-sp-io-file-read port scm-sample-count) (SCM SCM SCM)
+(define (scm-sp-file-read port scm-sample-count) (SCM SCM SCM)
   status-init (define result SCM)
   (define port-data port-data-t* (scm->port-data port))
   (define channel-count b32 (struct-pointer-get port-data channel-count)) (local-memory-init 2)
@@ -286,7 +286,7 @@
       (scm-cons (scm-take-f32vector (deref deinterleaved channel) deinterleaved-count) result)))
   (label exit local-memory-free (status->scm-return result)))
 
-(define (scm-sp-io-file-set-position port scm-sample-index) (SCM SCM SCM)
+(define (scm-sp-file-set-position port scm-sample-index) (SCM SCM SCM)
   "sp-port integer -> unspecified
    set port to offset in sample data"
   status-init (define port-data port-data-t* (scm->port-data port))
@@ -303,14 +303,14 @@
   (set (struct-pointer-get port-data position) sample-index)
   (label exit (status->scm-return SCM-BOOL-T)))
 
-(define (scm-sp-io-alsa-open-input device-name channel-count sample-rate latency)
-  (SCM SCM SCM SCM SCM) (return (sp-io-alsa-open #t device-name channel-count sample-rate latency)))
+(define (scm-sp-alsa-open-input device-name channel-count sample-rate latency)
+  (SCM SCM SCM SCM SCM) (return (sp-alsa-open #t device-name channel-count sample-rate latency)))
 
-(define (scm-sp-io-alsa-open-output device-name channel-count sample-rate latency)
-  (SCM SCM SCM SCM SCM) (return (sp-io-alsa-open #f device-name channel-count sample-rate latency)))
+(define (scm-sp-alsa-open-output device-name channel-count sample-rate latency)
+  (SCM SCM SCM SCM SCM) (return (sp-alsa-open #f device-name channel-count sample-rate latency)))
 
-(define (scm-sp-io-file-open-input path) (SCM SCM)
-  (return (sp-io-file-open path #t SCM-UNDEFINED SCM-UNDEFINED)))
+(define (scm-sp-file-open-input path) (SCM SCM)
+  (return (sp-file-open path #t SCM-UNDEFINED SCM-UNDEFINED)))
 
-(define (scm-sp-io-file-open-output path channel-count sample-rate) (SCM SCM SCM SCM)
-  (return (sp-io-file-open path #f channel-count sample-rate)))
+(define (scm-sp-file-open-output path channel-count sample-rate) (SCM SCM SCM SCM)
+  (return (sp-file-open path #f channel-count sample-rate)))

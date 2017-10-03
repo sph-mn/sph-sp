@@ -70,6 +70,8 @@
   if (!id) {                                                                   \
     status_set_both_goto(sp_status_group_sp, sp_status_id_memory);             \
   }
+#define inc(a) a = (1 + a)
+#define dec(a) a = (a - 1)
 #ifndef sc_included_sph_one
 #define sc_included_sph_one
 #ifndef sc_included_sph
@@ -443,7 +445,7 @@ b8_s file_au_read_header(int file, b32 *encoding, b32 *sample_rate,
   return (1);
 };
 #define optional_sample_rate(a)                                                \
-  ((SCM_UNDEFINED == a) ? sp_default_sample_rate : scm_to_uint32(a))
+  (scm_is_undefined(a) ? sp_default_sample_rate : scm_to_uint32(a))
 #define optional_channel_count(a)                                              \
   (scm_is_undefined(a) ? sp_default_channel_count : scm_to_uint32(a))
 #define sp_alsa_status_require_x(expression)                                   \
@@ -530,8 +532,8 @@ SCM sp_port_create(b8 type, b8 flags, b32 sample_rate, b32 channel_count,
 #define sp_port_scm_type_init                                                  \
   sp_port_scm_type = scm_make_smob_type("sp-port", 0);                         \
   scm_set_smob_print(sp_port_scm_type, sp_port_print)
-SCM sp_io_alsa_open(b8 input_p, SCM scm_device_name, SCM scm_channel_count,
-                    SCM scm_sample_rate, SCM scm_latency) {
+SCM sp_alsa_open(b8 input_p, SCM scm_device_name, SCM scm_channel_count,
+                 SCM scm_sample_rate, SCM scm_latency) {
   status_init;
   snd_pcm_t *alsa_port = 0;
   local_memory_init(1);
@@ -563,7 +565,7 @@ exit:
   local_memory_free;
   status_to_scm_return(result);
 };
-SCM sp_io_file_open(SCM path, b8 input_p, SCM channel_count, SCM sample_rate) {
+SCM sp_file_open(SCM path, b8 input_p, SCM channel_count, SCM sample_rate) {
   int file;
   SCM result;
   b32 sample_rate_file;
@@ -656,7 +658,7 @@ SCM scm_sp_port_type(SCM port) {
                       ? scm_sp_port_type_file
                       : SCM_BOOL_F)));
 };
-SCM scm_sp_io_alsa_write(SCM port, SCM scm_sample_count, SCM scm_channel_data) {
+SCM scm_sp_alsa_write(SCM port, SCM scm_sample_count, SCM scm_channel_data) {
   status_init;
   port_data_t *port_data = scm_to_port_data(port);
   b32 channel_count = (*port_data).channel_count;
@@ -684,7 +686,7 @@ exit:
   local_memory_free;
   status_to_scm_return(SCM_UNSPECIFIED);
 };
-SCM scm_sp_io_alsa_read(SCM port, SCM scm_sample_count) {
+SCM scm_sp_alsa_read(SCM port, SCM scm_sample_count) {
   status_init;
   port_data_t *port_data = scm_to_port_data(port);
   b32 channel_count = (*port_data).channel_count;
@@ -719,7 +721,7 @@ exit:
   local_memory_free;
   status_to_scm_return(result);
 };
-SCM scm_sp_io_file_write(SCM port, SCM scm_sample_count, SCM scm_channel_data) {
+SCM scm_sp_file_write(SCM port, SCM scm_sample_count, SCM scm_channel_data) {
   status_init;
   port_data_t *port_data = scm_to_port_data(port);
   if ((sp_port_bit_input & (*port_data).flags)) {
@@ -760,7 +762,7 @@ exit:
   local_memory_free;
   status_to_scm_return(SCM_UNSPECIFIED);
 };
-SCM scm_sp_io_file_read(SCM port, SCM scm_sample_count) {
+SCM scm_sp_file_read(SCM port, SCM scm_sample_count) {
   status_init;
   SCM result;
   port_data_t *port_data = scm_to_port_data(port);
@@ -812,7 +814,7 @@ exit:
 };
 /** sp-port integer -> unspecified
    set port to offset in sample data */
-SCM scm_sp_io_file_set_position(SCM port, SCM scm_sample_index) {
+SCM scm_sp_file_set_position(SCM port, SCM scm_sample_index) {
   status_init;
   port_data_t *port_data = scm_to_port_data(port);
   b32 sample_index = scm_to_int64(scm_sample_index);
@@ -837,19 +839,19 @@ SCM scm_sp_io_file_set_position(SCM port, SCM scm_sample_index) {
 exit:
   status_to_scm_return(SCM_BOOL_T);
 };
-SCM scm_sp_io_alsa_open_input(SCM device_name, SCM channel_count,
-                              SCM sample_rate, SCM latency) {
-  return (sp_io_alsa_open(1, device_name, channel_count, sample_rate, latency));
+SCM scm_sp_alsa_open_input(SCM device_name, SCM channel_count, SCM sample_rate,
+                           SCM latency) {
+  return (sp_alsa_open(1, device_name, channel_count, sample_rate, latency));
 };
-SCM scm_sp_io_alsa_open_output(SCM device_name, SCM channel_count,
-                               SCM sample_rate, SCM latency) {
-  return (sp_io_alsa_open(0, device_name, channel_count, sample_rate, latency));
+SCM scm_sp_alsa_open_output(SCM device_name, SCM channel_count, SCM sample_rate,
+                            SCM latency) {
+  return (sp_alsa_open(0, device_name, channel_count, sample_rate, latency));
 };
-SCM scm_sp_io_file_open_input(SCM path) {
-  return (sp_io_file_open(path, 1, SCM_UNDEFINED, SCM_UNDEFINED));
+SCM scm_sp_file_open_input(SCM path) {
+  return (sp_file_open(path, 1, SCM_UNDEFINED, SCM_UNDEFINED));
 };
-SCM scm_sp_io_file_open_output(SCM path, SCM channel_count, SCM sample_rate) {
-  return (sp_io_file_open(path, 0, channel_count, sample_rate));
+SCM scm_sp_file_open_output(SCM path, SCM channel_count, SCM sample_rate) {
+  return (sp_file_open(path, 0, channel_count, sample_rate));
 };
 #endif
 SCM scm_sp_fft(SCM a) {
@@ -894,6 +896,33 @@ exit:
   local_memory_free;
   status_to_scm_return(result);
 };
+#define octets_to_samples(a) (a / sizeof(sample_t))
+#define samples_to_octets(a) (a * sizeof(sample_t))
+/** faster, low precision version of sin() */
+double sin_lq(double a) {
+  double b = (4 / M_PI);
+  double c = (-4 / (M_PI * M_PI));
+  return ((((b * a) + (c * a * abs(a)))));
+}; /* write samples for a sine wave into data between start at end.
+also defines scm-sp-sine!, scm-sp-sine-lq! */
+#define define_sp_sine_x(id, sin)                                              \
+  b0 id(sp_sample_t *data, b32 start, b32 end, f32_s sample_duration,          \
+        f32_s freq, f32_s phase, f32_s amp) {                                  \
+    while ((start <= end)) {                                                   \
+      (*(data + start)) = (amp * sin((freq * phase * sample_duration)));       \
+      inc(phase);                                                              \
+      inc(start);                                                              \
+    };                                                                         \
+  };                                                                           \
+  SCM scm_##id(SCM data, SCM start, SCM end, SCM sample_duration, SCM freq,    \
+               SCM phase, SCM amp) {                                           \
+    id(((sp_sample_t *)(SCM_BYTEVECTOR_CONTENTS(data))), scm_to_uint32(start), \
+       scm_to_uint32(end), scm_to_double(sample_duration),                     \
+       scm_to_double(freq), scm_to_double(phase), scm_to_double(amp));         \
+    return (SCM_UNSPECIFIED);                                                  \
+  }
+define_sp_sine_x(sp_sine_x, sin);
+define_sp_sine_x(sp_sine_lq_x, sin_lq);
 b0 init_sp() {
   sp_port_scm_type_init;
   SCM scm_module = scm_c_resolve_module("sph sp");
@@ -920,6 +949,40 @@ b0 init_sp() {
                            "sp-port -> boolean");
   scm_c_define_procedure_c("sp-port-type", 1, 0, 0, scm_sp_port_type,
                            "sp-port -> integer");
+  scm_c_define_procedure_c("sp-file-open-input", 1, 2, 0,
+                           scm_sp_file_open_input,
+                           "string -> sp-port\n    path -> sp-port");
+  scm_c_define_procedure_c("sp-file-open-output", 1, 2, 0,
+                           scm_sp_file_open_output,
+                           "string [integer integer] -> sp-port\n    path "
+                           "[channel-count sample-rate] -> sp-port");
+  scm_c_define_procedure_c("sp-file-write", 2, 1, 0, scm_sp_file_write,
+                           "sp-port (f32vector ...):channel-data "
+                           "[integer:sample-count] -> boolean\n    write "
+                           "sample data to the channels of a file port");
+  scm_c_define_procedure_c(
+      "sp-file-set-position", 2, 0, 0, scm_sp_file_set_position,
+      "sp-port integer:sample-offset -> boolean\n    sample-offset can be "
+      "negative, in which case it is from the end of the file");
+  scm_c_define_procedure_c(
+      "sp-file-read", 2, 0, 0, scm_sp_file_read,
+      "sp-port integer:sample-count -> (f32vector ...):channel-data");
+  scm_c_define_procedure_c(
+      "sp-alsa-open-input", 0, 4, 0, scm_sp_alsa_open_input,
+      "[string integer integer integer] -> sp-port\n    [device-name "
+      "channel-count sample-rate latency] -> sp-port");
+  scm_c_define_procedure_c(
+      "sp-alsa-open-output", 0, 4, 0, scm_sp_alsa_open_output,
+      "[string integer integer integer] -> sp-port\n    [device-name "
+      "channel-count sample-rate latency] -> sp-port");
+  scm_c_define_procedure_c("sp-alsa-write", 2, 1, 0, scm_sp_alsa_write,
+                           "sp-port (f32vector ...):channel-data "
+                           "[integer:sample-count] -> boolean\n    write "
+                           "sample data to the channels of an alsa port - to "
+                           "the sound card for sound output for example");
+  scm_c_define_procedure_c("sp-alsa-read", 2, 0, 0, scm_sp_alsa_read,
+                           "port sample-count -> channel-data\n    sp-port "
+                           "integer -> (f32vector ...)");
   scm_c_define_procedure_c("sp-fft", 1, 0, 0, scm_sp_fft,
                            "f32vector:value-per-time -> "
                            "f32vector:frequencies-per-time\n    discrete "
@@ -928,38 +991,14 @@ b0 init_sp() {
                            "f32vector:frequencies-per-time -> "
                            "f32vector:value-per-time\n    inverse discrete "
                            "fourier transform on the input data");
-  scm_c_define_procedure_c("sp-io-file-open-input", 1, 2, 0,
-                           scm_sp_io_file_open_input,
-                           "string -> sp-port\n    path -> sp-port");
-  scm_c_define_procedure_c("sp-io-file-open-output", 1, 2, 0,
-                           scm_sp_io_file_open_output,
-                           "string [integer integer] -> sp-port\n    path "
-                           "[channel-count sample-rate] -> sp-port");
-  scm_c_define_procedure_c("sp-io-file-write", 2, 1, 0, scm_sp_io_file_write,
-                           "sp-port (f32vector ...):channel-data "
-                           "[integer:sample-count] -> boolean\n    write "
-                           "sample data to the channels of a file port");
-  scm_c_define_procedure_c(
-      "sp-io-file-set-position", 2, 0, 0, scm_sp_io_file_set_position,
-      "sp-port integer:sample-offset -> boolean\n    sample-offset can be "
-      "negative, in which case it is from the end of the file");
-  scm_c_define_procedure_c(
-      "sp-io-file-read", 2, 0, 0, scm_sp_io_file_read,
-      "sp-port integer:sample-count -> (f32vector ...):channel-data");
-  scm_c_define_procedure_c(
-      "sp-io-alsa-open-input", 0, 4, 0, scm_sp_io_alsa_open_input,
-      "[string integer integer integer] -> sp-port\n    [device-name "
-      "channel-count sample-rate latency] -> sp-port");
-  scm_c_define_procedure_c(
-      "sp-io-alsa-open-output", 0, 4, 0, scm_sp_io_alsa_open_output,
-      "[string integer integer integer] -> sp-port\n    [device-name "
-      "channel-count sample-rate latency] -> sp-port");
-  scm_c_define_procedure_c("sp-io-alsa-write", 2, 1, 0, scm_sp_io_alsa_write,
-                           "sp-port (f32vector ...):channel-data "
-                           "[integer:sample-count] -> boolean\n    write "
-                           "sample data to the channels of an alsa port - to "
-                           "the sound card for sound output for example");
-  scm_c_define_procedure_c("sp-io-alsa-read", 2, 0, 0, scm_sp_io_alsa_read,
-                           "port sample-count -> channel-data\n    sp-port "
-                           "integer -> (f32vector ...)");
+  scm_c_define_procedure_c("sp-sine!", 7, 0, 0, scm_sp_sine_x,
+                           "data start end sample-duration freq phase amp -> "
+                           "unspecified\n    f32vector integer integer "
+                           "rational rational rational rational");
+  scm_c_define_procedure_c("sp-sine-lq!", 7, 0, 0, scm_sp_sine_lq_x,
+                           "data start end sample-duration freq phase amp -> "
+                           "unspecified\n    f32vector integer integer "
+                           "rational rational rational rational\n    faster, "
+                           "lower precision version of sp-sine!.\n    "
+                           "currently faster by a factor of about 2.6");
 };
