@@ -903,9 +903,26 @@ exit:
   local_memory_free;
   return (status);
 };
+sp_sample_t float_sum(sp_sample_t *input, b32 len) {
+  sp_sample_t temp;
+  sp_sample_t element;
+  sp_sample_t correction = 0;
+  dec(len);
+  sp_sample_t result = (*(input + len));
+  while (len) {
+    dec(len);
+    element = (*(input + len));
+    temp = (result + element);
+    correction =
+        (correction + ((result >= element) ? ((result - temp) + element)
+                                           : ((element - temp) + result)));
+    result = temp;
+  };
+  return ((correction + result));
+};
 /** apply a centered moving average filter to source at index start to end
-   inclusively and write the result to result. removes higher frequencies with
-   little distortion of the signals time domain.
+   inclusively and write to result. removes higher frequencies with little
+   distortion in the time domain.
    * only the result portion corresponding to the subvector from start to end is
    written to result
    * prev and next can be 0, for example for the beginning and end of a stream
@@ -917,87 +934,81 @@ exit:
    * values outside the start/end range are considered where needed to calculate
    averages
    * rounding errors are kept low by using modified kahan neumaier summation and
-   recalculating internal state every call and optionally every n samples */
-b0 sp_moving_average_x(sp_sample_t *result, b32 result_len, sp_sample_t *source,
-                       b32 source_len, sp_sample_t *prev, b32 prev_len,
-                       sp_sample_t *next, b32 next_len, b32 distance, b32 start,
-                       b32 end, b32 recalculate_n) {
+   not using a recursive implementation */
+boolean sp_moving_average_x(sp_sample_t *result, sp_sample_t *source,
+                            b32 source_len, sp_sample_t *prev, b32 prev_len,
+                            sp_sample_t *next, b32 next_len, b32 distance,
+                            b32 start, b32 end) {
   if (!source_len) {
-    return;
+    return (1);
   };
-  sp_sample_t state;
   b32 left;
   b32 right;
-  sp_sample_t left_value;
-  sp_sample_t right_value;
-  b32 rec_index;
-  b32 result_index = 0;
   b32 width = (1 + (2 * distance));
-recalculate:
-  debug_log("# %s", "recalculate");
-  rec_index = (start + recalculate_n);
-  state = 0;
-  if ((start < distance)) {
-    if (prev) {
-      left = (distance - start);
-      left = ((left > prev_len) ? 0 : (prev_len - left));
-      while ((left < prev_len)) {
-        state = (state + (*(prev + left)));
-        left = (1 + left);
-      };
-    };
-    left = 0;
-  } else {
-    left = (start - distance);
-  };
-  right = (start + distance);
-  if ((right >= source_len)) {
-    right = (source_len ? (source_len - 1) : 0);
-  };
-  while ((left <= right)) {
-    state = (state + (*(source + left)));
-    left = (1 + left);
-  };
-  right = (start + distance);
-  if ((source_len <= right)) {
-    left = 0;
-    right = (right - source_len);
-    if ((right >= next_len)) {
-      right = (next_len - 1);
-    };
-    while ((left <= right)) {
-      state = (state + (*(next + left)));
-      left = (1 + left);
+  sp_sample_t *window = 0;
+  b32 window_index;
+  if (!(((start >= distance)) && (((start + distance + 1) <= source_len)))) {
+    window = malloc((width * sizeof(sp_sample_t)));
+    if (!window) {
+      return (1);
     };
   };
-  (*(result + result_index)) = (state / width);
-  result_index = (1 + result_index);
-  start = (1 + start);
-  debug_log("start:%lu end:%lu state:%f rec-index:%lu", start, end, state,
-            rec_index);
   while ((start <= end)) {
-    if ((start == rec_index)) {
-      goto recalculate;
+    if ((((start >= distance)) && (((start + distance + 1) <= source_len)))) {
+      (*result) = (float_sum(((source + start) - distance), width) / width);
     } else {
-      left_value =
-          ((start <= distance)
-               ? ((prev && ((1 + (distance - start)) < prev_len))
-                      ? (*(prev + (prev_len - 1 - (1 + (distance - start)))))
-                      : 0)
-               : (*(source + (start - distance - 1))));
-      right_value =
-          (((start + distance) < source_len)
-               ? (*(source + (start + distance)))
-               : ((next && (next_len > ((start + distance) - source_len)))
-                      ? (*(next + ((start + distance) - source_len)))
-                      : 0));
-      debug_log("lv %f, rv %f, state %f", left_value, right_value, state);
-      state = ((right_value + state) - left_value);
-      (*(result + result_index)) = (state / width);
-      result_index = (1 + result_index);
-      start = (1 + start);
+      window_index = 0;
+      if ((start < distance)) {
+        right = (distance - start);
+        if (prev) {
+          left = ((right > prev_len) ? 0 : (prev_len - right));
+          while ((left < prev_len)) {
+            (*(window + window_index)) = (*(prev + left));
+            inc(window_index);
+            inc(left);
+          };
+        };
+        while ((window_index < right)) {
+          (*(window + window_index)) = 0;
+          inc(window_index);
+        };
+        left = 0;
+      } else {
+        left = (start - distance);
+      };
+      right = (start + distance);
+      if ((right >= source_len)) {
+        right = (source_len - 1);
+      };
+      while ((left <= right)) {
+        (*(window + window_index)) = (*(source + left));
+        inc(window_index);
+        inc(left);
+      };
+      right = (start + distance);
+      if ((((right >= source_len)) && next)) {
+        left = 0;
+        right = (right - source_len);
+        if ((right >= next_len)) {
+          right = (next_len - 1);
+        };
+        while ((left <= right)) {
+          (*(window + window_index)) = (*(next + left));
+          inc(window_index);
+          inc(left);
+        };
+      };
+      while ((window_index < width)) {
+        (*(window + window_index)) = 0;
+        inc(window_index);
+      };
+      (*result) = (float_sum(window, width) / width);
     };
+    inc(result);
+    inc(start);
   };
+  free(window);
+  return (0);
 };
 double sinc(double a) { return (((0 == a) ? 1 : (sin(a) / a))); };
 sp_sample_t sp_blackman_window(b32 n) {
@@ -1039,9 +1050,11 @@ exit:
     a = 0;                                                                     \
     a_len = 0;                                                                 \
   }
+#define optional_index(a, default)                                             \
+  ((!scm_is_undefined(start) && scm_is_true(start)) ? scm_to_uint32(a)         \
+                                                    : default)
 SCM scm_sp_moving_average_x(SCM result, SCM source, SCM scm_prev, SCM scm_next,
-                            SCM distance, SCM start, SCM end,
-                            SCM recalculate_n) {
+                            SCM distance, SCM start, SCM end) {
   b32 source_len = octets_to_samples(SCM_BYTEVECTOR_LENGTH(source));
   sp_sample_t *prev;
   b32 prev_len;
@@ -1049,18 +1062,11 @@ SCM scm_sp_moving_average_x(SCM result, SCM source, SCM scm_prev, SCM scm_next,
   b32 next_len;
   optional_samples(prev, prev_len, scm_prev);
   optional_samples(next, next_len, scm_next);
-  sp_moving_average_x(
-      ((sp_sample_t *)(SCM_BYTEVECTOR_CONTENTS(result))),
-      octets_to_samples(SCM_BYTEVECTOR_LENGTH(result)),
-      ((sp_sample_t *)(SCM_BYTEVECTOR_CONTENTS(source))), source_len, prev,
-      prev_len, next, next_len, scm_to_uint32(distance),
-      ((!scm_is_undefined(start) && scm_is_true(start)) ? scm_to_uint32(start)
-                                                        : 0),
-      ((!scm_is_undefined(end) && scm_is_true(end)) ? scm_to_uint32(end)
-                                                    : (source_len - 1)),
-      (scm_is_undefined(recalculate_n) ? source_len
-                                       : scm_to_uint32(recalculate_n)));
-  scm_remember_upto_here(source);
+  sp_moving_average_x(((sp_sample_t *)(SCM_BYTEVECTOR_CONTENTS(result))),
+                      ((sp_sample_t *)(SCM_BYTEVECTOR_CONTENTS(source))),
+                      source_len, prev, prev_len, next, next_len,
+                      scm_to_uint32(distance), optional_index(start, 0),
+                      optional_index(end, (source_len - 1)));
   return (SCM_UNSPECIFIED);
 }; /* write samples for a sine wave into data between start at end.
 also defines scm-sp-sine!, scm-sp-sine-lq! */
@@ -1160,9 +1166,9 @@ b0 init_sp() {
                            "rational rational rational rational\n    faster, "
                            "lower precision version of sp-sine!.\n    "
                            "currently faster by a factor of about 2.6");
-  scm_c_define_procedure_c(
-      "sp-moving-average!", 5, 3, 0, scm_sp_moving_average_x,
-      "result source previous next distance [start end recalculate-n] -> "
-      "unspecified\n    f32vector f32vector f32vector f32vector integer "
-      "integer integer [integer]");
+  scm_c_define_procedure_c("sp-moving-average!", 5, 2, 0,
+                           scm_sp_moving_average_x,
+                           "result source previous next distance [start end] "
+                           "-> unspecified\n    f32vector f32vector f32vector "
+                           "f32vector integer integer integer [integer]");
 };

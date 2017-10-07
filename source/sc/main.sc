@@ -49,69 +49,64 @@
     (struct-set (array-get in source-len) r (deref source (* source-len (sizeof sp-sample-t)))))
   (kiss-fftri fftr-state in result) (label exit local-memory-free (return status)))
 
+(define (float-sum input len) (sp-sample-t sp-sample-t* b32)
+  (define temp sp-sample-t element sp-sample-t) (define correction sp-sample-t 0)
+  (dec len) (define result sp-sample-t (deref input len))
+  (while len (dec len)
+    (set element (deref input len)) (set temp (+ result element))
+    (set correction
+      (+ correction
+        (if* (>= result element) (+ (- result temp) element) (+ (- element temp) result)))
+      result temp))
+  (return (+ correction result)))
+
 (define
-  (sp-moving-average! result result-len source source-len prev prev-len next next-len distance
-    start
-    end
-    recalculate-n)
-  (b0 sp-sample-t* b32 sp-sample-t* b32 sp-sample-t* b32 sp-sample-t* b32 b32 b32 b32 b32)
-  "apply a centered moving average filter to source at index start to end inclusively and write the result to result.
-   removes higher frequencies with little distortion of the signals time domain.
+  (sp-moving-average! result source source-len prev prev-len next next-len distance start end)
+  (boolean sp-sample-t* sp-sample-t* b32 sp-sample-t* b32 sp-sample-t* b32 b32 b32 b32)
+  "apply a centered moving average filter to source at index start to end inclusively and write to result.
+   removes higher frequencies with little distortion in the time domain.
    * only the result portion corresponding to the subvector from start to end is written to result
    * prev and next can be 0, for example for the beginning and end of a stream
    * since the result value for a sample is calculated from samples left and right from the sample,
      a previous and following part of a stream is eventually needed to reference values outside the source segment
      to create a valid continuous result. unavailable values outside the source segment are zero
    * values outside the start/end range are considered where needed to calculate averages
-   * rounding errors are kept low by using modified kahan neumaier summation and recalculating
-     internal state every call and optionally every n samples"
-  ; start: current center index
-  (if (not source-len) (return))
-  (define state sp-sample-t
-    left b32 right b32 left-value sp-sample-t right-value sp-sample-t rec-index b32)
-  (define result-index b32 0) (define width b32 (+ 1 (* 2 distance)))
-  ; create state by summing all values around center.
-  ; the state is the result value for the current point
-  (label recalculate (debug-log "# %s" "recalculate")
-    (set rec-index (+ start recalculate-n) state 0)
-    ; sum prev values, init left
-    (if (< start distance)
-      (begin
-        (if prev
-          (begin (set left (- distance start) left (if* (> left prev-len) 0 (- prev-len left)))
-            (while (< left prev-len) (set state (+ state (deref prev left)) left (+ 1 left)))))
-        (set left 0))
-      (set left (- start distance)))
-    ; sum source values
-    (set right (+ start distance))
-    (if (>= right source-len) (set right (if* source-len (- source-len 1) 0)))
-    (while (<= left right) (set state (+ state (deref source left)) left (+ 1 left)))
-    ; sum next values
-    (set right (+ start distance))
-    (if (<= source-len right)
-      (begin (set left 0 right (- right source-len))
-        (if (>= right next-len) (set right (- next-len 1)))
-        (while (<= left right) (set state (+ state (deref next left)) left (+ 1 left)))))
-    (set (deref result result-index) (/ state width)
-      result-index (+ 1 result-index) start (+ 1 start)))
-  (debug-log "start:%lu end:%lu state:%f rec-index:%lu" start end state rec-index)
-  ; update state. subtract the element left - distance - 1 and add the element right + distance
+   * rounding errors are kept low by using modified kahan neumaier summation and not using a
+     recursive implementation"
+  (if (not source-len) (return 1)) (define left b32 right b32)
+  (define width b32 (+ 1 (* 2 distance))) (define window sp-sample-t* 0)
+  (define window-index b32)
+  (if (not (and (>= start distance) (<= (+ start distance 1) source-len)))
+    (begin (set window (malloc (* width (sizeof sp-sample-t)))) (if (not window) (return 1))))
   (while (<= start end)
-    (if (= start rec-index) (goto recalculate)
-      (begin
-        (set left-value
-          (if* (<= start distance)
-            (if* (and prev (< (+ 1 (- distance start)) prev-len))
-              (deref prev (- prev-len 1 (+ 1 (- distance start)))) 0)
-            (deref source (- start distance 1))))
-        (set right-value
-          (if* (< (+ start distance) source-len) (deref source (+ start distance))
-            (if* (and next (> next-len (- (+ start distance) source-len)))
-              (deref next (- (+ start distance) source-len)) 0)))
-        (debug-log "lv %f, rv %f, state %f" left-value right-value state)
-        (set state (- (+ right-value state) left-value)
-          (deref result result-index) (/ state width)
-          result-index (+ 1 result-index) start (+ 1 start))))))
+    (if (and (>= start distance) (<= (+ start distance 1) source-len))
+      (set (deref result) (/ (float-sum (- (+ source start) distance) width) width))
+      (begin (set window-index 0)
+        ; prev
+        (if (< start distance)
+          (begin (set right (- distance start))
+            (if prev
+              (begin (set left (if* (> right prev-len) 0 (- prev-len right)))
+                (while (< left prev-len) (set (deref window window-index) (deref prev left))
+                  (inc window-index) (inc left))))
+            (while (< window-index right) (set (deref window window-index) 0) (inc window-index))
+            (set left 0))
+          (set left (- start distance)))
+        ; source
+        (set right (+ start distance)) (if (>= right source-len) (set right (- source-len 1)))
+        (while (<= left right) (set (deref window window-index) (deref source left))
+          (inc window-index) (inc left))
+        ; next
+        (set right (+ start distance))
+        (if (and (>= right source-len) next)
+          (begin (set left 0 right (- right source-len))
+            (if (>= right next-len) (set right (- next-len 1)))
+            (while (<= left right) (set (deref window window-index) (deref next left))
+              (inc window-index) (inc left))))
+        (while (< window-index width) (set (deref window window-index) 0) (inc window-index))
+        (set (deref result) (/ (float-sum window width) width))))
+    (inc result) (inc start))
+  (free window) (return 0))
 
 (define (sinc a) (double double) (return (if* (= 0 a) 1 (/ (sin a) a))))
 
@@ -151,21 +146,20 @@
       a-len (octets->samples (SCM-BYTEVECTOR-LENGTH scm)))
     (set a 0 a-len 0)))
 
-(define (scm-sp-moving-average! result source scm-prev scm-next distance start end recalculate-n)
-  (SCM SCM SCM SCM SCM SCM SCM SCM SCM)
+(pre-define (optional-index a default)
+  (if* (and (not (scm-is-undefined start)) (scm-is-true start)) (scm->uint32 a) default))
+
+(define (scm-sp-moving-average! result source scm-prev scm-next distance start end)
+  (SCM SCM SCM SCM SCM SCM SCM SCM)
   (define source-len b32 (octets->samples (SCM-BYTEVECTOR-LENGTH source)))
   (define prev sp-sample-t* prev-len b32 next sp-sample-t* next-len b32)
   (optional-samples prev prev-len scm-prev) (optional-samples next next-len scm-next)
   (sp-moving-average! (convert-type (SCM-BYTEVECTOR-CONTENTS result) sp-sample-t*)
-    (octets->samples (SCM-BYTEVECTOR-LENGTH result))
     (convert-type (SCM-BYTEVECTOR-CONTENTS source) sp-sample-t*) source-len
     prev prev-len
     next next-len
-    (scm->uint32 distance)
-    (if* (and (not (scm-is-undefined start)) (scm-is-true start)) (scm->uint32 start) 0)
-    (if* (and (not (scm-is-undefined end)) (scm-is-true end)) (scm->uint32 end) (- source-len 1))
-    (if* (scm-is-undefined recalculate-n) source-len (scm->uint32 recalculate-n)))
-  (scm-remember-upto-here source) (return SCM-UNSPECIFIED))
+    (scm->uint32 distance) (optional-index start 0) (optional-index end (- source-len 1)))
+  (return SCM-UNSPECIFIED))
 
 (sc-comment
   "write samples for a sine wave into data between start at end.
@@ -268,7 +262,7 @@
     faster, lower precision version of sp-sine!.
     currently faster by a factor of about 2.6")
   (scm-c-define-procedure-c "sp-moving-average!" 5
-    3 0
+    2 0
     scm-sp-moving-average!
-    "result source previous next distance [start end recalculate-n] -> unspecified
+    "result source previous next distance [start end] -> unspecified
     f32vector f32vector f32vector f32vector integer integer integer [integer]"))
