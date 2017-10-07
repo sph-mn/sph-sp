@@ -11,6 +11,7 @@
     sp-file-read
     sp-file-set-position
     sp-file-write
+    sp-moving-average!
     sp-noise
     sp-port-channel-count
     sp-port-close

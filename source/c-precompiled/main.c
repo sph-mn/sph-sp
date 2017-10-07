@@ -31,6 +31,26 @@
 #define null ((b0)(0))
 #define zero_p(a) (0 == a)
 #endif
+#ifndef sc_included_sp_config
+#define sc_included_sp_config
+#define sp_sample_t f32_s
+#define sp_default_sample_rate 16000
+#define sp_default_channel_count 1
+#define sp_default_alsa_enable_soft_resample 1
+#define sp_default_alsa_latency 50
+/** reverse the byte order of one sample */
+sp_sample_t sample_reverse_endian(sp_sample_t a) {
+  sp_sample_t result;
+  b8 *b = ((b8 *)(&a));
+  b8 *c = ((b8 *)(&result));
+  (*c) = (*(b + 3));
+  (*(c + 1)) = (*(b + 2));
+  (*(c + 2)) = (*(b + 1));
+  (*(c + 3)) = (*b);
+  return (result);
+};
+#endif
+#define kiss_fft_scalar sp_sample_t
 #ifndef sc_included_stdio_h
 #include <stdio.h>
 #define sc_included_stdio_h
@@ -72,6 +92,8 @@
   }
 #define inc(a) a = (1 + a)
 #define dec(a) a = (a - 1)
+#define octets_to_samples(a) (a / sizeof(sp_sample_t))
+#define samples_to_octets(a) (a * sizeof(sp_sample_t))
 #ifndef sc_included_sph_one
 #define sc_included_sph_one
 #ifndef sc_included_sph
@@ -305,25 +327,6 @@ typedef struct {
     sph_local_memory_index = (sph_local_memory_index - 1);                     \
     free((*(sph_local_memory_register + sph_local_memory_index)));             \
   }
-#endif
-#ifndef sc_included_sp_config
-#define sc_included_sp_config
-#define sp_sample_t f32_s
-#define sp_default_sample_rate 16000
-#define sp_default_channel_count 1
-#define sp_default_alsa_enable_soft_resample 1
-#define sp_default_alsa_latency 50
-/** reverse the byte order of one sample */
-sp_sample_t sample_reverse_endian(sp_sample_t a) {
-  sp_sample_t result;
-  b8 *b = ((b8 *)(&a));
-  b8 *c = ((b8 *)(&result));
-  (*c) = (*(b + 3));
-  (*(c + 1)) = (*(b + 2));
-  (*(c + 2)) = (*(b + 1));
-  (*(c + 3)) = (*b);
-  return (result);
-};
 #endif
 #ifndef sc_included_sp_status
 #define sc_included_sp_status
@@ -854,55 +857,211 @@ SCM scm_sp_file_open_output(SCM path, SCM channel_count, SCM sample_rate) {
   return (sp_file_open(path, 0, channel_count, sample_rate));
 };
 #endif
-SCM scm_sp_fft(SCM a) {
-  status_init;
-  b32 size = (SCM_BYTEVECTOR_LENGTH(a) / 4);
-  b32 size_result = (1 + (size * 0.5));
-  local_memory_init(2);
-  kiss_fftr_cfg fftr_state = kiss_fftr_alloc(size, 0, 0, 0);
-  local_memory_add(fftr_state);
-  sp_define_malloc(out, kiss_fft_cpx *, (size_result * sizeof(kiss_fft_cpx)));
-  local_memory_add(out);
-  kiss_fftr(fftr_state, ((sp_sample_t *)(SCM_BYTEVECTOR_CONTENTS(a))), out);
-  SCM result =
-      scm_make_f32vector(scm_from_uint32(size_result), scm_from_uint8(0));
-  while (size_result) {
-    decrement(size_result);
-    (*(((sp_sample_t *)(SCM_BYTEVECTOR_CONTENTS(result))) + size_result)) =
-        (*(out + size_result)).r;
-  };
-exit:
-  local_memory_free;
-  status_to_scm_return(result);
-};
-SCM scm_sp_fft_inverse(SCM a) {
-  status_init;
-  b32 size = (SCM_BYTEVECTOR_LENGTH(a) / 4);
-  b32 size_result = ((size - 1) * 2);
-  local_memory_init(2);
-  kiss_fftr_cfg fftr_state = kiss_fftr_alloc(size_result, 1, 0, 0);
-  local_memory_add(fftr_state);
-  sp_define_malloc(in, kiss_fft_cpx *, (size * sizeof(kiss_fft_cpx)));
-  local_memory_add(in);
-  while (size) {
-    decrement(size);
-    (*(in + size)).r = (*(SCM_BYTEVECTOR_CONTENTS(a) + (size * 4)));
-  };
-  SCM result =
-      scm_make_f32vector(scm_from_uint32(size_result), scm_from_uint8(0));
-  kiss_fftri(fftr_state, in,
-             ((sp_sample_t *)(SCM_BYTEVECTOR_CONTENTS(result))));
-exit:
-  local_memory_free;
-  status_to_scm_return(result);
-};
-#define octets_to_samples(a) (a / sizeof(sample_t))
-#define samples_to_octets(a) (a * sizeof(sample_t))
-/** faster, low precision version of sin() */
+/** faster, lower precision version of sin() */
 double sin_lq(double a) {
   double b = (4 / M_PI);
   double c = (-4 / (M_PI * M_PI));
   return ((((b * a) + (c * a * abs(a)))));
+};
+status_t sp_fft_x(sp_sample_t *result, b32 result_len, sp_sample_t *source,
+                  b32 source_len) {
+  sp_status_init;
+  local_memory_init(2);
+  kiss_fftr_cfg fftr_state = kiss_fftr_alloc(result_len, 0, 0, 0);
+  if (!fftr_state) {
+    status_set_id_goto(sp_status_id_memory);
+  };
+  local_memory_add(fftr_state);
+  sp_define_malloc(out, kiss_fft_cpx *, (result_len * sizeof(kiss_fft_cpx)));
+  local_memory_add(out);
+  kiss_fftr(fftr_state, source, out);
+  while (result_len) {
+    dec(result_len);
+    (*(result + result_len)) = (*(out + result_len)).r;
+  };
+exit:
+  local_memory_free;
+  return (status);
+};
+status_t sp_fft_inverse_x(sp_sample_t *result, b32 result_len,
+                          sp_sample_t *source, b32 source_len) {
+  sp_status_init;
+  local_memory_init(2);
+  kiss_fftr_cfg fftr_state = kiss_fftr_alloc(source_len, 1, 0, 0);
+  if (!fftr_state) {
+    status_set_id_goto(sp_status_id_memory);
+  };
+  local_memory_add(fftr_state);
+  sp_define_malloc(in, kiss_fft_cpx *, (source_len * sizeof(kiss_fft_cpx)));
+  local_memory_add(in);
+  while (source_len) {
+    dec(source_len);
+    (*(in + source_len)).r = (*(source + (source_len * sizeof(sp_sample_t))));
+  };
+  kiss_fftri(fftr_state, in, result);
+exit:
+  local_memory_free;
+  return (status);
+};
+/** apply a centered moving average filter to source at index start to end
+   inclusively and write the result to result. removes higher frequencies with
+   little distortion of the signals time domain.
+   * only the result portion corresponding to the subvector from start to end is
+   written to result
+   * prev and next can be 0, for example for the beginning and end of a stream
+   * since the result value for a sample is calculated from samples left and
+   right from the sample, a previous and following part of a stream is
+   eventually needed to reference values outside the source segment to create a
+   valid continuous result. unavailable values outside the source segment are
+   zero
+   * values outside the start/end range are considered where needed to calculate
+   averages
+   * rounding errors are kept low by using modified kahan neumaier summation and
+   recalculating internal state every call and optionally every n samples */
+b0 sp_moving_average_x(sp_sample_t *result, b32 result_len, sp_sample_t *source,
+                       b32 source_len, sp_sample_t *prev, b32 prev_len,
+                       sp_sample_t *next, b32 next_len, b32 distance, b32 start,
+                       b32 end, b32 recalculate_n) {
+  if (!source_len) {
+    return;
+  };
+  sp_sample_t state;
+  b32 left;
+  b32 right;
+  sp_sample_t left_value;
+  sp_sample_t right_value;
+  b32 rec_index;
+  b32 result_index = 0;
+  b32 width = (1 + (2 * distance));
+recalculate:
+  debug_log("# %s", "recalculate");
+  rec_index = (start + recalculate_n);
+  state = 0;
+  if ((start < distance)) {
+    if (prev) {
+      left = (distance - start);
+      left = ((left > prev_len) ? 0 : (prev_len - left));
+      while ((left < prev_len)) {
+        state = (state + (*(prev + left)));
+        left = (1 + left);
+      };
+    };
+    left = 0;
+  } else {
+    left = (start - distance);
+  };
+  right = (start + distance);
+  if ((right >= source_len)) {
+    right = (source_len ? (source_len - 1) : 0);
+  };
+  while ((left <= right)) {
+    state = (state + (*(source + left)));
+    left = (1 + left);
+  };
+  right = (start + distance);
+  if ((source_len <= right)) {
+    left = 0;
+    right = (right - source_len);
+    if ((right >= next_len)) {
+      right = (next_len - 1);
+    };
+    while ((left <= right)) {
+      state = (state + (*(next + left)));
+      left = (1 + left);
+    };
+  };
+  (*(result + result_index)) = (state / width);
+  result_index = (1 + result_index);
+  start = (1 + start);
+  debug_log("start:%lu end:%lu state:%f rec-index:%lu", start, end, state,
+            rec_index);
+  while ((start <= end)) {
+    if ((start == rec_index)) {
+      goto recalculate;
+    } else {
+      left_value =
+          ((start <= distance)
+               ? ((prev && ((1 + (distance - start)) < prev_len))
+                      ? (*(prev + (prev_len - 1 - (1 + (distance - start)))))
+                      : 0)
+               : (*(source + (start - distance - 1))));
+      right_value =
+          (((start + distance) < source_len)
+               ? (*(source + (start + distance)))
+               : ((next && (next_len > ((start + distance) - source_len)))
+                      ? (*(next + ((start + distance) - source_len)))
+                      : 0));
+      debug_log("lv %f, rv %f, state %f", left_value, right_value, state);
+      state = ((right_value + state) - left_value);
+      (*(result + result_index)) = (state / width);
+      result_index = (1 + result_index);
+      start = (1 + start);
+    };
+  };
+};
+double sinc(double a) { return (((0 == a) ? 1 : (sin(a) / a))); };
+sp_sample_t sp_blackman_window(b32 n) {
+  return (((0.42 - (0.5 * cos(((2 * M_PI * n) / (n - 1))))) +
+           (0.8 * cos(((4 * M_PI * n) / (n - 1))))));
+};
+sp_sample_t sp_sinc(f32_s n, f32_s cutoff) {
+  sinc((2 * cutoff * (n - ((n - 1) / 2))));
+};
+SCM scm_sp_fft(SCM source) {
+  status_init;
+  b32 result_len = ((3 * SCM_BYTEVECTOR_LENGTH(source)) / 2);
+  SCM result =
+      scm_make_f32vector(scm_from_uint32(result_len), scm_from_uint8(0));
+  status_require_x(sp_fft_x(((sp_sample_t *)(SCM_BYTEVECTOR_CONTENTS(result))),
+                            result_len,
+                            ((sp_sample_t *)(SCM_BYTEVECTOR_CONTENTS(source))),
+                            SCM_BYTEVECTOR_LENGTH(source)));
+exit:
+  status_to_scm_return(result);
+};
+SCM scm_sp_fft_inverse(SCM source) {
+  status_init;
+  b32 result_len = ((SCM_BYTEVECTOR_LENGTH(source) - 1) * 2);
+  SCM result =
+      scm_make_f32vector(scm_from_uint32(result_len), scm_from_uint8(0));
+  status_require_x(sp_fft_inverse_x(
+      ((sp_sample_t *)(SCM_BYTEVECTOR_CONTENTS(result))), result_len,
+      ((sp_sample_t *)(SCM_BYTEVECTOR_CONTENTS(source))),
+      SCM_BYTEVECTOR_LENGTH(source)));
+exit:
+  status_to_scm_return(result);
+};
+#define optional_samples(a, a_len, scm)                                        \
+  if (scm_is_true(scm)) {                                                      \
+    a = ((sp_sample_t *)(SCM_BYTEVECTOR_CONTENTS(scm)));                       \
+    a_len = octets_to_samples(SCM_BYTEVECTOR_LENGTH(scm));                     \
+  } else {                                                                     \
+    a = 0;                                                                     \
+    a_len = 0;                                                                 \
+  }
+SCM scm_sp_moving_average_x(SCM result, SCM source, SCM scm_prev, SCM scm_next,
+                            SCM distance, SCM start, SCM end,
+                            SCM recalculate_n) {
+  b32 source_len = octets_to_samples(SCM_BYTEVECTOR_LENGTH(source));
+  sp_sample_t *prev;
+  b32 prev_len;
+  sp_sample_t *next;
+  b32 next_len;
+  optional_samples(prev, prev_len, scm_prev);
+  optional_samples(next, next_len, scm_next);
+  sp_moving_average_x(
+      ((sp_sample_t *)(SCM_BYTEVECTOR_CONTENTS(result))),
+      octets_to_samples(SCM_BYTEVECTOR_LENGTH(result)),
+      ((sp_sample_t *)(SCM_BYTEVECTOR_CONTENTS(source))), source_len, prev,
+      prev_len, next, next_len, scm_to_uint32(distance),
+      ((!scm_is_undefined(start) && scm_is_true(start)) ? scm_to_uint32(start)
+                                                        : 0),
+      ((!scm_is_undefined(end) && scm_is_true(end)) ? scm_to_uint32(end)
+                                                    : (source_len - 1)),
+      (scm_is_undefined(recalculate_n) ? source_len
+                                       : scm_to_uint32(recalculate_n)));
+  scm_remember_upto_here(source);
+  return (SCM_UNSPECIFIED);
 }; /* write samples for a sine wave into data between start at end.
 also defines scm-sp-sine!, scm-sp-sine-lq! */
 #define define_sp_sine_x(id, sin)                                              \
@@ -1001,4 +1160,9 @@ b0 init_sp() {
                            "rational rational rational rational\n    faster, "
                            "lower precision version of sp-sine!.\n    "
                            "currently faster by a factor of about 2.6");
+  scm_c_define_procedure_c(
+      "sp-moving-average!", 5, 3, 0, scm_sp_moving_average_x,
+      "result source previous next distance [start end recalculate-n] -> "
+      "unspecified\n    f32vector f32vector f32vector f32vector integer "
+      "integer integer [integer]");
 };
