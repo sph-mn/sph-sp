@@ -868,14 +868,14 @@ SCM scm_sp_file_open_output(SCM path, SCM channel_count, SCM sample_rate) {
 #define optional_index(a, default)                                             \
   ((!scm_is_undefined(start) && scm_is_true(start)) ? scm_to_uint32(a)         \
                                                     : default)
-/** faster, lower precision version of sin() */
-double sin_lq(double a) {
-  double b = (4 / M_PI);
-  double c = (-4 / (M_PI * M_PI));
+/** lower precision version of sin() that is faster to compute */
+f32_s sin_lq(f32_s a) {
+  f32_s b = (4 / M_PI);
+  f32_s c = (-4 / (M_PI * M_PI));
   return ((((b * a) + (c * a * abs(a)))));
 };
-status_t sp_fft_x(sp_sample_t *result, b32 result_len, sp_sample_t *source,
-                  b32 source_len) {
+status_t sp_fft(sp_sample_t *result, b32 result_len, sp_sample_t *source,
+                b32 source_len) {
   sp_status_init;
   local_memory_init(2);
   kiss_fftr_cfg fftr_state = kiss_fftr_alloc(result_len, 0, 0, 0);
@@ -894,8 +894,8 @@ exit:
   local_memory_free;
   return (status);
 };
-status_t sp_fft_inverse_x(sp_sample_t *result, b32 result_len,
-                          sp_sample_t *source, b32 source_len) {
+status_t sp_fft_inverse(sp_sample_t *result, b32 result_len,
+                        sp_sample_t *source, b32 source_len) {
   sp_status_init;
   local_memory_init(2);
   kiss_fftr_cfg fftr_state = kiss_fftr_alloc(source_len, 1, 0, 0);
@@ -914,6 +914,8 @@ exit:
   local_memory_free;
   return (status);
 };
+/** sum numbers with rounding error compensation using kahan summation with
+ * neumaier modification */
 f32_s float_sum(f32_s *numbers, b32 len) {
   f32_s temp;
   f32_s element;
@@ -931,7 +933,8 @@ f32_s float_sum(f32_s *numbers, b32 len) {
   };
   return ((correction + result));
 };
-/** http://floating-point-gui.de/errors/comparison/ */
+/** approximate float comparison. margin is a factor and is low for low accepted
+   differences. http://floating-point-gui.de/errors/comparison/ */
 boolean float_nearly_equal_p(f32_s a, f32_s b, f32_s margin) {
   if ((a == b)) {
     return (1);
@@ -947,21 +950,21 @@ boolean float_nearly_equal_p(f32_s a, f32_s b, f32_s margin) {
   distortion in the time domain.
    * only the result portion corresponding to the subvector from start to end is
   written to result
-   * prev and next are unprocessed segments and can be 0, for example for the
-  beginning and end of a stream
-   * since the result value for a sample is calculated from samples left and
-  right of it, a previous and following part of a stream is eventually needed
-  for reference to values outside the source segment to create a valid
-  continuous result. unavailable values outside the source segment are zero
-   * values outside the start/end range are considered where needed to calculate
-  averages
+   * prev and next are unprocessed segments and can be null pointers,
+     for example at the beginning and end of a stream
+   * since the result value for a sample is calculated using samples left and
+  right of it, a previous and following part of a stream is eventually needed to
+  reference values outside the source segment to create a valid continuous
+  result. zero is used for unavailable values outside the source segment
+   * available values outside the start/end range are considered where needed to
+  calculate averages
    * rounding errors are kept low by using modified kahan neumaier summation and
-  not using a recursive implementation (which makes it much slower than
-  recursive implementations) */
-boolean sp_moving_average_x(sp_sample_t *result, sp_sample_t *source,
-                            b32 source_len, sp_sample_t *prev, b32 prev_len,
-                            sp_sample_t *next, b32 next_len, b32 start, b32 end,
-                            b32 distance) {
+  not using a recursive implementation. both properties which make it much
+  slower than many other implementations */
+boolean sp_moving_average(sp_sample_t *result, sp_sample_t *source,
+                          b32 source_len, sp_sample_t *prev, b32 prev_len,
+                          sp_sample_t *next, b32 next_len, b32 start, b32 end,
+                          b32 distance) {
   if (!source_len) {
     return (1);
   };
@@ -1034,17 +1037,17 @@ boolean sp_moving_average_x(sp_sample_t *result, sp_sample_t *source,
   return (0);
 };
 /** the normalised sinc function */
-double sinc(double a) {
+f32_s sinc(f32_s a) {
   return (((0 == a) ? 1 : (sin((M_PI * a)) / (M_PI * a))));
 };
-double sp_blackman(double a, size_t width) {
+f32_s sp_blackman(f32_s a, size_t width) {
   return (((0.42 - (0.5 * cos(((2 * M_PI * a) / (width - 1))))) +
            (0.8 * cos(((4 * M_PI * a) / (width - 1))))));
 };
 /** discrete linear convolution.
   result length must be at least a-len + b-len - 1 */
-b0 sp_convolve_x(sp_sample_t *result, sp_sample_t *a, size_t a_len,
-                 sp_sample_t *b, size_t b_len) {
+b0 sp_convolve(sp_sample_t *result, sp_sample_t *a, size_t a_len,
+               sp_sample_t *b, size_t b_len) {
   size_t a_index = 0;
   size_t b_index = 0;
   while ((a_index < a_len)) {
@@ -1058,7 +1061,9 @@ b0 sp_convolve_x(sp_sample_t *result, sp_sample_t *a, size_t a_len,
     inc(a_index);
   };
 };
-/** modify an impulse response kernel for spectral inversion */
+/** modify an impulse response kernel for spectral inversion.
+   a-len must be odd and "a" must have left-right symmetry.
+  flips the frequency response top to bottom */
 b0 sp_spectral_inversion_ir(sp_sample_t *a, size_t a_len) {
   while (a_len) {
     dec(a_len);
@@ -1067,6 +1072,22 @@ b0 sp_spectral_inversion_ir(sp_sample_t *a, size_t a_len) {
   size_t center = ((a_len - 1) / 2);
   inc((*(a + center)));
 };
+/** inverts the sign for samples at odd indexes.
+  a-len must be odd and "a" must have left-right symmetry.
+  flips the frequency response left to right */
+b0 sp_spectral_reversal_ir(sp_sample_t *a, size_t a_len) {
+  while (a_len) {
+    a_len = (a_len - 2);
+    (*(a + a_len)) = (-1 * (*(a + a_len)));
+  };
+};
+/** f32-s integer -> f32-s
+  radians-per-second samples-per-second -> cutoff-value */
+#define sp_windowed_sinc_cutoff(freq, sample_rate)                             \
+  ((2 * M_PI * freq) / sample_rate)
+;
+/** approximate impulse response length for a transition factor and
+  ensure that the result is odd */
 size_t sp_windowed_sinc_ir_length(f32_s transition) {
   b32 result = ceil((4 / transition));
   if (!(result % 2)) {
@@ -1076,13 +1097,14 @@ size_t sp_windowed_sinc_ir_length(f32_s transition) {
 };
 /** write an impulse response kernel for a windowed sinc filter. uses a blackman
  * window (truncated version) */
-b0 sp_windowed_sinc_ir(sp_sample_t *a, size_t a_len, f32_s freq,
-                       f32_s transition) {
+b0 sp_windowed_sinc_ir(sp_sample_t *a, size_t a_len, b32 sample_rate,
+                       f32_s freq, f32_s transition) {
   b32 index = 0;
   f32_s center_index = ((a_len - 1.0) / 2.0);
+  f32_s cutoff = sp_windowed_sinc_cutoff(freq, sample_rate);
   while ((index < a_len)) {
     (*(a + index)) =
-        sp_blackman(sinc((2 * freq * (index - center_index))), a_len);
+        sp_blackman(sinc((2 * cutoff * (index - center_index))), a_len);
     inc(index);
   };
   f32_s a_sum = float_sum(a, a_len);
@@ -1091,22 +1113,23 @@ b0 sp_windowed_sinc_ir(sp_sample_t *a, size_t a_len, f32_s freq,
     (*(a + index)) = ((*(a + index)) / a_sum);
   };
 };
-boolean sp_windowed_sinc_x(sp_sample_t *result, sp_sample_t *source,
-                           size_t source_len, sp_sample_t *prev,
-                           size_t prev_len, sp_sample_t *next, size_t next_len,
-                           size_t start, size_t end, f32_s freq,
-                           f32_s transition) {
+boolean sp_windowed_sinc(sp_sample_t *result, sp_sample_t *source,
+                         size_t source_len, sp_sample_t *prev, size_t prev_len,
+                         sp_sample_t *next, size_t next_len, size_t start,
+                         size_t end, b32 sample_rate, f32_s freq,
+                         f32_s transition) {
   b32 ir_len = sp_windowed_sinc_ir_length(transition);
   sp_sample_t *ir = malloc((ir_len * sizeof(sp_sample_t)));
   if (!ir) {
     return (1);
   };
-  sp_convolve_x(result, source, source_len, ir, ir_len);
+  sp_convolve(result, source, source_len, ir, ir_len);
   free(ir);
   return (0);
 };
 SCM scm_sp_windowed_sinc_x(SCM result, SCM source, SCM scm_prev, SCM scm_next,
-                           SCM freq, SCM transition, SCM start, SCM end) {
+                           SCM sample_rate, SCM freq, SCM transition, SCM start,
+                           SCM end) {
   b32 source_len = octets_to_samples(SCM_BYTEVECTOR_LENGTH(source));
   sp_sample_t *prev;
   b32 prev_len;
@@ -1114,12 +1137,12 @@ SCM scm_sp_windowed_sinc_x(SCM result, SCM source, SCM scm_prev, SCM scm_next,
   b32 next_len;
   optional_samples(prev, prev_len, scm_prev);
   optional_samples(next, next_len, scm_next);
-  sp_windowed_sinc_x(((sp_sample_t *)(SCM_BYTEVECTOR_CONTENTS(result))),
-                     ((sp_sample_t *)(SCM_BYTEVECTOR_CONTENTS(source))),
-                     source_len, prev, prev_len, next, next_len,
-                     optional_index(start, 0),
-                     optional_index(end, (source_len - 1)), scm_to_double(freq),
-                     scm_to_double(transition));
+  sp_windowed_sinc(
+      ((sp_sample_t *)(SCM_BYTEVECTOR_CONTENTS(result))),
+      ((sp_sample_t *)(SCM_BYTEVECTOR_CONTENTS(source))), source_len, prev,
+      prev_len, next, next_len, optional_index(start, 0),
+      optional_index(end, (source_len - 1)), scm_to_uint32(sample_rate),
+      scm_to_double(freq), scm_to_double(transition));
   return (SCM_UNSPECIFIED);
 };
 SCM scm_sp_fft(SCM source) {
@@ -1127,10 +1150,10 @@ SCM scm_sp_fft(SCM source) {
   b32 result_len = ((3 * SCM_BYTEVECTOR_LENGTH(source)) / 2);
   SCM result =
       scm_make_f32vector(scm_from_uint32(result_len), scm_from_uint8(0));
-  status_require_x(sp_fft_x(((sp_sample_t *)(SCM_BYTEVECTOR_CONTENTS(result))),
-                            result_len,
-                            ((sp_sample_t *)(SCM_BYTEVECTOR_CONTENTS(source))),
-                            SCM_BYTEVECTOR_LENGTH(source)));
+  status_require_x(sp_fft(((sp_sample_t *)(SCM_BYTEVECTOR_CONTENTS(result))),
+                          result_len,
+                          ((sp_sample_t *)(SCM_BYTEVECTOR_CONTENTS(source))),
+                          SCM_BYTEVECTOR_LENGTH(source)));
 exit:
   status_to_scm_return(result);
 };
@@ -1139,7 +1162,7 @@ SCM scm_sp_fft_inverse(SCM source) {
   b32 result_len = ((SCM_BYTEVECTOR_LENGTH(source) - 1) * 2);
   SCM result =
       scm_make_f32vector(scm_from_uint32(result_len), scm_from_uint8(0));
-  status_require_x(sp_fft_inverse_x(
+  status_require_x(sp_fft_inverse(
       ((sp_sample_t *)(SCM_BYTEVECTOR_CONTENTS(result))), result_len,
       ((sp_sample_t *)(SCM_BYTEVECTOR_CONTENTS(source))),
       SCM_BYTEVECTOR_LENGTH(source)));
@@ -1155,7 +1178,7 @@ SCM scm_sp_moving_average_x(SCM result, SCM source, SCM scm_prev, SCM scm_next,
   b32 next_len;
   optional_samples(prev, prev_len, scm_prev);
   optional_samples(next, next_len, scm_next);
-  sp_moving_average_x(
+  sp_moving_average(
       ((sp_sample_t *)(SCM_BYTEVECTOR_CONTENTS(result))),
       ((sp_sample_t *)(SCM_BYTEVECTOR_CONTENTS(source))), source_len, prev,
       prev_len, next, next_len, optional_index(start, 0),
@@ -1276,11 +1299,11 @@ b0 init_sp() {
                            "result source previous next distance [start end] "
                            "-> unspecified\n  f32vector f32vector f32vector "
                            "f32vector integer integer integer [integer]");
-  scm_c_define_procedure_c("sp-windowed-sinc!", 6, 2, 0, scm_sp_windowed_sinc_x,
-                           "result source previous next freq transition [start "
-                           "end] -> unspecified\n    f32vector f32vector "
-                           "f32vector f32vector number number integer integer "
-                           "-> boolean");
+  scm_c_define_procedure_c("sp-windowed-sinc!", 7, 2, 0, scm_sp_windowed_sinc_x,
+                           "result source previous next sample-rate freq "
+                           "transition [start end] -> unspecified\n    "
+                           "f32vector f32vector f32vector f32vector number "
+                           "number integer integer -> boolean");
   scm_c_define_procedure_c("f32vector-sum", 1, 2, 0, scm_f32vector_sum,
                            "f32vector [start end] -> number");
   scm_c_define_procedure_c(

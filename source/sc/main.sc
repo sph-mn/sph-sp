@@ -34,11 +34,11 @@
 (pre-define (optional-index a default)
   (if* (and (not (scm-is-undefined start)) (scm-is-true start)) (scm->uint32 a) default))
 
-(define (sin-lq a) (double double)
-  "faster, lower precision version of sin()" (define b double (/ 4 M_PI))
-  (define c double (/ -4 (* M_PI M_PI))) (return (- (+ (* b a) (* c a (abs a))))))
+(define (sin-lq a) (f32-s f32-s)
+  "lower precision version of sin() that is faster to compute" (define b f32-s (/ 4 M_PI))
+  (define c f32-s (/ -4 (* M_PI M_PI))) (return (- (+ (* b a) (* c a (abs a))))))
 
-(define (sp-fft! result result-len source source-len) (status-t sp-sample-t* b32 sp-sample-t* b32)
+(define (sp-fft result result-len source source-len) (status-t sp-sample-t* b32 sp-sample-t* b32)
   sp-status-init (local-memory-init 2)
   (define fftr-state kiss-fftr-cfg (kiss-fftr-alloc result-len #f 0 0))
   (if (not fftr-state) (status-set-id-goto sp-status-id-memory)) (local-memory-add fftr-state)
@@ -49,7 +49,7 @@
     (set (deref result result-len) (struct-get (array-get out result-len) r)))
   (label exit local-memory-free (return status)))
 
-(define (sp-fft-inverse! result result-len source source-len)
+(define (sp-fft-inverse result result-len source source-len)
   (status-t sp-sample-t* b32 sp-sample-t* b32) sp-status-init
   (local-memory-init 2) (define fftr-state kiss-fftr-cfg (kiss-fftr-alloc source-len #t 0 0))
   (if (not fftr-state) (status-set-id-goto sp-status-id-memory)) (local-memory-add fftr-state)
@@ -59,6 +59,7 @@
   (kiss-fftri fftr-state in result) (label exit local-memory-free (return status)))
 
 (define (float-sum numbers len) (f32-s f32-s* b32)
+  "sum numbers with rounding error compensation using kahan summation with neumaier modification"
   (define temp f32-s element f32-s) (define correction f32-s 0)
   (dec len) (define result f32-s (deref numbers len))
   (while len (dec len)
@@ -70,26 +71,28 @@
   (return (+ correction result)))
 
 (define (float-nearly-equal? a b margin) (boolean f32-s f32-s f32-s)
-  "http://floating-point-gui.de/errors/comparison/"
+  "approximate float comparison. margin is a factor and is low for low accepted differences.
+   http://floating-point-gui.de/errors/comparison/"
   (if (= a b) (return #t)
     (begin (define diff f32-s (fabs (- a b)))
       (return
         (if* (or (= 0 a) (= 0 b) (< diff DBL_MIN)) (< diff (* margin DBL_MIN))
           (< (/ diff (fmin (+ (fabs a) (fabs b)) DBL_MAX)) margin))))))
 
-(define
-  (sp-moving-average! result source source-len prev prev-len next next-len start end distance)
+(define (sp-moving-average result source source-len prev prev-len next next-len start end distance)
   (boolean sp-sample-t* sp-sample-t* b32 sp-sample-t* b32 sp-sample-t* b32 b32 b32 b32)
   "apply a centered moving average filter to source at index start to end inclusively and write to result.
   removes higher frequencies with little distortion in the time domain.
    * only the result portion corresponding to the subvector from start to end is written to result
-   * prev and next are unprocessed segments and can be 0, for example for the beginning and end of a stream
-   * since the result value for a sample is calculated from samples left and right of it,
-     a previous and following part of a stream is eventually needed for reference to values outside the source segment
-     to create a valid continuous result. unavailable values outside the source segment are zero
-   * values outside the start/end range are considered where needed to calculate averages
+   * prev and next are unprocessed segments and can be null pointers,
+     for example at the beginning and end of a stream
+   * since the result value for a sample is calculated using samples left and right of it,
+     a previous and following part of a stream is eventually needed to reference values
+     outside the source segment to create a valid continuous result.
+     zero is used for unavailable values outside the source segment
+   * available values outside the start/end range are considered where needed to calculate averages
    * rounding errors are kept low by using modified kahan neumaier summation and not using a
-     recursive implementation (which makes it much slower than recursive implementations)"
+     recursive implementation. both properties which make it much slower than many other implementations"
   (if (not source-len) (return 1)) (define left b32 right b32)
   (define width b32 (+ 1 (* 2 distance))) (define window sp-sample-t* 0)
   (define window-index b32)
@@ -125,15 +128,15 @@
     (inc result) (inc start))
   (free window) (return 0))
 
-(define (sinc a) (double double)
+(define (sinc a) (f32-s f32-s)
   "the normalised sinc function" (return (if* (= 0 a) 1 (/ (sin (* M_PI a)) (* M_PI a)))))
 
-(define (sp-blackman a width) (double double size-t)
+(define (sp-blackman a width) (f32-s f32-s size-t)
   (return
     (+ (- 0.42 (* 0.5 (cos (/ (* 2 M_PI a) (- width 1)))))
       (* 0.8 (cos (/ (* 4 M_PI a) (- width 1)))))))
 
-(define (sp-convolve! result a a-len b b-len)
+(define (sp-convolve result a a-len b b-len)
   (b0 sp-sample-t* sp-sample-t* size-t sp-sample-t* size-t)
   "discrete linear convolution.
   result length must be at least a-len + b-len - 1"
@@ -146,52 +149,67 @@
     (set b-index 0) (inc a-index)))
 
 (define (sp-spectral-inversion-ir a a-len) (b0 sp-sample-t* size-t)
-  "modify an impulse response kernel for spectral inversion"
+  "modify an impulse response kernel for spectral inversion.
+   a-len must be odd and \"a\" must have left-right symmetry.
+  flips the frequency response top to bottom"
   (while a-len (dec a-len) (set (deref a a-len) (* -1 (deref a a-len))))
   (define center size-t (/ (- a-len 1) 2)) (inc (deref a center)))
 
-(define (sp-windowed-sinc-ir-length transition) (size-t f32-s)
-  (define result b32 (ceil (/ 4 transition)))
-  (if (not (modulo result 2)) (inc result)) (return result))
+(define (sp-spectral-reversal-ir a a-len) (b0 sp-sample-t* size-t)
+  "inverts the sign for samples at odd indexes.
+  a-len must be odd and \"a\" must have left-right symmetry.
+  flips the frequency response left to right"
+  (while a-len (set a-len (- a-len 2)) (set (deref a a-len) (* -1 (deref a a-len)))))
 
-(define (sp-windowed-sinc-ir a a-len freq transition) (b0 sp-sample-t* size-t f32-s f32-s)
+(pre-define (sp-windowed-sinc-cutoff freq sample-rate)
+  "f32-s integer -> f32-s
+  radians-per-second samples-per-second -> cutoff-value"
+  (/ (* 2 M_PI freq) sample-rate))
+
+(define (sp-windowed-sinc-ir-length transition) (size-t f32-s)
+  "approximate impulse response length for a transition factor and
+  ensure that the result is odd"
+  (define result b32 (ceil (/ 4 transition))) (if (not (modulo result 2)) (inc result))
+  (return result))
+
+(define (sp-windowed-sinc-ir a a-len sample-rate freq transition)
+  (b0 sp-sample-t* size-t b32 f32-s f32-s)
   "write an impulse response kernel for a windowed sinc filter. uses a blackman window (truncated version)"
   (define index b32 0) (define center-index f32-s (/ (- a-len 1.0) 2.0))
+  (define cutoff f32-s (sp-windowed-sinc-cutoff freq sample-rate))
   (while (< index a-len)
-    (set (deref a index) (sp-blackman (sinc (* 2 freq (- index center-index))) a-len)) (inc index))
+    (set (deref a index) (sp-blackman (sinc (* 2 cutoff (- index center-index))) a-len)) (inc index))
   (define a-sum f32-s (float-sum a a-len))
   (while a-len (dec a-len) (set (deref a index) (/ (deref a index) a-sum))))
 
 (define
-  (sp-windowed-sinc! result source source-len prev prev-len next next-len start end freq transition)
+  (sp-windowed-sinc result source source-len prev prev-len next next-len start end sample-rate freq
+    transition)
   (boolean sp-sample-t* sp-sample-t*
-    size-t sp-sample-t* size-t sp-sample-t* size-t size-t size-t f32-s f32-s)
+    size-t sp-sample-t* size-t sp-sample-t* size-t size-t size-t b32 f32-s f32-s)
   (define ir-len b32 (sp-windowed-sinc-ir-length transition))
   (define ir sp-sample-t* (malloc (* ir-len (sizeof sp-sample-t)))) (if (not ir) (return 1))
-  (sp-convolve! result source source-len ir ir-len) (free ir) (return 0))
+  (sp-convolve result source source-len ir ir-len) (free ir) (return 0))
 
-(define (scm-sp-windowed-sinc! result source scm-prev scm-next freq transition start end)
-  (SCM SCM SCM SCM SCM SCM SCM SCM SCM)
+(define
+  (scm-sp-windowed-sinc! result source scm-prev scm-next sample-rate freq transition start end)
+  (SCM SCM SCM SCM SCM SCM SCM SCM SCM SCM)
   (define source-len b32 (octets->samples (SCM-BYTEVECTOR-LENGTH source)))
   (define prev sp-sample-t* prev-len b32 next sp-sample-t* next-len b32)
   (optional-samples prev prev-len scm-prev) (optional-samples next next-len scm-next)
-  (sp-windowed-sinc! (convert-type (SCM-BYTEVECTOR-CONTENTS result) sp-sample-t*)
+  (sp-windowed-sinc (convert-type (SCM-BYTEVECTOR-CONTENTS result) sp-sample-t*)
     (convert-type (SCM-BYTEVECTOR-CONTENTS source) sp-sample-t*) source-len
     prev prev-len
     next next-len
     (optional-index start 0) (optional-index end (- source-len 1))
-    (scm->double freq) (scm->double transition))
+    (scm->uint32 sample-rate) (scm->double freq) (scm->double transition))
   (return SCM-UNSPECIFIED))
-
-;(define (sp-spectral-reversal))
-;(define (sp-moving-average-high!))
-;(define (sp-windowed-sinc-high))
 
 (define (scm-sp-fft source) (SCM SCM)
   status-init (define result-len b32 (/ (* 3 (SCM-BYTEVECTOR-LENGTH source)) 2))
   (define result SCM (scm-make-f32vector (scm-from-uint32 result-len) (scm-from-uint8 0)))
   (status-require!
-    (sp-fft! (convert-type (SCM-BYTEVECTOR-CONTENTS result) sp-sample-t*) result-len
+    (sp-fft (convert-type (SCM-BYTEVECTOR-CONTENTS result) sp-sample-t*) result-len
       (convert-type (SCM-BYTEVECTOR-CONTENTS source) sp-sample-t*) (SCM-BYTEVECTOR-LENGTH source)))
   (label exit (status->scm-return result)))
 
@@ -199,7 +217,7 @@
   status-init (define result-len b32 (* (- (SCM-BYTEVECTOR-LENGTH source) 1) 2))
   (define result SCM (scm-make-f32vector (scm-from-uint32 result-len) (scm-from-uint8 0)))
   (status-require!
-    (sp-fft-inverse! (convert-type (SCM-BYTEVECTOR-CONTENTS result) sp-sample-t*) result-len
+    (sp-fft-inverse (convert-type (SCM-BYTEVECTOR-CONTENTS result) sp-sample-t*) result-len
       (convert-type (SCM-BYTEVECTOR-CONTENTS source) sp-sample-t*) (SCM-BYTEVECTOR-LENGTH source)))
   (label exit (status->scm-return result)))
 
@@ -208,7 +226,7 @@
   (define source-len b32 (octets->samples (SCM-BYTEVECTOR-LENGTH source)))
   (define prev sp-sample-t* prev-len b32 next sp-sample-t* next-len b32)
   (optional-samples prev prev-len scm-prev) (optional-samples next next-len scm-next)
-  (sp-moving-average! (convert-type (SCM-BYTEVECTOR-CONTENTS result) sp-sample-t*)
+  (sp-moving-average (convert-type (SCM-BYTEVECTOR-CONTENTS result) sp-sample-t*)
     (convert-type (SCM-BYTEVECTOR-CONTENTS source) sp-sample-t*) source-len
     prev prev-len
     next next-len
@@ -333,10 +351,10 @@
     scm-sp-moving-average!
     "result source previous next distance [start end] -> unspecified
   f32vector f32vector f32vector f32vector integer integer integer [integer]")
-  (scm-c-define-procedure-c "sp-windowed-sinc!" 6
+  (scm-c-define-procedure-c "sp-windowed-sinc!" 7
     2 0
     scm-sp-windowed-sinc!
-    "result source previous next freq transition [start end] -> unspecified
+    "result source previous next sample-rate freq transition [start end] -> unspecified
     f32vector f32vector f32vector f32vector number number integer integer -> boolean")
   (scm-c-define-procedure-c "f32vector-sum" 1
     2 0 scm-f32vector-sum "f32vector [start end] -> number")
