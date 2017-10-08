@@ -1,5 +1,7 @@
 (library (sph sp)
   (export
+    f32vector-sum
+    float-nearly-equal?
     sp-alsa-open-input
     sp-alsa-open-output
     sp-alsa-read
@@ -11,7 +13,9 @@
     sp-file-read
     sp-file-set-position
     sp-file-write
+    sp-moving-average
     sp-moving-average!
+    sp-windowed-sinc!
     sp-noise
     sp-port-channel-count
     sp-port-close
@@ -72,6 +76,11 @@
     "(sp-port ...) integer -> (f32vector ...)
      read from multiple ports"
     (apply append (map (l (a) (sp-port-read a sample-count)) ports)))
+
+  (define* (sp-moving-average source prev next distance #:optional start end)
+    "f32vector false/f32vector false/f32vector integer [integer/false integer/false] -> f32vector"
+    (f32vector-copy-empty* source
+      (l (a) (sp-moving-average! a source prev next distance start end))))
 
   (define*
     (sp-noise sample-count #:optional (random random:uniform) (random-state default-random-state))
