@@ -17,13 +17,16 @@
 (define-type sp-windowed-sinc-state-t
   ; stores impulse response, parameters to create the current impulse response,
   ; and data needed for the next call
-  (struct (data sp-sample-t*) (data-len size-t)
+  (struct (data sp-sample-t*)
+    ; allocated len
+    (data-len size-t) (ir-len-prev size-t)
     (ir sp-sample-t*) (ir-len size-t) (sample-rate b32) (freq f32-s) (transition f32-s)))
 
 (define (sp-windowed-sinc-ir result result-len sample-rate freq transition)
-  (b0 sp-sample-t** size-t* f32-s* b32 f32-s f32-s)
+  (b0 sp-sample-t** size-t* b32 f32-s f32-s)
   "create an impulse response kernel for a windowed sinc filter. uses a blackman window (truncated version).
-  allocates result, sets result-len"
+  allocates result, sets result-len.
+  failed if result is null"
   (define len size-t (sp-windowed-sinc-ir-length transition)) (set (deref result-len) len)
   (define center-index f32-s (/ (- len 1.0) 2.0))
   (define cutoff f32-s (sp-windowed-sinc-cutoff freq sample-rate))
@@ -44,34 +47,44 @@
   (b8 b32 f32-s f32-s sp-windowed-sinc-state-t**)
   "create or update a state object. impulse response array properties are calculated
   from sample-rate, freq and transition.
-  eventually frees state.ir"
+  eventually frees state.ir.
+  ir-len-prev data elements have to be copied to the next result"
+  ; create state if not exists
   (define state-temp sp-windowed-sinc-state-t*)
-  (if (not state)
+  (if (not (deref state))
     (begin (set state-temp (malloc (sizeof sp-windowed-sinc-state-t)))
       (if (not state-temp) (return 1))
-      (struct-pointer-set state-temp sample-rate 0 freq 0 transition 0 data 0 data-len 0))
+      (struct-pointer-set state-temp sample-rate
+        0 freq 0 transition 0 data 0 data-len 0 ir-len-prev 0))
     (set state-temp (deref state)))
+  ; re-use ir, nothing changed
   (if
     (and (= (struct-pointer-get state-temp sample-rate) sample-rate)
       (= (struct-pointer-get state-temp freq) freq)
       (= (struct-pointer-get state-temp transition) transition))
     (return 0))
-  (if state (free (struct-get state-temp ir))) (define ir-len size-t)
+  ; replace ir
+  (if state (begin (free (struct-pointer-get state-temp ir)))) (define ir-len size-t)
   (define ir sp-sample-t*)
   (sp-windowed-sinc-ir (address-of ir) (address-of ir-len) sample-rate freq transition)
-  (if (not ir) (begin (if (not state) (free state-temp)) (return 1)))
-  (if (< ir-len (struct-pointer-ref state-temp data-len))
-    (struct-pointer-set state-temp data-len ir-len)
-    (define data sp-sample-t* (malloc (* ir-len (sizeof sp-sample-t)))))
-  (if (not data) (begin (free ir) (if (not state) (free state-temp)) (return 1)))
-  (struct-pointer-set state-temp data
-    data data-len ir ir ir-len ir-len sample-rate sample-rate freq freq transition transition)
+  (if (not ir) (begin (if (not (deref state)) (free state-temp)) (return 1)))
+  (struct-pointer-set state-temp ir-len-prev
+    (if* state (struct-pointer-get state-temp ir-len) ir-len))
+  ; set bigger data buffer if needed
+  (if (> ir-len (struct-pointer-get state-temp data-len))
+    (begin (define data sp-sample-t* (calloc ir-len (sizeof sp-sample-t)))
+      (if (not data) (begin (free ir) (if (not (deref state)) (free state-temp)) (return 1)))
+      (if (struct-pointer-get state-temp data)
+        (begin
+          (memcpy data (struct-pointer-get state-temp data)
+            (* (struct-pointer-get state-temp ir-len-prev) (sizeof sp-sample-t)))
+          (free (struct-pointer-get state-temp data))))
+      (struct-pointer-set state-temp data data data-len ir-len)))
+  (struct-pointer-set state-temp ir
+    ir ir-len ir-len sample-rate sample-rate freq freq transition transition)
   (set (deref state) state-temp) (return 0))
 
-(define
-  (sp-windowed-sinc result source source-len prev prev-len next next-len start end sample-rate freq
-    transition
-    state)
+(define (sp-windowed-sinc result source source-len start end sample-rate freq transition state)
   (b8 sp-sample-t* sp-sample-t*
     size-t sp-sample-t*
     size-t sp-sample-t* size-t size-t size-t b32 f32-s f32-s sp-windowed-sinc-state-t**)
@@ -82,19 +95,26 @@
   (sp-convolve result source
     source-len (struct-pointer-get (deref state) ir)
     (struct-pointer-get (deref state) ir-len) (struct-pointer-get (deref state) data)
-    (struct-pointer-get (deref state) data-len))
+    (struct-pointer-get (deref state) ir-len-prev))
   (return 0))
 
-(define
-  (scm-sp-windowed-sinc! result source scm-prev scm-next sample-rate freq transition start end)
+; todo: howto create/update scm-state
+; todo: having no state but available prev data (switching filter off/on)
+
+(define (scm-sp-windowed-sinc-state-create sample-rate freq transition old-state)
+  (SCM SCM SCM SCM SCM) (define state sp-windowed-sinc-state-t*)
+  (if (scm-is-true old-state) (set state (scm-sp-state->pointer old-state)) (set state 0))
+  (sp-windowed-sinc-state-create (scm->uint32 sample-rate) (scm->double freq)
+    (scm->double transition) (address-of state))
+  (if (scm-is-true old-state) old-state (scm-sp-state-from-pointer state)))
+
+(define (scm-sp-windowed-sinc! result source state start end)
   (SCM SCM SCM SCM SCM SCM SCM SCM SCM SCM)
   (define source-len b32 (octets->samples (SCM-BYTEVECTOR-LENGTH source)))
   (define prev sp-sample-t* prev-len b32 next sp-sample-t* next-len b32)
   (optional-samples prev prev-len scm-prev) (optional-samples next next-len scm-next)
+  (define state sp-windowed-sinc-state-t* (scm-sp-state->pointer state))
   (sp-windowed-sinc (convert-type (SCM-BYTEVECTOR-CONTENTS result) sp-sample-t*)
     (convert-type (SCM-BYTEVECTOR-CONTENTS source) sp-sample-t*) source-len
-    prev prev-len
-    next next-len
-    (optional-index start 0) (optional-index end (- source-len 1))
-    (scm->uint32 sample-rate) (scm->double freq) (scm->double transition))
+    (optional-index start 0) (optional-index end (- source-len 1)) state)
   (return SCM-UNSPECIFIED))

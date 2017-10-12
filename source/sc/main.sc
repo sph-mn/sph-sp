@@ -34,6 +34,27 @@
 (pre-define (optional-index a default)
   (if* (and (not (scm-is-undefined start)) (scm-is-true start)) (scm->uint32 a) default))
 
+(define scm-type-sp-state SCM)
+(pre-define sp-state-type-windowed-sinc 0)
+
+(define (scm-sp-state-create pointer sp-state-type) (SCM b0* b8)
+  "sp-state type for storing arbitrary pointers"
+  ; did not work without local variable and gcc optimisation level 3
+  (define result SCM (scm-new-smob scm-type-sp-state (convert-type pointer scm-t-bits)))
+  (SCM-SET-SMOB-FLAGS result (convert-type sp-state-type scm-t-bits)) (return result))
+
+(define (scm-sp-state-free a) (size-t SCM)
+  (define type b8 (SCM-SMOB-FLAGS a))
+  (case = type
+    (sp-state-type-windowed-sinc (sp-windowed-sinc-state-destroy (scm-sp-state->pointer a))))
+  (return 0))
+
+(scm-set-smob-free scm-type-sp-state scm-sp-state-free)
+(pre-define (scm-sp-state->pointer a) (SCM-SMOB-DATA a))
+
+(define (scm-sp-state? a) (SCM SCM)
+  (return (scm-from-bool (SCM-SMOB-PREDICATE scm-type-sp-state a))))
+
 (define (sin-lq a) (f32-s f32-s)
   "lower precision version of sin() that is faster to compute" (define b f32-s (/ 4 M_PI))
   (define c f32-s (/ -4 (* M_PI M_PI))) (return (- (+ (* b a) (* c a (abs a))))))
@@ -161,37 +182,37 @@
       (inc b-index))
     (set b-index 0) (inc a-index)))
 
-(define (sp-convolve result a a-len b b-len state state-len)
-  (b0 sp-sample-t* sp-sample-t* size-t sp-sample-t* size-t sp-sample-t* size-t*)
+(define (sp-convolve result a a-len b b-len carryover b-len-prev)
+  (b0 sp-sample-t* sp-sample-t* size-t sp-sample-t* size-t sp-sample-t* size-t)
   "discrete linear convolution for segments of a continuous stream.
   result length is a-len.
-  state length is b-len"
-  ; previous values
-  (define size size-t (deref state-len)) (if (not (= size b-len)) (set (deref state-len) b-len))
-  (while size (dec size) (set (deref result size) (deref state size)))
+  carryover length is b-len"
+  ; algorithm: copy results that overlap from previous call from carryover, add results that fit completely in result,
+  ;   add results that overlap with next segment to carryover.
+  ; previous values. b-len-prev should differ if b-len changed between calls
+  (while b-len-prev (dec b-len-prev) (set (deref result b-len-prev) (deref carryover b-len-prev)))
   ; result values
-  (set size (if* (> a-len b-len) a-len (- a-len b-len))) (sp-convolve-one result a size b b-len)
+  (define size size-t) (set size (if* (> a-len b-len) a-len (- a-len b-len)))
+  (sp-convolve-one result a size b b-len)
   ; next values
   (define a-index size-t size) (define b-index size-t 0)
   (while (< a-index a-len)
     (while (< b-index b-len) (set size (+ a-index b-index))
       (if (>= size a-len)
         (set size (- a-len (+ a-index b-index))
-          (deref state size) (+ (deref state size) (* (deref a a-index) (deref b b-index))))
+          (deref carryover size) (+ (deref carryover size) (* (deref a a-index) (deref b b-index))))
         (set (deref result size) (+ (deref result size) (* (deref a a-index) (deref b b-index)))))
       (inc b-index))
     (set b-index 0) (inc a-index)))
 
-(define (scm-sp-convolve! result a b state) (SCM SCM SCM SCM SCM)
+(define (scm-sp-convolve! result a b carryover b-len-prev) (SCM SCM SCM SCM SCM SCM)
   "state: (size . data)" (define a-len b32 (octets->samples (SCM-BYTEVECTOR-LENGTH a)))
   (define b-len b32 (octets->samples (SCM-BYTEVECTOR-LENGTH b)))
-  (define scm-state-len SCM (scm-first state)) (define scm-state-data SCM (scm-tail state))
-  (define state-len size-t (scm->size-t scm-state-len))
   (sp-convolve (convert-type (SCM-BYTEVECTOR-CONTENTS result) sp-sample-t*)
     (convert-type (SCM-BYTEVECTOR-CONTENTS a) sp-sample-t*) a-len
     (convert-type (SCM-BYTEVECTOR-CONTENTS b) sp-sample-t*) b-len
-    (convert-type (SCM-BYTEVECTOR-CONTENTS scm-state-data) sp-sample-t*) (address-of state-len))
-  (return (if* (= b-len state-len) state (scm-cons (scm-from-size-t state-len) scm-state-data))))
+    (convert-type (SCM-BYTEVECTOR-CONTENTS carryover) sp-sample-t*) (scm->size-t b-len-prev))
+  (return SCM-UNSPECIFIED))
 
 (define (scm-sp-fft source) (SCM SCM)
   status-init (define result-len b32 (/ (* 3 (SCM-BYTEVECTOR-LENGTH source)) 2))
@@ -252,11 +273,12 @@
 
 (define-sp-sine! sp-sine! sin)
 (define-sp-sine! sp-sine-lq! sin-lq)
-(include-sc "windowed-sinc")
+(sc-include "windowed-sinc")
 
 (define (init-sp) b0
   sp-port-scm-type-init (define scm-module SCM (scm-c-resolve-module "sph sp"))
-  (set scm-sp-port-type-alsa (scm-from-latin1-symbol "alsa")
+  (set scm-type-sp-state (scm-make-smob-type "sp-state" #t)
+    scm-sp-port-type-alsa (scm-from-latin1-symbol "alsa")
     scm-sp-port-type-file (scm-from-latin1-symbol "file")
     scm-rnrs-raise (scm-c-public-ref "rnrs exceptions" "raise"))
   (scm-c-module-define scm-module "sp-port-type-alsa" scm-sp-port-type-alsa)
