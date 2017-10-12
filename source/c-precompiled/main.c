@@ -1061,6 +1061,43 @@ b0 sp_convolve(sp_sample_t *result, sp_sample_t *a, size_t a_len,
     inc(a_index);
   };
 };
+/** discrete linear convolution mapping equally sized segments from a continuous
+  stream. result length will be a-len. state length will be b-len. if b-len
+  sizes changes between calls for the same stream, state.data must be at least
+  b-len large and state.size should be unchanged and will be updated
+  automatically */
+b0 sp_convolve_stream(sp_sample_t *result, sp_sample_t *a, size_t a_len,
+                      sp_sample_t *b, size_t b_len, sp_sample_t *state,
+                      size_t *state_len) {
+  size_t size = (*state_len);
+  if (!(size == b_len)) {
+    (*state_len) = b_len;
+  };
+  while (size) {
+    dec(size);
+    (*(result + size)) = (*(state + size));
+  };
+  size = ((a_len > b_len) ? a_len : (a_len - b_len));
+  sp_convolve(result, a, size, b, b_len);
+  size_t a_index = size;
+  size_t b_index = 0;
+  while ((a_index < a_len)) {
+    while ((b_index < b_len)) {
+      size = (a_index + b_index);
+      if ((size >= a_len)) {
+        size = (a_len - (a_index + b_index));
+        (*(state + size)) =
+            ((*(state + size)) + ((*(a + a_index)) * (*(b + b_index))));
+      } else {
+        (*(result + size)) =
+            ((*(result + size)) + ((*(a + a_index)) * (*(b + b_index))));
+      };
+      inc(b_index);
+    };
+    b_index = 0;
+    inc(a_index);
+  };
+};
 /** modify an impulse response kernel for spectral inversion.
    a-len must be odd and "a" must have left-right symmetry.
   flips the frequency response top to bottom */
@@ -1144,6 +1181,22 @@ SCM scm_sp_windowed_sinc_x(SCM result, SCM source, SCM scm_prev, SCM scm_next,
       optional_index(end, (source_len - 1)), scm_to_uint32(sample_rate),
       scm_to_double(freq), scm_to_double(transition));
   return (SCM_UNSPECIFIED);
+};
+/** state: (size . data) */
+SCM scm_sp_convolve_x(SCM result, SCM a, SCM b, SCM state) {
+  b32 a_len = octets_to_samples(SCM_BYTEVECTOR_LENGTH(a));
+  b32 b_len = octets_to_samples(SCM_BYTEVECTOR_LENGTH(b));
+  SCM scm_state_len = scm_first(state);
+  SCM scm_state_data = scm_tail(state);
+  size_t state_len = scm_to_size_t(scm_state_len);
+  sp_convolve_stream(((sp_sample_t *)(SCM_BYTEVECTOR_CONTENTS(result))),
+                     ((sp_sample_t *)(SCM_BYTEVECTOR_CONTENTS(a))), a_len,
+                     ((sp_sample_t *)(SCM_BYTEVECTOR_CONTENTS(b))), b_len,
+                     ((sp_sample_t *)(SCM_BYTEVECTOR_CONTENTS(scm_state_data))),
+                     &state_len);
+  return (((b_len == state_len)
+               ? state
+               : scm_cons(scm_from_size_t(state_len), scm_state_data)));
 };
 SCM scm_sp_fft(SCM source) {
   status_init;
@@ -1309,4 +1362,6 @@ b0 init_sp() {
   scm_c_define_procedure_c(
       "float-nearly-equal?", 3, 0, 0, scm_float_nearly_equal_p,
       "a b margin -> boolean\n    number number number -> boolean");
+  scm_c_define_procedure_c("sp-convolve!", 3, 0, 0, scm_sp_convolve_x,
+                           "a b state:(integer . f32vector) -> state");
 };

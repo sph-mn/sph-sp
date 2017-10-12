@@ -136,18 +136,6 @@
     (+ (- 0.42 (* 0.5 (cos (/ (* 2 M_PI a) (- width 1)))))
       (* 0.8 (cos (/ (* 4 M_PI a) (- width 1)))))))
 
-(define (sp-convolve result a a-len b b-len)
-  (b0 sp-sample-t* sp-sample-t* size-t sp-sample-t* size-t)
-  "discrete linear convolution.
-  result length must be at least a-len + b-len - 1"
-  (define a-index size-t 0) (define b-index size-t 0)
-  (while (< a-index a-len)
-    (while (< b-index b-len)
-      (set (deref result (+ a-index b-index))
-        (+ (deref result (+ a-index b-index)) (* (deref a a-index) (deref b b-index))))
-      (inc b-index))
-    (set b-index 0) (inc a-index)))
-
 (define (sp-spectral-inversion-ir a a-len) (b0 sp-sample-t* size-t)
   "modify an impulse response kernel for spectral inversion.
    a-len must be odd and \"a\" must have left-right symmetry.
@@ -161,49 +149,49 @@
   flips the frequency response left to right"
   (while a-len (set a-len (- a-len 2)) (set (deref a a-len) (* -1 (deref a a-len)))))
 
-(pre-define (sp-windowed-sinc-cutoff freq sample-rate)
-  "f32-s integer -> f32-s
-  radians-per-second samples-per-second -> cutoff-value"
-  (/ (* 2 M_PI freq) sample-rate))
+(define (sp-convolve-one result a a-len b b-len)
+  (b0 sp-sample-t* sp-sample-t* size-t sp-sample-t* size-t)
+  "discrete linear convolution.
+  result length must be at least a-len + b-len - 1"
+  (define a-index size-t 0) (define b-index size-t 0)
+  (while (< a-index a-len)
+    (while (< b-index b-len)
+      (set (deref result (+ a-index b-index))
+        (+ (deref result (+ a-index b-index)) (* (deref a a-index) (deref b b-index))))
+      (inc b-index))
+    (set b-index 0) (inc a-index)))
 
-(define (sp-windowed-sinc-ir-length transition) (size-t f32-s)
-  "approximate impulse response length for a transition factor and
-  ensure that the result is odd"
-  (define result b32 (ceil (/ 4 transition))) (if (not (modulo result 2)) (inc result))
-  (return result))
+(define (sp-convolve result a a-len b b-len state state-len)
+  (b0 sp-sample-t* sp-sample-t* size-t sp-sample-t* size-t sp-sample-t* size-t*)
+  "discrete linear convolution for segments of a continuous stream.
+  result length is a-len.
+  state length is b-len"
+  ; previous values
+  (define size size-t (deref state-len)) (if (not (= size b-len)) (set (deref state-len) b-len))
+  (while size (dec size) (set (deref result size) (deref state size)))
+  ; result values
+  (set size (if* (> a-len b-len) a-len (- a-len b-len))) (sp-convolve-one result a size b b-len)
+  ; next values
+  (define a-index size-t size) (define b-index size-t 0)
+  (while (< a-index a-len)
+    (while (< b-index b-len) (set size (+ a-index b-index))
+      (if (>= size a-len)
+        (set size (- a-len (+ a-index b-index))
+          (deref state size) (+ (deref state size) (* (deref a a-index) (deref b b-index))))
+        (set (deref result size) (+ (deref result size) (* (deref a a-index) (deref b b-index)))))
+      (inc b-index))
+    (set b-index 0) (inc a-index)))
 
-(define (sp-windowed-sinc-ir a a-len sample-rate freq transition)
-  (b0 sp-sample-t* size-t b32 f32-s f32-s)
-  "write an impulse response kernel for a windowed sinc filter. uses a blackman window (truncated version)"
-  (define index b32 0) (define center-index f32-s (/ (- a-len 1.0) 2.0))
-  (define cutoff f32-s (sp-windowed-sinc-cutoff freq sample-rate))
-  (while (< index a-len)
-    (set (deref a index) (sp-blackman (sinc (* 2 cutoff (- index center-index))) a-len)) (inc index))
-  (define a-sum f32-s (float-sum a a-len))
-  (while a-len (dec a-len) (set (deref a index) (/ (deref a index) a-sum))))
-
-(define
-  (sp-windowed-sinc result source source-len prev prev-len next next-len start end sample-rate freq
-    transition)
-  (boolean sp-sample-t* sp-sample-t*
-    size-t sp-sample-t* size-t sp-sample-t* size-t size-t size-t b32 f32-s f32-s)
-  (define ir-len b32 (sp-windowed-sinc-ir-length transition))
-  (define ir sp-sample-t* (malloc (* ir-len (sizeof sp-sample-t)))) (if (not ir) (return 1))
-  (sp-convolve result source source-len ir ir-len) (free ir) (return 0))
-
-(define
-  (scm-sp-windowed-sinc! result source scm-prev scm-next sample-rate freq transition start end)
-  (SCM SCM SCM SCM SCM SCM SCM SCM SCM SCM)
-  (define source-len b32 (octets->samples (SCM-BYTEVECTOR-LENGTH source)))
-  (define prev sp-sample-t* prev-len b32 next sp-sample-t* next-len b32)
-  (optional-samples prev prev-len scm-prev) (optional-samples next next-len scm-next)
-  (sp-windowed-sinc (convert-type (SCM-BYTEVECTOR-CONTENTS result) sp-sample-t*)
-    (convert-type (SCM-BYTEVECTOR-CONTENTS source) sp-sample-t*) source-len
-    prev prev-len
-    next next-len
-    (optional-index start 0) (optional-index end (- source-len 1))
-    (scm->uint32 sample-rate) (scm->double freq) (scm->double transition))
-  (return SCM-UNSPECIFIED))
+(define (scm-sp-convolve! result a b state) (SCM SCM SCM SCM SCM)
+  "state: (size . data)" (define a-len b32 (octets->samples (SCM-BYTEVECTOR-LENGTH a)))
+  (define b-len b32 (octets->samples (SCM-BYTEVECTOR-LENGTH b)))
+  (define scm-state-len SCM (scm-first state)) (define scm-state-data SCM (scm-tail state))
+  (define state-len size-t (scm->size-t scm-state-len))
+  (sp-convolve (convert-type (SCM-BYTEVECTOR-CONTENTS result) sp-sample-t*)
+    (convert-type (SCM-BYTEVECTOR-CONTENTS a) sp-sample-t*) a-len
+    (convert-type (SCM-BYTEVECTOR-CONTENTS b) sp-sample-t*) b-len
+    (convert-type (SCM-BYTEVECTOR-CONTENTS scm-state-data) sp-sample-t*) (address-of state-len))
+  (return (if* (= b-len state-len) state (scm-cons (scm-from-size-t state-len) scm-state-data))))
 
 (define (scm-sp-fft source) (SCM SCM)
   status-init (define result-len b32 (/ (* 3 (SCM-BYTEVECTOR-LENGTH source)) 2))
@@ -264,6 +252,7 @@
 
 (define-sp-sine! sp-sine! sin)
 (define-sp-sine! sp-sine-lq! sin-lq)
+(include-sc "windowed-sinc")
 
 (define (init-sp) b0
   sp-port-scm-type-init (define scm-module SCM (scm-c-resolve-module "sph sp"))
@@ -361,4 +350,6 @@
   (scm-c-define-procedure-c "float-nearly-equal?" 3
     0 0 scm-float-nearly-equal?
     "a b margin -> boolean
-    number number number -> boolean"))
+    number number number -> boolean")
+  (scm-c-define-procedure-c "sp-convolve!" 3
+    0 0 scm-sp-convolve! "a b state:(integer . f32vector) -> state"))
