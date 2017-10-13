@@ -21,7 +21,7 @@
   (set result-temp (malloc (* len (sizeof sp-sample-t))))
   (if (not result-temp) (begin (set (deref result) 0) (return))) (define index size-t 0)
   (while (< index len)
-    (set (deref result-temp index) (sp-blackman (sp-sinc (* 2 cutoff (- index center-index))) len))
+    (set (deref result-temp index) (sp-window-blackman (sp-sinc (* 2 cutoff (- index center-index))) len))
     (inc index))
   (define result-sum f32-s (float-sum result-temp len))
   (while len (dec len) (set (deref result-temp index) (/ (deref result-temp index) result-sum)))

@@ -130,7 +130,14 @@ b8 *sp_status_description(status_t a) {
                                           ? "file exists but channel count or "
                                             "sample rate is different from "
                                             "what was requested"
-                                          : ""))))))
+                                          : ((sp_status_id_file_incomplete ==
+                                              a.id)
+                                                 ? "incomplete write"
+                                                 : ((sp_status_id_port_type ==
+                                                     a.id)
+                                                        ? "incompatible port "
+                                                          "type"
+                                                        : ""))))))))
            : ((sp_status_group_alsa == a.group) ? ((b8 *)(snd_strerror(a.id)))
                                                 : ((b8 *)("")))));
 };
@@ -172,13 +179,13 @@ b8 *sp_status_name(status_t a) {
 sp_sample_t **sp_alloc_channel_data(b32 channel_count, b32 sample_count);
 f32_s sp_sin_lq(f32_s a);
 f32_s sp_sinc(f32_s a);
-f32_s sp_blackman(f32_s a, size_t width);
+f32_s sp_window_blackman(f32_s a, size_t width);
 b0 sp_spectral_inversion_ir(sp_sample_t *a, size_t a_len);
 b0 sp_spectral_reversal_ir(sp_sample_t *a, size_t a_len);
 status_t sp_fft(sp_sample_t *result, b32 result_len, sp_sample_t *source,
                 b32 source_len);
-status_t sp_fft_inverse(sp_sample_t *result, b32 result_len,
-                        sp_sample_t *source, b32 source_len);
+status_t sp_ifft(sp_sample_t *result, b32 result_len, sp_sample_t *source,
+                 b32 source_len);
 boolean sp_moving_average(sp_sample_t *result, sp_sample_t *source,
                           b32 source_len, sp_sample_t *prev, b32 prev_len,
                           sp_sample_t *next, b32 next_len, b32 start, b32 end,
@@ -230,12 +237,13 @@ typedef struct {
 #define sp_port_type_alsa 0
 #define sp_port_type_file 1
 #define sp_port_bit_input 1
-#define sp_port_bit_position 2
+#define sp_port_bit_output 2
+#define sp_port_bit_position 3
 status_t sp_port_read(sp_sample_t **result, sp_port_t *port, b32 sample_count);
 status_t sp_port_write(sp_port_t *port, b32 sample_count,
                        sp_sample_t **channel_data);
-status_t sp_file_open(sp_port_t *result, b8 *path, boolean input_p,
-                      b32_s channel_count, b32_s sample_rate);
+status_t sp_file_open(sp_port_t *result, b8 *path, b32_s channel_count,
+                      b32_s sample_rate);
 status_t sp_alsa_open(sp_port_t *result, b8 *device_name, boolean input_p,
                       b32_s channel_count, b32_s sample_rate, b32_s latency);
 status_t sp_port_close(sp_port_t *a);
@@ -461,8 +469,8 @@ exit:
   local_memory_free;
   return (status);
 };
-status_t sp_fft_inverse(sp_sample_t *result, b32 result_len,
-                        sp_sample_t *source, b32 source_len) {
+status_t sp_ifft(sp_sample_t *result, b32 result_len, sp_sample_t *source,
+                 b32 source_len) {
   sp_status_init;
   local_memory_init(2);
   kiss_fftr_cfg fftr_state = kiss_fftr_alloc(source_len, 1, 0, 0);
@@ -576,7 +584,7 @@ boolean sp_moving_average(sp_sample_t *result, sp_sample_t *source,
 f32_s sp_sinc(f32_s a) {
   return (((0 == a) ? 1 : (sin((M_PI * a)) / (M_PI * a))));
 };
-f32_s sp_blackman(f32_s a, size_t width) {
+f32_s sp_window_blackman(f32_s a, size_t width) {
   return (((0.42 - (0.5 * cos(((2 * M_PI * a) / (width - 1))))) +
            (0.8 * cos(((4 * M_PI * a) / (width - 1))))));
 };
@@ -595,7 +603,7 @@ b0 sp_spectral_inversion_ir(sp_sample_t *a, size_t a_len) {
   a-len must be odd and "a" must have left-right symmetry.
   flips the frequency response left to right */
 b0 sp_spectral_reversal_ir(sp_sample_t *a, size_t a_len) {
-  while (a_len) {
+  while ((a_len > 1)) {
     a_len = (a_len - 2);
     (*(a + a_len)) = (-1 * (*(a + a_len)));
   };
@@ -619,7 +627,7 @@ b0 sp_convolve_one(sp_sample_t *result, sp_sample_t *a, size_t a_len,
 };
 /** discrete linear convolution for segments of a continuous stream.
   result length is a-len.
-  carryover length is b-len */
+  carryover length is b-len or previous b-len */
 b0 sp_convolve(sp_sample_t *result, sp_sample_t *a, size_t a_len,
                sp_sample_t *b, size_t b_len, sp_sample_t *carryover,
                size_t carryover_len) {
@@ -691,7 +699,7 @@ b0 sp_windowed_sinc_ir(sp_sample_t **result, size_t *result_len,
   size_t index = 0;
   while ((index < len)) {
     (*(result_temp + index)) =
-        sp_blackman(sp_sinc((2 * cutoff * (index - center_index))), len);
+        sp_window_blackman(sp_sinc((2 * cutoff * (index - center_index))), len);
     inc(index);
   };
   f32_s result_sum = float_sum(result_temp, len);
@@ -856,9 +864,7 @@ status_t sp_port_create(sp_port_t *result, b8 type, b8 flags, b32 sample_rate,
                         int data_int) {
   status_init;
   result = malloc(sizeof(sp_port_t));
-  if (!result) {
-    status_set_both_goto(sp_status_group_sp, sp_status_id_memory);
-  };
+  sp_status_require_alloc(result);
   (*result).channel_count = channel_count;
   (*result).sample_rate = sample_rate;
   (*result).type = type;
@@ -875,15 +881,18 @@ boolean sp_port_position_p(sp_port_t *a) {
 };
 boolean sp_port_input_p(sp_port_t *a) {
   return ((sp_port_bit_input & (*a).flags));
+};
+boolean sp_port_output_p(sp_port_t *a) {
+  return ((sp_port_bit_output & (*a).flags));
 }; /* -- au file */
-status_t sp_file_open(sp_port_t *result, b8 *path, boolean input_p,
-                      b32_s channel_count, b32_s sample_rate) {
+status_t sp_file_open(sp_port_t *result, b8 *path, b32_s channel_count,
+                      b32_s sample_rate) {
   sp_status_init;
   int file;
   b32 channel_count_file;
   b32 sample_rate_file;
-  b8 sp_port_flags = (input_p ? (sp_port_bit_input | sp_port_bit_position)
-                              : sp_port_bit_position);
+  b8 sp_port_flags =
+      (sp_port_bit_input | sp_port_bit_output | sp_port_bit_position);
   if (file_exists_p(path)) {
     file = open(path, O_RDWR);
     sp_system_status_require_id(file);
@@ -920,6 +929,7 @@ status_t sp_file_open(sp_port_t *result, b8 *path, boolean input_p,
     status_require_x(sp_port_create(result, sp_port_type_file, sp_port_flags,
                                     sample_rate_file, channel_count_file,
                                     offset, 0, file));
+    debug_log("%s %lu", "create", (*result).type);
   };
 exit:
   if ((status_failure_p && file)) {
@@ -951,6 +961,7 @@ status_t sp_file_write(sp_port_t *port, b32 sample_count,
   };
 exit:
   local_memory_free;
+  debug_log("%lu", status.id);
   return (status);
 };
 status_t sp_file_read(sp_sample_t **result, sp_port_t *port,
@@ -1023,9 +1034,10 @@ status_t sp_alsa_open(sp_port_t *result, b8 *device_name, boolean input_p,
       alsa_port, SND_PCM_FORMAT_FLOAT_LE, SND_PCM_ACCESS_RW_NONINTERLEAVED,
       channel_count, sample_rate, sp_default_alsa_enable_soft_resample,
       latency));
-  status_require_x(sp_port_create(
-      result, sp_port_type_alsa, (input_p ? sp_port_bit_input : 0), sample_rate,
-      channel_count, 0, ((b0 *)(alsa_port)), 0));
+  b8 sp_port_flags = (input_p ? sp_port_bit_input : sp_port_bit_output);
+  status_require_x(sp_port_create(result, sp_port_type_alsa, sp_port_flags,
+                                  sample_rate, channel_count, 0,
+                                  ((b0 *)(alsa_port)), 0));
 exit:
   if ((status_failure_p && alsa_port)) {
     snd_pcm_close(alsa_port);

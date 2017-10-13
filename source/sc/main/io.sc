@@ -49,7 +49,7 @@
   "integer integer integer integer integer pointer integer -> sp-port
    flags is a combination of sp-port-bits"
   status-init (set result (malloc (sizeof sp-port-t)))
-  (if (not result) (status-set-both-goto sp-status-group-sp sp-status-id-memory))
+  (sp-status-require-alloc result)
   (struct-pointer-set result channel-count
     channel-count sample-rate
     sample-rate type
@@ -62,13 +62,14 @@
 (define (sp-port-input? a) (boolean sp-port-t*)
   (return (bit-and sp-port-bit-input (struct-pointer-get a flags))))
 
+(define (sp-port-output? a) (boolean sp-port-t*)
+  (return (bit-and sp-port-bit-output (struct-pointer-get a flags))))
+
 (sc-comment "-- au file")
 
-(define (sp-file-open result path input? channel-count sample-rate)
-  (status-t sp-port-t* b8* boolean b32-s b32-s) sp-status-init
-  (define file int channel-count-file b32 sample-rate-file b32)
-  (define sp-port-flags b8
-    (if* input? (bit-or sp-port-bit-input sp-port-bit-position) sp-port-bit-position))
+(define (sp-file-open result path channel-count sample-rate) (status-t sp-port-t* b8* b32-s b32-s)
+  sp-status-init (define file int channel-count-file b32 sample-rate-file b32)
+  (define sp-port-flags b8 (bit-or sp-port-bit-input sp-port-bit-output sp-port-bit-position))
   (if (file-exists? path)
     (begin (set file (open path O_RDWR)) (sp-system-status-require-id file)
       (define encoding b32)
@@ -92,9 +93,13 @@
       (if (not (file-au-write-header file 6 sample-rate-file channel-count-file))
         (status-set-id-goto sp-status-id-file-header))
       (define offset off-t (lseek file 0 SEEK-CUR)) (sp-system-status-require-id offset)
+
       (status-require!
         (sp-port-create result sp-port-type-file
-          sp-port-flags sample-rate-file channel-count-file offset 0 file))))
+          sp-port-flags sample-rate-file channel-count-file offset 0 file))
+      (debug-log "%s %lu" "create" (struct-pointer-get result type))
+
+      ))
   (label exit (if (and status-failure? file) (close file)) (return status)))
 
 (define (sp-file-write port sample-count channel-data) (status-t sp-port-t* b32 sp-sample-t**)
@@ -109,7 +114,7 @@
   (if (not (= interleaved-size count))
     (if (< count 0) (status-set-both-goto sp-status-group-libc count)
       (status-set-both-goto sp-status-group-sp sp-status-id-file-incomplete)))
-  (label exit local-memory-free (return status)))
+  (label exit local-memory-free (debug-log "%lu" status.id) (return status)))
 
 (define (sp-file-read result port sample-count) (status-t sp-sample-t** sp-port-t* size-t)
   status-init (local-memory-init 1)
@@ -156,9 +161,10 @@
     (snd-pcm-set-params alsa-port SND_PCM_FORMAT_FLOAT_LE
       SND_PCM_ACCESS_RW_NONINTERLEAVED channel-count
       sample-rate sp-default-alsa-enable-soft-resample latency))
+  (define sp-port-flags b8 (if* input? sp-port-bit-input sp-port-bit-output))
   (status-require!
     (sp-port-create result sp-port-type-alsa
-      (if* input? sp-port-bit-input 0) sample-rate channel-count 0 (convert-type alsa-port b0*) 0))
+      sp-port-flags sample-rate channel-count 0 (convert-type alsa-port b0*) 0))
   (label exit (if (and status-failure? alsa-port) (snd-pcm-close alsa-port)) (return status)))
 
 (define (sp-alsa-write port sample-count channel-data) (status-t sp-port-t* b32 sp-sample-t**)

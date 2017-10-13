@@ -48,9 +48,9 @@
     (set (deref result result-len) (struct-get (array-get out result-len) r)))
   (label exit local-memory-free (return status)))
 
-(define (sp-fft-inverse result result-len source source-len)
-  (status-t sp-sample-t* b32 sp-sample-t* b32) sp-status-init
-  (local-memory-init 2) (define fftr-state kiss-fftr-cfg (kiss-fftr-alloc source-len #t 0 0))
+(define (sp-ifft result result-len source source-len) (status-t sp-sample-t* b32 sp-sample-t* b32)
+  sp-status-init (local-memory-init 2)
+  (define fftr-state kiss-fftr-cfg (kiss-fftr-alloc source-len #t 0 0))
   (if (not fftr-state) (status-set-id-goto sp-status-id-memory)) (local-memory-add fftr-state)
   (sp-define-malloc in kiss-fft-cpx* (* source-len (sizeof kiss-fft-cpx))) (local-memory-add in)
   (while source-len (dec source-len)
@@ -109,7 +109,7 @@
 (define (sp-sinc a) (f32-s f32-s)
   "the normalised sinc function" (return (if* (= 0 a) 1 (/ (sin (* M_PI a)) (* M_PI a)))))
 
-(define (sp-blackman a width) (f32-s f32-s size-t)
+(define (sp-window-blackman a width) (f32-s f32-s size-t)
   (return
     (+ (- 0.42 (* 0.5 (cos (/ (* 2 M_PI a) (- width 1)))))
       (* 0.8 (cos (/ (* 4 M_PI a) (- width 1)))))))
@@ -125,7 +125,7 @@
   "inverts the sign for samples at odd indexes.
   a-len must be odd and \"a\" must have left-right symmetry.
   flips the frequency response left to right"
-  (while a-len (set a-len (- a-len 2)) (set (deref a a-len) (* -1 (deref a a-len)))))
+  (while (> a-len 1) (set a-len (- a-len 2)) (set (deref a a-len) (* -1 (deref a a-len)))))
 
 (define (sp-convolve-one result a a-len b b-len)
   (b0 sp-sample-t* sp-sample-t* size-t sp-sample-t* size-t)
@@ -143,7 +143,7 @@
   (b0 sp-sample-t* sp-sample-t* size-t sp-sample-t* size-t sp-sample-t* size-t)
   "discrete linear convolution for segments of a continuous stream.
   result length is a-len.
-  carryover length is b-len"
+  carryover length is b-len or previous b-len"
   ; algorithm: copy results that overlap from previous call from carryover, add results that fit completely in result,
   ;   add results that overlap with next segment to carryover.
   ; previous values. carryover-len should differ if b-len changed between calls

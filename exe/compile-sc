@@ -7,9 +7,9 @@ format_c() {
 copy_example_config() {
   # the config file is not versioned so that users can customise it
   sc="$1"
-  if [ ! -f "$sc/config.sc" ]
+  if [ ! -f "$sc/main/config.sc" ]
   then
-    cp "$sc/config.sc.example" "$sc/config.sc"
+    cp "$sc/main/config.sc.example" "$sc/main/config.sc"
   fi
 }
 
@@ -31,17 +31,24 @@ compile_sc_libsph_sp() {
   # create the c source code
   copy_example_config "$sc" &&
   copy_submodules &&
-  sc "$sc/main.sc" "$c/main.c" &&
-  sc "$sc/sph-sp.sc" "$c/sph-sp.c" &&
+  sc "$sc/main/main.sc" "$c/main.c" &&
+  sc "$sc/main/sph-sp.sc" "$c/sph-sp.c" &&
   format_c "$c/main.c" &&
   format_c "$c/sph-sp.c"
 }
 
-export SC_LOAD_PATH="$PWD/source/sc/foreign"
+compile_sc_test() {
+  sc="$1"
+  c="$2"
+  sc "$sc/test/main.sc" "$c/test-main.c" &&
+  format_c "$c/test-main.c"
+}
 
+export SC_LOAD_PATH="$PWD/source/sc"
 c=source/c-precompiled
 sc=source/sc
 
 mkdir -p "$c" &&
 compile_sc_libsph_sp "$sc" "$c" &&
+compile_sc_test "$sc" "$c" &&
 chmod 644 "$c"/*

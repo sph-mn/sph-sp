@@ -19,7 +19,8 @@
             (sp-status-id-memory "not enough memory or other memory allocation error")
             (sp-status-id-file-incompatible
               "file exists but channel count or sample rate is different from what was requested")
-            (else ""))
+            (sp-status-id-file-incomplete "incomplete write")
+            (sp-status-id-port-type "incompatible port type") (else ""))
           b8*))
       (sp-status-group-alsa (convert-type (snd-strerror a.id) b8*)) (else (convert-type "" b8*)))))
 

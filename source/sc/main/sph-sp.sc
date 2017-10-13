@@ -5,13 +5,11 @@
 (define (sp-alloc-channel-data channel-count sample-count) (sp-sample-t** b32 b32))
 (define (sp-sin-lq a) (f32-s f32-s))
 (define (sp-sinc a) (f32-s f32-s))
-(define (sp-blackman a width) (f32-s f32-s size-t))
+(define (sp-window-blackman a width) (f32-s f32-s size-t))
 (define (sp-spectral-inversion-ir a a-len) (b0 sp-sample-t* size-t))
 (define (sp-spectral-reversal-ir a a-len) (b0 sp-sample-t* size-t))
 (define (sp-fft result result-len source source-len) (status-t sp-sample-t* b32 sp-sample-t* b32))
-
-(define (sp-fft-inverse result result-len source source-len)
-  (status-t sp-sample-t* b32 sp-sample-t* b32))
+(define (sp-ifft result result-len source source-len) (status-t sp-sample-t* b32 sp-sample-t* b32))
 
 (define (sp-moving-average result source source-len prev prev-len next next-len start end distance)
   (boolean sp-sample-t* sp-sample-t* b32 sp-sample-t* b32 sp-sample-t* b32 b32 b32 b32))
@@ -63,12 +61,12 @@
     (closed? boolean) (flags b8)
     (type b8) (position b64) (position-offset b16) (data b0*) (data-int int)))
 
-(pre-define sp-port-type-alsa 0 sp-port-type-file 1 sp-port-bit-input 1 sp-port-bit-position 2)
+(pre-define sp-port-type-alsa 0
+  sp-port-type-file 1 sp-port-bit-input 1 sp-port-bit-output 2 sp-port-bit-position 3)
+
 (define (sp-port-read result port sample-count) (status-t sp-sample-t** sp-port-t* b32))
 (define (sp-port-write port sample-count channel-data) (status-t sp-port-t* b32 sp-sample-t**))
-
-(define (sp-file-open result path input? channel-count sample-rate)
-  (status-t sp-port-t* b8* boolean b32-s b32-s))
+(define (sp-file-open result path channel-count sample-rate) (status-t sp-port-t* b8* b32-s b32-s))
 
 (define (sp-alsa-open result device-name input? channel-count sample-rate latency)
   (status-t sp-port-t* b8* boolean b32-s b32-s b32-s))

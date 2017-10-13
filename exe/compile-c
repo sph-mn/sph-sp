@@ -16,5 +16,11 @@ compile_libsph_sp() {
     -Isource/c/foreign/kissfft "$f"/kissfft/kiss_fft.c "$f"/kissfft/tools/kiss_fftr.c
 }
 
+compile_test() {
+  export LIBRARY_PATH="$PWD/temp"
+  gcc "$c/test-main.c" -o temp/test-libsph-sp -lsph-sp -lm $gcc_options
+}
+
 mkdir -p "$dir" &&
-compile_libsph_sp
+compile_libsph_sp &&
+compile_test
