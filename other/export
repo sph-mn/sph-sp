@@ -1,4 +1,21 @@
 exports {
-  global: init_sp;
+  global:
+    sp_sin_lq;
+    sp_sinc;
+    sp_window_blackman;
+    sp_spectral_inversion_ir;
+    sp_spectral_reversal_ir;
+    sp_fft;
+    sp_ifft;
+    sp_moving_average;
+    sp_convolve_one;
+    sp_convolve;
+    sp_sine;
+    sp_sine_lq;
+    sp_windowed_sinc_ir_length;
+    sp_windowed_sinc_ir;
+    sp_windowed_sinc_state_destroy;
+    sp_windowed_sinc_state_create;
+    sp_windowed_sinc;
   local: *;
 };

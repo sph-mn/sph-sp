@@ -1,19 +1,17 @@
-(sc-include-once sph "sph")
+;(sc-include-once sph "sph")
 
 (pre-include-once string-h "string.h"
   ; malloc
   stdlib-h "stdlib.h"
-  ; access
+  ; "access"
   unistd-h "unistd.h"
   ; mkdir
   sys-stat-h "sys/stat.h"
   ; dirname
-  libgen-h "libgen.h" errno-h "errno.h")
+  libgen-h "libgen.h" errno-h "errno.h" float-h "float.h")
 
 (pre-define (file-exists? path) (not (equal? (access path F-OK) -1)))
 (pre-define (pointer-equal? a b) (= (convert-type a b0*) (convert-type b b0*)))
-(pre-define (increment a) (set a (+ 1 a)))
-(pre-define (decrement a) (set a (- a 1)))
 
 (define (ensure-trailing-slash a result) (b8 b8* b8**)
   "set result to a new string with a trailing slash added, or the given string if it already has a trailing slash.
@@ -46,3 +44,24 @@
   (define b-length size-t (strlen b)) (define result b8* (malloc (+ 1 a-length b-length)))
   (if result (begin (memcpy result a a-length) (memcpy (+ result a-length) b (+ 1 b-length))))
   (return result))
+
+(define (float-sum numbers len) (f32-s f32-s* b32)
+  "sum numbers with rounding error compensation using kahan summation with neumaier modification"
+  (define temp f32-s element f32-s) (define correction f32-s 0)
+  (set len (- len 1)) (define result f32-s (deref numbers len))
+  (while len (set len (- len 1))
+    (set element (deref numbers len)) (set temp (+ result element))
+    (set correction
+      (+ correction
+        (if* (>= result element) (+ (- result temp) element) (+ (- element temp) result)))
+      result temp))
+  (return (+ correction result)))
+
+(define (float-nearly-equal? a b margin) (boolean f32-s f32-s f32-s)
+  "approximate float comparison. margin is a factor and is low for low accepted differences.
+   http://floating-point-gui.de/errors/comparison/"
+  (if (= a b) (return #t)
+    (begin (define diff f32-s (fabs (- a b)))
+      (return
+        (if* (or (= 0 a) (= 0 b) (< diff DBL_MIN)) (< diff (* margin DBL_MIN))
+          (< (/ diff (fmin (+ (fabs a) (fabs b)) DBL_MAX)) margin))))))

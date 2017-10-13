@@ -1,7 +1,14 @@
-#!/usr/bin/guile
-!#
+#!/bin/sh
 
-(import (sph install))
+# usage: ./exe/install [path-prefix]
 
-(install-cli-guile ("/usr/lib" "temp/libguile-sph-sp.so")
-  (path-lib-scheme "source/scheme/sph" "source/scheme/test"))
+prefix="$1"
+a="temp/libsph-sp.so"
+b="source/c-precompiled/sph-sp.c"
+a_dest="$prefix/usr/lib"
+b_dest="$prefix/usr/include"
+
+mkdir -p "$a_dest" "$b_dest" &&
+cp -t "$a_dest" "$a" &&
+cp -t "$b_dest" $b &&
+chmod 644 "$a_dest/libsph-sp.so" "$b_dest/sph-sp.c"

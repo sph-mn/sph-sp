@@ -22,7 +22,7 @@ copy_submodules() {
   mkdir -p "$f/sph" &&
   cp --update --target-directory="$f" "$a/sph.sc" &&
   cp --update --target-directory="$f/sph" \
-    "$b/status.sc" "$b/guile.sc" "$b/one.sc" "$b/local-memory.sc"
+    "$b/status.sc" "$b/one.sc" "$b/local-memory.sc"
 }
 
 export SC_LOAD_PATH="$PWD/source/sc/foreign"

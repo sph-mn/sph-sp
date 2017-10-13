@@ -1,10 +1,11 @@
-(sc-include-once sph "foreign/sph" sp-config "config")
+(sc-include "sph-sp")
 (pre-define kiss-fft-scalar sp-sample-t)
 
 (pre-include-once stdio-h "stdio.h"
-  libguile-h "libguile.h"
   kiss-fft-h "foreign/kissfft/kiss_fft.h"
-  kiss-fftr-h "foreign/kissfft/tools/kiss_fftr.h" fcntl-h "fcntl.h" asoundlib-h "alsa/asoundlib.h")
+  kiss-fftr-h "foreign/kissfft/tools/kiss_fftr.h" fcntl-h "fcntl.h")
+
+(sc-include "foreign/sph/one" "foreign/sph/local-memory")
 
 (pre-define (sp-define-malloc id type size) (define id type (malloc size))
   (if (not id) (status-set-both-goto sp-status-group-sp sp-status-id-memory)))
@@ -17,45 +18,8 @@
 
 (pre-define (inc a) (set a (+ 1 a)))
 (pre-define (dec a) (set a (- a 1)))
-(pre-define (octets->samples a) (/ a (sizeof sp-sample-t)))
-(pre-define (samples->octets a) (* a (sizeof sp-sample-t)))
 
-(sc-include-once sph-one "foreign/sph/one"
-  guile "foreign/sph/guile"
-  sph-status "foreign/sph/status"
-  sph-local-memory "foreign/sph/local-memory" sp-status "status" sp-io "io")
-
-(pre-define (optional-samples a a-len scm)
-  (if (scm-is-true scm)
-    (set a (convert-type (SCM-BYTEVECTOR-CONTENTS scm) sp-sample-t*)
-      a-len (octets->samples (SCM-BYTEVECTOR-LENGTH scm)))
-    (set a 0 a-len 0)))
-
-(pre-define (optional-index a default)
-  (if* (and (not (scm-is-undefined start)) (scm-is-true start)) (scm->uint32 a) default))
-
-(define scm-type-sp-state SCM)
-(pre-define sp-state-type-windowed-sinc 0)
-
-(define (scm-sp-state-create pointer sp-state-type) (SCM b0* b8)
-  "sp-state type for storing arbitrary pointers"
-  ; did not work without local variable and gcc optimisation level 3
-  (define result SCM (scm-new-smob scm-type-sp-state (convert-type pointer scm-t-bits)))
-  (SCM-SET-SMOB-FLAGS result (convert-type sp-state-type scm-t-bits)) (return result))
-
-(define (scm-sp-state-free a) (size-t SCM)
-  (define type b8 (SCM-SMOB-FLAGS a))
-  (case = type
-    (sp-state-type-windowed-sinc (sp-windowed-sinc-state-destroy (scm-sp-state->pointer a))))
-  (return 0))
-
-(scm-set-smob-free scm-type-sp-state scm-sp-state-free)
-(pre-define (scm-sp-state->pointer a) (SCM-SMOB-DATA a))
-
-(define (scm-sp-state? a) (SCM SCM)
-  (return (scm-from-bool (SCM-SMOB-PREDICATE scm-type-sp-state a))))
-
-(define (sin-lq a) (f32-s f32-s)
+(define (sp-sin-lq a) (f32-s f32-s)
   "lower precision version of sin() that is faster to compute" (define b f32-s (/ 4 M_PI))
   (define c f32-s (/ -4 (* M_PI M_PI))) (return (- (+ (* b a) (* c a (abs a))))))
 
@@ -78,27 +42,6 @@
   (while source-len (dec source-len)
     (struct-set (array-get in source-len) r (deref source (* source-len (sizeof sp-sample-t)))))
   (kiss-fftri fftr-state in result) (label exit local-memory-free (return status)))
-
-(define (float-sum numbers len) (f32-s f32-s* b32)
-  "sum numbers with rounding error compensation using kahan summation with neumaier modification"
-  (define temp f32-s element f32-s) (define correction f32-s 0)
-  (dec len) (define result f32-s (deref numbers len))
-  (while len (dec len)
-    (set element (deref numbers len)) (set temp (+ result element))
-    (set correction
-      (+ correction
-        (if* (>= result element) (+ (- result temp) element) (+ (- element temp) result)))
-      result temp))
-  (return (+ correction result)))
-
-(define (float-nearly-equal? a b margin) (boolean f32-s f32-s f32-s)
-  "approximate float comparison. margin is a factor and is low for low accepted differences.
-   http://floating-point-gui.de/errors/comparison/"
-  (if (= a b) (return #t)
-    (begin (define diff f32-s (fabs (- a b)))
-      (return
-        (if* (or (= 0 a) (= 0 b) (< diff DBL_MIN)) (< diff (* margin DBL_MIN))
-          (< (/ diff (fmin (+ (fabs a) (fabs b)) DBL_MAX)) margin))))))
 
 (define (sp-moving-average result source source-len prev prev-len next next-len start end distance)
   (boolean sp-sample-t* sp-sample-t* b32 sp-sample-t* b32 sp-sample-t* b32 b32 b32 b32)
@@ -149,7 +92,7 @@
     (inc result) (inc start))
   (free window) (return 0))
 
-(define (sinc a) (f32-s f32-s)
+(define (sp-sinc a) (f32-s f32-s)
   "the normalised sinc function" (return (if* (= 0 a) 1 (/ (sin (* M_PI a)) (* M_PI a)))))
 
 (define (sp-blackman a width) (f32-s f32-s size-t)
@@ -182,15 +125,16 @@
       (inc b-index))
     (set b-index 0) (inc a-index)))
 
-(define (sp-convolve result a a-len b b-len carryover b-len-prev)
+(define (sp-convolve result a a-len b b-len carryover carryover-len)
   (b0 sp-sample-t* sp-sample-t* size-t sp-sample-t* size-t sp-sample-t* size-t)
   "discrete linear convolution for segments of a continuous stream.
   result length is a-len.
   carryover length is b-len"
   ; algorithm: copy results that overlap from previous call from carryover, add results that fit completely in result,
   ;   add results that overlap with next segment to carryover.
-  ; previous values. b-len-prev should differ if b-len changed between calls
-  (while b-len-prev (dec b-len-prev) (set (deref result b-len-prev) (deref carryover b-len-prev)))
+  ; previous values. carryover-len should differ if b-len changed between calls
+  (while carryover-len (dec carryover-len)
+    (set (deref result carryover-len) (deref carryover carryover-len)))
   ; result values
   (define size size-t) (set size (if* (> a-len b-len) a-len (- a-len b-len)))
   (sp-convolve-one result a size b b-len)
@@ -205,173 +149,16 @@
       (inc b-index))
     (set b-index 0) (inc a-index)))
 
-(define (scm-sp-convolve! result a b carryover b-len-prev) (SCM SCM SCM SCM SCM SCM)
-  "state: (size . data)" (define a-len b32 (octets->samples (SCM-BYTEVECTOR-LENGTH a)))
-  (define b-len b32 (octets->samples (SCM-BYTEVECTOR-LENGTH b)))
-  (sp-convolve (convert-type (SCM-BYTEVECTOR-CONTENTS result) sp-sample-t*)
-    (convert-type (SCM-BYTEVECTOR-CONTENTS a) sp-sample-t*) a-len
-    (convert-type (SCM-BYTEVECTOR-CONTENTS b) sp-sample-t*) b-len
-    (convert-type (SCM-BYTEVECTOR-CONTENTS carryover) sp-sample-t*) (scm->size-t b-len-prev))
-  (return SCM-UNSPECIFIED))
-
-(define (scm-sp-fft source) (SCM SCM)
-  status-init (define result-len b32 (/ (* 3 (SCM-BYTEVECTOR-LENGTH source)) 2))
-  (define result SCM (scm-make-f32vector (scm-from-uint32 result-len) (scm-from-uint8 0)))
-  (status-require!
-    (sp-fft (convert-type (SCM-BYTEVECTOR-CONTENTS result) sp-sample-t*) result-len
-      (convert-type (SCM-BYTEVECTOR-CONTENTS source) sp-sample-t*) (SCM-BYTEVECTOR-LENGTH source)))
-  (label exit (status->scm-return result)))
-
-(define (scm-sp-fft-inverse source) (SCM SCM)
-  status-init (define result-len b32 (* (- (SCM-BYTEVECTOR-LENGTH source) 1) 2))
-  (define result SCM (scm-make-f32vector (scm-from-uint32 result-len) (scm-from-uint8 0)))
-  (status-require!
-    (sp-fft-inverse (convert-type (SCM-BYTEVECTOR-CONTENTS result) sp-sample-t*) result-len
-      (convert-type (SCM-BYTEVECTOR-CONTENTS source) sp-sample-t*) (SCM-BYTEVECTOR-LENGTH source)))
-  (label exit (status->scm-return result)))
-
-(define (scm-sp-moving-average! result source scm-prev scm-next distance start end)
-  (SCM SCM SCM SCM SCM SCM SCM SCM)
-  (define source-len b32 (octets->samples (SCM-BYTEVECTOR-LENGTH source)))
-  (define prev sp-sample-t* prev-len b32 next sp-sample-t* next-len b32)
-  (optional-samples prev prev-len scm-prev) (optional-samples next next-len scm-next)
-  (sp-moving-average (convert-type (SCM-BYTEVECTOR-CONTENTS result) sp-sample-t*)
-    (convert-type (SCM-BYTEVECTOR-CONTENTS source) sp-sample-t*) source-len
-    prev prev-len
-    next next-len
-    (optional-index start 0) (optional-index end (- source-len 1)) (scm->uint32 distance))
-  (return SCM-UNSPECIFIED))
-
-(define (scm-float-nearly-equal? a b margin) (SCM SCM SCM SCM)
-  (return
-    (scm-from-bool (float-nearly-equal? (scm->double a) (scm->double b) (scm->double margin)))))
-
-(define (scm-f32vector-sum a start end) (SCM SCM SCM SCM)
-  (return
-    (scm-from-double
-      (float-sum
-        (+ (if* (scm-is-undefined start) 0 (scm->uint32 start))
-          (convert-type (SCM-BYTEVECTOR-CONTENTS a) f32-s*))
-        (* (if* (scm-is-undefined end) (SCM-BYTEVECTOR-LENGTH a) (- end (+ 1 start)))
-          (sizeof f32-s))))))
-
 (sc-comment
   "write samples for a sine wave into data between start at end.
-  also defines scm-sp-sine!, scm-sp-sine-lq!")
+ defines sp-sine, sp-sine-lq")
 
-(pre-define (define-sp-sine! id sin)
+(pre-define (define-sp-sine id sin)
   (define (id data start end sample-duration freq phase amp)
     (b0 sp-sample-t* b32 b32 f32_s f32_s f32_s f32_s)
     (while (<= start end) (set (deref data start) (* amp (sin (* freq phase sample-duration))))
-      (inc phase) (inc start)))
-  (define ((pre-concat scm_ id) data start end sample-duration freq phase amp)
-    (SCM SCM SCM SCM SCM SCM SCM SCM)
-    (id (convert-type (SCM-BYTEVECTOR-CONTENTS data) sp-sample-t*) (scm->uint32 start)
-      (scm->uint32 end) (scm->double sample-duration)
-      (scm->double freq) (scm->double phase) (scm->double amp))
-    (return SCM-UNSPECIFIED)))
+      (inc phase) (inc start))))
 
-(define-sp-sine! sp-sine! sin)
-(define-sp-sine! sp-sine-lq! sin-lq)
-(sc-include "windowed-sinc")
-
-(define (init-sp) b0
-  sp-port-scm-type-init (define scm-module SCM (scm-c-resolve-module "sph sp"))
-  (set scm-type-sp-state (scm-make-smob-type "sp-state" #t)
-    scm-sp-port-type-alsa (scm-from-latin1-symbol "alsa")
-    scm-sp-port-type-file (scm-from-latin1-symbol "file")
-    scm-rnrs-raise (scm-c-public-ref "rnrs exceptions" "raise"))
-  (scm-c-module-define scm-module "sp-port-type-alsa" scm-sp-port-type-alsa)
-  (scm-c-module-define scm-module "sp-port-type-file" scm-sp-port-type-file)
-  scm-c-define-procedure-c-init
-  (scm-c-define-procedure-c "sp-port-close" 1 0 0 scm-sp-port-close "sp-port -> boolean")
-  (scm-c-define-procedure-c "sp-port-input?" 1 0 0 scm-sp-port-input? "sp-port -> boolean")
-  (scm-c-define-procedure-c "sp-port-position?" 1 0 0 scm-sp-port-position? "sp-port -> boolean")
-  (scm-c-define-procedure-c "sp-port-position" 1
-    0 0 scm-sp-port-position "sp-port -> integer/boolean")
-  (scm-c-define-procedure-c "sp-port-channel-count" 1
-    0 0 scm-sp-port-channel-count "sp-port -> integer")
-  (scm-c-define-procedure-c "sp-port-sample-rate" 1
-    0 0 scm-sp-port-sample-rate "sp-port -> integer/boolean")
-  (scm-c-define-procedure-c "sp-port?" 1 0 0 scm-sp-port? "sp-port -> boolean")
-  (scm-c-define-procedure-c "sp-port-type" 1 0 0 scm-sp-port-type "sp-port -> integer")
-  (scm-c-define-procedure-c "sp-file-open-input" 1
-    2 0 scm-sp-file-open-input
-    "string -> sp-port
-    path -> sp-port")
-  (scm-c-define-procedure-c "sp-file-open-output" 1
-    2 0
-    scm-sp-file-open-output
-    "string [integer integer] -> sp-port
-    path [channel-count sample-rate] -> sp-port")
-  (scm-c-define-procedure-c "sp-file-write" 2
-    1 0
-    scm-sp-file-write
-    "sp-port (f32vector ...):channel-data [integer:sample-count] -> boolean
-    write sample data to the channels of a file port")
-  (scm-c-define-procedure-c "sp-file-set-position" 2
-    0 0
-    scm-sp-file-set-position
-    "sp-port integer:sample-offset -> boolean
-    sample-offset can be negative, in which case it is from the end of the file")
-  (scm-c-define-procedure-c "sp-file-read" 2
-    0 0 scm-sp-file-read "sp-port integer:sample-count -> (f32vector ...):channel-data")
-  (scm-c-define-procedure-c "sp-alsa-open-input" 0
-    4 0
-    scm-sp-alsa-open-input
-    "[string integer integer integer] -> sp-port
-    [device-name channel-count sample-rate latency] -> sp-port")
-  (scm-c-define-procedure-c "sp-alsa-open-output" 0
-    4 0
-    scm-sp-alsa-open-output
-    "[string integer integer integer] -> sp-port
-    [device-name channel-count sample-rate latency] -> sp-port")
-  (scm-c-define-procedure-c "sp-alsa-write" 2
-    1 0
-    scm-sp-alsa-write
-    "sp-port (f32vector ...):channel-data [integer:sample-count] -> boolean
-    write sample data to the channels of an alsa port - to the sound card for sound output for example")
-  (scm-c-define-procedure-c "sp-alsa-read" 2
-    0 0 scm-sp-alsa-read
-    "port sample-count -> channel-data
-    sp-port integer -> (f32vector ...)")
-  (scm-c-define-procedure-c "sp-fft" 1
-    0 0
-    scm-sp-fft
-    "f32vector:value-per-time -> f32vector:frequencies-per-time
-    discrete fourier transform on the input data")
-  (scm-c-define-procedure-c "sp-fft-inverse" 1
-    0 0
-    scm-sp-fft-inverse
-    "f32vector:frequencies-per-time -> f32vector:value-per-time
-    inverse discrete fourier transform on the input data")
-  (scm-c-define-procedure-c "sp-sine!" 7
-    0 0
-    scm-sp-sine!
-    "data start end sample-duration freq phase amp -> unspecified
-    f32vector integer integer rational rational rational rational")
-  (scm-c-define-procedure-c "sp-sine-lq!" 7
-    0 0
-    scm-sp-sine-lq!
-    "data start end sample-duration freq phase amp -> unspecified
-    f32vector integer integer rational rational rational rational
-    faster, lower precision version of sp-sine!.
-    currently faster by a factor of about 2.6")
-  (scm-c-define-procedure-c "sp-moving-average!" 5
-    2 0
-    scm-sp-moving-average!
-    "result source previous next distance [start end] -> unspecified
-  f32vector f32vector f32vector f32vector integer integer integer [integer]")
-  (scm-c-define-procedure-c "sp-windowed-sinc!" 7
-    2 0
-    scm-sp-windowed-sinc!
-    "result source previous next sample-rate freq transition [start end] -> unspecified
-    f32vector f32vector f32vector f32vector number number integer integer -> boolean")
-  (scm-c-define-procedure-c "f32vector-sum" 1
-    2 0 scm-f32vector-sum "f32vector [start end] -> number")
-  (scm-c-define-procedure-c "float-nearly-equal?" 3
-    0 0 scm-float-nearly-equal?
-    "a b margin -> boolean
-    number number number -> boolean")
-  (scm-c-define-procedure-c "sp-convolve!" 3
-    0 0 scm-sp-convolve! "a b state:(integer . f32vector) -> state"))
+(define-sp-sine sp-sine sin)
+(define-sp-sine sp-sine-lq sp-sin-lq)
+(sc-include "windowed-sinc" "io")

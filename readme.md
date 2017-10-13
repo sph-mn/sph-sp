@@ -1,14 +1,22 @@
 # sph-sp
-digital sound processing with scheme, guile, alsa and au format files
+basic utilities for digital sound processing as a shared library and c code.
+reference implementation for learning and, with some extra testing, practical usage.
+prefers higher precision to faster calculation.
 
 # features
-* input/output ports for sound data
+* generic input/output port for sound data for alsa and au format files
 * 32 bit float samples
+* convolution function
+* windowed sinc filter
+* moving average filter
+* processors work for segments from continous streams
+* avoids and compensates for rounding errors
+* sample format customisable to some extent
 
 # dependencies
 * run-time
-  * guile >= 2.2
   * alsa
+  * libc
 * quick build
   * gcc and shell for the provided compile script
 * development build
@@ -22,5 +30,5 @@ digital sound processing with scheme, guile, alsa and au format files
 
 # usage
 ```
-(import (sph sp))
+#include <sph-sp.c>
 ```

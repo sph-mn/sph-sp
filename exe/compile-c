@@ -2,13 +2,13 @@
 
 optimisation=0
 warnings="-Wunused-label -Wunused-value -Wunused-variable"
-gcc_options="-Wfatal-errors $warnings -O$optimisation $(guile-config link) -lasound"
+gcc_options="-Wfatal-errors $warnings -O$optimisation -lasound"
 c=source/c-precompiled
 dir=temp
-file="$dir/libguile-sph-sp.so"
+file="$dir/libsph-sp.so"
 source="$c/main.c"
 
-compile_libguile_sph_sp() {
+compile_libsph_sp() {
   f=source/c/foreign
   gcc -Wl,--version-script=other/export -shared -fpic "$source" -o "$file" \
     $gcc_options \
@@ -17,4 +17,4 @@ compile_libguile_sph_sp() {
 }
 
 mkdir -p "$dir" &&
-compile_libguile_sph_sp
+compile_libsph_sp
