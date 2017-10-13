@@ -16,8 +16,22 @@
 (pre-define (sp-define-calloc id type size) (define id type (calloc size 1))
   (if (not id) (status-set-both-goto sp-status-group-sp sp-status-id-memory)))
 
+(pre-define (sp-set-calloc id size) (set id (calloc size 1))
+  (if (not id) (status-set-both-goto sp-status-group-sp sp-status-id-memory)))
+
 (pre-define (inc a) (set a (+ 1 a)))
 (pre-define (dec a) (set a (- a 1)))
+
+(define (sp-alloc-channel-data channel-count sample-count) (sp-sample-t** b32 b32)
+  "zero if memory could not be allocated" (local-memory-init (+ channel-count 1))
+  (define result sp-sample-t** (malloc (* channel-count (sizeof sp-sample-t*))))
+  (if (not result) (return 0)) (local-memory-add result)
+  (define channel sp-sample-t*)
+  (while channel-count (dec channel-count)
+    (set channel (calloc (* sample-count (sizeof sp-sample-t)) 1)) (local-memory-add channel)
+    (if (not channel) (begin local-memory-free (return 0)))
+    (set (deref result channel-count) channel))
+  (return result))
 
 (define (sp-sin-lq a) (f32-s f32-s)
   "lower precision version of sin() that is faster to compute" (define b f32-s (/ 4 M_PI))

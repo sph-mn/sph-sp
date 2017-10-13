@@ -163,8 +163,13 @@ b8 *sp_status_name(status_t a) {
   if (status_failure_p) {                                                      \
     status_set_group_goto(sp_status_group_alsa);                               \
   }
+#define sp_status_require_alloc(a)                                             \
+  if (!a) {                                                                    \
+    status_set_both_goto(sp_status_group_sp, sp_status_id_memory);             \
+  }
 #define sp_octets_to_samples(a) (a / sizeof(sp_sample_t))
 #define sp_samples_to_octets(a) (a * sizeof(sp_sample_t))
+sp_sample_t **sp_alloc_channel_data(b32 channel_count, b32 sample_count);
 f32_s sp_sin_lq(f32_s a);
 f32_s sp_sinc(f32_s a);
 f32_s sp_blackman(f32_s a, size_t width);
@@ -211,6 +216,29 @@ b8 sp_windowed_sinc_state_create(b32 sample_rate, f32_s freq, f32_s transition,
 status_i_t sp_windowed_sinc(sp_sample_t *result, sp_sample_t *source,
                             size_t source_len, b32 sample_rate, f32_s freq,
                             f32_s transition, sp_windowed_sinc_state_t **state);
+typedef struct {
+  b32 sample_rate;
+  b32 channel_count;
+  boolean closed_p;
+  b8 flags;
+  b8 type;
+  b64 position;
+  b16 position_offset;
+  b0 *data;
+  int data_int;
+} sp_port_t;
+#define sp_port_type_alsa 0
+#define sp_port_type_file 1
+#define sp_port_bit_input 1
+#define sp_port_bit_position 2
+status_t sp_port_read(sp_sample_t **result, sp_port_t *port, b32 sample_count);
+status_t sp_port_write(sp_port_t *port, b32 sample_count,
+                       sp_sample_t **channel_data);
+status_t sp_file_open(sp_port_t *result, b8 *path, boolean input_p,
+                      b32_s channel_count, b32_s sample_rate);
+status_t sp_alsa_open(sp_port_t *result, b8 *device_name, boolean input_p,
+                      b32_s channel_count, b32_s sample_rate, b32_s latency);
+status_t sp_port_close(sp_port_t *a);
 #define kiss_fft_scalar sp_sample_t
 #ifndef sc_included_stdio_h
 #include <stdio.h>
@@ -379,8 +407,34 @@ boolean float_nearly_equal_p(f32_s a, f32_s b, f32_s margin) {
   if (!id) {                                                                   \
     status_set_both_goto(sp_status_group_sp, sp_status_id_memory);             \
   }
+#define sp_set_calloc(id, size)                                                \
+  id = calloc(size, 1);                                                        \
+  if (!id) {                                                                   \
+    status_set_both_goto(sp_status_group_sp, sp_status_id_memory);             \
+  }
 #define inc(a) a = (1 + a)
 #define dec(a) a = (a - 1)
+/** zero if memory could not be allocated */
+sp_sample_t **sp_alloc_channel_data(b32 channel_count, b32 sample_count) {
+  local_memory_init((channel_count + 1));
+  sp_sample_t **result = malloc((channel_count * sizeof(sp_sample_t *)));
+  if (!result) {
+    return (0);
+  };
+  local_memory_add(result);
+  sp_sample_t *channel;
+  while (channel_count) {
+    dec(channel_count);
+    channel = calloc((sample_count * sizeof(sp_sample_t)), 1);
+    local_memory_add(channel);
+    if (!channel) {
+      local_memory_free;
+      return (0);
+    };
+    (*(result + channel_count)) = channel;
+  };
+  return (result);
+};
 /** lower precision version of sin() that is faster to compute */
 f32_s sp_sin_lq(f32_s a) {
   f32_s b = (4 / M_PI);
@@ -794,21 +848,7 @@ define_sp_interleave(sp_deinterleave_and_reverse_endian, sp_sample_t, {
   if ((a < 0)) {                                                               \
     a = default;                                                               \
   }
-/* sp-port abstracts different output targets and formats */ typedef struct {
-  b32 sample_rate;
-  b32 channel_count;
-  boolean closed_p;
-  b8 flags;
-  b8 type;
-  b64 position;
-  b16 position_offset;
-  b0 *data;
-  int data_int;
-} sp_port_t;
-#define sp_port_type_alsa 0
-#define sp_port_type_file 1
-#define sp_port_bit_input 1
-#define sp_port_bit_position 2
+/* sp-port abstracts different output targets and formats */
 /** integer integer integer integer integer pointer integer -> sp-port
    flags is a combination of sp-port-bits */
 status_t sp_port_create(sp_port_t *result, b8 type, b8 flags, b32 sample_rate,
@@ -827,22 +867,6 @@ status_t sp_port_create(sp_port_t *result, b8 type, b8 flags, b32 sample_rate,
   (*result).data_int = data_int;
   (*result).position = 0;
   (*result).position_offset = position_offset;
-exit:
-  return (status);
-};
-status_t scm_sp_port_close(sp_port_t *a) {
-  status_init;
-  if ((*a).closed_p) {
-    goto exit;
-  };
-  if ((sp_port_type_alsa == (*a).type)) {
-    sp_alsa_status_require_x(snd_pcm_close(((snd_pcm_t *)((*a).data))));
-  } else {
-    if ((sp_port_type_file == (*a).type)) {
-      sp_system_status_require_x(close((*a).data_int));
-    };
-  };
-  (*a).closed_p = 1;
 exit:
   return (status);
 };
@@ -983,7 +1007,7 @@ exit:
   return (status);
 }; /* -- alsa */
 /** open alsa sound output for capture or playback */
-status_t sp_alsa_open(sp_port_t *result, boolean input_p, b8 *device_name,
+status_t sp_alsa_open(sp_port_t *result, b8 *device_name, boolean input_p,
                       b32_s channel_count, b32_s sample_rate, b32_s latency) {
   status_init;
   if (!device_name) {
@@ -1031,6 +1055,41 @@ status_t sp_alsa_read(sp_sample_t **result, sp_port_t *port, b32 sample_count) {
   if (((frames_read < 0) && (snd_pcm_recover(alsa_port, frames_read, 0) < 0))) {
     status_set_both_goto(sp_status_group_alsa, frames_read);
   };
+exit:
+  return (status);
+};
+status_t sp_port_read(sp_sample_t **result, sp_port_t *port, b32 sample_count) {
+  if ((sp_port_type_file == (*port).type)) {
+    return (sp_file_read(result, port, sample_count));
+  } else {
+    if ((sp_port_type_alsa == (*port).type)) {
+      return (sp_alsa_read(result, port, sample_count));
+    };
+  };
+};
+status_t sp_port_write(sp_port_t *port, b32 sample_count,
+                       sp_sample_t **channel_data) {
+  if ((sp_port_type_file == (*port).type)) {
+    return (sp_file_write(port, sample_count, channel_data));
+  } else {
+    if ((sp_port_type_alsa == (*port).type)) {
+      return (sp_alsa_write(port, sample_count, channel_data));
+    };
+  };
+};
+status_t sp_port_close(sp_port_t *a) {
+  status_init;
+  if ((*a).closed_p) {
+    goto exit;
+  };
+  if ((sp_port_type_alsa == (*a).type)) {
+    sp_alsa_status_require_x(snd_pcm_close(((snd_pcm_t *)((*a).data))));
+  } else {
+    if ((sp_port_type_file == (*a).type)) {
+      sp_system_status_require_x(close((*a).data_int));
+    };
+  };
+  (*a).closed_p = 1;
 exit:
   return (status);
 };

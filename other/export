@@ -1,5 +1,6 @@
 exports {
   global:
+    sp_alloc_channel_data;
     sp_sin_lq;
     sp_sinc;
     sp_window_blackman;
@@ -17,5 +18,10 @@ exports {
     sp_windowed_sinc_state_destroy;
     sp_windowed_sinc_state_create;
     sp_windowed_sinc;
+    sp_port_read;
+    sp_port_write;
+    sp_port_close;
+    sp_file_open;
+    sp_alsa_open;
   local: *;
 };

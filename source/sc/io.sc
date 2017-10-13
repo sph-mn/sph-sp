@@ -44,17 +44,6 @@
 (pre-define (set-optional-number a default) (if (< a 0) (set a default)))
 (sc-comment "sp-port abstracts different output targets and formats")
 
-(define-type sp-port-t
-  ; generic input/output port handle.
-  ; type: any of sp-port-type-* value
-  ; position?: true if the port supports random access
-  ; position-offset: header length
-  (struct (sample-rate b32) (channel-count b32)
-    (closed? boolean) (flags b8)
-    (type b8) (position b64) (position-offset b16) (data b0*) (data-int int)))
-
-(pre-define sp-port-type-alsa 0 sp-port-type-file 1 sp-port-bit-input 1 sp-port-bit-position 2)
-
 (define (sp-port-create result type flags sample-rate channel-count position-offset data data-int)
   (status-t sp-port-t* b8 b8 b32 b32 b16 b0* int)
   "integer integer integer integer integer pointer integer -> sp-port
@@ -66,15 +55,6 @@
     sample-rate type
     type flags flags data data data-int data-int position 0 position-offset position-offset)
   (label exit (return status)))
-
-(define (scm-sp-port-close a) (status-t sp-port-t*)
-  status-init (if (struct-pointer-get a closed?) (goto exit))
-  (case = (struct-pointer-get a type)
-    (sp-port-type-alsa
-      (sp-alsa-status-require!
-        (snd-pcm-close (convert-type (struct-pointer-get a data) snd-pcm-t*))))
-    (sp-port-type-file (sp-system-status-require! (close (struct-pointer-get a data-int)))))
-  (struct-pointer-set a closed? #t) (label exit (return status)))
 
 (define (sp-port-position? a) (boolean sp-port-t*)
   (return (bit-and sp-port-bit-position (struct-pointer-get a flags))))
@@ -160,8 +140,8 @@
 
 (sc-comment "-- alsa")
 
-(define (sp-alsa-open result input? device-name channel-count sample-rate latency)
-  (status-t sp-port-t* boolean b8* b32-s b32-s b32-s)
+(define (sp-alsa-open result device-name input? channel-count sample-rate latency)
+  (status-t sp-port-t* b8* boolean b32-s b32-s b32-s)
   "open alsa sound output for capture or playback" status-init
   ; defaults
   (if (not device-name) (set device-name "default"))
@@ -198,3 +178,22 @@
   (if (and (< frames-read 0) (< (snd-pcm-recover alsa-port frames-read 0) 0))
     (status-set-both-goto sp-status-group-alsa frames-read))
   (label exit (return status)))
+
+(define (sp-port-read result port sample-count) (status-t sp-sample-t** sp-port-t* b32)
+  (case = (struct-pointer-get port type)
+    (sp-port-type-file (return (sp-file-read result port sample-count)))
+    (sp-port-type-alsa (return (sp-alsa-read result port sample-count)))))
+
+(define (sp-port-write port sample-count channel-data) (status-t sp-port-t* b32 sp-sample-t**)
+  (case = (struct-pointer-get port type)
+    (sp-port-type-file (return (sp-file-write port sample-count channel-data)))
+    (sp-port-type-alsa (return (sp-alsa-write port sample-count channel-data)))))
+
+(define (sp-port-close a) (status-t sp-port-t*)
+  status-init (if (struct-pointer-get a closed?) (goto exit))
+  (case = (struct-pointer-get a type)
+    (sp-port-type-alsa
+      (sp-alsa-status-require!
+        (snd-pcm-close (convert-type (struct-pointer-get a data) snd-pcm-t*))))
+    (sp-port-type-file (sp-system-status-require! (close (struct-pointer-get a data-int)))))
+  (struct-pointer-set a closed? #t) (label exit (return status)))

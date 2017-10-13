@@ -163,8 +163,13 @@ b8 *sp_status_name(status_t a) {
   if (status_failure_p) {                                                      \
     status_set_group_goto(sp_status_group_alsa);                               \
   }
+#define sp_status_require_alloc(a)                                             \
+  if (!a) {                                                                    \
+    status_set_both_goto(sp_status_group_sp, sp_status_id_memory);             \
+  }
 #define sp_octets_to_samples(a) (a / sizeof(sp_sample_t))
 #define sp_samples_to_octets(a) (a * sizeof(sp_sample_t))
+sp_sample_t **sp_alloc_channel_data(b32 channel_count, b32 sample_count);
 f32_s sp_sin_lq(f32_s a);
 f32_s sp_sinc(f32_s a);
 f32_s sp_blackman(f32_s a, size_t width);
@@ -211,3 +216,26 @@ b8 sp_windowed_sinc_state_create(b32 sample_rate, f32_s freq, f32_s transition,
 status_i_t sp_windowed_sinc(sp_sample_t *result, sp_sample_t *source,
                             size_t source_len, b32 sample_rate, f32_s freq,
                             f32_s transition, sp_windowed_sinc_state_t **state);
+typedef struct {
+  b32 sample_rate;
+  b32 channel_count;
+  boolean closed_p;
+  b8 flags;
+  b8 type;
+  b64 position;
+  b16 position_offset;
+  b0 *data;
+  int data_int;
+} sp_port_t;
+#define sp_port_type_alsa 0
+#define sp_port_type_file 1
+#define sp_port_bit_input 1
+#define sp_port_bit_position 2
+status_t sp_port_read(sp_sample_t **result, sp_port_t *port, b32 sample_count);
+status_t sp_port_write(sp_port_t *port, b32 sample_count,
+                       sp_sample_t **channel_data);
+status_t sp_file_open(sp_port_t *result, b8 *path, boolean input_p,
+                      b32_s channel_count, b32_s sample_rate);
+status_t sp_alsa_open(sp_port_t *result, b8 *device_name, boolean input_p,
+                      b32_s channel_count, b32_s sample_rate, b32_s latency);
+status_t sp_port_close(sp_port_t *a);

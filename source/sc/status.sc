@@ -44,3 +44,6 @@
 
 (pre-define (sp-alsa-status-require! expression) (status-set-id expression)
   (if status-failure? (status-set-group-goto sp-status-group-alsa)))
+
+(pre-define (sp-status-require-alloc a)
+  (if (not a) (status-set-both-goto sp-status-group-sp sp-status-id-memory)))

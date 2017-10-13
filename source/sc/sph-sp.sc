@@ -2,6 +2,7 @@
 (sc-include "foreign/sph" "foreign/sph/status" "config" "status")
 (pre-define (sp-octets->samples a) (/ a (sizeof sp-sample-t)))
 (pre-define (sp-samples->octets a) (* a (sizeof sp-sample-t)))
+(define (sp-alloc-channel-data channel-count sample-count) (sp-sample-t** b32 b32))
 (define (sp-sin-lq a) (f32-s f32-s))
 (define (sp-sinc a) (f32-s f32-s))
 (define (sp-blackman a width) (f32-s f32-s size-t))
@@ -52,3 +53,24 @@
 
 (define (sp-windowed-sinc result source source-len sample-rate freq transition state)
   (status-i-t sp-sample-t* sp-sample-t* size-t b32 f32-s f32-s sp-windowed-sinc-state-t**))
+
+(define-type sp-port-t
+  ; generic input/output port handle.
+  ; type: any of sp-port-type-* value
+  ; position?: true if the port supports random access
+  ; position-offset: header length
+  (struct (sample-rate b32) (channel-count b32)
+    (closed? boolean) (flags b8)
+    (type b8) (position b64) (position-offset b16) (data b0*) (data-int int)))
+
+(pre-define sp-port-type-alsa 0 sp-port-type-file 1 sp-port-bit-input 1 sp-port-bit-position 2)
+(define (sp-port-read result port sample-count) (status-t sp-sample-t** sp-port-t* b32))
+(define (sp-port-write port sample-count channel-data) (status-t sp-port-t* b32 sp-sample-t**))
+
+(define (sp-file-open result path input? channel-count sample-rate)
+  (status-t sp-port-t* b8* boolean b32-s b32-s))
+
+(define (sp-alsa-open result device-name input? channel-count sample-rate latency)
+  (status-t sp-port-t* b8* boolean b32-s b32-s b32-s))
+
+(define (sp-port-close a) (status-t sp-port-t*))
