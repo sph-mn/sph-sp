@@ -1,0 +1,8 @@
+#!/bin/sh
+# list all bindings available after including sph-sp.c.
+# depends on sc-documentor from sph-sc
+
+# extra="$PWD/other/list-bindings-extra.scm"
+cd source/sc/main &&
+sc-documentor sph-sp.sc status.sc config.sc ../foreign/sph/status.sc
+#--extra="$extra"
