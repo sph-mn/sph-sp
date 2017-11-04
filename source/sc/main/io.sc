@@ -44,17 +44,15 @@
 (pre-define (set-optional-number a default) (if (< a 0) (set a default)))
 (sc-comment "sp-port abstracts different output targets and formats")
 
-(define (sp-port-create result type flags sample-rate channel-count position-offset data data-int)
-  (status-t sp-port-t* b8 b8 b32 b32 b16 b0* int)
+(define (sp-port-init result type flags sample-rate channel-count position-offset data data-int)
+  (status-i-t sp-port-t* b8 b8 b32 b32 b16 b0* int)
   "integer integer integer integer integer pointer integer -> sp-port
    flags is a combination of sp-port-bits"
-  status-init (set result (malloc (sizeof sp-port-t)))
-  (sp-status-require-alloc result)
   (struct-pointer-set result channel-count
     channel-count sample-rate
     sample-rate type
     type flags flags data data data-int data-int position 0 position-offset position-offset)
-  (label exit (return status)))
+  (return status-id-success))
 
 (define (sp-port-position? a) (boolean sp-port-t*)
   (return (bit-and sp-port-bit-position (struct-pointer-get a flags))))
@@ -84,8 +82,8 @@
       (if (not (= sample-rate-file sample-rate))
         (status-set-id-goto sp-status-id-file-incompatible))
       (define offset off-t (lseek file 0 SEEK-CUR)) (sp-system-status-require-id offset)
-      (status-require!
-        (sp-port-create result sp-port-type-file
+      (status-i-require!
+        (sp-port-init result sp-port-type-file
           sp-port-flags sample-rate-file channel-count-file offset 0 file)))
     (begin (set file (open path (bit-or O_RDWR O_CREAT) 384)) (sp-system-status-require-id file)
       (set sample-rate-file (optional-number sample-rate sp-default-sample-rate))
@@ -93,18 +91,14 @@
       (if (not (file-au-write-header file 6 sample-rate-file channel-count-file))
         (status-set-id-goto sp-status-id-file-header))
       (define offset off-t (lseek file 0 SEEK-CUR)) (sp-system-status-require-id offset)
-
-      (status-require!
-        (sp-port-create result sp-port-type-file
-          sp-port-flags sample-rate-file channel-count-file offset 0 file))
-      (debug-log "%s %lu" "create" (struct-pointer-get result type))
-
-      ))
+      (status-i-require!
+        (sp-port-init result sp-port-type-file
+          sp-port-flags sample-rate-file channel-count-file offset 0 file))))
   (label exit (if (and status-failure? file) (close file)) (return status)))
 
 (define (sp-file-write port sample-count channel-data) (status-t sp-port-t* b32 sp-sample-t**)
   status-init (local-memory-init 1)
-  (if (bit-and sp-port-bit-input (struct-pointer-get port flags))
+  (if (not (bit-and sp-port-bit-input (struct-pointer-get port flags)))
     (status-set-both-goto sp-status-group-sp sp-status-id-port-type))
   (define channel-count b32 (struct-pointer-get port channel-count))
   (define interleaved-size size-t (* channel-count sample-count (sizeof sp-sample-t*)))
@@ -114,7 +108,7 @@
   (if (not (= interleaved-size count))
     (if (< count 0) (status-set-both-goto sp-status-group-libc count)
       (status-set-both-goto sp-status-group-sp sp-status-id-file-incomplete)))
-  (label exit local-memory-free (debug-log "%lu" status.id) (return status)))
+  (label exit local-memory-free (return status)))
 
 (define (sp-file-read result port sample-count) (status-t sp-sample-t** sp-port-t* size-t)
   status-init (local-memory-init 1)
@@ -131,17 +125,35 @@
   (sp-deinterleave-and-reverse-endian result interleaved sample-count channel-count)
   (label exit local-memory-free (return status)))
 
-(define (scm-sp-file-set-position port sample-index) (status-t sp-port-t* b32)
+(pre-define (sp-file-index->position index position-offset channel-count)
+  (/ (- index position-offset) channel-count (sizeof sp-sample-t)))
+
+(define (sp-file-set-position port sample-index) (status-t sp-port-t* b64-s)
   "set port to offset in sample data" status-init
-  (define index b64-s (* (sizeof sp-sample-t) sample-index))
-  (pre-let
-    (file (struct-pointer-get port data-int) header-size (struct-pointer-get port position-offset))
-    (if (>= index 0) (sp-system-status-require! (lseek file (+ header-size index) SEEK_SET))
-      (begin (define end-position off-t (lseek file 0 SEEK_END))
-        (sp-system-status-require-id end-position) (set index (+ end-position index))
-        (if (>= index header-size) (sp-system-status-require! (lseek file index SEEK_SET))
-          (status-set-both-goto sp-status-group-sp sp-status-id-port-position)))))
-  (set (struct-pointer-get port position) sample-index) (label exit (return status)))
+  (define index b64-s (* sample-index (struct-pointer-get port channel-count) (sizeof sp-sample-t)))
+  (define header-size b16 (struct-pointer-get port position-offset))
+  (define file int (struct-pointer-get port data-int))
+  ; calculate positive index from negative index
+  (if (> 0 index)
+    (begin (define end-position off-t (lseek file 0 SEEK_END))
+      (sp-system-status-require-id end-position) (set index (+ end-position index)))
+    (set index (+ header-size index)))
+  ; index must be after header-size
+  (if (> header-size index) (status-set-both-goto sp-status-group-sp sp-status-id-port-position))
+  (sp-system-status-require! (lseek file index SEEK_SET))
+  (struct-pointer-set port position
+    (sp-file-index->position index header-size (struct-pointer-get port channel-count)))
+  (label exit (return status)))
+
+(define (sp-file-sample-count result port) (status-t size-t* sp-port-t*)
+  status-init (define file int (struct-pointer-get port data-int))
+  (define offset off-t (lseek file 0 SEEK_END)) (sp-system-status-require-id offset)
+  (define index size-t (lseek file 0 SEEK_CUR))
+  (define header-size b16 (struct-pointer-get port position-offset))
+  (if (> header-size index) (status-set-both-goto sp-status-group-sp sp-status-id-port-position))
+  (set (deref result)
+    (sp-file-index->position index header-size (struct-pointer-get port channel-count)))
+  (label exit (return status)))
 
 (sc-comment "-- alsa")
 
@@ -162,8 +174,8 @@
       SND_PCM_ACCESS_RW_NONINTERLEAVED channel-count
       sample-rate sp-default-alsa-enable-soft-resample latency))
   (define sp-port-flags b8 (if* input? sp-port-bit-input sp-port-bit-output))
-  (status-require!
-    (sp-port-create result sp-port-type-alsa
+  (status-i-require!
+    (sp-port-init result sp-port-type-alsa
       sp-port-flags sample-rate channel-count 0 (convert-type alsa-port b0*) 0))
   (label exit (if (and status-failure? alsa-port) (snd-pcm-close alsa-port)) (return status)))
 
@@ -203,3 +215,17 @@
         (snd-pcm-close (convert-type (struct-pointer-get a data) snd-pcm-t*))))
     (sp-port-type-file (sp-system-status-require! (close (struct-pointer-get a data-int)))))
   (struct-pointer-set a closed? #t) (label exit (return status)))
+
+(pre-define sp-port-not-implemented
+  (begin status-init (status-set-both sp-status-group-sp sp-status-id-not-implemented)
+    (return status)))
+
+(define (sp-port-sample-count result port) (status-t size-t* sp-port-t*)
+  (case = (struct-pointer-get port type)
+    (sp-port-type-file (return (sp-file-sample-count result port)))
+    (sp-port-type-alsa sp-port-not-implemented)))
+
+(define (sp-port-set-position port sample-index) (status-t sp-port-t* b64-s)
+  (case = (struct-pointer-get port type)
+    (sp-port-type-file (return (sp-file-set-position port sample-index)))
+    (sp-port-type-alsa sp-port-not-implemented)))

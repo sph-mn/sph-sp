@@ -1,16 +1,18 @@
 # sph-sp
 basic utilities for digital sound processing as a shared library and c code.
 reference implementation for learning and, with some extra testing, practical usage.
-prefers higher precision to faster calculation.
+prefers higher precision to faster calculation
+
+work in progress but the code could already be useful
 
 # features
 * convolution
 * windowed sinc filter
 * moving average filter
-* processors work for segments of continous streams
+* processors work for segments of continuous streams
 * 32 bit float samples by default
-* avoids and compensates for rounding errors
 * sample format customisable to some extent
+* avoids and compensates for rounding errors
 * io for alsa and au format files
 
 # dependencies

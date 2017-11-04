@@ -40,3 +40,7 @@
   status-goto)
 
 (pre-define (status-id-is? status-id) (equal? status-id (struct-get status id)))
+
+(pre-define (status-i-require! expression)
+  "update status with the result of expression, check for failure and goto error if so"
+  (set status.id expression) (if status-failure? status-goto))

@@ -82,6 +82,14 @@ typedef struct {
   status_set_both(group_id, status_id);                                        \
   status_goto
 #define status_id_is_p(status_id) (status_id == status.id)
+/** update status with the result of expression, check for failure and goto
+ * error if so */
+#define status_i_require_x(expression)                                         \
+  status.id = expression;                                                      \
+  if (status_failure_p) {                                                      \
+    status_goto;                                                               \
+  }
+;
 #define sp_sample_t f32_s
 #define sp_default_sample_rate 16000
 #define sp_default_channel_count 1
@@ -97,8 +105,8 @@ sp_sample_t sample_reverse_endian(sp_sample_t a) {
   (*(c + 2)) = (*(b + 1));
   (*(c + 3)) = (*b);
   return (result);
-}; /* return status handling */
-enum {
+};
+/* return status handling */ enum {
   sp_status_id_undefined,
   sp_status_id_input_type,
   sp_status_id_not_implemented,
@@ -229,7 +237,7 @@ typedef struct {
   boolean closed_p;
   b8 flags;
   b8 type;
-  b64 position;
+  size_t position;
   b16 position_offset;
   b0 *data;
   int data_int;
@@ -238,10 +246,12 @@ typedef struct {
 #define sp_port_type_file 1
 #define sp_port_bit_input 1
 #define sp_port_bit_output 2
-#define sp_port_bit_position 3
+#define sp_port_bit_position 4
 status_t sp_port_read(sp_sample_t **result, sp_port_t *port, b32 sample_count);
 status_t sp_port_write(sp_port_t *port, b32 sample_count,
                        sp_sample_t **channel_data);
+status_t sp_port_sample_count(size_t *result, sp_port_t *port);
+status_t sp_port_set_position(sp_port_t *port, b64_s sample_index);
 status_t sp_file_open(sp_port_t *result, b8 *path, b32_s channel_count,
                       b32_s sample_rate);
 status_t sp_alsa_open(sp_port_t *result, b8 *device_name, boolean input_p,

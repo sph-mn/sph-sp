@@ -40,18 +40,45 @@
   (define sample-rate b32 8000) (define port sp-port-t)
   ; not existing file
   (status-require! (sp-file-open (address-of port) test-file-path channel-count sample-rate))
-  (debug-log "type %d" (struct-get port type))
-  (define channel-data sp-sample-t** (sp-alloc-channel-data channel-count 5))
+  (define sample-count b32 5)
+  (define channel-data sp-sample-t** (sp-alloc-channel-data channel-count sample-count))
+  (define channel-data-2 sp-sample-t** (sp-alloc-channel-data channel-count sample-count))
   (sp-status-require-alloc channel-data) (local-memory-add channel-data)
-  (define sample-count b32 5) (define len size-t)
-  (define channel size-t channel-count)
+  (define len size-t) (define channel size-t channel-count)
   (while channel (dec channel)
     (set len sample-count) (while len (dec len) (set (deref (deref channel-data channel) len) len)))
+  (printf "  create\n") (define position size-t 0)
+  (status-require! (sp-port-sample-count (address-of position) (address-of port)))
   (status-require! (sp-port-write (address-of port) sample-count channel-data))
-  (status-require! (sp-port-close (address-of port)))
+  (status-require! (sp-port-sample-count (address-of position) (address-of port)))
+  (test-helper-assert "sp-port-sample-count after write"
+    (= (* channel-count sample-count) position))
+  (status-require! (sp-port-set-position (address-of port) 0))
+  (status-require! (sp-port-read channel-data-2 (address-of port) sample-count))
+  ; compare read result with output data
+  (set len channel-count) (define unequal b8-s 0)
+  (while (and len (not unequal)) (dec len)
+    (set unequal
+      (memcmp (deref channel-data len) (deref channel-data-2 len)
+        (* sample-count (sizeof sp-sample-t)))))
+  (test-helper-assert "sp-port-read result" (not unequal))
+  (status-require! (sp-port-close (address-of port))) (printf "  write\n")
   ; already existing file
   (status-require! (sp-file-open (address-of port) test-file-path 2 8000))
-  (status-require! (sp-port-close (address-of port))) (label exit local-memory-free (return status)))
+  (status-require! (sp-port-sample-count (address-of position) (address-of port)))
+  (test-helper-assert "sp-port-sample-count existing file"
+    (= (* channel-count sample-count) position))
+  (status-require! (sp-port-set-position (address-of port) 0))
+  (status-require! (sp-port-read channel-data-2 (address-of port) sample-count))
+  ; compare read result with output data
+  (set unequal 0 len channel-count)
+  (while (and len (not unequal)) (dec len)
+    (set unequal
+      (memcmp (deref channel-data len) (deref channel-data-2 len)
+        (* sample-count (sizeof sp-sample-t)))))
+  (test-helper-assert "sp-port-read existing result" (not unequal))
+  (status-require! (sp-port-close (address-of port))) (printf "  open\n")
+  (label exit local-memory-free (return status)))
 
 (define (main) int
   status-init (test-helper-test-one test-port)

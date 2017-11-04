@@ -21,6 +21,8 @@ exports {
     sp_port_read;
     sp_port_write;
     sp_port_close;
+    sp_port_set_position;
+    sp_port_sample_count;
     sp_file_open;
     sp_alsa_open;
   local: *;

@@ -230,11 +230,13 @@ status_t test_port() {
   sp_port_t port;
   status_require_x(
       sp_file_open(&port, test_file_path, channel_count, sample_rate));
-  debug_log("type %d", port.type);
-  sp_sample_t **channel_data = sp_alloc_channel_data(channel_count, 5);
+  b32 sample_count = 5;
+  sp_sample_t **channel_data =
+      sp_alloc_channel_data(channel_count, sample_count);
+  sp_sample_t **channel_data_2 =
+      sp_alloc_channel_data(channel_count, sample_count);
   sp_status_require_alloc(channel_data);
   local_memory_add(channel_data);
-  b32 sample_count = 5;
   size_t len;
   size_t channel = channel_count;
   while (channel) {
@@ -245,10 +247,41 @@ status_t test_port() {
       (*((*(channel_data + channel)) + len)) = len;
     };
   };
+  printf("  create\n");
+  size_t position = 0;
+  status_require_x(sp_port_sample_count(&position, &port));
   status_require_x(sp_port_write(&port, sample_count, channel_data));
+  status_require_x(sp_port_sample_count(&position, &port));
+  test_helper_assert("sp-port-sample-count after write",
+                     ((channel_count * sample_count) == position));
+  status_require_x(sp_port_set_position(&port, 0));
+  status_require_x(sp_port_read(channel_data_2, &port, sample_count));
+  len = channel_count;
+  b8_s unequal = 0;
+  while ((len && !unequal)) {
+    dec(len);
+    unequal = memcmp((*(channel_data + len)), (*(channel_data_2 + len)),
+                     (sample_count * sizeof(sp_sample_t)));
+  };
+  test_helper_assert("sp-port-read result", !unequal);
   status_require_x(sp_port_close(&port));
+  printf("  write\n");
   status_require_x(sp_file_open(&port, test_file_path, 2, 8000));
+  status_require_x(sp_port_sample_count(&position, &port));
+  test_helper_assert("sp-port-sample-count existing file",
+                     ((channel_count * sample_count) == position));
+  status_require_x(sp_port_set_position(&port, 0));
+  status_require_x(sp_port_read(channel_data_2, &port, sample_count));
+  unequal = 0;
+  len = channel_count;
+  while ((len && !unequal)) {
+    dec(len);
+    unequal = memcmp((*(channel_data + len)), (*(channel_data_2 + len)),
+                     (sample_count * sizeof(sp_sample_t)));
+  };
+  test_helper_assert("sp-port-read existing result", !unequal);
   status_require_x(sp_port_close(&port));
+  printf("  open\n");
 exit:
   local_memory_free;
   return (status);
