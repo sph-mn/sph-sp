@@ -1,114 +1,185 @@
 (pre-include "sph-sp.c")
 (sc-include "test/helper")
-(pre-define error-margin 1.0e-6)
+(define error-margin f32-s 1.0e-6)
 
 (define (test-base) status-t
   status-init
   (test-helper-assert "input 0.5" (float-nearly-equal? 0.63662 (sp-sinc 0.5) error-margin))
   (test-helper-assert "input 1" (float-nearly-equal? 1.0 (sp-sinc 0) error-margin))
-  (test-helper-assert "window-blackman 1.1 20"
-    (float-nearly-equal? 0.550175 (sp-window-blackman 1.1 20) error-margin))
-  (label exit (return status)))
+  (test-helper-assert
+    "window-blackman 1.1 20" (float-nearly-equal? 0.550175 (sp-window-blackman 1.1 20) error-margin))
+  (label exit
+    (return status)))
 
 (define (test-spectral-inversion-ir) status-t
-  status-init (define a-len size-t 5)
-  (define-array a sp-sample-t (5) 0.1 -0.2 0.3 -0.2 0.1) (sp-spectral-inversion-ir a a-len)
-  (test-helper-assert "result check"
-    (and (float-nearly-equal? -0.1 (array-get a 0) error-margin)
+  status-init
+  (define a-len size-t 5)
+  (define-array a sp-sample-t (5) 0.1 -0.2 0.3 -0.2 0.1)
+  (sp-spectral-inversion-ir a a-len)
+  (test-helper-assert
+    "result check"
+    (and
+      (float-nearly-equal? -0.1 (array-get a 0) error-margin)
       (float-nearly-equal? 0.2 (array-get a 1) error-margin)
       (float-nearly-equal? -0.3 (array-get a 2) error-margin)
       (float-nearly-equal? 0.2 (array-get a 3) error-margin)
       (float-nearly-equal? -0.1 (array-get a 4) error-margin)))
-  (label exit (return status)))
+  (label exit
+    (return status)))
 
 (define (test-spectral-reversal-ir) status-t
-  status-init (define a-len size-t 5)
-  (define-array a sp-sample-t (5) 0.1 -0.2 0.3 -0.2 0.1) (sp-spectral-reversal-ir a a-len)
-  (test-helper-assert "result check"
-    (and (float-nearly-equal? 0.1 (array-get a 0) error-margin)
+  status-init
+  (define a-len size-t 5)
+  (define-array a sp-sample-t (5) 0.1 -0.2 0.3 -0.2 0.1)
+  (sp-spectral-reversal-ir a a-len)
+  (test-helper-assert
+    "result check"
+    (and
+      (float-nearly-equal? 0.1 (array-get a 0) error-margin)
       (float-nearly-equal? 0.2 (array-get a 1) error-margin)
       (float-nearly-equal? 0.3 (array-get a 2) error-margin)
       (float-nearly-equal? 0.2 (array-get a 3) error-margin)
       (float-nearly-equal? 0.1 (array-get a 4) error-margin)))
-  (label exit (return status)))
+  (label exit
+    (return status)))
 
 (define test-file-path b8* "/tmp/test-sph-sp-file")
 
 (define (test-port) status-t
-  status-init (local-memory-init 2)
-  (if (file-exists? test-file-path) (unlink test-file-path)) (define channel-count b32 2)
-  (define sample-rate b32 8000) (define port sp-port-t)
+  status-init
+  (local-memory-init 2)
+  (if (file-exists? test-file-path) (unlink test-file-path))
+  (define channel-count b32 2)
+  (define sample-rate b32 8000)
+  (define port sp-port-t)
   (define sample-count b32 5)
   (define channel-data sp-sample-t** (sp-alloc-channel-array channel-count sample-count))
   (define channel-data-2 sp-sample-t** (sp-alloc-channel-array channel-count sample-count))
-  (sp-status-require-alloc channel-data) (local-memory-add channel-data)
-  (local-memory-add channel-data-2) (define len size-t)
+  (sp-status-require-alloc channel-data)
+  (local-memory-add channel-data)
+  (local-memory-add channel-data-2)
+  (define len size-t)
   (define channel size-t channel-count)
-  (while channel (dec channel)
-    (set len sample-count) (while len (dec len) (set (deref (deref channel-data channel) len) len)))
+  (while channel
+    (dec channel)
+    (set len sample-count)
+    (while len
+      (dec len)
+      (set (deref (deref channel-data channel) len) len)))
   ; -- test create
   (status-require! (sp-file-open (address-of port) test-file-path channel-count sample-rate))
-  (printf " create\n") (define position size-t 0)
+  (printf " create\n")
+  (define position size-t 0)
   (status-require! (sp-port-sample-count (address-of position) (address-of port)))
   (status-require! (sp-port-write (address-of port) sample-count channel-data))
   (status-require! (sp-port-sample-count (address-of position) (address-of port)))
-  (test-helper-assert "sp-port-sample-count after write"
-    (= (* channel-count sample-count) position))
+  (test-helper-assert
+    "sp-port-sample-count after write" (= (* channel-count sample-count) position))
   (status-require! (sp-port-set-position (address-of port) 0))
   (status-require! (sp-port-read channel-data-2 (address-of port) sample-count))
   ; compare read result with output data
-  (set len channel-count) (define unequal b8-s 0)
-  (while (and len (not unequal)) (dec len)
+  (set len channel-count)
+  (define unequal b8-s 0)
+  (while (and len (not unequal))
+    (dec len)
     (set unequal
-      (memcmp (deref channel-data len) (deref channel-data-2 len)
-        (* sample-count (sizeof sp-sample-t)))))
+      (memcmp
+        (deref channel-data len) (deref channel-data-2 len) (* sample-count (sizeof sp-sample-t)))))
   (test-helper-assert "sp-port-read result" (not unequal))
-  (status-require! (sp-port-close (address-of port))) (printf "  write\n")
+  (status-require! (sp-port-close (address-of port)))
+  (printf "  write\n")
   ; -- test open
   (status-require! (sp-file-open (address-of port) test-file-path 2 8000))
   (status-require! (sp-port-sample-count (address-of position) (address-of port)))
-  (test-helper-assert "sp-port-sample-count existing file"
-    (= (* channel-count sample-count) position))
+  (test-helper-assert
+    "sp-port-sample-count existing file" (= (* channel-count sample-count) position))
   (status-require! (sp-port-set-position (address-of port) 0))
   (status-require! (sp-port-read channel-data-2 (address-of port) sample-count))
   ; compare read result with output data
-  (set unequal 0 len channel-count)
-  (while (and len (not unequal)) (dec len)
+  (set
+    unequal 0
+    len channel-count)
+  (while (and len (not unequal))
+    (dec len)
     (set unequal
-      (memcmp (deref channel-data len) (deref channel-data-2 len)
-        (* sample-count (sizeof sp-sample-t)))))
+      (memcmp
+        (deref channel-data len) (deref channel-data-2 len) (* sample-count (sizeof sp-sample-t)))))
   (test-helper-assert "sp-port-read existing result" (not unequal))
-  (status-require! (sp-port-close (address-of port))) (printf "  open\n")
-  (label exit local-memory-free (return status)))
+  (status-require! (sp-port-close (address-of port)))
+  (printf "  open\n")
+  (label exit
+    local-memory-free
+    (return status)))
 
-(pre-define (sp-define-malloc id type size) (define id type (malloc size))
+(pre-define (sp-define-malloc id type size)
+  (define id type (malloc size))
   (if (not id) (status-set-both-goto sp-status-group-sp sp-status-id-memory)))
 
 (pre-define (sp-define-malloc-samples id sample-count)
   (sp-define-malloc id sp-sample-t* (* sample-count (sizeof sp-sample-t))))
 
-(define (test-convolve) status-t
-  status-init (define sample-count b32 5)
-  (define b-len b32 3) (define result-len b32 sample-count)
-  (define a-len b32 sample-count) (define carryover-len b32 b-len)
-  (sp-define-malloc-samples result result-len) (sp-define-malloc-samples a a-len)
-  (sp-define-malloc-samples b b-len) (sp-define-malloc-samples carryover carryover-len)
-  (define index b32 0)
+(define (float-array-nearly-equal? a a-len b b-len error-margin)
+  (boolean f32-s* size-t f32-s* size-t f32-s)
+  (define index size-t 0)
+  (if (not (= a-len b-len)) (return #f))
   (while (< index a-len)
-    (set (deref a index) (+ 2 index)) (inc index))
-  (set index 0) (while (< index b-len)
-    (set (deref b index) (+ 1 index)) (inc index))
-  (set index 0) (while (< index carryover-len) (set (deref carryover index) 0) (inc index))
-  (sp-convolve result a a-len b b-len carryover carryover-len) (set index 0)
-  (while (< index (+ a-len b-len)) (debug-log "result: %lu %f" index (deref result index)) (inc index))
-  (set index 0)
-  (while (< index carryover-len) (debug-log "carryover: %lu %f" index (deref carryover index)) (inc index))
-  (label exit (return status)))
+    (if (not (float-nearly-equal? (deref a index) (deref b index) error-margin)) (return #f))
+    (inc index))
+  (return #t))
+
+(define (test-convolve) status-t
+  status-init
+  (define sample-count b32 5)
+  (define b-len b32 3)
+  (define result-len b32 sample-count)
+  (define a-len b32 sample-count)
+  (define carryover-len b32 b-len)
+  ; allocate memory
+  (local-memory-init 4)
+  (sp-define-malloc-samples result result-len)
+  (local-memory-add result)
+  (sp-define-malloc-samples a a-len)
+  (local-memory-add a)
+  (sp-define-malloc-samples b b-len)
+  (local-memory-add b)
+  (sp-define-malloc-samples carryover carryover-len)
+  (local-memory-add carryover)
+  ; set data arrays
+  (array-set a 0 2 1 3 2 4 3 5 4 6)
+  (array-set b 0 1 1 2 2 3)
+  (array-set carryover 0 0 1 0 2 0)
+  (sp-convolve result a a-len b b-len carryover carryover-len)
+  (define-array expected-result sp-sample-t (5) 2 7 16 22 28)
+  (define-array expected-carryover sp-sample-t (3) 27 18 0)
+  (test-helper-assert
+    "first result"
+    (float-array-nearly-equal? result result-len expected-result result-len error-margin))
+  (test-helper-assert
+    "first result carryover"
+    (float-array-nearly-equal?
+      carryover carryover-len expected-carryover carryover-len error-margin))
+  (array-set a 0 8 1 9 2 10 3 11 4 12)
+  (sp-convolve result a a-len b b-len carryover carryover-len)
+  (array-set expected-result 0 35 1 43 2 52 3 58 4 64)
+  (array-set expected-carryover 0 57 1 36 2 0)
+  (test-helper-assert
+    "second result"
+    (float-array-nearly-equal? result result-len expected-result result-len error-margin))
+  (test-helper-assert
+    "second result carryover"
+    (float-array-nearly-equal?
+      carryover carryover-len expected-carryover carryover-len error-margin))
+  (label exit
+    local-memory-free
+    (return status)))
 
 (define (main) int
-  status-init (test-helper-test-one test-convolve)
+  status-init
+  (test-helper-test-one test-convolve)
   ;(test-helper-test-one test-port)
   ;(test-helper-test-one test-base)
   ;(test-helper-test-one test-spectral-reversal-ir)
   ;(test-helper-test-one test-spectral-inversion-ir)
-  (label exit (test-helper-display-summary) (return (struct-get status id))))
+  (label exit
+    (test-helper-display-summary)
+    (return (struct-get status id))))

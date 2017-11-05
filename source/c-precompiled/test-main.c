@@ -177,7 +177,7 @@ boolean float_nearly_equal_p(f32_s a, f32_s b, f32_s margin) {
     sph_local_memory_index = (sph_local_memory_index - 1);                     \
     free((*(sph_local_memory_register + sph_local_memory_index)));             \
   }
-#define error_margin 1.0e-6
+f32_s error_margin = 1.0e-6;
 status_t test_base() {
   status_init;
   test_helper_assert("input 0.5",
@@ -294,6 +294,20 @@ exit:
   }
 #define sp_define_malloc_samples(id, sample_count)                             \
   sp_define_malloc(id, sp_sample_t *, (sample_count * sizeof(sp_sample_t)))
+boolean float_array_nearly_equal_p(f32_s *a, size_t a_len, f32_s *b,
+                                   size_t b_len, f32_s error_margin) {
+  size_t index = 0;
+  if (!(a_len == b_len)) {
+    return (0);
+  };
+  while ((index < a_len)) {
+    if (!float_nearly_equal_p((*(a + index)), (*(b + index)), error_margin)) {
+      return (0);
+    };
+    inc(index);
+  };
+  return (1);
+};
 status_t test_convolve() {
   status_init;
   b32 sample_count = 5;
@@ -301,37 +315,59 @@ status_t test_convolve() {
   b32 result_len = sample_count;
   b32 a_len = sample_count;
   b32 carryover_len = b_len;
+  local_memory_init(4);
   sp_define_malloc_samples(result, result_len);
+  local_memory_add(result);
   sp_define_malloc_samples(a, a_len);
+  local_memory_add(a);
   sp_define_malloc_samples(b, b_len);
+  local_memory_add(b);
   sp_define_malloc_samples(carryover, carryover_len);
-  b32 index = 0;
-  while ((index < a_len)) {
-    (*(a + index)) = (2 + index);
-    inc(index);
-  };
-  index = 0;
-  while ((index < b_len)) {
-    (*(b + index)) = (1 + index);
-    inc(index);
-  };
-  index = 0;
-  while ((index < carryover_len)) {
-    (*(carryover + index)) = 0;
-    inc(index);
-  };
+  local_memory_add(carryover);
+  (*(a + 0)) = 2;
+  (*(a + 1)) = 3;
+  (*(a + 2)) = 4;
+  (*(a + 3)) = 5;
+  (*(a + 4)) = 6;
+  (*(b + 0)) = 1;
+  (*(b + 1)) = 2;
+  (*(b + 2)) = 3;
+  (*(carryover + 0)) = 0;
+  (*(carryover + 1)) = 0;
+  (*(carryover + 2)) = 0;
   sp_convolve(result, a, a_len, b, b_len, carryover, carryover_len);
-  index = 0;
-  while ((index < (a_len + b_len))) {
-    debug_log("result: %lu %f", index, (*(result + index)));
-    inc(index);
-  };
-  index = 0;
-  while ((index < carryover_len)) {
-    debug_log("carryover: %lu %f", index, (*(carryover + index)));
-    inc(index);
-  };
+  sp_sample_t expected_result[5] = {2, 7, 16, 22, 28};
+  sp_sample_t expected_carryover[3] = {27, 18, 0};
+  test_helper_assert("first result", float_array_nearly_equal_p(
+                                         result, result_len, expected_result,
+                                         result_len, error_margin));
+  test_helper_assert("first result carryover",
+                     float_array_nearly_equal_p(carryover, carryover_len,
+                                                expected_carryover,
+                                                carryover_len, error_margin));
+  (*(a + 0)) = 8;
+  (*(a + 1)) = 9;
+  (*(a + 2)) = 10;
+  (*(a + 3)) = 11;
+  (*(a + 4)) = 12;
+  sp_convolve(result, a, a_len, b, b_len, carryover, carryover_len);
+  (*(expected_result + 0)) = 35;
+  (*(expected_result + 1)) = 43;
+  (*(expected_result + 2)) = 52;
+  (*(expected_result + 3)) = 58;
+  (*(expected_result + 4)) = 64;
+  (*(expected_carryover + 0)) = 57;
+  (*(expected_carryover + 1)) = 36;
+  (*(expected_carryover + 2)) = 0;
+  test_helper_assert("second result", float_array_nearly_equal_p(
+                                          result, result_len, expected_result,
+                                          result_len, error_margin));
+  test_helper_assert("second result carryover",
+                     float_array_nearly_equal_p(carryover, carryover_len,
+                                                expected_carryover,
+                                                carryover_len, error_margin));
 exit:
+  local_memory_free;
   return (status);
 };
 int main() {

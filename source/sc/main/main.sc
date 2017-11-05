@@ -45,7 +45,10 @@
     (dec channel-count)
     (set channel (calloc (* sample-count (sizeof sp-sample-t)) 1))
     (local-memory-add channel)
-    (if (not channel) (begin local-memory-free (return 0)))
+    (if (not channel)
+      (begin
+        local-memory-free
+        (return 0)))
     (set (deref result channel-count) channel))
   (return result))
 
@@ -110,7 +113,9 @@
   (define window sp-sample-t* 0)
   (define window-index b32)
   (if (not (and (>= start distance) (<= (+ start distance 1) source-len)))
-    (begin (set window (malloc (* width (sizeof sp-sample-t)))) (if (not window) (return 1))))
+    (begin
+      (set window (malloc (* width (sizeof sp-sample-t))))
+      (if (not window) (return 1))))
   (while (<= start end)
     (if (and (>= start distance) (<= (+ start distance 1) source-len))
       (set (deref result) (/ (float-sum (- (+ source start) distance) width) width))
@@ -203,37 +208,38 @@
 
 (define (sp-convolve result a a-len b b-len carryover carryover-len)
   (b0 sp-sample-t* sp-sample-t* size-t sp-sample-t* size-t sp-sample-t* size-t)
-  "discrete linear convolution for segments of a continuous stream.
-  result length is a-len.
-  carryover length is b-len or previous b-len"
+  "discrete linear convolution for segments of a continuous stream. maps segments (a, a-len) to result.
+  result length is a-len, carryover length is b-len or previous b-len. b-len must be greater than zero"
   ; algorithm: copy results that overlap from previous call from carryover, add results that fit completely in result,
   ;   add results that overlap with next segment to carryover.
-  ; previous values. carryover-len should differ if b-len changed between calls
-  (while carryover-len
-    (dec carryover-len)
-    (set (deref result carryover-len) (deref carryover carryover-len)))
-  ; result values
-  (define size size-t)
-  (set size (if* (> a-len b-len) a-len (- a-len b-len)))
-  (sp-convolve-one result a size b b-len)
-  ; next values
+  (memset result 0 (* a-len (sizeof sp-sample-t)))
+  (memcpy result carryover (* carryover-len (sizeof sp-sample-t)))
+  (memset carryover 0 (* b-len (sizeof sp-sample-t)))
+  ;-- result values
+  ; restrict processed range to exclude input values that generate carryover
+  (define size size-t (if* (< a-len b-len) 0 (- a-len (- b-len 1))))
+  (if size (sp-convolve-one result a size b b-len))
+  ;-- carryover values
   (define a-index size-t size)
   (define b-index size-t 0)
+  (define c-index size-t)
   (while (< a-index a-len)
     (while (< b-index b-len)
-      (set size (+ a-index b-index))
-      (if (>= size a-len)
+      (set c-index (+ a-index b-index))
+      (if (< c-index a-len)
+        (set (deref result c-index)
+          (+ (deref result c-index) (* (deref a a-index) (deref b b-index))))
         (set
-          size (- a-len (+ a-index b-index))
-          (deref carryover size) (+ (deref carryover size) (* (deref a a-index) (deref b b-index))))
-        (set (deref result size) (+ (deref result size) (* (deref a a-index) (deref b b-index)))))
+          c-index (- c-index a-len)
+          (deref carryover c-index)
+          (+ (deref carryover c-index) (* (deref a a-index) (deref b b-index)))))
       (inc b-index))
     (set b-index 0)
     (inc a-index)))
 
 (sc-comment
   "write samples for a sine wave into data between start at end.
- defines sp-sine, sp-sine-lq")
+   defines sp-sine, sp-sine-lq")
 
 (pre-define (define-sp-sine id sin)
   (define (id data start end sample-duration freq phase amp)

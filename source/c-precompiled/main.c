@@ -639,31 +639,32 @@ b0 sp_convolve_one(sp_sample_t *result, sp_sample_t *a, size_t a_len,
     inc(a_index);
   };
 };
-/** discrete linear convolution for segments of a continuous stream.
-  result length is a-len.
-  carryover length is b-len or previous b-len */
+/** discrete linear convolution for segments of a continuous stream. maps
+  segments (a, a-len) to result. result length is a-len, carryover length is
+  b-len or previous b-len. b-len must be greater than zero */
 b0 sp_convolve(sp_sample_t *result, sp_sample_t *a, size_t a_len,
                sp_sample_t *b, size_t b_len, sp_sample_t *carryover,
                size_t carryover_len) {
-  while (carryover_len) {
-    dec(carryover_len);
-    (*(result + carryover_len)) = (*(carryover + carryover_len));
+  memset(result, 0, (a_len * sizeof(sp_sample_t)));
+  memcpy(result, carryover, (carryover_len * sizeof(sp_sample_t)));
+  memset(carryover, 0, (b_len * sizeof(sp_sample_t)));
+  size_t size = ((a_len < b_len) ? 0 : (a_len - (b_len - 1)));
+  if (size) {
+    sp_convolve_one(result, a, size, b, b_len);
   };
-  size_t size;
-  size = ((a_len > b_len) ? a_len : (a_len - b_len));
-  sp_convolve_one(result, a, size, b, b_len);
   size_t a_index = size;
   size_t b_index = 0;
+  size_t c_index;
   while ((a_index < a_len)) {
     while ((b_index < b_len)) {
-      size = (a_index + b_index);
-      if ((size >= a_len)) {
-        size = (a_len - (a_index + b_index));
-        (*(carryover + size)) =
-            ((*(carryover + size)) + ((*(a + a_index)) * (*(b + b_index))));
+      c_index = (a_index + b_index);
+      if ((c_index < a_len)) {
+        (*(result + c_index)) =
+            ((*(result + c_index)) + ((*(a + a_index)) * (*(b + b_index))));
       } else {
-        (*(result + size)) =
-            ((*(result + size)) + ((*(a + a_index)) * (*(b + b_index))));
+        c_index = (c_index - a_len);
+        (*(carryover + c_index)) =
+            ((*(carryover + c_index)) + ((*(a + a_index)) * (*(b + b_index))));
       };
       inc(b_index);
     };
@@ -672,7 +673,7 @@ b0 sp_convolve(sp_sample_t *result, sp_sample_t *a, size_t a_len,
   };
 };
 /* write samples for a sine wave into data between start at end.
- defines sp-sine, sp-sine-lq */
+   defines sp-sine, sp-sine-lq */
 #define define_sp_sine(id, sin)                                                \
   b0 id(sp_sample_t *data, b32 start, b32 end, f32_s sample_duration,          \
         f32_s freq, f32_s phase, f32_s amp) {                                  \
