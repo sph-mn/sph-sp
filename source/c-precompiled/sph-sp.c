@@ -184,7 +184,7 @@ b8 *sp_status_name(status_t a) {
   }
 #define sp_octets_to_samples(a) (a / sizeof(sp_sample_t))
 #define sp_samples_to_octets(a) (a * sizeof(sp_sample_t))
-sp_sample_t **sp_alloc_channel_data(b32 channel_count, b32 sample_count);
+sp_sample_t **sp_alloc_channel_array(b32 channel_count, b32 sample_count);
 f32_s sp_sin_lq(f32_s a);
 f32_s sp_sinc(f32_s a);
 f32_s sp_window_blackman(f32_s a, size_t width);

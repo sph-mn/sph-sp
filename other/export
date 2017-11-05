@@ -1,6 +1,6 @@
 exports {
   global:
-    sp_alloc_channel_data;
+    sp_alloc_channel_array;
     sp_sin_lq;
     sp_sinc;
     sp_window_blackman;

@@ -1,8 +1,10 @@
-(pre-include-once alsa-asoundlib-h "alsa/asoundlib.h")
+(pre-include-once
+  alsa-asoundlib-h "alsa/asoundlib.h")
+
 (sc-include "foreign/sph" "foreign/sph/status" "config" "status")
 (pre-define (sp-octets->samples a) (/ a (sizeof sp-sample-t)))
 (pre-define (sp-samples->octets a) (* a (sizeof sp-sample-t)))
-(define (sp-alloc-channel-data channel-count sample-count) (sp-sample-t** b32 b32))
+(define (sp-alloc-channel-array channel-count sample-count) (sp-sample-t** b32 b32))
 (define (sp-sin-lq a) (f32-s f32-s))
 (define (sp-sinc a) (f32-s f32-s))
 (define (sp-window-blackman a width) (f32-s f32-s size-t))
@@ -34,10 +36,16 @@
 (define-type sp-windowed-sinc-state-t
   ; stores impulse response, parameters to create the current impulse response,
   ; and data needed for the next call
-  (struct (data sp-sample-t*)
+  (struct
+    (data sp-sample-t*)
     ; allocated len
-    (data-len size-t) (ir-len-prev size-t)
-    (ir sp-sample-t*) (ir-len size-t) (sample-rate b32) (freq f32-s) (transition f32-s)))
+    (data-len size-t)
+    (ir-len-prev size-t)
+    (ir sp-sample-t*)
+    (ir-len size-t)
+    (sample-rate b32)
+    (freq f32-s)
+    (transition f32-s)))
 
 (define (sp-windowed-sinc-ir-length transition) (size-t f32-s))
 
@@ -57,12 +65,23 @@
   ; type: any of sp-port-type-* value
   ; position?: true if the port supports random access
   ; position-offset: header length
-  (struct (sample-rate b32) (channel-count b32)
-    (closed? boolean) (flags b8)
-    (type b8) (position size-t) (position-offset b16) (data b0*) (data-int int)))
+  (struct
+    (sample-rate b32)
+    (channel-count b32)
+    (closed? boolean)
+    (flags b8)
+    (type b8)
+    (position size-t)
+    (position-offset b16)
+    (data b0*)
+    (data-int int)))
 
-(pre-define sp-port-type-alsa 0
-  sp-port-type-file 1 sp-port-bit-input 1 sp-port-bit-output 2 sp-port-bit-position 4)
+(pre-define
+  sp-port-type-alsa 0
+  sp-port-type-file 1
+  sp-port-bit-input 1
+  sp-port-bit-output 2
+  sp-port-bit-position 4)
 
 (define (sp-port-read result port sample-count) (status-t sp-sample-t** sp-port-t* b32))
 (define (sp-port-write port sample-count channel-data) (status-t sp-port-t* b32 sp-sample-t**))

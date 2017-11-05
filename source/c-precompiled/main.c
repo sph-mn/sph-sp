@@ -184,7 +184,7 @@ b8 *sp_status_name(status_t a) {
   }
 #define sp_octets_to_samples(a) (a / sizeof(sp_sample_t))
 #define sp_samples_to_octets(a) (a * sizeof(sp_sample_t))
-sp_sample_t **sp_alloc_channel_data(b32 channel_count, b32 sample_count);
+sp_sample_t **sp_alloc_channel_array(b32 channel_count, b32 sample_count);
 f32_s sp_sin_lq(f32_s a);
 f32_s sp_sinc(f32_s a);
 f32_s sp_window_blackman(f32_s a, size_t width);
@@ -430,10 +430,14 @@ boolean float_nearly_equal_p(f32_s a, f32_s b, f32_s margin) {
   if (!id) {                                                                   \
     status_set_both_goto(sp_status_group_sp, sp_status_id_memory);             \
   }
+#define sp_define_malloc_samples(id, sample_count)                             \
+  sp_define_malloc(id, sp_sample_t *, (sample_count * sizeof(sp_sample_t)))
+#define sp_set_malloc_samples(id, sample_count)                                \
+  sp_set_malloc(id, (sample_count * sizeof(sp_sample_t)))
 #define inc(a) a = (1 + a)
 #define dec(a) a = (a - 1)
 /** zero if memory could not be allocated */
-sp_sample_t **sp_alloc_channel_data(b32 channel_count, b32 sample_count) {
+sp_sample_t **sp_alloc_channel_array(b32 channel_count, b32 sample_count) {
   local_memory_init((channel_count + 1));
   sp_sample_t **result = malloc((channel_count * sizeof(sp_sample_t *)));
   if (!result) {

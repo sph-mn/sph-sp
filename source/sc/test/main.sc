@@ -35,19 +35,20 @@
 (define test-file-path b8* "/tmp/test-sph-sp-file")
 
 (define (test-port) status-t
-  status-init (local-memory-init 1)
+  status-init (local-memory-init 2)
   (if (file-exists? test-file-path) (unlink test-file-path)) (define channel-count b32 2)
   (define sample-rate b32 8000) (define port sp-port-t)
-  ; not existing file
-  (status-require! (sp-file-open (address-of port) test-file-path channel-count sample-rate))
   (define sample-count b32 5)
-  (define channel-data sp-sample-t** (sp-alloc-channel-data channel-count sample-count))
-  (define channel-data-2 sp-sample-t** (sp-alloc-channel-data channel-count sample-count))
+  (define channel-data sp-sample-t** (sp-alloc-channel-array channel-count sample-count))
+  (define channel-data-2 sp-sample-t** (sp-alloc-channel-array channel-count sample-count))
   (sp-status-require-alloc channel-data) (local-memory-add channel-data)
-  (define len size-t) (define channel size-t channel-count)
+  (local-memory-add channel-data-2) (define len size-t)
+  (define channel size-t channel-count)
   (while channel (dec channel)
     (set len sample-count) (while len (dec len) (set (deref (deref channel-data channel) len) len)))
-  (printf "  create\n") (define position size-t 0)
+  ; -- test create
+  (status-require! (sp-file-open (address-of port) test-file-path channel-count sample-rate))
+  (printf " create\n") (define position size-t 0)
   (status-require! (sp-port-sample-count (address-of position) (address-of port)))
   (status-require! (sp-port-write (address-of port) sample-count channel-data))
   (status-require! (sp-port-sample-count (address-of position) (address-of port)))
@@ -63,7 +64,7 @@
         (* sample-count (sizeof sp-sample-t)))))
   (test-helper-assert "sp-port-read result" (not unequal))
   (status-require! (sp-port-close (address-of port))) (printf "  write\n")
-  ; already existing file
+  ; -- test open
   (status-require! (sp-file-open (address-of port) test-file-path 2 8000))
   (status-require! (sp-port-sample-count (address-of position) (address-of port)))
   (test-helper-assert "sp-port-sample-count existing file"
@@ -80,8 +81,33 @@
   (status-require! (sp-port-close (address-of port))) (printf "  open\n")
   (label exit local-memory-free (return status)))
 
+(pre-define (sp-define-malloc id type size) (define id type (malloc size))
+  (if (not id) (status-set-both-goto sp-status-group-sp sp-status-id-memory)))
+
+(pre-define (sp-define-malloc-samples id sample-count)
+  (sp-define-malloc id sp-sample-t* (* sample-count (sizeof sp-sample-t))))
+
+(define (test-convolve) status-t
+  status-init (define sample-count b32 5)
+  (define b-len b32 3) (define result-len b32 sample-count)
+  (define a-len b32 sample-count) (define carryover-len b32 b-len)
+  (sp-define-malloc-samples result result-len) (sp-define-malloc-samples a a-len)
+  (sp-define-malloc-samples b b-len) (sp-define-malloc-samples carryover carryover-len)
+  (define index b32 0)
+  (while (< index a-len)
+    (set (deref a index) (+ 2 index)) (inc index))
+  (set index 0) (while (< index b-len)
+    (set (deref b index) (+ 1 index)) (inc index))
+  (set index 0) (while (< index carryover-len) (set (deref carryover index) 0) (inc index))
+  (sp-convolve result a a-len b b-len carryover carryover-len) (set index 0)
+  (while (< index (+ a-len b-len)) (debug-log "result: %lu %f" index (deref result index)) (inc index))
+  (set index 0)
+  (while (< index carryover-len) (debug-log "carryover: %lu %f" index (deref carryover index)) (inc index))
+  (label exit (return status)))
+
 (define (main) int
-  status-init (test-helper-test-one test-port)
+  status-init (test-helper-test-one test-convolve)
+  ;(test-helper-test-one test-port)
   ;(test-helper-test-one test-base)
   ;(test-helper-test-one test-spectral-reversal-ir)
   ;(test-helper-test-one test-spectral-inversion-ir)

@@ -221,22 +221,21 @@ exit:
 b8 *test_file_path = "/tmp/test-sph-sp-file";
 status_t test_port() {
   status_init;
-  local_memory_init(1);
+  local_memory_init(2);
   if (file_exists_p(test_file_path)) {
     unlink(test_file_path);
   };
   b32 channel_count = 2;
   b32 sample_rate = 8000;
   sp_port_t port;
-  status_require_x(
-      sp_file_open(&port, test_file_path, channel_count, sample_rate));
   b32 sample_count = 5;
   sp_sample_t **channel_data =
-      sp_alloc_channel_data(channel_count, sample_count);
+      sp_alloc_channel_array(channel_count, sample_count);
   sp_sample_t **channel_data_2 =
-      sp_alloc_channel_data(channel_count, sample_count);
+      sp_alloc_channel_array(channel_count, sample_count);
   sp_status_require_alloc(channel_data);
   local_memory_add(channel_data);
+  local_memory_add(channel_data_2);
   size_t len;
   size_t channel = channel_count;
   while (channel) {
@@ -247,7 +246,9 @@ status_t test_port() {
       (*((*(channel_data + channel)) + len)) = len;
     };
   };
-  printf("  create\n");
+  status_require_x(
+      sp_file_open(&port, test_file_path, channel_count, sample_rate));
+  printf(" create\n");
   size_t position = 0;
   status_require_x(sp_port_sample_count(&position, &port));
   status_require_x(sp_port_write(&port, sample_count, channel_data));
@@ -286,9 +287,56 @@ exit:
   local_memory_free;
   return (status);
 };
+#define sp_define_malloc(id, type, size)                                       \
+  type id = malloc(size);                                                      \
+  if (!id) {                                                                   \
+    status_set_both_goto(sp_status_group_sp, sp_status_id_memory);             \
+  }
+#define sp_define_malloc_samples(id, sample_count)                             \
+  sp_define_malloc(id, sp_sample_t *, (sample_count * sizeof(sp_sample_t)))
+status_t test_convolve() {
+  status_init;
+  b32 sample_count = 5;
+  b32 b_len = 3;
+  b32 result_len = sample_count;
+  b32 a_len = sample_count;
+  b32 carryover_len = b_len;
+  sp_define_malloc_samples(result, result_len);
+  sp_define_malloc_samples(a, a_len);
+  sp_define_malloc_samples(b, b_len);
+  sp_define_malloc_samples(carryover, carryover_len);
+  b32 index = 0;
+  while ((index < a_len)) {
+    (*(a + index)) = (2 + index);
+    inc(index);
+  };
+  index = 0;
+  while ((index < b_len)) {
+    (*(b + index)) = (1 + index);
+    inc(index);
+  };
+  index = 0;
+  while ((index < carryover_len)) {
+    (*(carryover + index)) = 0;
+    inc(index);
+  };
+  sp_convolve(result, a, a_len, b, b_len, carryover, carryover_len);
+  index = 0;
+  while ((index < (a_len + b_len))) {
+    debug_log("result: %lu %f", index, (*(result + index)));
+    inc(index);
+  };
+  index = 0;
+  while ((index < carryover_len)) {
+    debug_log("carryover: %lu %f", index, (*(carryover + index)));
+    inc(index);
+  };
+exit:
+  return (status);
+};
 int main() {
   status_init;
-  test_helper_test_one(test_port);
+  test_helper_test_one(test_convolve);
 exit:
   test_helper_display_summary();
   return (status.id);
