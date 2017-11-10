@@ -1,4 +1,4 @@
-(pre-include "sph-sp.c")
+(pre-include "sph-sp.h")
 (sc-include "test/helper")
 (define error-margin f32-s 1.0e-6)
 
@@ -144,13 +144,14 @@
   (local-memory-add b)
   (sp-define-malloc-samples carryover carryover-len)
   (local-memory-add carryover)
-  ; set data arrays
-  (array-set a 0 2 1 3 2 4 3 5 4 6)
-  (array-set b 0 1 1 2 2 3)
-  (array-set carryover 0 0 1 0 2 0)
-  (sp-convolve result a a-len b b-len carryover carryover-len)
+  ; prepare input/output data arrays
+  (array-set-index a 0 2 1 3 2 4 3 5 4 6)
+  (array-set-index b 0 1 1 2 2 3)
+  (array-set-index carryover 0 0 1 0 2 0)
   (define-array expected-result sp-sample-t (5) 2 7 16 22 28)
   (define-array expected-carryover sp-sample-t (3) 27 18 0)
+  ; test convolve first segment
+  (sp-convolve result a a-len b b-len carryover carryover-len)
   (test-helper-assert
     "first result"
     (float-array-nearly-equal? result result-len expected-result result-len error-margin))
@@ -158,10 +159,11 @@
     "first result carryover"
     (float-array-nearly-equal?
       carryover carryover-len expected-carryover carryover-len error-margin))
-  (array-set a 0 8 1 9 2 10 3 11 4 12)
+  ; test convolve second segment
+  (array-set-index a 0 8 1 9 2 10 3 11 4 12)
+  (array-set-index expected-result 0 35 1 43 2 52 3 58 4 64)
+  (array-set-index expected-carryover 0 57 1 36 2 0)
   (sp-convolve result a a-len b b-len carryover carryover-len)
-  (array-set expected-result 0 35 1 43 2 52 3 58 4 64)
-  (array-set expected-carryover 0 57 1 36 2 0)
   (test-helper-assert
     "second result"
     (float-array-nearly-equal? result result-len expected-result result-len error-margin))
@@ -173,13 +175,59 @@
     local-memory-free
     (return status)))
 
+(define (debug-log-samples a len) (b0 sp-sample-t* b32)
+  (define
+    column-width b32
+    column-end b32
+    index b32)
+  (set
+    column-width 8
+    index 0)
+  (while (< index len)
+    (set column-end (+ index column-width))
+    (while (and (< index len) (< index column-end))
+      (printf "%f " (deref a index))
+      (set index (+ 1 index)))
+    (printf "\n")))
+
+(define (test-moving-average) status-t
+  status-init
+  (define source-len b32 8)
+  (define result-len b32 source-len)
+  (define prev-len b32 4)
+  (define next-len b32 prev-len)
+  ; allocate memory
+  (local-memory-init 4)
+  (sp-define-malloc-samples result result-len)
+  (local-memory-add result)
+  (sp-define-malloc-samples source source-len)
+  (local-memory-add source)
+  (sp-define-malloc-samples prev prev-len)
+  (local-memory-add prev)
+  (sp-define-malloc-samples next next-len)
+  (local-memory-add next)
+  ; set values
+  (array-set source 1 4 8 12 3 32 2)
+  (array-set prev 3 2 1 -12)
+  (array-set next 83 12 -32 2)
+  (define radius b32 4)
+  ; with prev and next
+  (sp-moving-average result source source-len prev prev-len next next-len 0 (- source-len 1) radius)
+  (debug-log-samples result result-len)
+  ; without prev or next
+  (sp-moving-average result source source-len 0 0 0 0 0 (- source-len 1) (+ 1 (/ source-len 2)))
+  (label exit
+    local-memory-free
+    (return status)))
+
 (define (main) int
   status-init
   (test-helper-test-one test-convolve)
-  ;(test-helper-test-one test-port)
-  ;(test-helper-test-one test-base)
-  ;(test-helper-test-one test-spectral-reversal-ir)
-  ;(test-helper-test-one test-spectral-inversion-ir)
+  (test-helper-test-one test-moving-average)
+  (test-helper-test-one test-port)
+  (test-helper-test-one test-base)
+  (test-helper-test-one test-spectral-reversal-ir)
+  (test-helper-test-one test-spectral-inversion-ir)
   (label exit
     (test-helper-display-summary)
     (return (struct-get status id))))

@@ -1,62 +1,12 @@
-(sc-include "sph-sp")
-(pre-define kiss-fft-scalar sp-sample-t)
+(sc-comment
+  "routines that take sample arrays as input and process them.
+  depends on base.sc")
+
+(sc-include "transform.h")
 
 (pre-include-once
-  stdio-h "stdio.h"
-  kiss-fft-h "foreign/kissfft/kiss_fft.h"
-  kiss-fftr-h "foreign/kissfft/tools/kiss_fftr.h"
-  fcntl-h "fcntl.h")
-
-(sc-include "foreign/sph/one" "foreign/sph/local-memory")
-
-(pre-define (sp-define-malloc id type size)
-  (define id type (malloc size))
-  (if (not id) (status-set-both-goto sp-status-group-sp sp-status-id-memory)))
-
-(pre-define (sp-set-malloc id size)
-  (set id (malloc size))
-  (if (not id) (status-set-both-goto sp-status-group-sp sp-status-id-memory)))
-
-(pre-define (sp-define-calloc id type size)
-  (define id type (calloc size 1))
-  (if (not id) (status-set-both-goto sp-status-group-sp sp-status-id-memory)))
-
-(pre-define (sp-set-calloc id size)
-  (set id (calloc size 1))
-  (if (not id) (status-set-both-goto sp-status-group-sp sp-status-id-memory)))
-
-(pre-define (sp-define-malloc-samples id sample-count)
-  (sp-define-malloc id sp-sample-t* (* sample-count (sizeof sp-sample-t))))
-
-(pre-define (sp-set-malloc-samples id sample-count)
-  (sp-set-malloc id (* sample-count (sizeof sp-sample-t))))
-
-(pre-define (inc a) (set a (+ 1 a)))
-(pre-define (dec a) (set a (- a 1)))
-
-(define (sp-alloc-channel-array channel-count sample-count) (sp-sample-t** b32 b32)
-  "zero if memory could not be allocated"
-  (local-memory-init (+ channel-count 1))
-  (define result sp-sample-t** (malloc (* channel-count (sizeof sp-sample-t*))))
-  (if (not result) (return 0))
-  (local-memory-add result)
-  (define channel sp-sample-t*)
-  (while channel-count
-    (dec channel-count)
-    (set channel (calloc (* sample-count (sizeof sp-sample-t)) 1))
-    (local-memory-add channel)
-    (if (not channel)
-      (begin
-        local-memory-free
-        (return 0)))
-    (set (deref result channel-count) channel))
-  (return result))
-
-(define (sp-sin-lq a) (f32-s f32-s)
-  "lower precision version of sin() that is faster to compute"
-  (define b f32-s (/ 4 M_PI))
-  (define c f32-s (/ -4 (* M_PI M_PI)))
-  (return (- (+ (* b a) (* c a (abs a))))))
+  kiss-fft "kiss_fft.h"
+  kiss-fftr "tools/kiss_fftr.h")
 
 (define (sp-fft result result-len source source-len) (status-t sp-sample-t* b32 sp-sample-t* b32)
   sp-status-init
@@ -91,8 +41,8 @@
     local-memory-free
     (return status)))
 
-(define (sp-moving-average result source source-len prev prev-len next next-len start end distance)
-  (boolean sp-sample-t* sp-sample-t* b32 sp-sample-t* b32 sp-sample-t* b32 b32 b32 b32)
+(define (sp-moving-average result source source-len prev prev-len next next-len start end radius)
+  (status-i-t sp-sample-t* sp-sample-t* b32 sp-sample-t* b32 sp-sample-t* b32 b32 b32 b32)
   "apply a centered moving average filter to source at index start to end inclusively and write to result.
   removes higher frequencies with little distortion in the time domain.
    * only the result portion corresponding to the subvector from start to end is written to result
@@ -109,22 +59,24 @@
   (define
     left b32
     right b32)
-  (define width b32 (+ 1 (* 2 distance)))
+  (define width b32 (+ 1 (* 2 radius)))
   (define window sp-sample-t* 0)
   (define window-index b32)
-  (if (not (and (>= start distance) (<= (+ start distance 1) source-len)))
+  (if (not (and (>= start radius) (<= (+ start radius 1) source-len)))
+    ; not all required samples in source array
     (begin
       (set window (malloc (* width (sizeof sp-sample-t))))
       (if (not window) (return 1))))
   (while (<= start end)
-    (if (and (>= start distance) (<= (+ start distance 1) source-len))
-      (set (deref result) (/ (float-sum (- (+ source start) distance) width) width))
+    (if (and (>= start radius) (<= (+ start radius 1) source-len))
+      ; all required samples are in source array
+      (set (deref result) (/ (float-sum (- (+ source start) radius) width) width))
       (begin
         (set window-index 0)
-        ; prev
-        (if (< start distance)
+        ; get samples from previous segment
+        (if (< start radius)
           (begin
-            (set right (- distance start))
+            (set right (- radius start))
             (if prev
               (begin
                 (set left (if* (> right prev-len) 0 (- prev-len right)))
@@ -136,16 +88,16 @@
               (set (deref window window-index) 0)
               (inc window-index))
             (set left 0))
-          (set left (- start distance)))
-        ; source
-        (set right (+ start distance))
+          (set left (- start radius)))
+        ; get samples from source segment
+        (set right (+ start radius))
         (if (>= right source-len) (set right (- source-len 1)))
         (while (<= left right)
           (set (deref window window-index) (deref source left))
           (inc window-index)
           (inc left))
-        ; next
-        (set right (+ start distance))
+        ; get samples from next segment
+        (set right (+ start radius))
         (if (and (>= right source-len) next)
           (begin
             (set
@@ -156,6 +108,7 @@
               (set (deref window window-index) (deref next left))
               (inc window-index)
               (inc left))))
+        ; fill unset values in window with zero
         (while (< window-index width)
           (set (deref window window-index) 0)
           (inc window-index))
@@ -164,10 +117,6 @@
     (inc start))
   (free window)
   (return 0))
-
-(define (sp-sinc a) (f32-s f32-s)
-  "the normalised sinc function"
-  (return (if* (= 0 a) 1 (/ (sin (* M_PI a)) (* M_PI a)))))
 
 (define (sp-window-blackman a width) (f32-s f32-s size-t)
   (return
@@ -237,18 +186,4 @@
     (set b-index 0)
     (inc a-index)))
 
-(sc-comment
-  "write samples for a sine wave into data between start at end.
-   defines sp-sine, sp-sine-lq")
-
-(pre-define (define-sp-sine id sin)
-  (define (id data start end sample-duration freq phase amp)
-    (b0 sp-sample-t* b32 b32 f32_s f32_s f32_s f32_s)
-    (while (<= start end)
-      (set (deref data start) (* amp (sin (* freq phase sample-duration))))
-      (inc phase)
-      (inc start))))
-
-(define-sp-sine sp-sine sin)
-(define-sp-sine sp-sine-lq sp-sin-lq)
-(sc-include "windowed-sinc" "io")
+(sc-include "transform/windowed-sinc")

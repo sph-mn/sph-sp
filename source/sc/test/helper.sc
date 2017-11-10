@@ -14,4 +14,4 @@
   (if status-success? (printf "--\ntests finished successfully.\n")
     (printf "\ntests failed. %d %s\n" (struct-get status id) (sp-status-description status))))
 
-(sc-include "foreign/sph/one" "foreign/sph/local-memory")
+(sc-include "base/foreign/sph/one" "base/foreign/sph/local-memory")

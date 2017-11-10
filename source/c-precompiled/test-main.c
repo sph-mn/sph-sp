@@ -1,5 +1,5 @@
 
-#include <sph-sp.c>
+#include <sph-sp.h>
 #ifndef sc_included_stdio_h
 #include <stdio.h>
 #define sc_included_stdio_h
@@ -52,6 +52,10 @@
 #ifndef sc_included_unistd_h
 #include <unistd.h>
 #define sc_included_unistd_h
+#endif
+#ifndef sc_included_math_h
+#include <math.h>
+#define sc_included_math_h
 #endif
 #ifndef sc_included_sys_stat_h
 #include <sys/stat.h>
@@ -335,9 +339,9 @@ status_t test_convolve() {
   (*(carryover + 0)) = 0;
   (*(carryover + 1)) = 0;
   (*(carryover + 2)) = 0;
-  sp_convolve(result, a, a_len, b, b_len, carryover, carryover_len);
   sp_sample_t expected_result[5] = {2, 7, 16, 22, 28};
   sp_sample_t expected_carryover[3] = {27, 18, 0};
+  sp_convolve(result, a, a_len, b, b_len, carryover, carryover_len);
   test_helper_assert("first result", float_array_nearly_equal_p(
                                          result, result_len, expected_result,
                                          result_len, error_margin));
@@ -350,7 +354,6 @@ status_t test_convolve() {
   (*(a + 2)) = 10;
   (*(a + 3)) = 11;
   (*(a + 4)) = 12;
-  sp_convolve(result, a, a_len, b, b_len, carryover, carryover_len);
   (*(expected_result + 0)) = 35;
   (*(expected_result + 1)) = 43;
   (*(expected_result + 2)) = 52;
@@ -359,6 +362,7 @@ status_t test_convolve() {
   (*(expected_carryover + 0)) = 57;
   (*(expected_carryover + 1)) = 36;
   (*(expected_carryover + 2)) = 0;
+  sp_convolve(result, a, a_len, b, b_len, carryover, carryover_len);
   test_helper_assert("second result", float_array_nearly_equal_p(
                                           result, result_len, expected_result,
                                           result_len, error_margin));
@@ -370,9 +374,69 @@ exit:
   local_memory_free;
   return (status);
 };
+b0 debug_log_samples(sp_sample_t *a, b32 len) {
+  b32 column_width;
+  b32 column_end;
+  b32 index;
+  column_width = 8;
+  index = 0;
+  while ((index < len)) {
+    column_end = (index + column_width);
+    while (((index < len) && (index < column_end))) {
+      printf("%f ", (*(a + index)));
+      index = (1 + index);
+    };
+    printf("\n");
+  };
+};
+status_t test_moving_average() {
+  status_init;
+  b32 source_len = 8;
+  b32 result_len = source_len;
+  b32 prev_len = 4;
+  b32 next_len = prev_len;
+  local_memory_init(4);
+  sp_define_malloc_samples(result, result_len);
+  local_memory_add(result);
+  sp_define_malloc_samples(source, source_len);
+  local_memory_add(source);
+  sp_define_malloc_samples(prev, prev_len);
+  local_memory_add(prev);
+  sp_define_malloc_samples(next, next_len);
+  local_memory_add(next);
+  (*(source + 0)) = 1;
+  (*(source + 1)) = 4;
+  (*(source + 2)) = 8;
+  (*(source + 3)) = 12;
+  (*(source + 4)) = 3;
+  (*(source + 5)) = 32;
+  (*(source + 6)) = 2;
+  (*(prev + 0)) = 3;
+  (*(prev + 1)) = 2;
+  (*(prev + 2)) = 1;
+  (*(prev + 3)) = -12;
+  (*(next + 0)) = 83;
+  (*(next + 1)) = 12;
+  (*(next + 2)) = -32;
+  (*(next + 3)) = 2;
+  b32 radius = 4;
+  sp_moving_average(result, source, source_len, prev, prev_len, next, next_len,
+                    0, (source_len - 1), radius);
+  debug_log_samples(result, result_len);
+  sp_moving_average(result, source, source_len, 0, 0, 0, 0, 0, (source_len - 1),
+                    (1 + (source_len / 2)));
+exit:
+  local_memory_free;
+  return (status);
+};
 int main() {
   status_init;
   test_helper_test_one(test_convolve);
+  test_helper_test_one(test_moving_average);
+  test_helper_test_one(test_port);
+  test_helper_test_one(test_base);
+  test_helper_test_one(test_spectral_reversal_ir);
+  test_helper_test_one(test_spectral_inversion_ir);
 exit:
   test_helper_display_summary();
   return (status.id);

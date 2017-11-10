@@ -3,24 +3,22 @@
 optimisation=0
 warnings="-Wunused-label -Wunused-value -Wunused-variable"
 gcc_options="-Wfatal-errors $warnings -O$optimisation -lasound"
-c=source/c-precompiled
-dir=temp
-file="$dir/libsph-sp.so"
-source="$c/main.c"
+target_dir=temp
+precompiled=source/c-precompiled
 
 compile_libsph_sp() {
-  f=source/c/foreign
-  gcc -Wl,--version-script=other/export -shared -fpic "$source" -o "$file" \
-    $gcc_options \
-    -Isource/c \
-    -Isource/c/foreign/kissfft "$f"/kissfft/kiss_fft.c "$f"/kissfft/tools/kiss_fftr.c
+  target="$target_dir/libsph-sp.so"
+  source="$precompiled/sph-sp.c"
+  c=$PWD/source/c
+  k="$c"/transform/foreign/kissfft
+  gcc -Wl,--version-script=other/export -shared -fpic "$source" -o "$target" \
+    $gcc_options -I"$c" -I"$k" "$k"/kiss_fft.c "$k"/tools/kiss_fftr.c
 }
 
 compile_test() {
-  export LIBRARY_PATH="$PWD/temp"
-  gcc "$c/test-main.c" -o temp/test-libsph-sp -lsph-sp -lm $gcc_options
+  export LIBRARY_PATH="$PWD/$target_dir"
+  gcc "$precompiled/test-main.c" -o "$target_dir"/test-libsph-sp -lsph-sp -lm $gcc_options -I"$precompiled"
 }
 
-mkdir -p "$dir" &&
-compile_libsph_sp &&
-compile_test
+mkdir -p "$target_dir" &&
+compile_libsph_sp && compile_test

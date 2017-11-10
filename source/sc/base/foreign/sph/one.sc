@@ -5,6 +5,7 @@
   stdlib-h "stdlib.h"
   ; "access"
   unistd-h "unistd.h"
+  math-h "math.h"
   ; mkdir
   sys-stat-h "sys/stat.h"
   ; dirname
