@@ -166,11 +166,12 @@ b8 *sp_status_name(status_t a) {
   if (!a) {                                                                    \
     status_set_both_goto(sp_status_group_sp, sp_status_id_memory);             \
   }
-#define sp_sample_t f32_s
-#define sp_float_t f32_s
+#define sp_sample_t f64_s
+#define sp_float_t f64_s
 #define sp_default_sample_rate 16000
 #define sp_default_channel_count 1
 #define sp_default_alsa_enable_soft_resample 1
+#define sp_float_sum f64_sum
 #define sp_default_alsa_latency 50
 /** reverse the byte order of one sample */
 sp_sample_t sample_reverse_endian(sp_sample_t a) {
@@ -202,12 +203,12 @@ typedef struct {
 status_t sp_port_read(sp_sample_t **result, sp_port_t *port, b32 sample_count);
 status_t sp_port_write(sp_port_t *port, b32 sample_count,
                        sp_sample_t **channel_data);
-status_t sp_port_sample_count(size_t *result, sp_port_t *port);
+status_t sp_port_position(size_t *result, sp_port_t *port);
 status_t sp_port_set_position(sp_port_t *port, b64_s sample_index);
-status_t sp_file_open(sp_port_t *result, b8 *path, b32_s channel_count,
-                      b32_s sample_rate);
+status_t sp_file_open(sp_port_t *result, b8 *path, b32 channel_count,
+                      b32 sample_rate);
 status_t sp_alsa_open(sp_port_t *result, b8 *device_name, boolean input_p,
-                      b32_s channel_count, b32_s sample_rate, b32_s latency);
+                      b32 channel_count, b32 sample_rate, b32_s latency);
 status_t sp_port_close(sp_port_t *a);
 #define sp_octets_to_samples(a) (a / sizeof(sp_sample_t))
 #define sp_samples_to_octets(a) (a * sizeof(sp_sample_t))

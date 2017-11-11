@@ -3,7 +3,7 @@
   variable sample-rate, cutoff radian frequency and transition band width per call.
   depends on some sp functions defined in main.sc and sph-sp.sc")
 
-(define (sp-windowed-sinc-ir-length transition) (size-t f32-s)
+(define (sp-windowed-sinc-ir-length transition) (size-t sp-float-t)
   "approximate impulse response length for a transition factor and
   ensure that the length is odd"
   (define result b32 (ceil (/ 4 transition)))
@@ -11,14 +11,14 @@
   (return result))
 
 (define (sp-windowed-sinc-ir result result-len sample-rate freq transition)
-  (b0 sp-sample-t** size-t* b32 f32-s f32-s)
+  (b0 sp-sample-t** size-t* b32 sp-float-t sp-float-t)
   "create an impulse response kernel for a windowed sinc filter. uses a blackman window (truncated version).
   allocates result, sets result-len.
   failed if result is null"
   (define len size-t (sp-windowed-sinc-ir-length transition))
   (set (deref result-len) len)
-  (define center-index f32-s (/ (- len 1.0) 2.0))
-  (define cutoff f32-s (sp-windowed-sinc-cutoff freq sample-rate))
+  (define center-index sp-float-t (/ (- len 1.0) 2.0))
+  (define cutoff sp-float-t (sp-windowed-sinc-cutoff freq sample-rate))
   (define result-temp sp-sample-t* (malloc (* len (sizeof sp-sample-t))))
   (set result-temp (malloc (* len (sizeof sp-sample-t))))
   (if (not result-temp)
@@ -30,7 +30,7 @@
     (set (deref result-temp index)
       (sp-window-blackman (sp-sinc (* 2 cutoff (- index center-index))) len))
     (inc index))
-  (define result-sum f32-s (float-sum result-temp len))
+  (define result-sum sp-float-t (sp-float-sum result-temp len))
   (while len
     (dec len)
     (set (deref result-temp index) (/ (deref result-temp index) result-sum)))
@@ -42,7 +42,7 @@
   (free state))
 
 (define (sp-windowed-sinc-state-create sample-rate freq transition state)
-  (b8 b32 f32-s f32-s sp-windowed-sinc-state-t**)
+  (b8 b32 sp-float-t sp-float-t sp-windowed-sinc-state-t**)
   "create or update a state object. impulse response array properties are calculated
   from sample-rate, freq and transition.
   eventually frees state.ir.
@@ -99,7 +99,7 @@
   (return 0))
 
 (define (sp-windowed-sinc result source source-len sample-rate freq transition state)
-  (status-i-t sp-sample-t* sp-sample-t* size-t b32 f32-s f32-s sp-windowed-sinc-state-t**)
+  (status-i-t sp-sample-t* sp-sample-t* size-t b32 sp-float-t sp-float-t sp-windowed-sinc-state-t**)
   "a windowed sinc filter for segments of continuous streams with
   sample-rate, frequency and transition variable per call.
   state can be zero and it will be allocated"

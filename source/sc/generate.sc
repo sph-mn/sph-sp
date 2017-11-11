@@ -1,10 +1,10 @@
-(define (sp-sin-lq a) (f32-s f32-s)
+(define (sp-sin-lq a) (sp-sample-t sp-sample-t)
   "lower precision version of sin() that is faster to compute"
-  (define b f32-s (/ 4 M_PI))
-  (define c f32-s (/ -4 (* M_PI M_PI)))
+  (define b sp-sample-t (/ 4 M_PI))
+  (define c sp-sample-t (/ -4 (* M_PI M_PI)))
   (return (- (+ (* b a) (* c a (abs a))))))
 
-(define (sp-sinc a) (f32-s f32-s)
+(define (sp-sinc a) (sp-sample-t sp-sample-t)
   "the normalised sinc function"
   (return (if* (= 0 a) 1 (/ (sin (* M_PI a)) (* M_PI a)))))
 
@@ -17,8 +17,9 @@
    defines sp-sine, sp-sine-lq")
 
 (pre-define (define-sp-sine id sin)
+  ; todo: assumes that sin() returns sp-sample-t
   (define (id dest len sample-duration freq phase amp)
-    (b0 sp-sample-t* b32 f32_s f32_s f32_s f32_s)
+    (b0 sp-sample-t* b32 sp-float-t sp-float-t sp-float-t sp-float-t)
     (define index b32 0)
     (while (<= index len)
       (set (deref dest index) (* amp (sin (* freq phase sample-duration))))

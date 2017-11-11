@@ -1,13 +1,13 @@
 (pre-include "sph-sp.h")
 (sc-include "test/helper")
-(define error-margin f32-s 1.0e-6)
+(define error-margin f64-s 1.0e-6)
 
 (define (test-base) status-t
   status-init
-  (test-helper-assert "input 0.5" (float-nearly-equal? 0.63662 (sp-sinc 0.5) error-margin))
-  (test-helper-assert "input 1" (float-nearly-equal? 1.0 (sp-sinc 0) error-margin))
+  (test-helper-assert "input 0.5" (f64-nearly-equal? 0.63662 (sp-sinc 0.5) error-margin))
+  (test-helper-assert "input 1" (f64-nearly-equal? 1.0 (sp-sinc 0) error-margin))
   (test-helper-assert
-    "window-blackman 1.1 20" (float-nearly-equal? 0.550175 (sp-window-blackman 1.1 20) error-margin))
+    "window-blackman 1.1 20" (f64-nearly-equal? 0.550175 (sp-window-blackman 1.1 20) error-margin))
   (label exit
     (return status)))
 
@@ -19,11 +19,11 @@
   (test-helper-assert
     "result check"
     (and
-      (float-nearly-equal? -0.1 (array-get a 0) error-margin)
-      (float-nearly-equal? 0.2 (array-get a 1) error-margin)
-      (float-nearly-equal? -0.3 (array-get a 2) error-margin)
-      (float-nearly-equal? 0.2 (array-get a 3) error-margin)
-      (float-nearly-equal? -0.1 (array-get a 4) error-margin)))
+      (f64-nearly-equal? -0.1 (array-get a 0) error-margin)
+      (f64-nearly-equal? 0.2 (array-get a 1) error-margin)
+      (f64-nearly-equal? -0.3 (array-get a 2) error-margin)
+      (f64-nearly-equal? 0.2 (array-get a 3) error-margin)
+      (f64-nearly-equal? -0.1 (array-get a 4) error-margin)))
   (label exit
     (return status)))
 
@@ -35,15 +35,24 @@
   (test-helper-assert
     "result check"
     (and
-      (float-nearly-equal? 0.1 (array-get a 0) error-margin)
-      (float-nearly-equal? 0.2 (array-get a 1) error-margin)
-      (float-nearly-equal? 0.3 (array-get a 2) error-margin)
-      (float-nearly-equal? 0.2 (array-get a 3) error-margin)
-      (float-nearly-equal? 0.1 (array-get a 4) error-margin)))
+      (f64-nearly-equal? 0.1 (array-get a 0) error-margin)
+      (f64-nearly-equal? 0.2 (array-get a 1) error-margin)
+      (f64-nearly-equal? 0.3 (array-get a 2) error-margin)
+      (f64-nearly-equal? 0.2 (array-get a 3) error-margin)
+      (f64-nearly-equal? 0.1 (array-get a 4) error-margin)))
   (label exit
     (return status)))
 
 (define test-file-path b8* "/tmp/test-sph-sp-file")
+
+(define (f64-array-nearly-equal? a a-len b b-len error-margin)
+  (boolean f64-s* size-t f64-s* size-t f64-s)
+  (define index size-t 0)
+  (if (not (= a-len b-len)) (return #f))
+  (while (< index a-len)
+    (if (not (f64-nearly-equal? (deref a index) (deref b index) error-margin)) (return #f))
+    (inc index))
+  (return #t))
 
 (define (test-port) status-t
   status-init
@@ -70,11 +79,10 @@
   (status-require! (sp-file-open (address-of port) test-file-path channel-count sample-rate))
   (printf " create\n")
   (define position size-t 0)
-  (status-require! (sp-port-sample-count (address-of position) (address-of port)))
+  (status-require! (sp-port-position (address-of position) (address-of port)))
   (status-require! (sp-port-write (address-of port) sample-count channel-data))
-  (status-require! (sp-port-sample-count (address-of position) (address-of port)))
-  (test-helper-assert
-    "sp-port-sample-count after write" (= (* channel-count sample-count) position))
+  (status-require! (sp-port-position (address-of position) (address-of port)))
+  (test-helper-assert "sp-port-position after write" (= sample-count position))
   (status-require! (sp-port-set-position (address-of port) 0))
   (status-require! (sp-port-read channel-data-2 (address-of port) sample-count))
   ; compare read result with output data
@@ -83,16 +91,15 @@
   (while (and len (not unequal))
     (dec len)
     (set unequal
-      (memcmp
-        (deref channel-data len) (deref channel-data-2 len) (* sample-count (sizeof sp-sample-t)))))
+      (f64-array-nearly-equal?
+        (deref channel-data len) sample-count (deref channel-data-2 len) sample-count error-margin)))
   (test-helper-assert "sp-port-read result" (not unequal))
   (status-require! (sp-port-close (address-of port)))
   (printf "  write\n")
   ; -- test open
   (status-require! (sp-file-open (address-of port) test-file-path 2 8000))
-  (status-require! (sp-port-sample-count (address-of position) (address-of port)))
-  (test-helper-assert
-    "sp-port-sample-count existing file" (= (* channel-count sample-count) position))
+  (status-require! (sp-port-position (address-of position) (address-of port)))
+  (test-helper-assert "sp-port-position existing file" (= sample-count position))
   (status-require! (sp-port-set-position (address-of port) 0))
   (status-require! (sp-port-read channel-data-2 (address-of port) sample-count))
   ; compare read result with output data
@@ -102,23 +109,14 @@
   (while (and len (not unequal))
     (dec len)
     (set unequal
-      (memcmp
-        (deref channel-data len) (deref channel-data-2 len) (* sample-count (sizeof sp-sample-t)))))
+      (f64-array-nearly-equal?
+        (deref channel-data len) sample-count (deref channel-data-2 len) sample-count error-margin)))
   (test-helper-assert "sp-port-read existing result" (not unequal))
   (status-require! (sp-port-close (address-of port)))
   (printf "  open\n")
   (label exit
     local-memory-free
     (return status)))
-
-(define (float-array-nearly-equal? a a-len b b-len error-margin)
-  (boolean f32-s* size-t f32-s* size-t f32-s)
-  (define index size-t 0)
-  (if (not (= a-len b-len)) (return #f))
-  (while (< index a-len)
-    (if (not (float-nearly-equal? (deref a index) (deref b index) error-margin)) (return #f))
-    (inc index))
-  (return #t))
 
 (define (test-convolve) status-t
   status-init
@@ -147,11 +145,10 @@
   (sp-convolve result a a-len b b-len carryover carryover-len)
   (test-helper-assert
     "first result"
-    (float-array-nearly-equal? result result-len expected-result result-len error-margin))
+    (f64-array-nearly-equal? result result-len expected-result result-len error-margin))
   (test-helper-assert
     "first result carryover"
-    (float-array-nearly-equal?
-      carryover carryover-len expected-carryover carryover-len error-margin))
+    (f64-array-nearly-equal? carryover carryover-len expected-carryover carryover-len error-margin))
   ; test convolve second segment
   (array-set-index a 0 8 1 9 2 10 3 11 4 12)
   (array-set-index expected-result 0 35 1 43 2 52 3 58 4 64)
@@ -159,11 +156,10 @@
   (sp-convolve result a a-len b b-len carryover carryover-len)
   (test-helper-assert
     "second result"
-    (float-array-nearly-equal? result result-len expected-result result-len error-margin))
+    (f64-array-nearly-equal? result result-len expected-result result-len error-margin))
   (test-helper-assert
     "second result carryover"
-    (float-array-nearly-equal?
-      carryover carryover-len expected-carryover carryover-len error-margin))
+    (f64-array-nearly-equal? carryover carryover-len expected-carryover carryover-len error-margin))
   (label exit
     local-memory-free
     (return status)))

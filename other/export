@@ -22,7 +22,7 @@ exports {
     sp_port_write;
     sp_port_close;
     sp_port_set_position;
-    sp_port_sample_count;
+    sp_port_position;
     sp_file_open;
     sp_alsa_open;
   local: *;

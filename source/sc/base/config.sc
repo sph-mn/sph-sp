@@ -1,9 +1,10 @@
 (pre-define
-  sp-sample-t f32-s
-  sp-float-t f32-s
+  sp-sample-t f64-s
+  sp-float-t f64-s
   sp-default-sample-rate 16000
   sp-default-channel-count 1
   sp-default-alsa-enable-soft-resample 1
+  sp-float-sum f64-sum
   sp-default-alsa-latency 50)
 
 (define (sample-reverse-endian a) (sp-sample-t sp-sample-t)

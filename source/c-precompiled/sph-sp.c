@@ -174,11 +174,12 @@ b8 *sp_status_name(status_t a) {
   if (!a) {                                                                    \
     status_set_both_goto(sp_status_group_sp, sp_status_id_memory);             \
   }
-#define sp_sample_t f32_s
-#define sp_float_t f32_s
+#define sp_sample_t f64_s
+#define sp_float_t f64_s
 #define sp_default_sample_rate 16000
 #define sp_default_channel_count 1
 #define sp_default_alsa_enable_soft_resample 1
+#define sp_float_sum f64_sum
 #define sp_default_alsa_latency 50
 /** reverse the byte order of one sample */
 sp_sample_t sample_reverse_endian(sp_sample_t a) {
@@ -210,12 +211,12 @@ typedef struct {
 status_t sp_port_read(sp_sample_t **result, sp_port_t *port, b32 sample_count);
 status_t sp_port_write(sp_port_t *port, b32 sample_count,
                        sp_sample_t **channel_data);
-status_t sp_port_sample_count(size_t *result, sp_port_t *port);
+status_t sp_port_position(size_t *result, sp_port_t *port);
 status_t sp_port_set_position(sp_port_t *port, b64_s sample_index);
-status_t sp_file_open(sp_port_t *result, b8 *path, b32_s channel_count,
-                      b32_s sample_rate);
+status_t sp_file_open(sp_port_t *result, b8 *path, b32 channel_count,
+                      b32 sample_rate);
 status_t sp_alsa_open(sp_port_t *result, b8 *device_name, boolean input_p,
-                      b32_s channel_count, b32_s sample_rate, b32_s latency);
+                      b32 channel_count, b32 sample_rate, b32_s latency);
 status_t sp_port_close(sp_port_t *a);
 #define sp_octets_to_samples(a) (a / sizeof(sp_sample_t))
 #define sp_samples_to_octets(a) (a * sizeof(sp_sample_t))
@@ -260,10 +261,6 @@ sp_sample_t **sp_alloc_channel_array(b32 channel_count, b32 sample_count);
 #include <unistd.h>
 #define sc_included_unistd_h
 #endif
-#ifndef sc_included_math_h
-#include <math.h>
-#define sc_included_math_h
-#endif
 #ifndef sc_included_sys_stat_h
 #include <sys/stat.h>
 #define sc_included_sys_stat_h
@@ -279,6 +276,10 @@ sp_sample_t **sp_alloc_channel_array(b32 channel_count, b32 sample_count);
 #ifndef sc_included_float_h
 #include <float.h>
 #define sc_included_float_h
+#endif
+#ifndef sc_included_math_h
+#include <math.h>
+#define sc_included_math_h
 #endif
 #define file_exists_p(path) !(access(path, F_OK) == -1)
 #define pointer_equal_p(a, b) (((b0 *)(a)) == ((b0 *)(b)))
@@ -343,12 +344,12 @@ b8 *string_append(b8 *a, b8 *b) {
 };
 /** sum numbers with rounding error compensation using kahan summation with
  * neumaier modification */
-f32_s float_sum(f32_s *numbers, b32 len) {
-  f32_s temp;
-  f32_s element;
-  f32_s correction = 0;
+f64_s f64_sum(f64_s *numbers, b32 len) {
+  f64_s temp;
+  f64_s element;
+  f64_s correction = 0;
   len = (len - 1);
-  f32_s result = (*(numbers + len));
+  f64_s result = (*(numbers + len));
   while (len) {
     len = (len - 1);
     element = (*(numbers + len));
@@ -362,11 +363,11 @@ f32_s float_sum(f32_s *numbers, b32 len) {
 };
 /** approximate float comparison. margin is a factor and is low for low accepted
    differences. http://floating-point-gui.de/errors/comparison/ */
-boolean float_nearly_equal_p(f32_s a, f32_s b, f32_s margin) {
+boolean f64_nearly_equal_p(f64_s a, f64_s b, f64_s margin) {
   if ((a == b)) {
     return (1);
   } else {
-    f32_s diff = fabs((a - b));
+    f64_s diff = fabs((a - b));
     return (((((0 == a)) || ((0 == b)) || (diff < DBL_MIN))
                  ? (diff < (margin * DBL_MIN))
                  : ((diff / fmin((fabs(a) + fabs(b)), DBL_MAX)) < margin)));
@@ -503,22 +504,24 @@ boolean sp_port_output_p(sp_port_t *a) {
   return ((sp_port_bit_output & (*a).flags));
 };
 /* -- au file */ status_t sp_file_open(sp_port_t *result, b8 *path,
-                                       b32_s channel_count, b32_s sample_rate) {
+                                       b32 channel_count, b32 sample_rate) {
   sp_status_init;
   int file;
   b32 channel_count_file;
   b32 sample_rate_file;
   b8 sp_port_flags =
       (sp_port_bit_input | sp_port_bit_output | sp_port_bit_position);
+  b8 encoding =
+      ((8 == sizeof(sp_sample_t)) ? 7 : ((4 == sizeof(sp_sample_t)) ? 6 : 0));
   if (file_exists_p(path)) {
     file = open(path, O_RDWR);
     sp_system_status_require_id(file);
-    b32 encoding;
-    if (!file_au_read_header(file, &encoding, &sample_rate_file,
+    b32 encoding_file;
+    if (!file_au_read_header(file, &encoding_file, &sample_rate_file,
                              &channel_count_file)) {
       status_set_id_goto(sp_status_id_file_header);
     };
-    if (!(encoding == 6)) {
+    if (!(encoding_file == encoding)) {
       status_set_id_goto(sp_status_id_file_encoding);
     };
     if (!(channel_count_file == channel_count)) {
@@ -535,10 +538,10 @@ boolean sp_port_output_p(sp_port_t *a) {
   } else {
     file = open(path, (O_RDWR | O_CREAT), 384);
     sp_system_status_require_id(file);
-    sample_rate_file = optional_number(sample_rate, sp_default_sample_rate);
-    channel_count_file =
-        optional_number(channel_count, sp_default_channel_count);
-    if (!file_au_write_header(file, 6, sample_rate_file, channel_count_file)) {
+    sample_rate_file = sample_rate;
+    channel_count_file = channel_count;
+    if (!file_au_write_header(file, encoding, sample_rate_file,
+                              channel_count_file)) {
       status_set_id_goto(sp_status_id_file_header);
     };
     off_t offset = lseek(file, 0, SEEK_CUR);
@@ -632,7 +635,7 @@ status_t sp_file_set_position(sp_port_t *port, b64_s sample_index) {
 exit:
   return (status);
 };
-status_t sp_file_sample_count(size_t *result, sp_port_t *port) {
+status_t sp_file_position(size_t *result, sp_port_t *port) {
   status_init;
   int file = (*port).data_int;
   off_t offset = lseek(file, 0, SEEK_END);
@@ -650,13 +653,12 @@ exit:
 /* -- alsa */
 /** open alsa sound output for capture or playback */
 status_t sp_alsa_open(sp_port_t *result, b8 *device_name, boolean input_p,
-                      b32_s channel_count, b32_s sample_rate, b32_s latency) {
+                      b32 channel_count, b32 sample_rate, b32_s latency) {
   status_init;
   if (!device_name) {
     device_name = "default";
   };
   set_optional_number(latency, sp_default_alsa_latency);
-  set_optional_number(sample_rate, sp_default_channel_count);
   snd_pcm_t *alsa_port = 0;
   sp_alsa_status_require_x(snd_pcm_open(
       &alsa_port, device_name,
@@ -740,9 +742,9 @@ exit:
   status_init;                                                                 \
   status_set_both(sp_status_group_sp, sp_status_id_not_implemented);           \
   return (status)
-status_t sp_port_sample_count(size_t *result, sp_port_t *port) {
+status_t sp_port_position(size_t *result, sp_port_t *port) {
   if ((sp_port_type_file == (*port).type)) {
-    return (sp_file_sample_count(result, port));
+    return (sp_file_position(result, port));
   } else {
     if ((sp_port_type_alsa == (*port).type)) {
       sp_port_not_implemented;
@@ -759,13 +761,13 @@ status_t sp_port_set_position(sp_port_t *port, b64_s sample_index) {
   };
 };
 /** lower precision version of sin() that is faster to compute */
-f32_s sp_sin_lq(f32_s a) {
-  f32_s b = (4 / M_PI);
-  f32_s c = (-4 / (M_PI * M_PI));
+sp_sample_t sp_sin_lq(sp_sample_t a) {
+  sp_sample_t b = (4 / M_PI);
+  sp_sample_t c = (-4 / (M_PI * M_PI));
   return ((((b * a) + (c * a * abs(a)))));
 };
 /** the normalised sinc function */
-f32_s sp_sinc(f32_s a) {
+sp_sample_t sp_sinc(sp_sample_t a) {
   return (((0 == a) ? 1 : (sin((M_PI * a)) / (M_PI * a))));
 };
 /* write samples for a sine wave into dest.
@@ -775,8 +777,8 @@ f32_s sp_sinc(f32_s a) {
    amp: amplitude. 0..1
    defines sp-sine, sp-sine-lq */
 #define define_sp_sine(id, sin)                                                \
-  b0 id(sp_sample_t *dest, b32 len, f32_s sample_duration, f32_s freq,         \
-        f32_s phase, f32_s amp) {                                              \
+  b0 id(sp_sample_t *dest, b32 len, sp_float_t sample_duration,                \
+        sp_float_t freq, sp_float_t phase, sp_float_t amp) {                   \
     b32 index = 0;                                                             \
     while ((index <= len)) {                                                   \
       (*(dest + index)) = (amp * sin((freq * phase * sample_duration)));       \
@@ -915,7 +917,7 @@ status_i_t sp_moving_average(sp_sample_t *result, sp_sample_t *source,
   };
   while ((start <= end)) {
     if ((((start >= radius)) && (((start + radius + 1) <= source_len)))) {
-      (*result) = (float_sum(((source + start) - radius), width) / width);
+      (*result) = (sp_float_sum(((source + start) - radius), width) / width);
     } else {
       window_index = 0;
       if ((start < radius)) {
@@ -962,7 +964,7 @@ status_i_t sp_moving_average(sp_sample_t *result, sp_sample_t *source,
         (*(window + window_index)) = 0;
         inc(window_index);
       };
-      (*result) = (float_sum(window, width) / width);
+      (*result) = (sp_float_sum(window, width) / width);
     };
     inc(result);
     inc(start);
@@ -970,7 +972,7 @@ status_i_t sp_moving_average(sp_sample_t *result, sp_sample_t *source,
   free(window);
   return (0);
 };
-f32_s sp_window_blackman(f32_s a, size_t width) {
+sp_float_t sp_window_blackman(sp_float_t a, size_t width) {
   return (((0.42 - (0.5 * cos(((2 * M_PI * a) / (width - 1))))) +
            (0.8 * cos(((4 * M_PI * a) / (width - 1))))));
 };
@@ -1050,7 +1052,7 @@ b0 sp_convolve(sp_sample_t *result, sp_sample_t *a, size_t a_len,
   defined in main.sc and sph-sp.sc */
 /** approximate impulse response length for a transition factor and
   ensure that the length is odd */
-size_t sp_windowed_sinc_ir_length(f32_s transition) {
+size_t sp_windowed_sinc_ir_length(sp_float_t transition) {
   b32 result = ceil((4 / transition));
   if (!(result % 2)) {
     inc(result);
@@ -1061,11 +1063,12 @@ size_t sp_windowed_sinc_ir_length(f32_s transition) {
   blackman window (truncated version). allocates result, sets result-len. failed
   if result is null */
 b0 sp_windowed_sinc_ir(sp_sample_t **result, size_t *result_len,
-                       b32 sample_rate, f32_s freq, f32_s transition) {
+                       b32 sample_rate, sp_float_t freq,
+                       sp_float_t transition) {
   size_t len = sp_windowed_sinc_ir_length(transition);
   (*result_len) = len;
-  f32_s center_index = ((len - 1.0) / 2.0);
-  f32_s cutoff = sp_windowed_sinc_cutoff(freq, sample_rate);
+  sp_float_t center_index = ((len - 1.0) / 2.0);
+  sp_float_t cutoff = sp_windowed_sinc_cutoff(freq, sample_rate);
   sp_sample_t *result_temp = malloc((len * sizeof(sp_sample_t)));
   result_temp = malloc((len * sizeof(sp_sample_t)));
   if (!result_temp) {
@@ -1078,7 +1081,7 @@ b0 sp_windowed_sinc_ir(sp_sample_t **result, size_t *result_len,
         sp_window_blackman(sp_sinc((2 * cutoff * (index - center_index))), len);
     inc(index);
   };
-  f32_s result_sum = float_sum(result_temp, len);
+  sp_float_t result_sum = sp_float_sum(result_temp, len);
   while (len) {
     dec(len);
     (*(result_temp + index)) = ((*(result_temp + index)) / result_sum);
@@ -1093,7 +1096,8 @@ b0 sp_windowed_sinc_state_destroy(sp_windowed_sinc_state_t *state) {
 /** create or update a state object. impulse response array properties are
   calculated from sample-rate, freq and transition. eventually frees state.ir.
   ir-len-prev data elements have to be copied to the next result */
-b8 sp_windowed_sinc_state_create(b32 sample_rate, f32_s freq, f32_s transition,
+b8 sp_windowed_sinc_state_create(b32 sample_rate, sp_float_t freq,
+                                 sp_float_t transition,
                                  sp_windowed_sinc_state_t **state) {
   sp_windowed_sinc_state_t *state_temp;
   if (!(*state)) {
@@ -1157,8 +1161,8 @@ b8 sp_windowed_sinc_state_create(b32 sample_rate, f32_s freq, f32_s transition,
   sample-rate, frequency and transition variable per call.
   state can be zero and it will be allocated */
 status_i_t sp_windowed_sinc(sp_sample_t *result, sp_sample_t *source,
-                            size_t source_len, b32 sample_rate, f32_s freq,
-                            f32_s transition,
+                            size_t source_len, b32 sample_rate, sp_float_t freq,
+                            sp_float_t transition,
                             sp_windowed_sinc_state_t **state) {
   if (sp_windowed_sinc_state_create(sample_rate, freq, transition, state)) {
     return (1);

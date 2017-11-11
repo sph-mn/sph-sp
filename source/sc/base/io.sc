@@ -83,24 +83,30 @@
 
 (sc-comment "-- au file")
 
-(define (sp-file-open result path channel-count sample-rate) (status-t sp-port-t* b8* b32-s b32-s)
+(define (sp-file-open result path channel-count sample-rate) (status-t sp-port-t* b8* b32 b32)
   sp-status-init
   (define
     file int
     channel-count-file b32
     sample-rate-file b32)
+  ; todo: current limitation: can only read files with the same sample type as sp-sample-t
   (define sp-port-flags b8 (bit-or sp-port-bit-input sp-port-bit-output sp-port-bit-position))
+  (define encoding b8
+    (case* = (sizeof sp-sample-t)
+      (8 7)
+      (4 6)))
   (if (file-exists? path)
     (begin
       (set file (open path O_RDWR))
       (sp-system-status-require-id file)
-      (define encoding b32)
+      (define encoding-file b32)
       (if
         (not
           (file-au-read-header
-            file (address-of encoding) (address-of sample-rate-file) (address-of channel-count-file)))
+            file
+            (address-of encoding-file) (address-of sample-rate-file) (address-of channel-count-file)))
         (status-set-id-goto sp-status-id-file-header))
-      (if (not (= encoding 6)) (status-set-id-goto sp-status-id-file-encoding))
+      (if (not (= encoding-file encoding)) (status-set-id-goto sp-status-id-file-encoding))
       (if (not (= channel-count-file channel-count))
         (status-set-id-goto sp-status-id-file-incompatible))
       (if (not (= sample-rate-file sample-rate))
@@ -113,9 +119,9 @@
     (begin
       (set file (open path (bit-or O_RDWR O_CREAT) 384))
       (sp-system-status-require-id file)
-      (set sample-rate-file (optional-number sample-rate sp-default-sample-rate))
-      (set channel-count-file (optional-number channel-count sp-default-channel-count))
-      (if (not (file-au-write-header file 6 sample-rate-file channel-count-file))
+      (set sample-rate-file sample-rate)
+      (set channel-count-file channel-count)
+      (if (not (file-au-write-header file encoding sample-rate-file channel-count-file))
         (status-set-id-goto sp-status-id-file-header))
       (define offset off-t (lseek file 0 SEEK-CUR))
       (sp-system-status-require-id offset)
@@ -190,7 +196,7 @@
   (label exit
     (return status)))
 
-(define (sp-file-sample-count result port) (status-t size-t* sp-port-t*)
+(define (sp-file-position result port) (status-t size-t* sp-port-t*)
   status-init
   (define file int (struct-pointer-get port data-int))
   (define offset off-t (lseek file 0 SEEK_END))
@@ -206,13 +212,12 @@
 (sc-comment "-- alsa")
 
 (define (sp-alsa-open result device-name input? channel-count sample-rate latency)
-  (status-t sp-port-t* b8* boolean b32-s b32-s b32-s)
+  (status-t sp-port-t* b8* boolean b32 b32 b32-s)
   "open alsa sound output for capture or playback"
   status-init
   ; defaults
   (if (not device-name) (set device-name "default"))
   (set-optional-number latency sp-default-alsa-latency)
-  (set-optional-number sample-rate sp-default-channel-count)
   (define alsa-port snd-pcm-t* 0)
   ; open
   (sp-alsa-status-require!
@@ -285,9 +290,9 @@
     (status-set-both sp-status-group-sp sp-status-id-not-implemented)
     (return status)))
 
-(define (sp-port-sample-count result port) (status-t size-t* sp-port-t*)
+(define (sp-port-position result port) (status-t size-t* sp-port-t*)
   (case = (struct-pointer-get port type)
-    (sp-port-type-file (return (sp-file-sample-count result port)))
+    (sp-port-type-file (return (sp-file-position result port)))
     (sp-port-type-alsa sp-port-not-implemented)))
 
 (define (sp-port-set-position port sample-index) (status-t sp-port-t* b64-s)

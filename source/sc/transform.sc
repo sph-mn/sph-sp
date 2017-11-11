@@ -70,7 +70,7 @@
   (while (<= start end)
     (if (and (>= start radius) (<= (+ start radius 1) source-len))
       ; all required samples are in source array
-      (set (deref result) (/ (float-sum (- (+ source start) radius) width) width))
+      (set (deref result) (/ (sp-float-sum (- (+ source start) radius) width) width))
       (begin
         (set window-index 0)
         ; get samples from previous segment
@@ -112,13 +112,13 @@
         (while (< window-index width)
           (set (deref window window-index) 0)
           (inc window-index))
-        (set (deref result) (/ (float-sum window width) width))))
+        (set (deref result) (/ (sp-float-sum window width) width))))
     (inc result)
     (inc start))
   (free window)
   (return 0))
 
-(define (sp-window-blackman a width) (f32-s f32-s size-t)
+(define (sp-window-blackman a width) (sp-float-t sp-float-t size-t)
   (return
     (+
       (- 0.42 (* 0.5 (cos (/ (* 2 M_PI a) (- width 1))))) (* 0.8 (cos (/ (* 4 M_PI a) (- width 1)))))))

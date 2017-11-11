@@ -18,17 +18,17 @@
   uint32_t
   b64
   uint64_t
-  b8_s
+  b8-s
   int8_t
-  b16_s
+  b16-s
   int16_t
-  b32_s
+  b32-s
   int32_t
-  b64_s
+  b64-s
   int64_t
-  f32_s
+  f32-s
   float
-  f64_s
+  f64-s
   double)
 
 (pre-define (debug-log format ...)
