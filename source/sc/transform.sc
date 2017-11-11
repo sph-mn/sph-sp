@@ -14,7 +14,7 @@
   (define fftr-state kiss-fftr-cfg (kiss-fftr-alloc result-len #f 0 0))
   (if (not fftr-state) (status-set-id-goto sp-status-id-memory))
   (local-memory-add fftr-state)
-  (sp-define-malloc out kiss-fft-cpx* (* result-len (sizeof kiss-fft-cpx)))
+  (sp-alloc-define out kiss-fft-cpx* (* result-len (sizeof kiss-fft-cpx)))
   (local-memory-add out)
   (kiss-fftr fftr-state source out)
   ; extract the real part
@@ -31,7 +31,7 @@
   (define fftr-state kiss-fftr-cfg (kiss-fftr-alloc source-len #t 0 0))
   (if (not fftr-state) (status-set-id-goto sp-status-id-memory))
   (local-memory-add fftr-state)
-  (sp-define-malloc in kiss-fft-cpx* (* source-len (sizeof kiss-fft-cpx)))
+  (sp-alloc-define in kiss-fft-cpx* (* source-len (sizeof kiss-fft-cpx)))
   (local-memory-add in)
   (while source-len
     (dec source-len)

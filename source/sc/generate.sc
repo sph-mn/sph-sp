@@ -9,16 +9,21 @@
   (return (if* (= 0 a) 1 (/ (sin (* M_PI a)) (* M_PI a)))))
 
 (sc-comment
-  "write samples for a sine wave into data between start at end.
+  "write samples for a sine wave into dest.
+   sample-duration: in seconds
+   freq: radian frequency
+   phase: phase offset
+   amp: amplitude. 0..1
    defines sp-sine, sp-sine-lq")
 
 (pre-define (define-sp-sine id sin)
-  (define (id data start end sample-duration freq phase amp)
-    (b0 sp-sample-t* b32 b32 f32_s f32_s f32_s f32_s)
-    (while (<= start end)
-      (set (deref data start) (* amp (sin (* freq phase sample-duration))))
+  (define (id dest len sample-duration freq phase amp)
+    (b0 sp-sample-t* b32 f32_s f32_s f32_s f32_s)
+    (define index b32 0)
+    (while (<= index len)
+      (set (deref dest index) (* amp (sin (* freq phase sample-duration))))
       (inc phase)
-      (inc start))))
+      (inc index))))
 
 (define-sp-sine sp-sine sin)
 (define-sp-sine sp-sine-lq sp-sin-lq)

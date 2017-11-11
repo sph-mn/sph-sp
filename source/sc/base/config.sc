@@ -1,5 +1,6 @@
 (pre-define
   sp-sample-t f32-s
+  sp-float-t f32-s
   sp-default-sample-rate 16000
   sp-default-channel-count 1
   sp-default-alsa-enable-soft-resample 1

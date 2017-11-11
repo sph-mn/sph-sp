@@ -55,7 +55,7 @@
   (define sample-count b32 5)
   (define channel-data sp-sample-t** (sp-alloc-channel-array channel-count sample-count))
   (define channel-data-2 sp-sample-t** (sp-alloc-channel-array channel-count sample-count))
-  (sp-status-require-alloc channel-data)
+  (sp-alloc-require channel-data)
   (local-memory-add channel-data)
   (local-memory-add channel-data-2)
   (define len size-t)
@@ -111,13 +111,6 @@
     local-memory-free
     (return status)))
 
-(pre-define (sp-define-malloc id type size)
-  (define id type (malloc size))
-  (if (not id) (status-set-both-goto sp-status-group-sp sp-status-id-memory)))
-
-(pre-define (sp-define-malloc-samples id sample-count)
-  (sp-define-malloc id sp-sample-t* (* sample-count (sizeof sp-sample-t))))
-
 (define (float-array-nearly-equal? a a-len b b-len error-margin)
   (boolean f32-s* size-t f32-s* size-t f32-s)
   (define index size-t 0)
@@ -136,13 +129,13 @@
   (define carryover-len b32 b-len)
   ; allocate memory
   (local-memory-init 4)
-  (sp-define-malloc-samples result result-len)
+  (sp-alloc-define-samples result result-len)
   (local-memory-add result)
-  (sp-define-malloc-samples a a-len)
+  (sp-alloc-define-samples a a-len)
   (local-memory-add a)
-  (sp-define-malloc-samples b b-len)
+  (sp-alloc-define-samples b b-len)
   (local-memory-add b)
-  (sp-define-malloc-samples carryover carryover-len)
+  (sp-alloc-define-samples carryover carryover-len)
   (local-memory-add carryover)
   ; prepare input/output data arrays
   (array-set-index a 0 2 1 3 2 4 3 5 4 6)
@@ -198,13 +191,13 @@
   (define next-len b32 prev-len)
   ; allocate memory
   (local-memory-init 4)
-  (sp-define-malloc-samples result result-len)
+  (sp-alloc-define-samples result result-len)
   (local-memory-add result)
-  (sp-define-malloc-samples source source-len)
+  (sp-alloc-define-samples source source-len)
   (local-memory-add source)
-  (sp-define-malloc-samples prev prev-len)
+  (sp-alloc-define-samples prev prev-len)
   (local-memory-add prev)
-  (sp-define-malloc-samples next next-len)
+  (sp-alloc-define-samples next next-len)
   (local-memory-add next)
   ; set values
   (array-set source 1 4 8 12 3 32 2)

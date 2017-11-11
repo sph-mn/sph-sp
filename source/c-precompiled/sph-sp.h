@@ -167,6 +167,7 @@ b8 *sp_status_name(status_t a) {
     status_set_both_goto(sp_status_group_sp, sp_status_id_memory);             \
   }
 #define sp_sample_t f32_s
+#define sp_float_t f32_s
 #define sp_default_sample_rate 16000
 #define sp_default_channel_count 1
 #define sp_default_alsa_enable_soft_resample 1
@@ -210,15 +211,43 @@ status_t sp_alsa_open(sp_port_t *result, b8 *device_name, boolean input_p,
 status_t sp_port_close(sp_port_t *a);
 #define sp_octets_to_samples(a) (a / sizeof(sp_sample_t))
 #define sp_samples_to_octets(a) (a * sizeof(sp_sample_t))
+/** set sph/status object to group sp and id memory-error and goto "exit" label
+ * if "a" is 0 */
+#define sp_alloc_require(a)                                                    \
+  if (!a) {                                                                    \
+    status_set_both_goto(sp_status_group_sp, sp_status_id_memory);             \
+  }
+;
+#define sp_alloc_set(a, octet_count)                                           \
+  a = malloc(octet_count);                                                     \
+  sp_alloc_require(a)
+#define sp_alloc_set_zero(a, octet_count)                                      \
+  a = calloc(octet_count, 1);                                                  \
+  sp_alloc_require(a)
+#define sp_alloc_define(id, type, octet_count)                                 \
+  type id;                                                                     \
+  sp_alloc_set(id, octet_count)
+#define sp_alloc_define_zero(id, type, octet_count)                            \
+  type id;                                                                     \
+  sp_alloc_set_zero(id, octet_count)
+#define sp_alloc_define_samples(id, sample_count)                              \
+  sp_alloc_define(id, sp_sample_t *, (sample_count * sizeof(sp_sample_t)))
+#define sp_alloc_set_samples(a, sample_count)                                  \
+  sp_alloc_set(a, (sample_count * sizeof(sp_sample_t)))
+#define sp_alloc_define_samples_zero(id, sample_count)                         \
+  sp_alloc_define_zero(id, sp_sample_t *,                                      \
+                       sp_samples_to_octets(sizeof(sp_sample_t)))
+#define sp_alloc_set_samples_zero(a, sample_count)                             \
+  sp_alloc_set_zero(a, sp_samples_to_octets(sample_count))
 sp_sample_t **sp_alloc_channel_array(b32 channel_count, b32 sample_count);
-f32_s sp_sin_lq(f32_s a);
-f32_s sp_sinc(f32_s a);
-b0 sp_sine(sp_sample_t *data, b32 start, b32 end, f32_s sample_duration,
-           f32_s freq, f32_s phase, f32_s amp);
-b0 sp_sine_lq(sp_sample_t *data, b32 start, b32 end, f32_s sample_duration,
-              f32_s freq, f32_s phase, f32_s amp);
+sp_float_t sp_sin_lq(sp_float_t a);
+sp_float_t sp_sinc(sp_float_t a);
+b0 sp_sine(sp_sample_t *data, b32 len, sp_float_t sample_duration,
+           sp_float_t freq, sp_float_t phase, sp_float_t amp);
+b0 sp_sine_lq(sp_sample_t *data, b32 len, sp_float_t sample_duration,
+              sp_float_t freq, sp_float_t phase, sp_float_t amp);
 #define kiss_fft_scalar sp_sample_t
-/** f32-s integer -> f32-s
+/** sp-float-t integer -> sp-float-t
   radians-per-second samples-per-second -> cutoff-value */
 #define sp_windowed_sinc_cutoff(freq, sample_rate)                             \
   ((2 * M_PI * freq) / sample_rate)
@@ -230,19 +259,21 @@ typedef struct {
   sp_sample_t *ir;
   size_t ir_len;
   b32 sample_rate;
-  f32_s freq;
-  f32_s transition;
+  sp_float_t freq;
+  sp_float_t transition;
 } sp_windowed_sinc_state_t;
-size_t sp_windowed_sinc_ir_length(f32_s transition);
+size_t sp_windowed_sinc_ir_length(sp_float_t transition);
 b0 sp_windowed_sinc_ir(sp_sample_t **result, size_t *result_len,
-                       b32 sample_rate, f32_s freq, f32_s transition);
+                       b32 sample_rate, sp_float_t freq, sp_float_t transition);
 b0 sp_windowed_sinc_state_destroy(sp_windowed_sinc_state_t *state);
-b8 sp_windowed_sinc_state_create(b32 sample_rate, f32_s freq, f32_s transition,
+b8 sp_windowed_sinc_state_create(b32 sample_rate, sp_float_t freq,
+                                 sp_float_t transition,
                                  sp_windowed_sinc_state_t **state);
 status_i_t sp_windowed_sinc(sp_sample_t *result, sp_sample_t *source,
-                            size_t source_len, b32 sample_rate, f32_s freq,
-                            f32_s transition, sp_windowed_sinc_state_t **state);
-f32_s sp_window_blackman(f32_s a, size_t width);
+                            size_t source_len, b32 sample_rate, sp_float_t freq,
+                            sp_float_t transition,
+                            sp_windowed_sinc_state_t **state);
+sp_float_t sp_window_blackman(sp_float_t a, size_t width);
 b0 sp_spectral_inversion_ir(sp_sample_t *a, size_t a_len);
 b0 sp_spectral_reversal_ir(sp_sample_t *a, size_t a_len);
 status_t sp_fft(sp_sample_t *result, b32 result_len, sp_sample_t *source,

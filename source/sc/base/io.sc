@@ -133,7 +133,7 @@
     (status-set-both-goto sp-status-group-sp sp-status-id-port-type))
   (define channel-count b32 (struct-pointer-get port channel-count))
   (define interleaved-size size-t (* channel-count sample-count (sizeof sp-sample-t*)))
-  (sp-define-malloc interleaved sp-sample-t* interleaved-size)
+  (sp-alloc-define interleaved sp-sample-t* interleaved-size)
   (local-memory-add interleaved)
   (sp-interleave-and-reverse-endian channel-data interleaved sample-count channel-count)
   (define count int (write (struct-pointer-get port data-int) interleaved interleaved-size))
@@ -150,7 +150,7 @@
   (local-memory-init 1)
   (define channel-count b32 (struct-pointer-get port channel-count))
   (define interleaved-size size-t (* channel-count sample-count (sizeof sp-sample-t)))
-  (sp-define-malloc interleaved sp-sample-t* interleaved-size)
+  (sp-alloc-define interleaved sp-sample-t* interleaved-size)
   (local-memory-add interleaved)
   (define count int (read (struct-pointer-get port data-int) interleaved interleaved-size))
   (cond

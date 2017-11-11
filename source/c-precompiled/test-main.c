@@ -237,7 +237,7 @@ status_t test_port() {
       sp_alloc_channel_array(channel_count, sample_count);
   sp_sample_t **channel_data_2 =
       sp_alloc_channel_array(channel_count, sample_count);
-  sp_status_require_alloc(channel_data);
+  sp_alloc_require(channel_data);
   local_memory_add(channel_data);
   local_memory_add(channel_data_2);
   size_t len;
@@ -291,13 +291,6 @@ exit:
   local_memory_free;
   return (status);
 };
-#define sp_define_malloc(id, type, size)                                       \
-  type id = malloc(size);                                                      \
-  if (!id) {                                                                   \
-    status_set_both_goto(sp_status_group_sp, sp_status_id_memory);             \
-  }
-#define sp_define_malloc_samples(id, sample_count)                             \
-  sp_define_malloc(id, sp_sample_t *, (sample_count * sizeof(sp_sample_t)))
 boolean float_array_nearly_equal_p(f32_s *a, size_t a_len, f32_s *b,
                                    size_t b_len, f32_s error_margin) {
   size_t index = 0;
@@ -320,13 +313,13 @@ status_t test_convolve() {
   b32 a_len = sample_count;
   b32 carryover_len = b_len;
   local_memory_init(4);
-  sp_define_malloc_samples(result, result_len);
+  sp_alloc_define_samples(result, result_len);
   local_memory_add(result);
-  sp_define_malloc_samples(a, a_len);
+  sp_alloc_define_samples(a, a_len);
   local_memory_add(a);
-  sp_define_malloc_samples(b, b_len);
+  sp_alloc_define_samples(b, b_len);
   local_memory_add(b);
-  sp_define_malloc_samples(carryover, carryover_len);
+  sp_alloc_define_samples(carryover, carryover_len);
   local_memory_add(carryover);
   (*(a + 0)) = 2;
   (*(a + 1)) = 3;
@@ -396,13 +389,13 @@ status_t test_moving_average() {
   b32 prev_len = 4;
   b32 next_len = prev_len;
   local_memory_init(4);
-  sp_define_malloc_samples(result, result_len);
+  sp_alloc_define_samples(result, result_len);
   local_memory_add(result);
-  sp_define_malloc_samples(source, source_len);
+  sp_alloc_define_samples(source, source_len);
   local_memory_add(source);
-  sp_define_malloc_samples(prev, prev_len);
+  sp_alloc_define_samples(prev, prev_len);
   local_memory_add(prev);
-  sp_define_malloc_samples(next, next_len);
+  sp_alloc_define_samples(next, next_len);
   local_memory_add(next);
   (*(source + 0)) = 1;
   (*(source + 1)) = 4;
