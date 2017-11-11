@@ -2,4 +2,4 @@
 !#
 
 (import (sph install))
-(install-cli-guile ("/usr/lib" "temp/libsph-sp.so") ("/usr/include" "source/c-precompiled/sph-sp.c"))
+(install-cli-guile ("/usr/lib" "temp/libsph-sp.so") ("/usr/include" "source/c-precompiled/sph-sp.h"))
