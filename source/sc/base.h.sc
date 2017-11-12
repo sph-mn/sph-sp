@@ -4,6 +4,8 @@
 (sc-include "base/foreign/sph" "base/foreign/sph/status" "base/status" "base/config" "base/io.h")
 (pre-define (sp-octets->samples a) (/ a (sizeof sp-sample-t)))
 (pre-define (sp-samples->octets a) (* a (sizeof sp-sample-t)))
+(pre-define (duration->sample-count seconds sample-rate) (* seconds sample-rate))
+(pre-define (sample-count->duration sample-count sample-rate) (/ sample-count sample-rate))
 ;
 ;-- memory
 
