@@ -132,7 +132,7 @@
     (if (and status-failure? file) (close file))
     (return status)))
 
-(define (sp-file-write port sample-count channel-data) (status-t sp-port-t* b32 sp-sample-t**)
+(define (sp-file-write port sample-count channel-data) (status-t sp-port-t* size-t sp-sample-t**)
   status-init
   (local-memory-init 1)
   (if (not (bit-and sp-port-bit-input (struct-pointer-get port flags)))
@@ -228,7 +228,7 @@
   (sp-alsa-status-require!
     (snd-pcm-set-params
       alsa-port
-      SND_PCM_FORMAT_FLOAT_LE
+      SND_PCM_FORMAT_FLOAT64_LE
       SND_PCM_ACCESS_RW_NONINTERLEAVED
       channel-count sample-rate sp-default-alsa-enable-soft-resample latency))
   (define sp-port-flags b8 (if* input? sp-port-bit-input sp-port-bit-output))
@@ -240,13 +240,12 @@
     (if (and status-failure? alsa-port) (snd-pcm-close alsa-port))
     (return status)))
 
-(define (sp-alsa-write port sample-count channel-data) (status-t sp-port-t* b32 sp-sample-t**)
+(define (sp-alsa-write port sample-count channel-data) (status-t sp-port-t* size-t sp-sample-t**)
   status-init
-  (define deinterleaved-size size-t (sp-samples->octets sample-count))
   (define alsa-port snd-pcm-t* (struct-pointer-get port data))
   (define frames-written snd_pcm_sframes_t
     (snd-pcm-writen
-      alsa-port (convert-type channel-data b0**) (convert-type deinterleaved-size snd_pcm_uframes_t)))
+      alsa-port (convert-type channel-data b0**) (convert-type sample-count snd_pcm_uframes_t)))
   (if (and (< frames-written 0) (< (snd-pcm-recover alsa-port frames-written 0) 0))
     (status-set-both-goto sp-status-group-alsa frames-written))
   (label exit
@@ -267,7 +266,7 @@
     (sp-port-type-file (return (sp-file-read result port sample-count)))
     (sp-port-type-alsa (return (sp-alsa-read result port sample-count)))))
 
-(define (sp-port-write port sample-count channel-data) (status-t sp-port-t* b32 sp-sample-t**)
+(define (sp-port-write port sample-count channel-data) (status-t sp-port-t* size-t sp-sample-t**)
   (case = (struct-pointer-get port type)
     (sp-port-type-file (return (sp-file-write port sample-count channel-data)))
     (sp-port-type-alsa (return (sp-alsa-write port sample-count channel-data)))))

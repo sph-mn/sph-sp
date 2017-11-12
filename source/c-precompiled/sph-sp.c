@@ -180,7 +180,7 @@ b8 *sp_status_name(status_t a) {
 #define sp_default_channel_count 1
 #define sp_default_alsa_enable_soft_resample 1
 #define sp_float_sum f64_sum
-#define sp_default_alsa_latency 50
+#define sp_default_alsa_latency 128
 /** reverse the byte order of one sample */
 sp_sample_t sample_reverse_endian(sp_sample_t a) {
   sp_sample_t result;
@@ -209,7 +209,7 @@ typedef struct {
 #define sp_port_bit_output 2
 #define sp_port_bit_position 4
 status_t sp_port_read(sp_sample_t **result, sp_port_t *port, b32 sample_count);
-status_t sp_port_write(sp_port_t *port, b32 sample_count,
+status_t sp_port_write(sp_port_t *port, size_t sample_count,
                        sp_sample_t **channel_data);
 status_t sp_port_position(size_t *result, sp_port_t *port);
 status_t sp_port_set_position(sp_port_t *port, b64_s sample_index);
@@ -220,6 +220,9 @@ status_t sp_alsa_open(sp_port_t *result, b8 *device_name, boolean input_p,
 status_t sp_port_close(sp_port_t *a);
 #define sp_octets_to_samples(a) (a / sizeof(sp_sample_t))
 #define sp_samples_to_octets(a) (a * sizeof(sp_sample_t))
+#define duration_to_sample_count(seconds, sample_rate) (seconds * sample_rate)
+#define sample_count_to_duration(sample_count, sample_rate)                    \
+  (sample_count / sample_rate)
 /** set sph/status object to group sp and id memory-error and goto "exit" label
  * if "a" is 0 */
 #define sp_alloc_require(a)                                                    \
@@ -556,7 +559,7 @@ exit:
   };
   return (status);
 };
-status_t sp_file_write(sp_port_t *port, b32 sample_count,
+status_t sp_file_write(sp_port_t *port, size_t sample_count,
                        sp_sample_t **channel_data) {
   status_init;
   local_memory_init(1);
@@ -664,7 +667,7 @@ status_t sp_alsa_open(sp_port_t *result, b8 *device_name, boolean input_p,
       &alsa_port, device_name,
       (input_p ? SND_PCM_STREAM_CAPTURE : SND_PCM_STREAM_PLAYBACK), 0));
   sp_alsa_status_require_x(snd_pcm_set_params(
-      alsa_port, SND_PCM_FORMAT_FLOAT_LE, SND_PCM_ACCESS_RW_NONINTERLEAVED,
+      alsa_port, SND_PCM_FORMAT_FLOAT64_LE, SND_PCM_ACCESS_RW_NONINTERLEAVED,
       channel_count, sample_rate, sp_default_alsa_enable_soft_resample,
       latency));
   b8 sp_port_flags = (input_p ? sp_port_bit_input : sp_port_bit_output);
@@ -677,14 +680,12 @@ exit:
   };
   return (status);
 };
-status_t sp_alsa_write(sp_port_t *port, b32 sample_count,
+status_t sp_alsa_write(sp_port_t *port, size_t sample_count,
                        sp_sample_t **channel_data) {
   status_init;
-  size_t deinterleaved_size = sp_samples_to_octets(sample_count);
   snd_pcm_t *alsa_port = (*port).data;
-  snd_pcm_sframes_t frames_written =
-      snd_pcm_writen(alsa_port, ((b0 **)(channel_data)),
-                     ((snd_pcm_uframes_t)(deinterleaved_size)));
+  snd_pcm_sframes_t frames_written = snd_pcm_writen(
+      alsa_port, ((b0 **)(channel_data)), ((snd_pcm_uframes_t)(sample_count)));
   if (((frames_written < 0) &&
        (snd_pcm_recover(alsa_port, frames_written, 0) < 0))) {
     status_set_both_goto(sp_status_group_alsa, frames_written);
@@ -712,7 +713,7 @@ status_t sp_port_read(sp_sample_t **result, sp_port_t *port, b32 sample_count) {
     };
   };
 };
-status_t sp_port_write(sp_port_t *port, b32 sample_count,
+status_t sp_port_write(sp_port_t *port, size_t sample_count,
                        sp_sample_t **channel_data) {
   if ((sp_port_type_file == (*port).type)) {
     return (sp_file_write(port, sample_count, channel_data));

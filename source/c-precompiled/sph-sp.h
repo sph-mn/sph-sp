@@ -172,7 +172,7 @@ b8 *sp_status_name(status_t a) {
 #define sp_default_channel_count 1
 #define sp_default_alsa_enable_soft_resample 1
 #define sp_float_sum f64_sum
-#define sp_default_alsa_latency 50
+#define sp_default_alsa_latency 128
 /** reverse the byte order of one sample */
 sp_sample_t sample_reverse_endian(sp_sample_t a) {
   sp_sample_t result;
@@ -201,7 +201,7 @@ typedef struct {
 #define sp_port_bit_output 2
 #define sp_port_bit_position 4
 status_t sp_port_read(sp_sample_t **result, sp_port_t *port, b32 sample_count);
-status_t sp_port_write(sp_port_t *port, b32 sample_count,
+status_t sp_port_write(sp_port_t *port, size_t sample_count,
                        sp_sample_t **channel_data);
 status_t sp_port_position(size_t *result, sp_port_t *port);
 status_t sp_port_set_position(sp_port_t *port, b64_s sample_index);
@@ -212,6 +212,9 @@ status_t sp_alsa_open(sp_port_t *result, b8 *device_name, boolean input_p,
 status_t sp_port_close(sp_port_t *a);
 #define sp_octets_to_samples(a) (a / sizeof(sp_sample_t))
 #define sp_samples_to_octets(a) (a * sizeof(sp_sample_t))
+#define duration_to_sample_count(seconds, sample_rate) (seconds * sample_rate)
+#define sample_count_to_duration(sample_count, sample_rate)                    \
+  (sample_count / sample_rate)
 /** set sph/status object to group sp and id memory-error and goto "exit" label
  * if "a" is 0 */
 #define sp_alloc_require(a)                                                    \

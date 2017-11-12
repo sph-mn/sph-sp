@@ -3,9 +3,9 @@
   sp-float-t f64-s
   sp-default-sample-rate 16000
   sp-default-channel-count 1
-  sp-default-alsa-enable-soft-resample 1
+  sp-default-alsa-enable-soft-resample #t
   sp-float-sum f64-sum
-  sp-default-alsa-latency 50)
+  sp-default-alsa-latency 128)
 
 (define (sample-reverse-endian a) (sp-sample-t sp-sample-t)
   "reverse the byte order of one sample"
