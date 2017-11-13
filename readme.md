@@ -21,7 +21,6 @@ see also [sph-sp-guile](https://github.com/sph-mn/sph-sp-guile), [on sph.mn](htt
 * windowed sinc filter
 * spectral inversion
 * spectral reversal
-* bezier curves on sample data
 
 ## excluded
 * run-time adjustable sample type
