@@ -259,16 +259,17 @@ b8 *sp_status_name(status_t a) {
 #define sp_default_sample_rate 16000
 #define sp_default_channel_count 1
 #define sp_default_alsa_enable_soft_resample 1
-#define sp_float_sum f64_sum
 #define sp_default_alsa_latency 128
 #if (sp_sample_type == sp_sample_type_f64)
 #define sp_sample_t f64_s
 #define sample_reverse_endian __bswap_64
+#define sp_sample_sum f64_sum
 #define sp_alsa_snd_pcm_format SND_PCM_FORMAT_FLOAT64_LE
 #else
 #if (sp_sample_type_f32 == sp_sample_type)
 #define sp_sample_t f32_s
 #define sample_reverse_endian __bswap_32
+#define sp_sample_sum f32_sum
 #define sp_alsa_snd_pcm_format SND_PCM_FORMAT_FLOAT_LE
 #endif
 #endif
@@ -959,7 +960,7 @@ status_i_t sp_moving_average(sp_sample_t *result, sp_sample_t *source,
   };
   while ((start <= end)) {
     if ((((start >= radius)) && (((start + radius + 1) <= source_len)))) {
-      (*result) = (sp_float_sum(((source + start) - radius), width) / width);
+      (*result) = (sp_sample_sum(((source + start) - radius), width) / width);
     } else {
       window_index = 0;
       if ((start < radius)) {
@@ -1006,7 +1007,7 @@ status_i_t sp_moving_average(sp_sample_t *result, sp_sample_t *source,
         (*(window + window_index)) = 0;
         inc(window_index);
       };
-      (*result) = (sp_float_sum(window, width) / width);
+      (*result) = (sp_sample_sum(window, width) / width);
     };
     inc(result);
     inc(start);
@@ -1123,7 +1124,7 @@ b0 sp_windowed_sinc_ir(sp_sample_t **result, size_t *result_len,
         sp_window_blackman(sp_sinc((2 * cutoff * (index - center_index))), len);
     inc(index);
   };
-  sp_float_t result_sum = sp_float_sum(result_temp, len);
+  sp_float_t result_sum = sp_sample_sum(result_temp, len);
   while (len) {
     dec(len);
     (*(result_temp + index)) = ((*(result_temp + index)) / result_sum);

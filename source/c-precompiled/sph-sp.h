@@ -251,16 +251,17 @@ b8 *sp_status_name(status_t a) {
 #define sp_default_sample_rate 16000
 #define sp_default_channel_count 1
 #define sp_default_alsa_enable_soft_resample 1
-#define sp_float_sum f64_sum
 #define sp_default_alsa_latency 128
 #if (sp_sample_type == sp_sample_type_f64)
 #define sp_sample_t f64_s
 #define sample_reverse_endian __bswap_64
+#define sp_sample_sum f64_sum
 #define sp_alsa_snd_pcm_format SND_PCM_FORMAT_FLOAT64_LE
 #else
 #if (sp_sample_type_f32 == sp_sample_type)
 #define sp_sample_t f32_s
 #define sample_reverse_endian __bswap_32
+#define sp_sample_sum f32_sum
 #define sp_alsa_snd_pcm_format SND_PCM_FORMAT_FLOAT_LE
 #endif
 #endif

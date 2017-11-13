@@ -15,12 +15,14 @@
   (pre-define
     sp-sample-t f64-s
     sample-reverse-endian __bswap_64
+    sp-sample-sum f64-sum
     sp-alsa-snd-pcm-format SND_PCM_FORMAT_FLOAT64_LE)
   (pre-if
     (= sp-sample-type-f32 sp-sample-type)
     (pre-define
       sp-sample-t f32-s
       sample-reverse-endian __bswap_32
+      sp-sample-sum f32-sum
       sp-alsa-snd-pcm-format SND_PCM_FORMAT_FLOAT_LE)))
 
 (pre-define (sp-octets->samples a) (/ a (sizeof sp-sample-t)))

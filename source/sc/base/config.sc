@@ -4,5 +4,4 @@
   sp-default-sample-rate 16000
   sp-default-channel-count 1
   sp-default-alsa-enable-soft-resample #t
-  sp-float-sum f64-sum
   sp-default-alsa-latency 128)

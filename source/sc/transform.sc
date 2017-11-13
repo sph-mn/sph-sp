@@ -70,7 +70,7 @@
   (while (<= start end)
     (if (and (>= start radius) (<= (+ start radius 1) source-len))
       ; all required samples are in source array
-      (set (deref result) (/ (sp-float-sum (- (+ source start) radius) width) width))
+      (set (deref result) (/ (sp-sample-sum (- (+ source start) radius) width) width))
       (begin
         (set window-index 0)
         ; get samples from previous segment
@@ -112,7 +112,7 @@
         (while (< window-index width)
           (set (deref window window-index) 0)
           (inc window-index))
-        (set (deref result) (/ (sp-float-sum window width) width))))
+        (set (deref result) (/ (sp-sample-sum window width) width))))
     (inc result)
     (inc start))
   (free window)

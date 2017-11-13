@@ -30,7 +30,7 @@
     (set (deref result-temp index)
       (sp-window-blackman (sp-sinc (* 2 cutoff (- index center-index))) len))
     (inc index))
-  (define result-sum sp-float-t (sp-float-sum result-temp len))
+  (define result-sum sp-float-t (sp-sample-sum result-temp len))
   (while len
     (dec len)
     (set (deref result-temp index) (/ (deref result-temp index) result-sum)))
