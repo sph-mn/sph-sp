@@ -11,6 +11,16 @@
 #include <alsa/asoundlib.h>
 #define sc_included_alsa_asoundlib_h
 #endif
+#ifndef sc_included_byteswap_h
+#include <byteswap.h>
+#define sc_included_byteswap_h
+#endif
+#ifndef sc_included_math_h
+#include <math.h>
+#define sc_included_math_h
+#endif
+#define sp_sample_type_f64 1
+#define sp_sample_type_f32 2
 #ifndef sc_included_inttypes_h
 #include <inttypes.h>
 #define sc_included_inttypes_h
@@ -98,6 +108,76 @@ typedef struct {
     status_goto;                                                               \
   }
 ;
+#ifndef sc_included_float_h
+#include <float.h>
+#define sc_included_float_h
+#endif
+#ifndef sc_included_math_h
+#include <math.h>
+#define sc_included_math_h
+#endif
+#define define_float_sum(prefix, type)                                         \
+  type prefix##_sum(type *numbers, size_t len) {                               \
+    type temp;                                                                 \
+    type element;                                                              \
+    type correction = 0;                                                       \
+    len = (len - 1);                                                           \
+    type result = (*(numbers + len));                                          \
+    while (len) {                                                              \
+      len = (len - 1);                                                         \
+      element = (*(numbers + len));                                            \
+      temp = (result + element);                                               \
+      correction =                                                             \
+          (correction + ((result >= element) ? ((result - temp) + element)     \
+                                             : ((element - temp) + result)));  \
+      result = temp;                                                           \
+    };                                                                         \
+    return ((correction + result));                                            \
+  }
+#define define_float_array_nearly_equal_p(prefix, type)                        \
+  boolean prefix##_array_nearly_equal_p(type *a, size_t a_len, type *b,        \
+                                        size_t b_len, type error_margin) {     \
+    size_t index = 0;                                                          \
+    if (!(a_len == b_len)) {                                                   \
+      return (0);                                                              \
+    };                                                                         \
+    while ((index < a_len)) {                                                  \
+      if (!prefix##_nearly_equal_p((*(a + index)), (*(b + index)),             \
+                                   error_margin)) {                            \
+        return (0);                                                            \
+      };                                                                       \
+      index = (1 + index);                                                     \
+    };                                                                         \
+    return (1);                                                                \
+  }
+/** approximate float comparison. margin is a factor and is low for low accepted
+   differences. http://floating-point-gui.de/errors/comparison/ */
+boolean f64_nearly_equal_p(f64_s a, f64_s b, f64_s margin) {
+  if ((a == b)) {
+    return (1);
+  } else {
+    f64_s diff = fabs((a - b));
+    return (((((0 == a)) || ((0 == b)) || (diff < DBL_MIN))
+                 ? (diff < (margin * DBL_MIN))
+                 : ((diff / fmin((fabs(a) + fabs(b)), DBL_MAX)) < margin)));
+  };
+};
+/** approximate float comparison. margin is a factor and is low for low accepted
+   differences. http://floating-point-gui.de/errors/comparison/ */
+boolean f32_nearly_equal_p(f32_s a, f32_s b, f32_s margin) {
+  if ((a == b)) {
+    return (1);
+  } else {
+    f32_s diff = fabs((a - b));
+    return (((((0 == a)) || ((0 == b)) || (diff < FLT_MIN))
+                 ? (diff < (margin * FLT_MIN))
+                 : ((diff / fmin((fabs(a) + fabs(b)), FLT_MAX)) < margin)));
+  };
+};
+define_float_array_nearly_equal_p(f32, f32_s);
+define_float_array_nearly_equal_p(f64, f64_s);
+define_float_sum(f32, f32_s);
+define_float_sum(f64, f64_s);
 /* return status handling */ enum {
   sp_status_id_undefined,
   sp_status_id_input_type,
@@ -174,24 +254,29 @@ b8 *sp_status_name(status_t a) {
   if (!a) {                                                                    \
     status_set_both_goto(sp_status_group_sp, sp_status_id_memory);             \
   }
-#define sp_sample_t f64_s
+#define sp_sample_type sp_sample_type_f64
 #define sp_float_t f64_s
 #define sp_default_sample_rate 16000
 #define sp_default_channel_count 1
 #define sp_default_alsa_enable_soft_resample 1
 #define sp_float_sum f64_sum
 #define sp_default_alsa_latency 128
-/** reverse the byte order of one sample */
-sp_sample_t sample_reverse_endian(sp_sample_t a) {
-  sp_sample_t result;
-  b8 *b = ((b8 *)(&a));
-  b8 *c = ((b8 *)(&result));
-  (*c) = (*(b + 3));
-  (*(c + 1)) = (*(b + 2));
-  (*(c + 2)) = (*(b + 1));
-  (*(c + 3)) = (*b);
-  return (result);
-};
+#if (sp_sample_type == sp_sample_type_f64)
+#define sp_sample_t f64_s
+#define sample_reverse_endian __bswap_64
+#define sp_alsa_snd_pcm_format SND_PCM_FORMAT_FLOAT64_LE
+#else
+#if (sp_sample_type_f32 == sp_sample_type)
+#define sp_sample_t f32_s
+#define sample_reverse_endian __bswap_32
+#define sp_alsa_snd_pcm_format SND_PCM_FORMAT_FLOAT_LE
+#endif
+#endif
+#define sp_octets_to_samples(a) (a / sizeof(sp_sample_t))
+#define sp_samples_to_octets(a) (a * sizeof(sp_sample_t))
+#define duration_to_sample_count(seconds, sample_rate) (seconds * sample_rate)
+#define sample_count_to_duration(sample_count, sample_rate)                    \
+  (sample_count / sample_rate)
 typedef struct {
   b32 sample_rate;
   b32 channel_count;
@@ -212,17 +297,12 @@ status_t sp_port_read(sp_sample_t **result, sp_port_t *port, b32 sample_count);
 status_t sp_port_write(sp_port_t *port, size_t sample_count,
                        sp_sample_t **channel_data);
 status_t sp_port_position(size_t *result, sp_port_t *port);
-status_t sp_port_set_position(sp_port_t *port, b64_s sample_index);
+status_t sp_port_set_position(sp_port_t *port, size_t sample_index);
 status_t sp_file_open(sp_port_t *result, b8 *path, b32 channel_count,
                       b32 sample_rate);
 status_t sp_alsa_open(sp_port_t *result, b8 *device_name, boolean input_p,
                       b32 channel_count, b32 sample_rate, b32_s latency);
 status_t sp_port_close(sp_port_t *a);
-#define sp_octets_to_samples(a) (a / sizeof(sp_sample_t))
-#define sp_samples_to_octets(a) (a * sizeof(sp_sample_t))
-#define duration_to_sample_count(seconds, sample_rate) (seconds * sample_rate)
-#define sample_count_to_duration(sample_count, sample_rate)                    \
-  (sample_count / sample_rate)
 /** set sph/status object to group sp and id memory-error and goto "exit" label
  * if "a" is 0 */
 #define sp_alloc_require(a)                                                    \
@@ -252,6 +332,7 @@ status_t sp_port_close(sp_port_t *a);
 #define sp_alloc_set_samples_zero(a, sample_count)                             \
   sp_alloc_set_zero(a, sp_samples_to_octets(sample_count))
 sp_sample_t **sp_alloc_channel_array(b32 channel_count, b32 sample_count);
+/* depends on sph.sc */
 #ifndef sc_included_string_h
 #include <string.h>
 #define sc_included_string_h
@@ -260,32 +341,6 @@ sp_sample_t **sp_alloc_channel_array(b32 channel_count, b32 sample_count);
 #include <stdlib.h>
 #define sc_included_stdlib_h
 #endif
-#ifndef sc_included_unistd_h
-#include <unistd.h>
-#define sc_included_unistd_h
-#endif
-#ifndef sc_included_sys_stat_h
-#include <sys/stat.h>
-#define sc_included_sys_stat_h
-#endif
-#ifndef sc_included_libgen_h
-#include <libgen.h>
-#define sc_included_libgen_h
-#endif
-#ifndef sc_included_errno_h
-#include <errno.h>
-#define sc_included_errno_h
-#endif
-#ifndef sc_included_float_h
-#include <float.h>
-#define sc_included_float_h
-#endif
-#ifndef sc_included_math_h
-#include <math.h>
-#define sc_included_math_h
-#endif
-#define file_exists_p(path) !(access(path, F_OK) == -1)
-#define pointer_equal_p(a, b) (((b0 *)(a)) == ((b0 *)(b)))
 /** set result to a new string with a trailing slash added, or the given string
   if it already has a trailing slash. returns 0 if result is the given string, 1
   if new memory could not be allocated, 2 if result is a new string */
@@ -306,6 +361,17 @@ b8 ensure_trailing_slash(b8 *a, b8 **result) {
     return (2);
   };
 };
+/** always returns a new string */
+b8 *string_append(b8 *a, b8 *b) {
+  size_t a_length = strlen(a);
+  size_t b_length = strlen(b);
+  b8 *result = malloc((1 + a_length + b_length));
+  if (result) {
+    memcpy(result, a, a_length);
+    memcpy((result + a_length), b, (1 + b_length));
+  };
+  return (result);
+};
 /** return a new string with the same contents as the given string. return 0 if
  * the memory allocation failed */
 b8 *string_clone(b8 *a) {
@@ -316,6 +382,23 @@ b8 *string_clone(b8 *a) {
   };
   return (result);
 };
+#ifndef sc_included_unistd_h
+#include <unistd.h>
+#define sc_included_unistd_h
+#endif
+#ifndef sc_included_sys_stat_h
+#include <sys/stat.h>
+#define sc_included_sys_stat_h
+#endif
+#ifndef sc_included_libgen_h
+#include <libgen.h>
+#define sc_included_libgen_h
+#endif
+#ifndef sc_included_errno_h
+#include <errno.h>
+#define sc_included_errno_h
+#endif
+#define file_exists_p(path) !(access(path, F_OK) == -1)
 /** like posix dirname, but never modifies its argument and always returns a new
  * string */
 b8 *dirname_2(b8 *a) {
@@ -332,48 +415,6 @@ boolean ensure_directory_structure(b8 *path, mode_t mkdir_mode) {
     free(path_dirname);
     return ((status &&
              ((((EEXIST == errno)) || ((0 == mkdir(path, mkdir_mode)))))));
-  };
-};
-/** always returns a new string */
-b8 *string_append(b8 *a, b8 *b) {
-  size_t a_length = strlen(a);
-  size_t b_length = strlen(b);
-  b8 *result = malloc((1 + a_length + b_length));
-  if (result) {
-    memcpy(result, a, a_length);
-    memcpy((result + a_length), b, (1 + b_length));
-  };
-  return (result);
-};
-/** sum numbers with rounding error compensation using kahan summation with
- * neumaier modification */
-f64_s f64_sum(f64_s *numbers, b32 len) {
-  f64_s temp;
-  f64_s element;
-  f64_s correction = 0;
-  len = (len - 1);
-  f64_s result = (*(numbers + len));
-  while (len) {
-    len = (len - 1);
-    element = (*(numbers + len));
-    temp = (result + element);
-    correction =
-        (correction + ((result >= element) ? ((result - temp) + element)
-                                           : ((element - temp) + result)));
-    result = temp;
-  };
-  return ((correction + result));
-};
-/** approximate float comparison. margin is a factor and is low for low accepted
-   differences. http://floating-point-gui.de/errors/comparison/ */
-boolean f64_nearly_equal_p(f64_s a, f64_s b, f64_s margin) {
-  if ((a == b)) {
-    return (1);
-  } else {
-    f64_s diff = fabs((a - b));
-    return (((((0 == a)) || ((0 == b)) || (diff < DBL_MIN))
-                 ? (diff < (margin * DBL_MIN))
-                 : ((diff / fmin((fabs(a) + fabs(b)), DBL_MAX)) < margin)));
   };
 };
 /** register memory in a local variable to free all memory allocated at point */
@@ -617,9 +658,9 @@ exit:
 #define sp_file_index_to_position(index, position_offset, channel_count)       \
   ((index - position_offset) / channel_count / sizeof(sp_sample_t))
 /** set port to offset in sample data */
-status_t sp_file_set_position(sp_port_t *port, b64_s sample_index) {
+status_t sp_file_set_position(sp_port_t *port, size_t sample_index) {
   status_init;
-  b64_s index = (sample_index * (*port).channel_count * sizeof(sp_sample_t));
+  size_t index = (sample_index * (*port).channel_count * sizeof(sp_sample_t));
   b16 header_size = (*port).position_offset;
   int file = (*port).data_int;
   if ((0 > index)) {
@@ -667,7 +708,7 @@ status_t sp_alsa_open(sp_port_t *result, b8 *device_name, boolean input_p,
       &alsa_port, device_name,
       (input_p ? SND_PCM_STREAM_CAPTURE : SND_PCM_STREAM_PLAYBACK), 0));
   sp_alsa_status_require_x(snd_pcm_set_params(
-      alsa_port, SND_PCM_FORMAT_FLOAT64_LE, SND_PCM_ACCESS_RW_NONINTERLEAVED,
+      alsa_port, sp_alsa_snd_pcm_format, SND_PCM_ACCESS_RW_NONINTERLEAVED,
       channel_count, sample_rate, sp_default_alsa_enable_soft_resample,
       latency));
   b8 sp_port_flags = (input_p ? sp_port_bit_input : sp_port_bit_output);
@@ -752,7 +793,7 @@ status_t sp_port_position(size_t *result, sp_port_t *port) {
     };
   };
 };
-status_t sp_port_set_position(sp_port_t *port, b64_s sample_index) {
+status_t sp_port_set_position(sp_port_t *port, size_t sample_index) {
   if ((sp_port_type_file == (*port).type)) {
     return (sp_file_set_position(port, sample_index));
   } else {

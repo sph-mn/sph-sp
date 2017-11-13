@@ -1,11 +1,33 @@
 (pre-include-once
-  alsa-asoundlib-h "alsa/asoundlib.h")
+  alsa-asoundlib-h "alsa/asoundlib.h"
+  byteswap-h "byteswap.h"
+  math-h "math.h")
 
-(sc-include "base/foreign/sph" "base/foreign/sph/status" "base/status" "base/config" "base/io.h")
+(pre-define
+  sp-sample-type-f64 1
+  sp-sample-type-f32 2)
+
+(sc-include
+  "base/foreign/sph" "base/foreign/sph/status" "base/foreign/sph/float" "base/status" "base/config")
+
+(pre-if
+  (= sp-sample-type sp-sample-type-f64)
+  (pre-define
+    sp-sample-t f64-s
+    sample-reverse-endian __bswap_64
+    sp-alsa-snd-pcm-format SND_PCM_FORMAT_FLOAT64_LE)
+  (pre-if
+    (= sp-sample-type-f32 sp-sample-type)
+    (pre-define
+      sp-sample-t f32-s
+      sample-reverse-endian __bswap_32
+      sp-alsa-snd-pcm-format SND_PCM_FORMAT_FLOAT_LE)))
+
 (pre-define (sp-octets->samples a) (/ a (sizeof sp-sample-t)))
 (pre-define (sp-samples->octets a) (* a (sizeof sp-sample-t)))
 (pre-define (duration->sample-count seconds sample-rate) (* seconds sample-rate))
 (pre-define (sample-count->duration sample-count sample-rate) (/ sample-count sample-rate))
+(sc-include "base/io.h")
 ;
 ;-- memory
 

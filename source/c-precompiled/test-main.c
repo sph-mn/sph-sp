@@ -41,6 +41,7 @@
     printf("\ntests failed. %d %s\n", status.id,                               \
            sp_status_description(status));                                     \
   }
+/* depends on sph.sc */
 #ifndef sc_included_string_h
 #include <string.h>
 #define sc_included_string_h
@@ -49,32 +50,6 @@
 #include <stdlib.h>
 #define sc_included_stdlib_h
 #endif
-#ifndef sc_included_unistd_h
-#include <unistd.h>
-#define sc_included_unistd_h
-#endif
-#ifndef sc_included_sys_stat_h
-#include <sys/stat.h>
-#define sc_included_sys_stat_h
-#endif
-#ifndef sc_included_libgen_h
-#include <libgen.h>
-#define sc_included_libgen_h
-#endif
-#ifndef sc_included_errno_h
-#include <errno.h>
-#define sc_included_errno_h
-#endif
-#ifndef sc_included_float_h
-#include <float.h>
-#define sc_included_float_h
-#endif
-#ifndef sc_included_math_h
-#include <math.h>
-#define sc_included_math_h
-#endif
-#define file_exists_p(path) !(access(path, F_OK) == -1)
-#define pointer_equal_p(a, b) (((b0 *)(a)) == ((b0 *)(b)))
 /** set result to a new string with a trailing slash added, or the given string
   if it already has a trailing slash. returns 0 if result is the given string, 1
   if new memory could not be allocated, 2 if result is a new string */
@@ -95,6 +70,17 @@ b8 ensure_trailing_slash(b8 *a, b8 **result) {
     return (2);
   };
 };
+/** always returns a new string */
+b8 *string_append(b8 *a, b8 *b) {
+  size_t a_length = strlen(a);
+  size_t b_length = strlen(b);
+  b8 *result = malloc((1 + a_length + b_length));
+  if (result) {
+    memcpy(result, a, a_length);
+    memcpy((result + a_length), b, (1 + b_length));
+  };
+  return (result);
+};
 /** return a new string with the same contents as the given string. return 0 if
  * the memory allocation failed */
 b8 *string_clone(b8 *a) {
@@ -105,6 +91,23 @@ b8 *string_clone(b8 *a) {
   };
   return (result);
 };
+#ifndef sc_included_unistd_h
+#include <unistd.h>
+#define sc_included_unistd_h
+#endif
+#ifndef sc_included_sys_stat_h
+#include <sys/stat.h>
+#define sc_included_sys_stat_h
+#endif
+#ifndef sc_included_libgen_h
+#include <libgen.h>
+#define sc_included_libgen_h
+#endif
+#ifndef sc_included_errno_h
+#include <errno.h>
+#define sc_included_errno_h
+#endif
+#define file_exists_p(path) !(access(path, F_OK) == -1)
 /** like posix dirname, but never modifies its argument and always returns a new
  * string */
 b8 *dirname_2(b8 *a) {
@@ -123,48 +126,6 @@ boolean ensure_directory_structure(b8 *path, mode_t mkdir_mode) {
              ((((EEXIST == errno)) || ((0 == mkdir(path, mkdir_mode)))))));
   };
 };
-/** always returns a new string */
-b8 *string_append(b8 *a, b8 *b) {
-  size_t a_length = strlen(a);
-  size_t b_length = strlen(b);
-  b8 *result = malloc((1 + a_length + b_length));
-  if (result) {
-    memcpy(result, a, a_length);
-    memcpy((result + a_length), b, (1 + b_length));
-  };
-  return (result);
-};
-/** sum numbers with rounding error compensation using kahan summation with
- * neumaier modification */
-f64_s f64_sum(f64_s *numbers, b32 len) {
-  f64_s temp;
-  f64_s element;
-  f64_s correction = 0;
-  len = (len - 1);
-  f64_s result = (*(numbers + len));
-  while (len) {
-    len = (len - 1);
-    element = (*(numbers + len));
-    temp = (result + element);
-    correction =
-        (correction + ((result >= element) ? ((result - temp) + element)
-                                           : ((element - temp) + result)));
-    result = temp;
-  };
-  return ((correction + result));
-};
-/** approximate float comparison. margin is a factor and is low for low accepted
-   differences. http://floating-point-gui.de/errors/comparison/ */
-boolean f64_nearly_equal_p(f64_s a, f64_s b, f64_s margin) {
-  if ((a == b)) {
-    return (1);
-  } else {
-    f64_s diff = fabs((a - b));
-    return (((((0 == a)) || ((0 == b)) || (diff < DBL_MIN))
-                 ? (diff < (margin * DBL_MIN))
-                 : ((diff / fmin((fabs(a) + fabs(b)), DBL_MAX)) < margin)));
-  };
-};
 /** register memory in a local variable to free all memory allocated at point */
 #define local_memory_init(register_size)                                       \
   b0 *sph_local_memory_register[register_size];                                \
@@ -181,16 +142,41 @@ boolean f64_nearly_equal_p(f64_s a, f64_s b, f64_s margin) {
     sph_local_memory_index = (sph_local_memory_index - 1);                     \
     free((*(sph_local_memory_register + sph_local_memory_index)));             \
   }
-f64_s error_margin = 1.0e-6;
+;
+b0 debug_log_samples(sp_sample_t *a, size_t len) {
+  size_t column_width;
+  size_t column_end;
+  size_t index;
+  column_width = 8;
+  index = 0;
+  while ((index < len)) {
+    column_end = (index + column_width);
+    while (((index < len) && (index < column_end))) {
+      printf("%f ", (*(a + index)));
+      index = (1 + index);
+    };
+    printf("\n");
+  };
+};
+#if (sp_sample_type_f64 == sp_sample_type)
+#define sp_sample_nearly_equal_p f64_nearly_equal_p
+#define sp_sample_array_nearly_equal_p f64_array_nearly_equal_p
+#else
+#if (sp_sample_type_f32 == sp_sample_type)
+#define sp_sample_nearly_equal_p f32_nearly_equal_p
+#define sp_sample_array_nearly_equal_p f32_array_nearly_equal_p
+#endif
+#endif
+sp_sample_t error_margin = 0.1;
 status_t test_base() {
   status_init;
-  test_helper_assert("input 0.5",
-                     f64_nearly_equal_p(0.63662, sp_sinc(0.5), error_margin));
+  test_helper_assert("input 0.5", sp_sample_nearly_equal_p(
+                                      0.63662, sp_sinc(0.5), error_margin));
   test_helper_assert("input 1",
-                     f64_nearly_equal_p(1.0, sp_sinc(0), error_margin));
-  test_helper_assert(
-      "window-blackman 1.1 20",
-      f64_nearly_equal_p(0.550175, sp_window_blackman(1.1, 20), error_margin));
+                     sp_sample_nearly_equal_p(1.0, sp_sinc(0), error_margin));
+  test_helper_assert("window-blackman 1.1 20",
+                     sp_sample_nearly_equal_p(
+                         0.550175, sp_window_blackman(1.1, 20), error_margin));
 exit:
   return (status);
 };
@@ -199,12 +185,13 @@ status_t test_spectral_inversion_ir() {
   size_t a_len = 5;
   sp_sample_t a[5] = {0.1, -0.2, 0.3, -0.2, 0.1};
   sp_spectral_inversion_ir(a, a_len);
-  test_helper_assert("result check",
-                     (f64_nearly_equal_p(-0.1, (*(a + 0)), error_margin) &&
-                      f64_nearly_equal_p(0.2, (*(a + 1)), error_margin) &&
-                      f64_nearly_equal_p(-0.3, (*(a + 2)), error_margin) &&
-                      f64_nearly_equal_p(0.2, (*(a + 3)), error_margin) &&
-                      f64_nearly_equal_p(-0.1, (*(a + 4)), error_margin)));
+  test_helper_assert(
+      "result check",
+      (sp_sample_nearly_equal_p(-0.1, (*(a + 0)), error_margin) &&
+       sp_sample_nearly_equal_p(0.2, (*(a + 1)), error_margin) &&
+       sp_sample_nearly_equal_p(-0.3, (*(a + 2)), error_margin) &&
+       sp_sample_nearly_equal_p(0.2, (*(a + 3)), error_margin) &&
+       sp_sample_nearly_equal_p(-0.1, (*(a + 4)), error_margin)));
 exit:
   return (status);
 };
@@ -214,29 +201,15 @@ status_t test_spectral_reversal_ir() {
   sp_sample_t a[5] = {0.1, -0.2, 0.3, -0.2, 0.1};
   sp_spectral_reversal_ir(a, a_len);
   test_helper_assert("result check",
-                     (f64_nearly_equal_p(0.1, (*(a + 0)), error_margin) &&
-                      f64_nearly_equal_p(0.2, (*(a + 1)), error_margin) &&
-                      f64_nearly_equal_p(0.3, (*(a + 2)), error_margin) &&
-                      f64_nearly_equal_p(0.2, (*(a + 3)), error_margin) &&
-                      f64_nearly_equal_p(0.1, (*(a + 4)), error_margin)));
+                     (sp_sample_nearly_equal_p(0.1, (*(a + 0)), error_margin) &&
+                      sp_sample_nearly_equal_p(0.2, (*(a + 1)), error_margin) &&
+                      sp_sample_nearly_equal_p(0.3, (*(a + 2)), error_margin) &&
+                      sp_sample_nearly_equal_p(0.2, (*(a + 3)), error_margin) &&
+                      sp_sample_nearly_equal_p(0.1, (*(a + 4)), error_margin)));
 exit:
   return (status);
 };
 b8 *test_file_path = "/tmp/test-sph-sp-file";
-boolean f64_array_nearly_equal_p(f64_s *a, size_t a_len, f64_s *b, size_t b_len,
-                                 f64_s error_margin) {
-  size_t index = 0;
-  if (!(a_len == b_len)) {
-    return (0);
-  };
-  while ((index < a_len)) {
-    if (!f64_nearly_equal_p((*(a + index)), (*(b + index)), error_margin)) {
-      return (0);
-    };
-    inc(index);
-  };
-  return (1);
-};
 status_t test_port() {
   status_init;
   local_memory_init(2);
@@ -246,7 +219,7 @@ status_t test_port() {
   b32 channel_count = 2;
   b32 sample_rate = 8000;
   sp_port_t port;
-  b32 sample_count = 5;
+  size_t sample_count = 5;
   sp_sample_t **channel_data =
       sp_alloc_channel_array(channel_count, sample_count);
   sp_sample_t **channel_data_2 =
@@ -271,7 +244,7 @@ status_t test_port() {
   status_require_x(sp_port_position(&position, &port));
   status_require_x(sp_port_write(&port, sample_count, channel_data));
   status_require_x(sp_port_position(&position, &port));
-  test_helper_assert("sp-port-position after write",
+  test_helper_assert("sp-port-position file after write",
                      (sample_count == position));
   status_require_x(sp_port_set_position(&port, 0));
   status_require_x(sp_port_read(channel_data_2, &port, sample_count));
@@ -279,11 +252,11 @@ status_t test_port() {
   b8_s unequal = 0;
   while ((len && !unequal)) {
     dec(len);
-    unequal = f64_array_nearly_equal_p((*(channel_data + len)), sample_count,
-                                       (*(channel_data_2 + len)), sample_count,
-                                       error_margin);
+    unequal = !sp_sample_array_nearly_equal_p(
+        (*(channel_data + len)), sample_count, (*(channel_data_2 + len)),
+        sample_count, error_margin);
   };
-  test_helper_assert("sp-port-read result", !unequal);
+  test_helper_assert("sp-port-read new file result", !unequal);
   status_require_x(sp_port_close(&port));
   printf("  write\n");
   status_require_x(sp_file_open(&port, test_file_path, 2, 8000));
@@ -296,9 +269,9 @@ status_t test_port() {
   len = channel_count;
   while ((len && !unequal)) {
     dec(len);
-    unequal = f64_array_nearly_equal_p((*(channel_data + len)), sample_count,
-                                       (*(channel_data_2 + len)), sample_count,
-                                       error_margin);
+    unequal = !sp_sample_array_nearly_equal_p(
+        (*(channel_data + len)), sample_count, (*(channel_data_2 + len)),
+        sample_count, error_margin);
   };
   test_helper_assert("sp-port-read existing result", !unequal);
   status_require_x(sp_port_close(&port));
@@ -309,11 +282,11 @@ exit:
 };
 status_t test_convolve() {
   status_init;
-  b32 sample_count = 5;
-  b32 b_len = 3;
-  b32 result_len = sample_count;
-  b32 a_len = sample_count;
-  b32 carryover_len = b_len;
+  size_t sample_count = 5;
+  size_t b_len = 3;
+  size_t result_len = sample_count;
+  size_t a_len = sample_count;
+  size_t carryover_len = b_len;
   local_memory_init(4);
   sp_alloc_define_samples(result, result_len);
   local_memory_add(result);
@@ -337,13 +310,13 @@ status_t test_convolve() {
   sp_sample_t expected_result[5] = {2, 7, 16, 22, 28};
   sp_sample_t expected_carryover[3] = {27, 18, 0};
   sp_convolve(result, a, a_len, b, b_len, carryover, carryover_len);
-  test_helper_assert("first result", f64_array_nearly_equal_p(
+  test_helper_assert("first result", sp_sample_array_nearly_equal_p(
                                          result, result_len, expected_result,
                                          result_len, error_margin));
   test_helper_assert("first result carryover",
-                     f64_array_nearly_equal_p(carryover, carryover_len,
-                                              expected_carryover, carryover_len,
-                                              error_margin));
+                     sp_sample_array_nearly_equal_p(
+                         carryover, carryover_len, expected_carryover,
+                         carryover_len, error_margin));
   (*(a + 0)) = 8;
   (*(a + 1)) = 9;
   (*(a + 2)) = 10;
@@ -358,38 +331,23 @@ status_t test_convolve() {
   (*(expected_carryover + 1)) = 36;
   (*(expected_carryover + 2)) = 0;
   sp_convolve(result, a, a_len, b, b_len, carryover, carryover_len);
-  test_helper_assert("second result", f64_array_nearly_equal_p(
+  test_helper_assert("second result", sp_sample_array_nearly_equal_p(
                                           result, result_len, expected_result,
                                           result_len, error_margin));
   test_helper_assert("second result carryover",
-                     f64_array_nearly_equal_p(carryover, carryover_len,
-                                              expected_carryover, carryover_len,
-                                              error_margin));
+                     sp_sample_array_nearly_equal_p(
+                         carryover, carryover_len, expected_carryover,
+                         carryover_len, error_margin));
 exit:
   local_memory_free;
   return (status);
 };
-b0 debug_log_samples(sp_sample_t *a, b32 len) {
-  b32 column_width;
-  b32 column_end;
-  b32 index;
-  column_width = 8;
-  index = 0;
-  while ((index < len)) {
-    column_end = (index + column_width);
-    while (((index < len) && (index < column_end))) {
-      printf("%f ", (*(a + index)));
-      index = (1 + index);
-    };
-    printf("\n");
-  };
-};
 status_t test_moving_average() {
   status_init;
-  b32 source_len = 8;
-  b32 result_len = source_len;
-  b32 prev_len = 4;
-  b32 next_len = prev_len;
+  size_t source_len = 8;
+  size_t result_len = source_len;
+  size_t prev_len = 4;
+  size_t next_len = prev_len;
   local_memory_init(4);
   sp_alloc_define_samples(result, result_len);
   local_memory_add(result);
@@ -414,10 +372,9 @@ status_t test_moving_average() {
   (*(next + 1)) = 12;
   (*(next + 2)) = -32;
   (*(next + 3)) = 2;
-  b32 radius = 4;
+  size_t radius = 4;
   sp_moving_average(result, source, source_len, prev, prev_len, next, next_len,
                     0, (source_len - 1), radius);
-  debug_log_samples(result, result_len);
   sp_moving_average(result, source, source_len, 0, 0, 0, 0, 0, (source_len - 1),
                     (1 + (source_len / 2)));
 exit:

@@ -175,10 +175,11 @@
 (pre-define (sp-file-index->position index position-offset channel-count)
   (/ (- index position-offset) channel-count (sizeof sp-sample-t)))
 
-(define (sp-file-set-position port sample-index) (status-t sp-port-t* b64-s)
+(define (sp-file-set-position port sample-index) (status-t sp-port-t* size-t)
   "set port to offset in sample data"
   status-init
-  (define index b64-s (* sample-index (struct-pointer-get port channel-count) (sizeof sp-sample-t)))
+  (define index size-t
+    (* sample-index (struct-pointer-get port channel-count) (sizeof sp-sample-t)))
   (define header-size b16 (struct-pointer-get port position-offset))
   (define file int (struct-pointer-get port data-int))
   ; calculate positive index from negative index
@@ -228,7 +229,7 @@
   (sp-alsa-status-require!
     (snd-pcm-set-params
       alsa-port
-      SND_PCM_FORMAT_FLOAT64_LE
+      sp-alsa-snd-pcm-format
       SND_PCM_ACCESS_RW_NONINTERLEAVED
       channel-count sample-rate sp-default-alsa-enable-soft-resample latency))
   (define sp-port-flags b8 (if* input? sp-port-bit-input sp-port-bit-output))
@@ -294,7 +295,7 @@
     (sp-port-type-file (return (sp-file-position result port)))
     (sp-port-type-alsa sp-port-not-implemented)))
 
-(define (sp-port-set-position port sample-index) (status-t sp-port-t* b64-s)
+(define (sp-port-set-position port sample-index) (status-t sp-port-t* size-t)
   (case = (struct-pointer-get port type)
     (sp-port-type-file (return (sp-file-set-position port sample-index)))
     (sp-port-type-alsa sp-port-not-implemented)))

@@ -1,21 +1,11 @@
-;(sc-include-once sph "sph")
+(sc-comment "depends on sph.sc")
 
 (pre-include-once
   string-h "string.h"
   ; malloc
-  stdlib-h "stdlib.h"
-  ; "access"
-  unistd-h "unistd.h"
-  ; mkdir
-  sys-stat-h "sys/stat.h"
-  ; dirname
-  libgen-h "libgen.h"
-  errno-h "errno.h"
-  float-h "float.h"
-  math-h "math.h")
+  stdlib-h "stdlib.h")
 
-(pre-define (file-exists? path) (not (equal? (access path F-OK) -1)))
-(pre-define (pointer-equal? a b) (= (convert-type a b0*) (convert-type b b0*)))
+;-- string
 
 (define (ensure-trailing-slash a result) (b8 b8* b8**)
   "set result to a new string with a trailing slash added, or the given string if it already has a trailing slash.
@@ -34,12 +24,36 @@
       (set (deref result) new-a)
       (return 2))))
 
+(define (string-append a b) (b8* b8* b8*)
+  "always returns a new string"
+  (define a-length size-t (strlen a))
+  (define b-length size-t (strlen b))
+  (define result b8* (malloc (+ 1 a-length b-length)))
+  (if result
+    (begin
+      (memcpy result a a-length)
+      (memcpy (+ result a-length) b (+ 1 b-length))))
+  (return result))
+
 (define (string-clone a) (b8* b8*)
   "return a new string with the same contents as the given string. return 0 if the memory allocation failed"
   (define a-size size-t (+ 1 (strlen a)))
   (define result b8* (malloc a-size))
   (if result (memcpy result a a-size))
   (return result))
+
+;-- filesystem
+
+(pre-include-once
+  ; "access"
+  unistd-h "unistd.h"
+  ; mkdir
+  sys-stat-h "sys/stat.h"
+  ; dirname
+  libgen-h "libgen.h"
+  errno-h "errno.h")
+
+(pre-define (file-exists? path) (not (equal? (access path F-OK) -1)))
 
 (define (dirname-2 a) (b8* b8*)
   "like posix dirname, but never modifies its argument and always returns a new string"
@@ -55,44 +69,3 @@
       (define status boolean (ensure-directory-structure path-dirname mkdir-mode))
       (free path-dirname)
       (return (and status (or (= EEXIST errno) (= 0 (mkdir path mkdir-mode))))))))
-
-(define (string-append a b) (b8* b8* b8*)
-  "always returns a new string"
-  (define a-length size-t (strlen a))
-  (define b-length size-t (strlen b))
-  (define result b8* (malloc (+ 1 a-length b-length)))
-  (if result
-    (begin
-      (memcpy result a a-length)
-      (memcpy (+ result a-length) b (+ 1 b-length))))
-  (return result))
-
-(define (f64-sum numbers len) (f64-s f64-s* b32)
-  "sum numbers with rounding error compensation using kahan summation with neumaier modification"
-  (define
-    temp f64-s
-    element f64-s)
-  (define correction f64-s 0)
-  (set len (- len 1))
-  (define result f64-s (deref numbers len))
-  (while len
-    (set len (- len 1))
-    (set element (deref numbers len))
-    (set temp (+ result element))
-    (set
-      correction
-      (+
-        correction (if* (>= result element) (+ (- result temp) element) (+ (- element temp) result)))
-      result temp))
-  (return (+ correction result)))
-
-(define (f64-nearly-equal? a b margin) (boolean f64-s f64-s f64-s)
-  "approximate float comparison. margin is a factor and is low for low accepted differences.
-   http://floating-point-gui.de/errors/comparison/"
-  (if (= a b)
-    (return #t)
-    (begin
-      (define diff f64-s (fabs (- a b)))
-      (return
-        (if* (or (= 0 a) (= 0 b) (< diff DBL_MIN))
-          (< diff (* margin DBL_MIN)) (< (/ diff (fmin (+ (fabs a) (fabs b)) DBL_MAX)) margin))))))

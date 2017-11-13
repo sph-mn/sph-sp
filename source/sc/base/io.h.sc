@@ -24,7 +24,7 @@
 (define (sp-port-read result port sample-count) (status-t sp-sample-t** sp-port-t* b32))
 (define (sp-port-write port sample-count channel-data) (status-t sp-port-t* size-t sp-sample-t**))
 (define (sp-port-position result port) (status-t size-t* sp-port-t*))
-(define (sp-port-set-position port sample-index) (status-t sp-port-t* b64-s))
+(define (sp-port-set-position port sample-index) (status-t sp-port-t* size-t))
 (define (sp-file-open result path channel-count sample-rate) (status-t sp-port-t* b8* b32 b32))
 
 (define (sp-alsa-open result device-name input? channel-count sample-rate latency)
