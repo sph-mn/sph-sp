@@ -1,5 +1,6 @@
 (pre-include-once
   alsa-asoundlib-h "alsa/asoundlib.h"
+  sndfile-h "sndfile.h"
   byteswap-h "byteswap.h"
   math-h "math.h")
 

@@ -20,11 +20,11 @@
   (while channel-count
     (dec channel-count)
     (set channel (calloc (* sample-count (sizeof sp-sample-t)) 1))
-    (local-memory-add channel)
     (if (not channel)
       (begin
         local-memory-free
         (return 0)))
+    (local-memory-add channel)
     (set (deref result channel-count) channel))
   (return result))
 

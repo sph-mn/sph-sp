@@ -3,6 +3,10 @@
 #include <alsa/asoundlib.h>
 #define sc_included_alsa_asoundlib_h
 #endif
+#ifndef sc_included_sndfile_h
+#include <sndfile.h>
+#define sc_included_sndfile_h
+#endif
 #ifndef sc_included_byteswap_h
 #include <byteswap.h>
 #define sc_included_byteswap_h
@@ -171,47 +175,54 @@ define_float_array_nearly_equal_p(f64, f64_s);
 define_float_sum(f32, f32_s);
 define_float_sum(f64, f64_s);
 /* return status handling */ enum {
-  sp_status_id_undefined,
-  sp_status_id_input_type,
-  sp_status_id_not_implemented,
-  sp_status_id_memory,
-  sp_status_id_file_incompatible,
+  sp_status_group_alsa,
+  sp_status_group_libc,
+  sp_status_group_sndfile,
+  sp_status_group_sp,
+  sp_status_id_file_channel_mismatch,
   sp_status_id_file_encoding,
   sp_status_id_file_header,
+  sp_status_id_file_incompatible,
+  sp_status_id_file_incomplete,
+  sp_status_id_eof,
+  sp_status_id_input_type,
+  sp_status_id_memory,
+  sp_status_id_not_implemented,
   sp_status_id_port_closed,
   sp_status_id_port_position,
-  sp_status_id_file_channel_mismatch,
-  sp_status_id_file_incomplete,
   sp_status_id_port_type,
-  sp_status_group_sp,
-  sp_status_group_libc,
-  sp_status_group_alsa
+  sp_status_id_undefined
 };
 b8 *sp_status_description(status_t a) {
-  return (
-      ((sp_status_group_sp == a.group)
-           ? ((b8 *)((
-                 (sp_status_id_input_type == a.id)
-                     ? "input argument is of wrong type"
-                     : ((sp_status_id_not_implemented == a.id)
-                            ? "not implemented"
-                            : ((sp_status_id_memory == a.id)
-                                   ? "not enough memory or other memory "
-                                     "allocation error"
-                                   : ((sp_status_id_file_incompatible == a.id)
-                                          ? "file exists but channel count or "
-                                            "sample rate is different from "
-                                            "what was requested"
-                                          : ((sp_status_id_file_incomplete ==
-                                              a.id)
-                                                 ? "incomplete write"
-                                                 : ((sp_status_id_port_type ==
-                                                     a.id)
-                                                        ? "incompatible port "
-                                                          "type"
-                                                        : ""))))))))
-           : ((sp_status_group_alsa == a.group) ? ((b8 *)(snd_strerror(a.id)))
-                                                : ((b8 *)("")))));
+  return ((
+      (sp_status_group_sp == a.group)
+          ? ((b8 *)((
+                (sp_status_id_eof == a.id)
+                    ? "end of file"
+                    : ((sp_status_id_input_type == a.id)
+                           ? "input argument is of wrong type"
+                           : ((sp_status_id_not_implemented == a.id)
+                                  ? "not implemented"
+                                  : ((sp_status_id_memory == a.id)
+                                         ? "memory allocation error"
+                                         : ((sp_status_id_file_incompatible ==
+                                             a.id)
+                                                ? "file channel count or "
+                                                  "sample rate is different "
+                                                  "from what was requested"
+                                                : ((sp_status_id_file_incomplete ==
+                                                    a.id)
+                                                       ? "incomplete write"
+                                                       : ((sp_status_id_port_type ==
+                                                           a.id)
+                                                              ? "incompatible "
+                                                                "port type"
+                                                              : "")))))))))
+          : ((sp_status_group_alsa == a.group)
+                 ? ((b8 *)(sf_error_number(a.id)))
+                 : ((sp_status_group_sndfile == a.group)
+                        ? ((b8 *)(sf_error_number(a.id)))
+                        : ((b8 *)(""))))));
 };
 b8 *sp_status_name(status_t a) {
   return (((sp_status_group_sp == a.group)
@@ -222,8 +233,11 @@ b8 *sp_status_name(status_t a) {
                                      : ((sp_status_id_memory == a.id)
                                             ? "memory"
                                             : "unknown")))))
-               : ((sp_status_group_alsa == a.group) ? ((b8 *)("alsa"))
-                                                    : ((b8 *)("unknown")))));
+               : ((sp_status_group_alsa == a.group)
+                      ? ((b8 *)("alsa"))
+                      : ((sp_status_group_sndfile == a.group)
+                             ? ((b8 *)("sndfile"))
+                             : ((b8 *)("unknown"))))));
 };
 #define sp_status_init status_init_group(sp_status_group_sp)
 #define sp_system_status_require_id(id)                                        \
@@ -271,21 +285,18 @@ b8 *sp_status_name(status_t a) {
 #define sample_count_to_duration(sample_count, sample_rate)                    \
   (sample_count / sample_rate)
 typedef struct {
+  b8 type;
+  b8 flags;
   b32 sample_rate;
   b32 channel_count;
-  boolean closed_p;
-  b8 flags;
-  b8 type;
-  size_t position;
-  b16 position_offset;
   b0 *data;
-  int data_int;
 } sp_port_t;
 #define sp_port_type_alsa 0
 #define sp_port_type_file 1
 #define sp_port_bit_input 1
 #define sp_port_bit_output 2
 #define sp_port_bit_position 4
+#define sp_port_bit_closed 8
 status_t sp_port_read(sp_sample_t **result, sp_port_t *port, b32 sample_count);
 status_t sp_port_write(sp_port_t *port, size_t sample_count,
                        sp_sample_t **channel_data);

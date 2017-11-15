@@ -11,14 +11,15 @@ compile_libsph_sp() {
   source="$precompiled/sph-sp.c"
   c=$PWD/source/c
   k="$c"/transform/foreign/kissfft
-  gcc -Wl,--version-script=other/export -shared -fpic "$source" -o "$target" \
+  gcc -Wl,--version-script=other/export -shared -fpic -lsndfile "$source" -o "$target" \
     $gcc_options -I"$c" -I"$k" "$k"/kiss_fft.c "$k"/tools/kiss_fftr.c
 }
 
 compile_test() {
   export LIBRARY_PATH="$PWD/$target_dir"
-  gcc "$precompiled/test-main.c" -o "$target_dir"/test-libsph-sp -lsph-sp -lm $gcc_options -I"$precompiled"
+  gcc "$precompiled/test-main.c" -o "$target_dir"/test-libsph-sp -lsph-sp -lm -lsndfile $gcc_options -I"$precompiled"
 }
 
 mkdir -p "$target_dir" &&
-compile_libsph_sp && compile_test
+compile_libsph_sp &&
+compile_test

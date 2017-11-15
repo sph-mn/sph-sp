@@ -90,7 +90,7 @@
   (status-require! (sp-port-position (address-of position) (address-of port)))
   (test-helper-assert "sp-port-position file after write" (= sample-count position))
   (status-require! (sp-port-set-position (address-of port) 0))
-  (status-require! (sp-port-read channel-data-2 (address-of port) sample-count))
+  (sp-port-read channel-data-2 (address-of port) sample-count)
   ; compare read result with output data
   (set len channel-count)
   (define unequal b8-s 0)
@@ -108,7 +108,7 @@
   (status-require! (sp-port-position (address-of position) (address-of port)))
   (test-helper-assert "sp-port-position existing file" (= sample-count position))
   (status-require! (sp-port-set-position (address-of port) 0))
-  (status-require! (sp-port-read channel-data-2 (address-of port) sample-count))
+  (sp-port-read channel-data-2 (address-of port) sample-count)
   ; compare read result with output data
   (set
     unequal 0
@@ -206,9 +206,9 @@
 
 (define (main) int
   status-init
+  (test-helper-test-one test-port)
   (test-helper-test-one test-convolve)
   (test-helper-test-one test-moving-average)
-  (test-helper-test-one test-port)
   (test-helper-test-one test-base)
   (test-helper-test-one test-spectral-reversal-ir)
   (test-helper-test-one test-spectral-inversion-ir)
