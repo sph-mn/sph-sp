@@ -27,7 +27,8 @@
   sp-sample-t (compound-statement (set (deref (deref a channel) a-size) (deref b b-size))))
 
 (sc-comment "-- file")
-(define sp-file-sf-format b32 (bit-or SF-FORMAT-WAV SF-FORMAT-DOUBLE))
+(define sp-file-sf-format b32 (bit-or SF-FORMAT-AU SF-FORMAT-FLOAT))
+;(define sp-file-sf-format b32 (bit-or SF-FORMAT-WAV SF-FORMAT-DOUBLE))
 
 (define (sp-file-close port) (status-t sp-port-t*)
   status-init

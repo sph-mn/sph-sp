@@ -497,7 +497,7 @@ define_sp_interleave(sp_interleave, sp_sample_t,
                      { (*(b + b_size)) = (*((*(a + channel)) + a_size)); });
 define_sp_interleave(sp_deinterleave, sp_sample_t,
                      { (*((*(a + channel)) + a_size)) = (*(b + b_size)); });
-/* -- file */ b32 sp_file_sf_format = (SF_FORMAT_WAV | SF_FORMAT_DOUBLE);
+/* -- file */ b32 sp_file_sf_format = (SF_FORMAT_AU | SF_FORMAT_FLOAT);
 status_t sp_file_close(sp_port_t *port) {
   status_init;
   status.id = sf_close(((SNDFILE *)((*port).data)));
