@@ -11,12 +11,13 @@ see also [sph-sp-guile](https://github.com/sph-mn/sph-sp-guile), [on sph.mn](htt
 * generic port object for alsa and file io
 * 64 bit (default) or 32 bit float sample calculations
 * possible channel count 1 to 4e6+, sample rate 1 to 4e6+
-* many supported file formats. for a full list see the table \.(link-e "http://www.mega-nerd.com/libsndfile/" "here")
+* many supported file formats. for a full list see the table [here](http://www.mega-nerd.com/libsndfile/)
 * read and write non-interleaved sample arrays
 * avoids rounding errors
 * all processors are designed for segments of continuous streams
 
 ## partly implemented
+implemented but barely tested
 * convolution
 * moving average filter
 * windowed sinc filter
