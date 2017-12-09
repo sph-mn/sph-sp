@@ -21,13 +21,14 @@ these features do not depend on guile
 * prefers precision to performance
 
 ### transform - experimental
-example code for learning - barely tested
+example code for learning - barely tested.
+all processors are designed to process segments of continuous streams
+
 * convolution
 * moving average filter
 * windowed sinc filter
 * spectral inversion
 * spectral reversal
-* all processors are designed to process segments of continuous streams
 
 ## excluded
 * run-time adjustable sample type
@@ -52,6 +53,9 @@ example code for learning - barely tested
 ./exe/compile-c
 ./exe/install
 ```
+
+first argument to `exe/install` is the destination path prefix, for example `./exe/install /tmp`.
+there is also exe/install-extended which can symlink files but needs [sph-lib](https://github.com/sph-mn/sph-lib)
 
 installed files
 * /usr/include/sph-sp.h
@@ -181,6 +185,44 @@ seq-state-new :: procedure [#:event-f-list list #:custom alist] -> seq-state
 seq-state-options :: a ->
 seq-state-output :: a ->
 seq-state-update :: a #:custom #:events-f #:events-custom #:index #:index-i #:input #:mixer #:options #:output -> state
+```
+
+sequencer usage example
+```
+(define (sound-a time state event duration custom)
+  (and (< duration 1) (seq-output (sp-sine time 100) state)))
+
+(define (sound-b time state event duration custom)
+  (seq-output (* 0.5 (sp-sine time 200)) state (alist-q freq time)))
+
+(define (sound-c time state event duration custom) (seq-output (* 0.5 (sp-sine time 400)) state))
+
+(define (events-f time end seq-state)
+  ; this returns a list of next event objects. events-f is called again after (seq-state-duration seq-state) seconds
+  (list
+    (seq-event a sound-a 0)
+    (seq-event b sound-b 1)
+    (seq-event c sound-c 1.5)
+    (seq-event c sound-b (+ time 1))
+    (seq-event d sound-b (+ time 20))))
+
+(define (sample-f env time gen-result seq-state . custom)
+  ; this maps time to sample value
+  (seq time seq-state (l (data seq-state) (pairs data gen-result seq-state custom))))
+
+(define (segment-f env time segment gen-result . custom)
+  ; this maps time and a possibly empty sample array to a new sample array
+  (pair (pair (list segment) gen-result) custom))
+
+(define (run)
+  (let*
+    ( (seq-state (seq-state-new events-f))
+      (result-states
+        (sp-generate sample-rate 0 duration segment-f sample-f
+          ; custom state values
+          null seq-state))
+      (result-segments (reverse (first result-states))))
+    (sp-segments->alsa result-segments sample-rate "plughw:0" 4096)))
 ```
 
 # c usage
