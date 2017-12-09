@@ -24,23 +24,6 @@
 #include <math.h>
 #define sc_included_math_h
 #endif
-#define inc(a) a = (1 + a)
-#define dec(a) a = (a - 1)
-#define test_helper_test_one(func)                                             \
-  printf("%s\n", #func);                                                       \
-  status_require_x(func())
-#define test_helper_assert(description, expression)                            \
-  if (!expression) {                                                           \
-    printf("%s failed\n", description);                                        \
-    status_set_id_goto(1);                                                     \
-  }
-#define test_helper_display_summary()                                          \
-  if (status_success_p) {                                                      \
-    printf("--\ntests finished successfully.\n");                              \
-  } else {                                                                     \
-    printf("\ntests failed. %d %s\n", status.id,                               \
-           sp_status_description(status));                                     \
-  }
 /* depends on sph.sc */
 #ifndef sc_included_string_h
 #include <string.h>
@@ -143,6 +126,23 @@ boolean ensure_directory_structure(b8 *path, mode_t mkdir_mode) {
     free((*(sph_local_memory_register + sph_local_memory_index)));             \
   }
 ;
+#define inc(a) a = (1 + a)
+#define dec(a) a = (a - 1)
+#define test_helper_test_one(func)                                             \
+  printf("%s\n", #func);                                                       \
+  status_require_x(func())
+#define test_helper_assert(description, expression)                            \
+  if (!expression) {                                                           \
+    printf("%s failed\n", description);                                        \
+    status_set_id_goto(1);                                                     \
+  }
+#define test_helper_display_summary()                                          \
+  if (status_success_p) {                                                      \
+    printf("--\ntests finished successfully.\n");                              \
+  } else {                                                                     \
+    printf("\ntests failed. %d %s\n", status.id,                               \
+           sp_status_description(status));                                     \
+  }
 b0 debug_log_samples(sp_sample_t *a, size_t len) {
   size_t column_width;
   size_t column_end;

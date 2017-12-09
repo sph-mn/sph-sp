@@ -31,7 +31,7 @@
     (sph process)
     (sph string))
 
-  (load-extension "libguile-sph-sp" "init_sp_guile")
+  (load-extension "libguile-sph-sp" "sp_init_guile")
   (define sp-pi (* 4 (atan 1)))
   (define (sp-duration->sample-count seconds sample-rate) (* seconds sample-rate))
   (define (sp-sample-count->duration sample-count sample-rate) (/ sample-count sample-rate))

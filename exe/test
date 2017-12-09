@@ -1,6 +1,11 @@
-#!/bin/sh
-# the shared library must have already been compiled,
-# but it does not need to have been installed.
+#!/usr/bin/guile
+!#
 
-export LD_LIBRARY_PATH="$PWD/temp"
-./temp/test-libsph-sp
+(import (sph) (sph test))
+
+(define settings
+  (test-settings-default-custom
+    only (q ((test module sph sp generate sequencer)))
+    path-search "source/scheme" reporter-name (q compact)))
+
+(test-execute-modules-by-prefix #:settings settings (q (test module sph sp)))

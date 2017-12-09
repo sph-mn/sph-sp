@@ -130,7 +130,7 @@
 
 (sc-include "guile/io" "guile/generate" "guile/transform")
 
-(define (init-sp-guile) b0
+(define (sp-init-guile) b0
   (init-sp-io)
   (init-sp-generate)
   (init-sp-transform)

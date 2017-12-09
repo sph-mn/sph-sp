@@ -17,7 +17,7 @@ compile_libguile_sph_sp() {
 compile_test() {
   # links with libguile_sph_sp and uses the header files
   export LIBRARY_PATH="$PWD/$target_dir"
-  gcc "$precompiled/test-main.c" -o "$target_dir"/test-libguile-sph-sp $gcc_options -lguile-sph-sp
+  gcc "$precompiled/test-main.c" -o "$target_dir"/test-libguile-sph-sp $gcc_options -lm -lguile-sph-sp
 }
 
 mkdir -p "$target_dir" &&

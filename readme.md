@@ -1,28 +1,33 @@
 # sph-sp
-sound synthesis and processing toolset as a shared library and c code.
-reference implementation for learning and, with some extra testing, practical usage.
-prefers higher precision to faster calculation
+scheme sound synthesis and processing toolset. c code, shared library, guile extension and scheme modules.
+multi-dimensional sound generator
 
-work in progress but the code could already be useful
-
-see also [sph-sp-guile](https://github.com/sph-mn/sph-sp-guile), [on sph.mn](http://sph.mn/c/view/nm)
+see also [sph-sp](https://github.com/sph-mn/sph-sp) or [sph.mn](http://sph.mn/c/view/nm)
 
 # features
-* generic port object for alsa and file io
-* 64 bit (default) or 32 bit float sample calculations
-* possible channel count 1 to 4e6+, sample rate 1 to 4e6+
-* many supported file formats. for a full list see the table [here](http://www.mega-nerd.com/libsndfile/)
-* read and write non-interleaved sample arrays
-* avoids rounding errors
-* all processors are designed for segments of continuous streams
+## scheme
+* generator function that maps time to samples
+* sequencer for custom functions with designated shared state and unlimited multi-stage cross modulation
+* custom paths with gap, line, bezier curve and elliptical arc segments
 
-## partly implemented
-implemented but barely tested
+## base library
+these features do not depend on guile
+
+* port object for alsa and file io with many supported file formats ([full list](http://www.mega-nerd.com/libsndfile/))
+* 64 bit float sample calculations by default, compile-time customisable sample type
+* arbitrary number of channels
+* processing on non-interleaved sample arrays
+* avoids floating point errors
+* prefers precision to performance
+
+### transform - experimental
+example code for learning - barely tested
 * convolution
 * moving average filter
 * windowed sinc filter
 * spectral inversion
 * spectral reversal
+* all processors are designed to process segments of continuous streams
 
 ## excluded
 * run-time adjustable sample type
@@ -33,12 +38,16 @@ implemented but barely tested
   * alsa
   * libc
   * libsndfile
+  * guile >= 2.2
 * quick build
   * gcc and shell for the provided compile script
 * development build
-  * sph-sc
+  * [sph-sc](https://github.com/sph-mn/sph-sc)
 
 # setup
+* install dependencies
+* then from inside the project directory, execute
+
 ```
 ./exe/compile-c
 ./exe/install
@@ -46,14 +55,144 @@ implemented but barely tested
 
 installed files
 * /usr/include/sph-sp.h
-* /usr/lib/libsph-sp.so
+* /usr/lib/libguile-sph-sp.so
+* /usr/share/guile/site/sph/*
+* /usr/share/guile/site/test/sph/*
 
-# usage
+# scheme usage
+```scheme
+(import (sph sp))
+
+(define sample-rate 16000)
+(define channel-count 1)
+
+;-- basic io
+(define latency 4096)
+(define input-port? #f)
+(define dac (sp-alsa-open "default" input-port? channel-count sample-rate latency))
+(sp-port-write dac (list (f64vector 1 2 3 4)))
+(sp-port-close dac)
+
+(define file (sp-file-open "tmp/sp-file.au" channel-count sample-rate))
+(sp-port-write file (list (f64vector 1 2 3 4)))
+(sp-port-close file)
+
+;-- sp-generate
+(import (sph sp generate))
+
+(define time-start 0)
+(define duration-seconds 2)
+
+(let*
+  ( (result-states
+      (sp-generate sample-rate time-start duration-seconds
+        ; segment-f - maps segments with samples previously set by sample-f
+        (l (env time segment result . states)
+          (pair (pair segment result) states))
+        ; sample-f - sets samples in segments for time
+        (l (env time . states)
+          (pair (* 0.5 (sp-sine time)) states))
+        ; all following arguments are passed to segment-f/sample-f
+        (list)))
+    (result-segments (reverse (first result-states))))
+  (sp-segments->alsa result-segments))
+```
+
+## modules
+more documentation can currently be found in the code files
+
+(sph sp)
+```
+f32vector-sum :: f32vector [start end] -> number
+f64vector-sum :: f64vector [start end] -> number
+float-nearly-equal? :: a b c ->
+sp-alsa-open :: device-name input? channel-count sample-rate latency -> sp-port
+sp-duration->sample-count :: seconds sample-rate ->
+sp-file-open :: path channel-count sample-rate -> sp-port
+sp-pi
+sp-plot-render :: file-path ->
+sp-port-channel-count :: sp-port -> integer
+sp-port-close :: sp-port -> boolean
+sp-port-input? :: sp-port -> boolean
+sp-port-position :: sp-port -> integer/boolean
+sp-port-position? :: sp-port -> boolean
+sp-port-read :: sp-port integer:sample-count -> (f32vector ...):channel-data
+sp-port-sample-rate :: sp-port -> integer/boolean
+sp-port-set-position :: sp-port integer:sample-offset -> boolean
+sp-port-write :: sp-port (f32vector ...):channel-data [integer:sample-count] -> boolean
+sp-port? :: sp-port -> boolean
+sp-sample-count->duration :: sample-count sample-rate ->
+sp-segments->alsa :: ((vector ...) ...) ->
+sp-segments->file :: ((vector ...) ...) string ->
+sp-segments->plot :: ((vector ...) ...) string ->
+sp-segments->plot-render :: a path ->
+sp-sine! :: data len sample-duration freq phase amp -> unspecified
+sp-sine-lq! :: data len sample-duration freq phase amp -> unspecified
+```
+
+(sph sp generate)
+```
+sp-clip :: a ->
+sp-fold-integers :: start end f states ... ->
+sp-generate :: integer number number procedure procedure any ... -> (any ...):states
+sp-noise :: integer [{random-state -> real} random-state] -> f64vector
+sp-path :: number path-state [procedure -> result]
+sp-path-new :: sample-rate (symbol:segment-type param ...) ...
+sp-path-new-p :: number ((symbol:type any:parameter ...) ...) -> path-state
+sp-segment :: integer procedure -> (vector . states)
+sp-sine :: time freq -> number
+```
+
+(sph sp generate sequencer)
+```
+seq :: integer list -> integer/vector:sample-data list:state
+seq-default-mixer :: output ->
+seq-event :: name f optional ...
+seq-event-custom :: a ->
+seq-event-f :: a ->
+seq-event-groups :: a ->
+seq-event-list->events :: a ->
+seq-event-name :: a ->
+seq-event-new :: procedure #:key integer (symbol ...) any -> vector
+seq-event-start :: a ->
+seq-event-update :: a #:f #:start #:name #:groups #:custom ->
+seq-events-merge :: events:target events:source -> events
+seq-index-data :: a ->
+seq-index-end :: a ->
+seq-index-events :: a ->
+seq-index-f :: a ->
+seq-index-f-new :: number seq-state -> procedure
+seq-index-i-f :: a ->
+seq-index-i-f-new :: vector number number -> procedure
+seq-index-i-next :: index time ->
+seq-index-new :: data end events f i-f start ->
+seq-index-next :: index time state ->
+seq-index-start :: a ->
+seq-index-update :: a #:data #:end #:events #:f #:i-f #:start ->
+seq-output :: symbol integer/vector/any seq-state list list:alist -> list
+seq-output-new :: name data custom event ->
+seq-state-add-events :: seq-state seq-event-list/seq-events ... -> state
+seq-state-custom :: a ->
+seq-state-events-custom :: a ->
+seq-state-index :: a ->
+seq-state-index-i :: a ->
+seq-state-input :: a ->
+seq-state-new :: procedure [#:event-f-list list #:custom alist] -> seq-state
+seq-state-options :: a ->
+seq-state-output :: a ->
+seq-state-update :: a #:custom #:events-f #:events-custom #:index #:index-i #:input #:mixer #:options #:output -> state
+```
+
+# c usage
 ```
 #include <sph-sp.h>
 ```
 
-# types
+## error handling
+routines return object of type status_t, which is a struct {.id, .group}.
+status.id = 0 is success, but it is easier to use status_* and sp_status_* bindings
+
+## types
 ```c
 status_i_t
 sp_port_t struct
@@ -80,7 +219,7 @@ status_t struct
   b8 group;
 ```
 
-# enum
+## enum
 ```c
 sp_status_id_undefined, sp_status_id_input_type, sp_status_id_not_implemented,
 sp_status_id_memory, sp_status_id_file_incompatible, sp_status_id_file_encoding,
@@ -89,7 +228,7 @@ sp_status_id_file_channel_mismatch, sp_status_id_file_incomplete, sp_status_id_p
 sp_status_group_sp, sp_status_group_libc, sp_status_group_alsa
 ```
 
-# routines
+## routines
 ```c
 b0 sp_convolve(sp_sample_t* result, sp_sample_t* a, size_t a_len, sp_sample_t* b, size_t b_len, sp_sample_t* carryover, size_t carryover_len)
 b0 sp_convolve_one(sp_sample_t* result, sp_sample_t* a, size_t a_len, sp_sample_t* b, size_t b_len)
@@ -120,7 +259,7 @@ status_t sp_port_set_position(sp_port_t* port, size_t sample_index)
 status_t sp_port_write(sp_port_t* port, size_t sample_count, sp_sample_t** channel_data)
 ```
 
-# macros
+## macros
 ```c
 duration_to_sample_count(seconds, sample_rate)
 sample_count_to_duration(sample_count, sample_rate)

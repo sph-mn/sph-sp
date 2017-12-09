@@ -3,7 +3,7 @@
 # usage: ./exe/install [path-prefix]
 
 prefix="$1"
-a="temp/libsph-sp.so"
+a="temp/libguile-sph-sp.so"
 b="source/c-precompiled/sph-sp.h"
 a_dest="$prefix/usr/lib"
 b_dest="$prefix/usr/include"
@@ -11,4 +11,10 @@ b_dest="$prefix/usr/include"
 mkdir -p "$a_dest" "$b_dest" &&
 cp -t "$a_dest" "$a" &&
 cp -t "$b_dest" $b &&
-chmod 644 "$a_dest/libsph-sp.so" "$b_dest/sph-sp.h"
+chmod 644 "$a_dest/libguile-sph-sp.so" "$b_dest/sph-sp.h"
+
+dest="$prefix/usr/share/guile/site"
+mkdir -p "$dest" &&
+cp -rt "$dest" source/scheme/sph source/scheme/test &&
+find "$dest/sph" "$dest/test" -type d -exec chmod 755 {} \; &&
+find "$dest/sph" "$dest/test" -type f -exec chmod 644 {} \;

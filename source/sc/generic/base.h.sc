@@ -1,6 +1,4 @@
 (pre-include-once
-  alsa-asoundlib-h "alsa/asoundlib.h"
-  sndfile-h "sndfile.h"
   byteswap-h "byteswap.h"
   math-h "math.h")
 
@@ -69,3 +67,5 @@
   (sp-alloc-set-zero a (sp-samples->octets sample-count)))
 
 (define (sp-alloc-channel-array channel-count sample-count) (sp-sample-t** b32 b32))
+(define (sp-status-description a) (b8* status-t))
+(define (sp-status-name a) (b8* status-t))

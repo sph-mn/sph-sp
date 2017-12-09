@@ -202,52 +202,6 @@ define_float_sum(f64, f64_s);
   sp_status_id_port_type,
   sp_status_id_undefined
 };
-b8 *sp_status_description(status_t a) {
-  return ((
-      (sp_status_group_sp == a.group)
-          ? ((b8 *)((
-                (sp_status_id_eof == a.id)
-                    ? "end of file"
-                    : ((sp_status_id_input_type == a.id)
-                           ? "input argument is of wrong type"
-                           : ((sp_status_id_not_implemented == a.id)
-                                  ? "not implemented"
-                                  : ((sp_status_id_memory == a.id)
-                                         ? "memory allocation error"
-                                         : ((sp_status_id_file_incompatible ==
-                                             a.id)
-                                                ? "file channel count or "
-                                                  "sample rate is different "
-                                                  "from what was requested"
-                                                : ((sp_status_id_file_incomplete ==
-                                                    a.id)
-                                                       ? "incomplete write"
-                                                       : ((sp_status_id_port_type ==
-                                                           a.id)
-                                                              ? "incompatible "
-                                                                "port type"
-                                                              : "")))))))))
-          : ((sp_status_group_alsa == a.group)
-                 ? ((b8 *)(sf_error_number(a.id)))
-                 : ((sp_status_group_sndfile == a.group)
-                        ? ((b8 *)(sf_error_number(a.id)))
-                        : ((b8 *)(""))))));
-};
-b8 *sp_status_name(status_t a) {
-  return (((sp_status_group_sp == a.group)
-               ? ((b8 *)(((sp_status_id_input_type == a.id)
-                              ? "input-type"
-                              : ((sp_status_id_not_implemented == a.id)
-                                     ? "not-implemented"
-                                     : ((sp_status_id_memory == a.id)
-                                            ? "memory"
-                                            : "unknown")))))
-               : ((sp_status_group_alsa == a.group)
-                      ? ((b8 *)("alsa"))
-                      : ((sp_status_group_sndfile == a.group)
-                             ? ((b8 *)("sndfile"))
-                             : ((b8 *)("unknown"))))));
-};
 #define sp_status_init status_init_group(sp_status_group_sp)
 #define sp_system_status_require_id(id)                                        \
   if ((id < 0)) {                                                              \
@@ -345,6 +299,8 @@ status_t sp_port_close(sp_port_t *a);
 #define sp_alloc_set_samples_zero(a, sample_count)                             \
   sp_alloc_set_zero(a, sp_samples_to_octets(sample_count))
 sp_sample_t **sp_alloc_channel_array(b32 channel_count, b32 sample_count);
+b8 *sp_status_description(status_t a);
+b8 *sp_status_name(status_t a);
 /* depends on sph.sc */
 #ifndef sc_included_string_h
 #include <string.h>
@@ -448,6 +404,52 @@ boolean ensure_directory_structure(b8 *path, mode_t mkdir_mode) {
   }
 #define inc(a) a = (1 + a)
 #define dec(a) a = (a - 1)
+b8 *sp_status_description(status_t a) {
+  return ((
+      (sp_status_group_sp == a.group)
+          ? ((b8 *)((
+                (sp_status_id_eof == a.id)
+                    ? "end of file"
+                    : ((sp_status_id_input_type == a.id)
+                           ? "input argument is of wrong type"
+                           : ((sp_status_id_not_implemented == a.id)
+                                  ? "not implemented"
+                                  : ((sp_status_id_memory == a.id)
+                                         ? "memory allocation error"
+                                         : ((sp_status_id_file_incompatible ==
+                                             a.id)
+                                                ? "file channel count or "
+                                                  "sample rate is different "
+                                                  "from what was requested"
+                                                : ((sp_status_id_file_incomplete ==
+                                                    a.id)
+                                                       ? "incomplete write"
+                                                       : ((sp_status_id_port_type ==
+                                                           a.id)
+                                                              ? "incompatible "
+                                                                "port type"
+                                                              : "")))))))))
+          : ((sp_status_group_alsa == a.group)
+                 ? ((b8 *)(sf_error_number(a.id)))
+                 : ((sp_status_group_sndfile == a.group)
+                        ? ((b8 *)(sf_error_number(a.id)))
+                        : ((b8 *)(""))))));
+};
+b8 *sp_status_name(status_t a) {
+  return (((sp_status_group_sp == a.group)
+               ? ((b8 *)(((sp_status_id_input_type == a.id)
+                              ? "input-type"
+                              : ((sp_status_id_not_implemented == a.id)
+                                     ? "not-implemented"
+                                     : ((sp_status_id_memory == a.id)
+                                            ? "memory"
+                                            : "unknown")))))
+               : ((sp_status_group_alsa == a.group)
+                      ? ((b8 *)("alsa"))
+                      : ((sp_status_group_sndfile == a.group)
+                             ? ((b8 *)("sndfile"))
+                             : ((b8 *)("unknown"))))));
+};
 /** return an array for channels with data arrays for each channel.
   returns zero if memory could not be allocated */
 sp_sample_t **sp_alloc_channel_array(b32 channel_count, b32 sample_count) {
@@ -1524,7 +1526,7 @@ b0 init_sp_transform() {
   scm_c_define_procedure_c("sp-convolve!", 3, 0, 0, scm_sp_convolve_x,
                            "a b state:(integer . f32vector) -> state");
 };
-b0 init_sp_guile() {
+b0 sp_init_guile() {
   init_sp_io();
   init_sp_generate();
   init_sp_transform();
