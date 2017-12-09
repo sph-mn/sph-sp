@@ -7,48 +7,54 @@ format_c() {
 copy_example_config() {
   # the config file is not versioned so that users can customise it
   sc="$1"
-  if [ ! -f "$sc/base/config.sc" ]
+  if [ ! -f "$sc/generic/base/config.sc" ]
   then
-    cp "$sc/base/config.sc.example" "$sc/base/config.sc"
+    cp "$sc/generic/base/config.sc.example" "$sc/generic/base/config.sc"
   fi
 }
 
 copy_submodules() {
   # copy code files from submodules.
   # to not have the whole submodule in the source directory
-  a=submodules/sph-sc-lib/source/sc
-  b="$a/sph"
-  f="source/sc/base/foreign"
-  mkdir -p "$f/sph" &&
-  cp --update --target-directory="$f" "$a/sph.sc" &&
-  cp --update --target-directory="$f/sph" \
-     "$b/status.sc" "$b/one.sc" "$b/local-memory.sc" "$b/float.sc"
+  s_sc=submodules/sph-sc-lib/source/sc
+  s="$s_sc/sph"
+  # generic
+  t="source/sc/generic/base/foreign"
+  mkdir -p "$t/sph" &&
+  cp --update --target-directory="$t" "$s_sc/sph.sc" &&
+  cp --update --target-directory="$t/sph" \
+     "$s/float.sc" "$s/local-memory.sc" "$s/one.sc" "$s/status.sc"
+  # guile specific
+  t="source/sc/guile/foreign"
+  mkdir -p "$t/sph" &&
+  cp --update --target-directory="$t" "$s_sc/sph.sc" &&
+  cp --update --target-directory="$t/sph" "$s/guile.sc"
 }
 
-compile_sc_libsph_sp() {
+compile_sc_libguile_sph_sp() {
+  # create the c source code
   sc="$1"
   c="$2"
-  # create the c source code
-  copy_example_config "$sc" &&
   copy_submodules &&
-  sc "$sc/main.sc" "$c/sph-sp.c" &&
-  sc "$sc/main.h.sc" "$c/sph-sp.h" &&
-  format_c "$c/sph-sp.c" &&
+  copy_example_config "$sc" &&
+  sc "$sc/guile/main.sc" "$c/main.c" &&
+  sc "$sc/generic/main.h.sc" "$c/sph-sp.h" &&
+  format_c "$c/main.c" &&
   format_c "$c/sph-sp.h"
 }
 
 compile_sc_test() {
   sc="$1"
   c="$2"
-  sc "$sc/test/main.sc" "$c/test-main.c" &&
+  sc "$sc/generic/test/main.sc" "$c/test-main.c" &&
   format_c "$c/test-main.c"
 }
 
 export SC_LOAD_PATH="$PWD/source/sc"
-c=source/c-precompiled
-sc=source/sc
+precompiled=source/c-precompiled
+source=source/sc
 
-mkdir -p "$c" &&
-compile_sc_libsph_sp "$sc" "$c" &&
-compile_sc_test "$sc" "$c" &&
-chmod 644 "$c"/*
+mkdir -p "$precompiled" &&
+compile_sc_libguile_sph_sp "$source" "$precompiled" &&
+compile_sc_test "$source" "$precompiled" &&
+chmod 644 "$precompiled"/*

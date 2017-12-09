@@ -6,6 +6,7 @@
   float-h "float.h"
   math-h "math.h")
 
+(sc-include "generic/base/foreign/sph/one" "generic/base/foreign/sph/local-memory")
 (pre-define (inc a) (set a (+ 1 a)))
 (pre-define (dec a) (set a (- a 1)))
 
@@ -23,8 +24,6 @@
   (if status-success?
     (printf "--\ntests finished successfully.\n")
     (printf "\ntests failed. %d %s\n" (struct-get status id) (sp-status-description status))))
-
-(sc-include "base/foreign/sph/one" "base/foreign/sph/local-memory")
 
 (define (debug-log-samples a len) (b0 sp-sample-t* size-t)
   (define

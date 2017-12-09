@@ -1,4 +1,5 @@
 
+#include <libguile.h>
 #ifndef sc_included_stdio_h
 #include <stdio.h>
 #define sc_included_stdio_h
@@ -1111,4 +1112,430 @@ status_i_t sp_windowed_sinc(sp_sample_t *result, sp_sample_t *source,
   sp_convolve(result, source, source_len, (*(*state)).ir, (*(*state)).ir_len,
               (*(*state)).data, (*(*state)).ir_len_prev);
   return (0);
+};
+#define scm_first SCM_CAR
+#define scm_tail SCM_CDR
+#define scm_c_define_procedure_c_init SCM scm_c_define_procedure_c_temp
+#define scm_is_undefined(a) (SCM_UNDEFINED == a)
+#define scm_c_define_procedure_c(name, required, optional, rest, c_function,   \
+                                 documentation)                                \
+  scm_c_define_procedure_c_temp =                                              \
+      scm_c_define_gsubr(name, required, optional, rest, c_function);          \
+  scm_set_procedure_property_x(scm_c_define_procedure_c_temp,                  \
+                               scm_from_locale_symbol("documentation"),        \
+                               scm_from_locale_string(documentation))
+b0 scm_debug_log(SCM value) {
+  scm_call_2(scm_variable_ref(scm_c_lookup("write")), value,
+             scm_current_output_port());
+  scm_newline(scm_current_output_port());
+};
+SCM scm_c_bytevector_take(size_t size_octets, b8 *a) {
+  SCM r = scm_c_make_bytevector(size_octets);
+  memcpy(SCM_BYTEVECTOR_CONTENTS(r), a, size_octets);
+  return (r);
+};
+#define scm_c_list_each(list, e, body)                                         \
+  while (!scm_is_null(list)) {                                                 \
+    e = scm_first(list);                                                       \
+    body;                                                                      \
+    list = scm_tail(list);                                                     \
+  }
+#define inc(a) a = (1 + a)
+#define dec(a) a = (a - 1)
+/** raise an exception with error information set as an alist with given values
+ */
+#define scm_c_error(name, description)                                         \
+  scm_call_1(scm_rnrs_raise,                                                   \
+             scm_list_3(scm_from_latin1_symbol(name),                          \
+                        scm_cons(scm_from_latin1_symbol("description"),        \
+                                 scm_from_utf8_string(description)),           \
+                        scm_cons(scm_from_latin1_symbol("c-routine"),          \
+                                 scm_from_latin1_symbol(__FUNCTION__))))
+;
+#define status_to_scm_error(a)                                                 \
+  scm_c_error(sp_status_name(a), sp_status_description(a))
+#define status_to_scm(result)                                                  \
+  (status_success_p ? result : status_to_scm_error(status))
+/** call scm-c-error if status is not success or return result */
+#define status_to_scm_return(result) return (status_to_scm(result))
+;
+#define scm_sp_object_type_init                                                \
+  scm_type_sp_object = scm_make_smob_type("sp-object", 0)
+#define scm_set_smob_print                                                     \
+  scm_type_sp_object scm_sp_object_print scm_set_smob_free(scm_type_sp_object, \
+                                                           scm_sp_object_free)
+/** integer -> string */
+#define sp_port_type_to_name(a)                                                \
+  ((sp_port_type_file == a) ? "file"                                           \
+                            : ((sp_port_type_alsa == a) ? "alsa" : "unknown"))
+;
+#define sp_object_type_port 0
+#define sp_object_type_windowed_sinc 1
+#define scm_sp_object_type SCM_SMOB_FLAGS
+#define scm_sp_object_data SCM_SMOB_DATA
+#define optional_sample_rate(a) (scm_is_undefined(a) ? -1 : scm_to_int32(a))
+#define optional_channel_count(a) (scm_is_undefined(a) ? -1 : scm_to_int32(a))
+scm_t_bits scm_type_sp_object;
+SCM scm_rnrs_raise;
+/** get a guile scheme object for channel data sample arrays. returns a list of
+  f64vectors. eventually frees given data arrays */
+SCM scm_take_channel_data(sp_sample_t **a, b32 channel_count,
+                          b32 sample_count) {
+  SCM result = SCM_EOL;
+  while (channel_count) {
+    dec(channel_count);
+    result = scm_cons(scm_take_f64vector((*(a + channel_count)), sample_count),
+                      result);
+  };
+  free(a);
+  return (result);
+};
+/** only the result array is allocated, data is referenced to the scm vectors */
+sp_sample_t **scm_to_channel_data(SCM a, b32 *channel_count,
+                                  size_t *sample_count) {
+  (*channel_count) = scm_to_uint32(scm_length(a));
+  if (!(*channel_count)) {
+    return (0);
+  };
+  sp_sample_t **result = malloc(((*channel_count) * sizeof(sp_sample_t *)));
+  if (!result) {
+    return (0);
+  };
+  (*sample_count) = sp_octets_to_samples(SCM_BYTEVECTOR_LENGTH(scm_first(a)));
+  size_t index = 0;
+  while (!scm_is_null(a)) {
+    (*(result + index)) =
+        ((sp_sample_t *)(SCM_BYTEVECTOR_CONTENTS(scm_first(a))));
+    inc(index);
+    a = scm_tail(a);
+  };
+  return (result);
+};
+/** sp-object type for storing arbitrary pointers */
+SCM scm_sp_object_create(b0 *pointer, b8 sp_object_type) {
+  SCM result = scm_new_smob(scm_type_sp_object, ((scm_t_bits)(pointer)));
+  SCM_SET_SMOB_FLAGS(result, ((scm_t_bits)(sp_object_type)));
+  return (result);
+};
+int scm_sp_object_print(SCM a, SCM output_port, scm_print_state *print_state) {
+  char *result = malloc((70 + 10 + 7 + 10 + 10 + 2 + 2));
+  if (!result) {
+    return (0);
+  };
+  b8 type = scm_sp_object_type(a);
+  if ((sp_object_type_port == type)) {
+    sp_port_t *sp_port = ((sp_port_t *)(scm_sp_object_data(a)));
+    sprintf(result,
+            "#<sp-port %lx type:%s sample-rate:%d channel-count:%d closed?:%s "
+            "input?:%s>",
+            ((b0 *)(a)), sp_port_type_to_name((*sp_port).type),
+            (*sp_port).sample_rate, (*sp_port).channel_count,
+            ((sp_port_bit_closed & (*sp_port).flags) ? "#t" : "#f"),
+            ((sp_port_bit_input & (*sp_port).flags) ? "#t" : "#f"));
+  } else {
+    if ((sp_object_type_windowed_sinc == type)) {
+      sprintf(result, "#<sp-state %lx type:windowed-sinc>", ((b0 *)(a)));
+    } else {
+      sprintf(result, "#<sp %lx>", ((b0 *)(a)));
+    };
+  };
+  scm_display(scm_take_locale_string(result), output_port);
+  return (0);
+};
+size_t scm_sp_object_free(SCM a) {
+  b8 type = SCM_SMOB_FLAGS(a);
+  b0 *data = ((b0 *)(scm_sp_object_data(a)));
+  if ((sp_object_type_windowed_sinc == type)) {
+    sp_windowed_sinc_state_destroy(data);
+  } else {
+    if ((sp_object_type_port == type)) {
+      sp_port_close(data);
+    };
+  };
+  return (0);
+};
+SCM scm_float_nearly_equal_p(SCM a, SCM b, SCM margin) {
+  return (scm_from_bool(f64_nearly_equal_p(scm_to_double(a), scm_to_double(b),
+                                           scm_to_double(margin))));
+};
+SCM scm_f64vector_sum(SCM a, SCM start, SCM end) {
+  return (scm_from_double(
+      f64_sum(((scm_is_undefined(start) ? 0 : scm_to_size_t(start)) +
+               ((f64_s *)(SCM_BYTEVECTOR_CONTENTS(a)))),
+              ((scm_is_undefined(end) ? SCM_BYTEVECTOR_LENGTH(a)
+                                      : (end - (1 + start))) *
+               sizeof(f64_s)))));
+};
+SCM scm_f32vector_sum(SCM a, SCM start, SCM end) {
+  return (scm_from_double(
+      f32_sum(((scm_is_undefined(start) ? 0 : scm_to_size_t(start)) +
+               ((f32_s *)(SCM_BYTEVECTOR_CONTENTS(a)))),
+              ((scm_is_undefined(end) ? SCM_BYTEVECTOR_LENGTH(a)
+                                      : (end - (1 + start))) *
+               sizeof(f32_s)))));
+};
+#define scm_sp_port(a) ((sp_port_t *)(scm_sp_object_data(a)))
+SCM scm_sp_port_p(SCM a) {
+  return (scm_from_bool((SCM_SMOB_PREDICATE(scm_type_sp_object, a) &&
+                         ((sp_object_type_port == scm_sp_object_type(a))))));
+};
+SCM scm_sp_port_channel_count(SCM port) {
+  return (scm_from_uint32((*scm_sp_port(port)).channel_count));
+};
+SCM scm_sp_port_sample_rate(SCM port) {
+  return (scm_from_uint32((*scm_sp_port(port)).sample_rate));
+};
+SCM scm_sp_port_position_p(SCM port) {
+  return (scm_from_bool((sp_port_bit_position & (*scm_sp_port(port)).flags)));
+};
+SCM scm_sp_port_input_p(SCM port) {
+  return (scm_from_bool((sp_port_bit_input & (*scm_sp_port(port)).flags)));
+};
+/** returns the current port position in number of octets */
+SCM scm_sp_port_position(SCM port) {
+  size_t position;
+  sp_port_position(&position, scm_sp_port(port));
+  return (scm_from_size_t(position));
+};
+SCM scm_sp_port_close(SCM a) {
+  status_init;
+  status = sp_port_close(scm_sp_port(a));
+  status_to_scm_return(SCM_UNSPECIFIED);
+};
+SCM scm_sp_port_read(SCM scm_port, SCM scm_sample_count) {
+  status_init;
+  sp_port_t *port = scm_sp_port(scm_port);
+  b32 sample_count = scm_to_uint32(scm_sample_count);
+  b32 channel_count = (*port).channel_count;
+  sp_sample_t **data = sp_alloc_channel_array(channel_count, sample_count);
+  sp_status_require_alloc(data);
+  status_require_x(sp_port_read(data, port, sample_count));
+  SCM result = scm_take_channel_data(data, channel_count, sample_count);
+exit:
+  status_to_scm_return(result);
+};
+SCM scm_sp_port_write(SCM scm_port, SCM scm_channel_data,
+                      SCM scm_sample_count) {
+  status_init;
+  sp_port_t *port = scm_sp_port(scm_port);
+  local_memory_init(1);
+  b32 channel_count;
+  size_t sample_count;
+  sp_sample_t **data =
+      scm_to_channel_data(scm_channel_data, &channel_count, &sample_count);
+  sp_status_require_alloc(data);
+  local_memory_add(data);
+  status_require_x(sp_port_write(port, sample_count, data));
+exit:
+  local_memory_free;
+  status_to_scm_return(SCM_UNSPECIFIED);
+};
+SCM scm_sp_port_set_position(SCM scm_port, SCM scm_sample_offset) {
+  status_init;
+  status = sp_port_set_position(scm_sp_port(scm_port),
+                                scm_to_uint64(scm_sample_offset));
+  status_to_scm_return(SCM_UNSPECIFIED);
+};
+SCM scm_sp_file_open(SCM scm_path, SCM scm_channel_count, SCM scm_sample_rate) {
+  status_init;
+  b8 *path = scm_to_locale_string(scm_path);
+  b32 channel_count = scm_to_uint32(scm_channel_count);
+  b32 sample_rate = scm_to_uint32(scm_sample_rate);
+  sp_alloc_define(sp_port, sp_port_t *, sizeof(sp_port_t));
+  status_require_x(sp_file_open(sp_port, path, channel_count, sample_rate));
+  SCM result = scm_sp_object_create(sp_port, sp_object_type_port);
+exit:
+  status_to_scm_return(result);
+};
+SCM scm_sp_alsa_open(SCM scm_device_name, SCM scm_input_p,
+                     SCM scm_channel_count, SCM scm_sample_rate,
+                     SCM scm_latency) {
+  status_init;
+  b8 *device_name = scm_to_locale_string(scm_device_name);
+  boolean input_p = scm_to_bool(scm_input_p);
+  b32 channel_count = scm_to_uint32(scm_channel_count);
+  b32 sample_rate = scm_to_uint32(scm_sample_rate);
+  b32 latency = scm_to_uint32(scm_latency);
+  sp_alloc_define_zero(sp_port, sp_port_t *, sizeof(sp_port_t));
+  status_require_x(sp_alsa_open(sp_port, device_name, input_p, channel_count,
+                                sample_rate, latency));
+  SCM result = scm_sp_object_create(sp_port, sp_object_type_port);
+exit:
+  status_to_scm_return(result);
+};
+b0 init_sp_io() {
+  scm_c_define_procedure_c_init;
+  scm_c_define_procedure_c("sp-port-close", 1, 0, 0, scm_sp_port_close,
+                           "sp-port -> boolean");
+  scm_c_define_procedure_c("sp-port-input?", 1, 0, 0, scm_sp_port_input_p,
+                           "sp-port -> boolean");
+  scm_c_define_procedure_c("sp-port-position?", 1, 0, 0, scm_sp_port_position_p,
+                           "sp-port -> boolean");
+  scm_c_define_procedure_c("sp-port-position", 1, 0, 0, scm_sp_port_position,
+                           "sp-port -> integer/boolean");
+  scm_c_define_procedure_c("sp-port-channel-count", 1, 0, 0,
+                           scm_sp_port_channel_count, "sp-port -> integer");
+  scm_c_define_procedure_c("sp-port-sample-rate", 1, 0, 0,
+                           scm_sp_port_sample_rate,
+                           "sp-port -> integer/boolean");
+  scm_c_define_procedure_c("sp-port?", 1, 0, 0, scm_sp_port_p,
+                           "sp-port -> boolean");
+  scm_c_define_procedure_c(
+      "sp-alsa-open", 5, 0, 0, scm_sp_alsa_open,
+      "device-name input? channel-count sample-rate latency -> sp-port");
+  scm_c_define_procedure_c("sp-file-open", 3, 0, 0, scm_sp_file_open,
+                           "path channel-count sample-rate -> sp-port");
+  scm_c_define_procedure_c("sp-port-write", 2, 1, 0, scm_sp_port_write,
+                           "sp-port (f32vector ...):channel-data "
+                           "[integer:sample-count] -> boolean\n    write "
+                           "sample data to the channels of port");
+  scm_c_define_procedure_c(
+      "sp-port-read", 2, 0, 0, scm_sp_port_read,
+      "sp-port integer:sample-count -> (f32vector ...):channel-data");
+  scm_c_define_procedure_c(
+      "sp-port-set-position", 2, 0, 0, scm_sp_port_set_position,
+      "sp-port integer:sample-offset -> boolean\n    sample-offset can be "
+      "negative, in which case it is from the end of the port");
+};
+/** defines scm-sp-sine!, scm-sp-sine-lq! */
+#define define_sp_sine_x(scm_id, id)                                           \
+  SCM scm_id(SCM data, SCM len, SCM sample_duration, SCM freq, SCM phase,      \
+             SCM amp) {                                                        \
+    id(((sp_sample_t *)(SCM_BYTEVECTOR_CONTENTS(data))), scm_to_uint32(len),   \
+       scm_to_double(sample_duration), scm_to_double(freq),                    \
+       scm_to_double(phase), scm_to_double(amp));                              \
+    return (SCM_UNSPECIFIED);                                                  \
+  }
+;
+define_sp_sine_x(scm_sp_sine_x, sp_sine);
+define_sp_sine_x(scm_sp_sine_lq_x, sp_sine);
+b0 init_sp_generate() {
+  scm_c_define_procedure_c_init;
+  scm_c_define_procedure_c("sp-sine!", 6, 0, 0, scm_sp_sine_x,
+                           "data len sample-duration freq phase amp -> "
+                           "unspecified\n    f32vector integer integer "
+                           "rational rational rational rational");
+  scm_c_define_procedure_c("sp-sine-lq!", 6, 0, 0, scm_sp_sine_lq_x,
+                           "data len sample-duration freq phase amp -> "
+                           "unspecified\n    f32vector integer integer "
+                           "rational rational rational rational\n    faster, "
+                           "lower precision version of sp-sine!.\n    "
+                           "currently faster by a factor of about 2.6");
+};
+SCM scm_sp_convolve_x(SCM result, SCM a, SCM b, SCM carryover,
+                      SCM carryover_len) {
+  b32 a_len = sp_octets_to_samples(SCM_BYTEVECTOR_LENGTH(a));
+  b32 b_len = sp_octets_to_samples(SCM_BYTEVECTOR_LENGTH(b));
+  sp_convolve(((sp_sample_t *)(SCM_BYTEVECTOR_CONTENTS(result))),
+              ((sp_sample_t *)(SCM_BYTEVECTOR_CONTENTS(a))), a_len,
+              ((sp_sample_t *)(SCM_BYTEVECTOR_CONTENTS(b))), b_len,
+              ((sp_sample_t *)(SCM_BYTEVECTOR_CONTENTS(carryover))),
+              scm_to_size_t(carryover_len));
+  return (SCM_UNSPECIFIED);
+};
+#define optional_samples(a, a_len, scm)                                        \
+  if (scm_is_true(scm)) {                                                      \
+    a = ((sp_sample_t *)(SCM_BYTEVECTOR_CONTENTS(scm)));                       \
+    a_len = sp_octets_to_samples(SCM_BYTEVECTOR_LENGTH(scm));                  \
+  } else {                                                                     \
+    a = 0;                                                                     \
+    a_len = 0;                                                                 \
+  }
+#define optional_index(a, default)                                             \
+  ((!scm_is_undefined(start) && scm_is_true(start)) ? scm_to_uint32(a)         \
+                                                    : default)
+SCM scm_sp_moving_average_x(SCM result, SCM source, SCM scm_prev, SCM scm_next,
+                            SCM distance, SCM start, SCM end) {
+  b32 source_len = sp_octets_to_samples(SCM_BYTEVECTOR_LENGTH(source));
+  sp_sample_t *prev;
+  b32 prev_len;
+  sp_sample_t *next;
+  b32 next_len;
+  optional_samples(prev, prev_len, scm_prev);
+  optional_samples(next, next_len, scm_next);
+  sp_moving_average(
+      ((sp_sample_t *)(SCM_BYTEVECTOR_CONTENTS(result))),
+      ((sp_sample_t *)(SCM_BYTEVECTOR_CONTENTS(source))), source_len, prev,
+      prev_len, next, next_len, optional_index(start, 0),
+      optional_index(end, (source_len - 1)), scm_to_uint32(distance));
+  return (SCM_UNSPECIFIED);
+};
+SCM scm_sp_windowed_sinc_state_create(SCM sample_rate, SCM freq, SCM transition,
+                                      SCM old_state) {
+  sp_windowed_sinc_state_t *state;
+  if (scm_is_true(old_state)) {
+    state = ((sp_windowed_sinc_state_t *)(scm_sp_object_data(old_state)));
+  } else {
+    state = 0;
+  };
+  sp_windowed_sinc_state_create(scm_to_uint32(sample_rate), scm_to_double(freq),
+                                scm_to_double(transition), &state);
+  return ((scm_is_true(old_state)
+               ? old_state
+               : scm_sp_object_create(state, sp_object_type_windowed_sinc)));
+};
+SCM scm_sp_windowed_sinc_x(SCM result, SCM source, SCM state) {
+  return (SCM_UNSPECIFIED);
+};
+SCM scm_sp_fft(SCM source) {
+  status_init;
+  b32 result_len = ((3 * SCM_BYTEVECTOR_LENGTH(source)) / 2);
+  SCM result =
+      scm_make_f32vector(scm_from_uint32(result_len), scm_from_uint8(0));
+  status_require_x(sp_fft(((sp_sample_t *)(SCM_BYTEVECTOR_CONTENTS(result))),
+                          result_len,
+                          ((sp_sample_t *)(SCM_BYTEVECTOR_CONTENTS(source))),
+                          SCM_BYTEVECTOR_LENGTH(source)));
+exit:
+  status_to_scm_return(result);
+};
+SCM scm_sp_ifft(SCM source) {
+  status_init;
+  b32 result_len = ((SCM_BYTEVECTOR_LENGTH(source) - 1) * 2);
+  SCM result =
+      scm_make_f32vector(scm_from_uint32(result_len), scm_from_uint8(0));
+  status_require_x(sp_ifft(((sp_sample_t *)(SCM_BYTEVECTOR_CONTENTS(result))),
+                           result_len,
+                           ((sp_sample_t *)(SCM_BYTEVECTOR_CONTENTS(source))),
+                           SCM_BYTEVECTOR_LENGTH(source)));
+exit:
+  status_to_scm_return(result);
+};
+b0 init_sp_transform() {
+  scm_c_define_procedure_c_init;
+  scm_c_define_procedure_c("sp-fft", 1, 0, 0, scm_sp_fft,
+                           "f32vector:value-per-time -> "
+                           "f32vector:frequencies-per-time\n    discrete "
+                           "fourier transform on the input data");
+  scm_c_define_procedure_c("sp-ifft", 1, 0, 0, scm_sp_ifft,
+                           "f32vector:frequencies-per-time -> "
+                           "f32vector:value-per-time\n    inverse discrete "
+                           "fourier transform on the input data");
+  scm_c_define_procedure_c("sp-moving-average!", 5, 2, 0,
+                           scm_sp_moving_average_x,
+                           "result source previous next distance [start end] "
+                           "-> unspecified\n  f32vector f32vector f32vector "
+                           "f32vector integer integer integer [integer]");
+  scm_c_define_procedure_c("sp-windowed-sinc!", 7, 2, 0, scm_sp_windowed_sinc_x,
+                           "result source previous next sample-rate freq "
+                           "transition [start end] -> unspecified\n    "
+                           "f32vector f32vector f32vector f32vector number "
+                           "number integer integer -> boolean");
+  scm_c_define_procedure_c("sp-convolve!", 3, 0, 0, scm_sp_convolve_x,
+                           "a b state:(integer . f32vector) -> state");
+};
+b0 init_sp_guile() {
+  init_sp_io();
+  init_sp_generate();
+  init_sp_transform();
+  scm_c_define_procedure_c_init;
+  scm_sp_object_type_init;
+  scm_rnrs_raise = scm_c_public_ref("rnrs exceptions", "raise");
+  scm_c_define_procedure_c("f32vector-sum", 1, 2, 0, scm_f32vector_sum,
+                           "f32vector [start end] -> number");
+  scm_c_define_procedure_c("f64vector-sum", 1, 2, 0, scm_f64vector_sum,
+                           "f64vector [start end] -> number");
+  scm_c_define_procedure_c(
+      "float-nearly-equal?", 3, 0, 0, scm_float_nearly_equal_p,
+      "a b margin -> boolean\n    number number number -> boolean");
 };

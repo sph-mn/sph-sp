@@ -1,0 +1,7 @@
+#!/usr/bin/guile
+!#
+
+(import (sph install))
+
+(install-cli-guile ("/usr/lib" "temp/libguile-sph-sp.so")
+  (path-lib-scheme "source/scheme/sph" "source/scheme/test"))

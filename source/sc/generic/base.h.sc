@@ -9,7 +9,9 @@
   sp-sample-type-f32 2)
 
 (sc-include
-  "base/foreign/sph" "base/foreign/sph/status" "base/foreign/sph/float" "base/status" "base/config")
+  "generic/base/foreign/sph"
+  "generic/base/foreign/sph/status"
+  "generic/base/foreign/sph/float" "generic/base/status" "generic/base/config")
 
 (pre-if
   (= sp-sample-type sp-sample-type-f64)
@@ -30,7 +32,7 @@
 (pre-define (sp-samples->octets a) (* a (sizeof sp-sample-t)))
 (pre-define (duration->sample-count seconds sample-rate) (* seconds sample-rate))
 (pre-define (sample-count->duration sample-count sample-rate) (/ sample-count sample-rate))
-(sc-include "base/io.h")
+(sc-include "generic/base/io.h")
 ;
 ;-- memory
 

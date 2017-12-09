@@ -1,5 +1,5 @@
 (pre-include "sph-sp.h")
-(sc-include "test/helper")
+(sc-include "generic/test/helper")
 
 (pre-if
   (= sp-sample-type-f64 sp-sample-type)

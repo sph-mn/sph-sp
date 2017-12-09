@@ -1,5 +1,6 @@
 exports {
   global:
+    sp_init_guile;
     sp_alloc_channel_array;
     sp_sin_lq;
     sp_sinc;

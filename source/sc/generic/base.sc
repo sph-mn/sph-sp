@@ -1,8 +1,10 @@
 (pre-include-once
   stdio-h "stdio.h"
-  fcntl-h "fcntl.h")
+  fcntl-h "fcntl.h"
+  alsa-asoundlib-h "alsa/asoundlib.h"
+  sndfile-h "sndfile.h")
 
-(sc-include "base.h" "base/foreign/sph/one" "base/foreign/sph/local-memory")
+(sc-include "generic/base/foreign/sph/one" "generic/base/foreign/sph/local-memory" "generic/base.h")
 ;
 ;-- other
 ;
@@ -28,4 +30,4 @@
     (set (deref result channel-count) channel))
   (return result))
 
-(sc-include "base/io")
+(sc-include "generic/base/io")

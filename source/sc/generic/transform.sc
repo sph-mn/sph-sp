@@ -2,7 +2,7 @@
   "routines that take sample arrays as input and process them.
   depends on base.sc")
 
-(sc-include "transform.h")
+(sc-include "generic/transform.h")
 
 (pre-include-once
   kiss-fft "kiss_fft.h"
@@ -186,4 +186,4 @@
     (set b-index 0)
     (inc a-index)))
 
-(sc-include "transform/windowed-sinc")
+(sc-include "generic/transform/windowed-sinc")
