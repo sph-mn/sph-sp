@@ -2,23 +2,24 @@
 scheme sound synthesis and processing toolset. c code, shared library, guile extension and scheme modules.
 multi-dimensional sound generator
 
-see also [sph-sp](https://github.com/sph-mn/sph-sp) or [sph.mn](http://sph.mn/c/view/nm)
+see also [sph.mn](http://sph.mn/c/view/nm)
 
 # features
 ## scheme
 * generator function that maps time to samples
 * sequencer for custom functions with designated shared state and unlimited multi-stage cross modulation
 * custom paths with gap, line, bezier curve and elliptical arc segments
+* purely functional
 
 ## base library
 these features do not depend on guile
 
-* port object for alsa and file io with many supported file formats ([full list](http://www.mega-nerd.com/libsndfile/))
+* port object for alsa and file io with many supported file formats ([full list](http://www.mega-nerd.com/libsndfile/)). the file format to use is currently a compile-time configuration
 * 64 bit float sample calculations by default, compile-time customisable sample type
 * arbitrary number of channels
-* processing on non-interleaved sample arrays
-* avoids floating point errors
-* prefers precision to performance
+* arbitrary sample rate
+* processing on non-interleaved sample arrays by default
+* avoids floating point errors, prefers precision to performance
 
 ### transform - experimental
 example code for learning - barely tested.
@@ -29,10 +30,6 @@ all processors are designed to process segments of continuous streams
 * windowed sinc filter
 * spectral inversion
 * spectral reversal
-
-## excluded
-* run-time adjustable sample type
-* graphical user interfaces
 
 # dependencies
 * run-time
@@ -64,8 +61,9 @@ installed files
 * /usr/share/guile/site/test/sph/*
 
 # scheme usage
+
 ```scheme
-(import (sph sp))
+(import (sph sp) (sph sp generate))
 
 (define sample-rate 16000)
 (define channel-count 1)
@@ -102,11 +100,52 @@ installed files
   (sp-segments->alsa result-segments))
 ```
 
+sequencer usage example
+
+```scheme
+(import (sph sp) (sph sp generate) (sph sp generate sequencer))
+
+(define (sound-a time state event duration custom)
+  (and (< duration 1) (seq-output (sp-sine time 100) state)))
+
+(define (sound-b time state event duration custom)
+  (seq-output (* 0.5 (sp-sine time 200)) state (alist-q freq time)))
+
+(define (sound-c time state event duration custom) (seq-output (* 0.5 (sp-sine time 400)) state))
+
+(define (events-f time end seq-state)
+  ; this returns a list of next event objects. events-f is called again after (seq-state-duration seq-state) seconds
+  (list
+    (seq-event a sound-a 0)
+    (seq-event b sound-b 1)
+    (seq-event c sound-c 1.5)
+    (seq-event c sound-b (+ time 1))
+    (seq-event d sound-b (+ time 20))))
+
+(define (sample-f env time gen-result seq-state . custom)
+  ; this maps time to sample value
+  (seq time seq-state (l (data seq-state) (pairs data gen-result seq-state custom))))
+
+(define (segment-f env time segment gen-result . custom)
+  ; this maps time and a possibly empty sample array to a new sample array
+  (pair (pair (list segment) gen-result) custom))
+
+(define (run)
+  (let*
+    ( (seq-state (seq-state-new events-f))
+      (result-states
+        (sp-generate sample-rate 0 duration segment-f sample-f
+          ; custom state values
+          null seq-state))
+      (result-segments (reverse (first result-states))))
+    (sp-segments->alsa result-segments sample-rate "plughw:0" 4096)))
+```
+
 ## modules
-more documentation can currently be found in the code files
+more documentation is currently to be found in the code files.
 
 (sph sp)
-```
+```scheme
 f32vector-sum :: f32vector [start end] -> number
 f64vector-sum :: f64vector [start end] -> number
 float-nearly-equal? :: a b c ->
@@ -187,52 +226,14 @@ seq-state-output :: a ->
 seq-state-update :: a #:custom #:events-f #:events-custom #:index #:index-i #:input #:mixer #:options #:output -> state
 ```
 
-sequencer usage example
-```
-(define (sound-a time state event duration custom)
-  (and (< duration 1) (seq-output (sp-sine time 100) state)))
-
-(define (sound-b time state event duration custom)
-  (seq-output (* 0.5 (sp-sine time 200)) state (alist-q freq time)))
-
-(define (sound-c time state event duration custom) (seq-output (* 0.5 (sp-sine time 400)) state))
-
-(define (events-f time end seq-state)
-  ; this returns a list of next event objects. events-f is called again after (seq-state-duration seq-state) seconds
-  (list
-    (seq-event a sound-a 0)
-    (seq-event b sound-b 1)
-    (seq-event c sound-c 1.5)
-    (seq-event c sound-b (+ time 1))
-    (seq-event d sound-b (+ time 20))))
-
-(define (sample-f env time gen-result seq-state . custom)
-  ; this maps time to sample value
-  (seq time seq-state (l (data seq-state) (pairs data gen-result seq-state custom))))
-
-(define (segment-f env time segment gen-result . custom)
-  ; this maps time and a possibly empty sample array to a new sample array
-  (pair (pair (list segment) gen-result) custom))
-
-(define (run)
-  (let*
-    ( (seq-state (seq-state-new events-f))
-      (result-states
-        (sp-generate sample-rate 0 duration segment-f sample-f
-          ; custom state values
-          null seq-state))
-      (result-segments (reverse (first result-states))))
-    (sp-segments->alsa result-segments sample-rate "plughw:0" 4096)))
-```
-
 # c usage
 ```
 #include <sph-sp.h>
 ```
 
 ## error handling
-routines return object of type status_t, which is a struct {.id, .group}.
-status.id = 0 is success, but it is easier to use status_* and sp_status_* bindings
+routines return an object of type `status_t`, which is a `struct {.id, .group}`.
+status.id = 0 is success, but it is easier to use status_* and sp_status_* bindings to check for that
 
 ## types
 ```c
