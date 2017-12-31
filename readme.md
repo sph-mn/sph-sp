@@ -14,7 +14,7 @@ see also [sph.mn](http://sph.mn/c/view/nm)
 ## base library
 these features do not depend on guile
 
-* port object for alsa and file io with many supported file formats ([full list](http://www.mega-nerd.com/libsndfile/)). the file format to use is currently a compile-time configuration
+* port object for alsa and file io with many supported file formats ([full list](http://www.mega-nerd.com/libsndfile/)). the file format to use is currently a compile-time configuration. eventually necessary sample type conversions happen automatically
 * 64 bit float sample calculations by default, compile-time customisable sample type
 * arbitrary number of channels
 * arbitrary sample rate
@@ -145,7 +145,7 @@ sequencer usage example
 more documentation is currently to be found in the code files.
 
 (sph sp)
-```scheme
+```
 f32vector-sum :: f32vector [start end] -> number
 f64vector-sum :: f64vector [start end] -> number
 float-nearly-equal? :: a b c ->
@@ -355,3 +355,6 @@ status_set_id(status_id)
 status_set_id_goto(status_id)
 status_success_p
 ```
+
+# other interesting projects
+* [soundpipe](https://github.com/PaulBatchelor/Soundpipe)
