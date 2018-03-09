@@ -1,7 +1,8 @@
 # sph-sp
 scheme sound synthesis and processing toolset. c code, shared library, guile extension and scheme modules.
-
 see also [sph.mn](http://sph.mn/c/view/nm)
+
+status: this project is maintained as of 2018-03. you can contact me for any issues with using the code.
 
 # features
 ## scheme
@@ -17,7 +18,7 @@ the source code for these features does not depend on guile, but the compile scr
 * 64 bit float sample calculations by default. compile-time customisable sample type
 * unlimited number of channels
 * unlimited sample rate
-* processing by default on non-interleaved sample arrays (one separate array per channel)
+* processing by default on non-interleaved sample arrays (one array per channel)
 * tries to avoid floating point errors, prefers precision to performance
 
 ### transform - experimental
@@ -36,6 +37,7 @@ all processors are designed to process segments of continuous streams
   * libc
   * libsndfile
   * guile >= 2.2
+  * linux or compatible
 * quick build
   * gcc and shell for the provided compile script
 * development build
