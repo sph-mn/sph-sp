@@ -1,6 +1,5 @@
 # sph-sp
 scheme sound synthesis and processing toolset. c code, shared library, guile extension and scheme modules.
-multi-dimensional sound generator
 
 see also [sph.mn](http://sph.mn/c/view/nm)
 
@@ -8,18 +7,18 @@ see also [sph.mn](http://sph.mn/c/view/nm)
 ## scheme
 * generator function that maps time to samples
 * sequencer for custom functions with designated shared state and unlimited multi-stage cross modulation
-* custom paths with gap, line, bezier curve and elliptical arc segments
+* custom paths with line, bezier curve, elliptical arc and gap segments (for adsr envelopes and anything else)
 * purely functional
 
 ## base library
-these features do not depend on guile
+the source code for these features does not depend on guile, but the compile script only builds a guile dependent library currently.
 
-* port object for alsa and file io with many supported file formats ([full list](http://www.mega-nerd.com/libsndfile/)). the file format to use is currently a compile-time configuration. eventually necessary sample type conversions happen automatically
-* 64 bit float sample calculations by default, compile-time customisable sample type
-* arbitrary number of channels
-* arbitrary sample rate
-* processing on non-interleaved sample arrays by default
-* avoids floating point errors, prefers precision to performance
+* port object for alsa and file io with many supported file formats ([full list](http://www.mega-nerd.com/libsndfile/)). any necessary sample type adjustments for using specific file formats is done automatically. the file format to use is currently a compile-time configuration (for example .wav input/output)
+* 64 bit float sample calculations by default. compile-time customisable sample type
+* unlimited number of channels
+* unlimited sample rate
+* processing by default on non-interleaved sample arrays (one separate array per channel)
+* tries to avoid floating point errors, prefers precision to performance
 
 ### transform - experimental
 example code for learning - barely tested.
@@ -51,7 +50,7 @@ all processors are designed to process segments of continuous streams
 ./exe/install
 ```
 
-first argument to `exe/install` is the destination path prefix, for example `./exe/install /tmp`.
+first argument to `exe/install` can be the destination path prefix, for example `./exe/install /tmp`.
 there is also exe/install-extended which can symlink files but needs [sph-lib](https://github.com/sph-mn/sph-lib)
 
 installed files
@@ -88,13 +87,13 @@ installed files
 (let*
   ( (result-states
       (sp-generate sample-rate time-start duration-seconds
-        ; segment-f - maps segments with samples previously set by sample-f
+        ; segment-f - maps segments with samples eventually set by sample-f
         (l (env time segment result . states)
           (pair (pair segment result) states))
         ; sample-f - sets samples in segments for time
         (l (env time . states)
           (pair (* 0.5 (sp-sine time)) states))
-        ; all following arguments are passed to segment-f/sample-f
+        ; all following arguments are passed to segment-f/sample-f in "states"
         (list)))
     (result-segments (reverse (first result-states))))
   (sp-segments->alsa result-segments))
@@ -114,7 +113,9 @@ sequencer usage example
 (define (sound-c time state event duration custom) (seq-output (* 0.5 (sp-sine time 400)) state))
 
 (define (events-f time end seq-state)
-  ; this returns a list of next event objects. events-f is called again after (seq-state-duration seq-state) seconds
+  ; this returns a list of next event objects to register.
+  ; events-f is called every (seq-state-duration seq-state) seconds
+  ; this is so that not all events have to be created at once.
   (list
     (seq-event a sound-a 0)
     (seq-event b sound-b 1)
@@ -123,11 +124,12 @@ sequencer usage example
     (seq-event d sound-b (+ time 20))))
 
 (define (sample-f env time gen-result seq-state . custom)
-  ; this maps time to sample value
+  ; this maps time to sample value in sp-generate
   (seq time seq-state (l (data seq-state) (pairs data gen-result seq-state custom))))
 
 (define (segment-f env time segment gen-result . custom)
-  ; this maps time and a possibly empty sample array to a new sample array
+  ; this maps time and a sample array to a new sample array
+  ; the sample array was first processed by sample-f and can be empty
   (pair (pair (list segment) gen-result) custom))
 
 (define (run)
@@ -138,7 +140,7 @@ sequencer usage example
           ; custom state values
           null seq-state))
       (result-segments (reverse (first result-states))))
-    (sp-segments->alsa result-segments sample-rate "plughw:0" 4096)))
+    (sp-segments->alsa result-segments sample-rate "default" 4096)))
 ```
 
 ## modules
@@ -230,6 +232,13 @@ seq-state-update :: a #:custom #:events-f #:events-custom #:index #:index-i #:in
 ```
 #include <sph-sp.h>
 ```
+
+using as a shared library
+```
+gcc -lguile-sph-sp main.c
+```
+
+otherwise copy or extract from the source code files.
 
 ## error handling
 routines return an object of type `status_t`, which is a `struct {.id, .group}`.
@@ -358,3 +367,4 @@ status_success_p
 
 # other interesting projects
 * [soundpipe](https://github.com/PaulBatchelor/Soundpipe)
+* [ciglet](https://github.com/Sleepwalking/ciglet)
