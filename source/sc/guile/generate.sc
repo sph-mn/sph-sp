@@ -1,5 +1,5 @@
-(pre-define (define-sp-sine! scm-id id)
-  "defines scm-sp-sine!, scm-sp-sine-lq!"
+(pre-define
+  (define-sp-sine! scm-id id) "defines scm-sp-sine!, scm-sp-sine-lq!"
   (define (scm-id data len sample-duration freq phase amp) (SCM SCM SCM SCM SCM SCM SCM)
     (id
       (convert-type (SCM-BYTEVECTOR-CONTENTS data) sp-sample-t*)

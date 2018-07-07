@@ -9,22 +9,24 @@
     b-len (convert-type (SCM-BYTEVECTOR-CONTENTS carryover) sp-sample-t*) (scm->size-t carryover-len))
   (return SCM-UNSPECIFIED))
 
-(pre-define (optional-samples a a-len scm)
+(pre-define
+  (optional-samples a a-len scm)
   (if (scm-is-true scm)
     (set
       a (convert-type (SCM-BYTEVECTOR-CONTENTS scm) sp-sample-t*)
       a-len (sp-octets->samples (SCM-BYTEVECTOR-LENGTH scm)))
     (set
       a 0
-      a-len 0)))
-
-(pre-define (optional-index a default)
-  (if* (and (not (scm-is-undefined start)) (scm-is-true start)) (scm->uint32 a) default))
+      a-len 0))
+  (optional-index a default)
+  (if* (and (not (scm-is-undefined start)) (scm-is-true start))
+    (scm->uint32 a)
+    default))
 
 (define (scm-sp-moving-average! result source scm-prev scm-next distance start end)
   (SCM SCM SCM SCM SCM SCM SCM SCM)
   (define source-len b32 (sp-octets->samples (SCM-BYTEVECTOR-LENGTH source)))
-  (define
+  (declare
     prev sp-sample-t*
     prev-len b32
     next sp-sample-t*
@@ -43,15 +45,17 @@
 
 (define (scm-sp-windowed-sinc-state-create sample-rate freq transition old-state)
   (SCM SCM SCM SCM SCM)
-  (define state sp-windowed-sinc-state-t*)
+  (declare state sp-windowed-sinc-state-t*)
   (if (scm-is-true old-state)
-    (set state (convert-type (scm-sp-object-data old-state) sp-windowed-sinc-state-t*)) (set state 0))
+    (set state (convert-type (scm-sp-object-data old-state) sp-windowed-sinc-state-t*))
+    (set state 0))
   (sp-windowed-sinc-state-create
-    (scm->uint32 sample-rate) (scm->double freq) (scm->double transition) (address-of state))
+    (scm->uint32 sample-rate) (scm->double freq) (scm->double transition) &state)
   ; old-state has either been updated or a new state been created
   (return
     (if* (scm-is-true old-state)
-      old-state (scm-sp-object-create state sp-object-type-windowed-sinc))))
+      old-state
+      (scm-sp-object-create state sp-object-type-windowed-sinc))))
 
 (define (scm-sp-windowed-sinc! result source state) (SCM SCM SCM SCM)
   ;(define source-len b32 (sp-octets->samples (SCM-BYTEVECTOR-LENGTH source)))
@@ -67,10 +71,10 @@
   (return SCM-UNSPECIFIED))
 
 (define (scm-sp-fft source) (SCM SCM)
-  status-init
+  status-declare
   (define result-len b32 (/ (* 3 (SCM-BYTEVECTOR-LENGTH source)) 2))
   (define result SCM (scm-make-f32vector (scm-from-uint32 result-len) (scm-from-uint8 0)))
-  (status-require!
+  (status-require
     (sp-fft
       (convert-type (SCM-BYTEVECTOR-CONTENTS result) sp-sample-t*)
       result-len
@@ -79,10 +83,10 @@
     (status->scm-return result)))
 
 (define (scm-sp-ifft source) (SCM SCM)
-  status-init
+  status-declare
   (define result-len b32 (* (- (SCM-BYTEVECTOR-LENGTH source) 1) 2))
   (define result SCM (scm-make-f32vector (scm-from-uint32 result-len) (scm-from-uint8 0)))
-  (status-require!
+  (status-require
     (sp-ifft
       (convert-type (SCM-BYTEVECTOR-CONTENTS result) sp-sample-t*)
       result-len

@@ -1,10 +1,10 @@
-(pre-include-once
-  stdio-h "stdio.h"
-  fcntl-h "fcntl.h"
-  alsa-asoundlib-h "alsa/asoundlib.h"
-  sndfile-h "sndfile.h")
+(pre-include
+  "stdio.h"
+  "fcntl.h"
+  "alsa/asoundlib.h"
+  "sndfile.h"
+  "generic/base.h" "generic/base/foreign/sph/one.c" "generic/base/foreign/sph/local-memory.c")
 
-(sc-include "generic/base.h" "generic/base/foreign/sph/one" "generic/base/foreign/sph/local-memory")
 ;
 ;-- other
 ;
@@ -50,10 +50,10 @@
   "return an array for channels with data arrays for each channel.
   returns zero if memory could not be allocated"
   (local-memory-init (+ channel-count 1))
+  (declare channel sp-sample-t*)
   (define result sp-sample-t** (malloc (* channel-count (sizeof sp-sample-t*))))
   (if (not result) (return 0))
   (local-memory-add result)
-  (define channel sp-sample-t*)
   (while channel-count
     (dec channel-count)
     (set channel (calloc (* sample-count (sizeof sp-sample-t)) 1))
@@ -62,7 +62,7 @@
         local-memory-free
         (return 0)))
     (local-memory-add channel)
-    (set (deref result channel-count) channel))
+    (set (array-get result channel-count) channel))
   (return result))
 
-(sc-include "generic/base/io")
+(pre-include "generic/base/io.sc")

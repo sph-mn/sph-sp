@@ -1,18 +1,15 @@
-(pre-include-once
-  stdio-h "stdio.h"
-  stdlib-h "stdlib.h"
-  errno-h "errno.h"
-  pthread-h "pthread.h"
-  float-h "float.h"
-  math-h "math.h")
+(pre-include
+  "stdio.h"
+  "stdlib.h"
+  "errno.h"
+  "pthread.h"
+  "float.h" "math.h" "generic/base/foreign/sph/one.c" "generic/base/foreign/sph/local-memory.c")
 
-(sc-include "generic/base/foreign/sph/one" "generic/base/foreign/sph/local-memory")
 (pre-define (inc a) (set a (+ 1 a)))
 (pre-define (dec a) (set a (- a 1)))
 
-(pre-define (test-helper-test-one func)
-  (printf "%s\n" (pre-stringify func))
-  (status-require! (func)))
+(pre-define
+  (test-helper-test-one func) (printf "%s\n" (pre-stringify func)) (status-require (func)))
 
 (pre-define (test-helper-assert description expression)
   (if (not expression)
@@ -21,9 +18,8 @@
       (status-set-id-goto 1))))
 
 (pre-define (test-helper-display-summary)
-  (if status-success?
-    (printf "--\ntests finished successfully.\n")
-    (printf "\ntests failed. %d %s\n" (struct-get status id) (sp-status-description status))))
+  (if status-is-success (printf "--\ntests finished successfully.\n")
+    (printf "\ntests failed. %d %s\n" status.id (sp-status-description status))))
 
 (define (debug-log-samples a len) (b0 sp-sample-t* size-t)
   (define
@@ -36,6 +32,6 @@
   (while (< index len)
     (set column-end (+ index column-width))
     (while (and (< index len) (< index column-end))
-      (printf "%f " (deref a index))
+      (printf "%f " (array-get a index))
       (set index (+ 1 index)))
     (printf "\n")))

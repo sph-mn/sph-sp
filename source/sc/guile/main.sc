@@ -1,34 +1,39 @@
-(pre-include "libguile.h")
-(sc-include "generic/main" "guile/foreign/sph/guile")
+(pre-include "libguile.h" "generic/main.c" "guile/foreign/sph/guile.c")
 (pre-define (inc a) (set a (+ 1 a)))
 (pre-define (dec a) (set a (- a 1)))
 
 (pre-define (scm-c-error name description)
-  "raise an exception with error information set as an alist with given values"
-  (scm-call-1
-    scm-rnrs-raise
-    (scm-list-3
-      (scm-from-latin1-symbol name)
-      (scm-cons (scm-from-latin1-symbol "description") (scm-from-utf8-string description))
-      (scm-cons (scm-from-latin1-symbol "c-routine") (scm-from-latin1-symbol __FUNCTION__)))))
+  (begin
+    "raise an exception with error information set as an alist with given values"
+    (scm-call-1
+      scm-rnrs-raise
+      (scm-list-3
+        (scm-from-latin1-symbol name)
+        (scm-cons (scm-from-latin1-symbol "description") (scm-from-utf8-string description))
+        (scm-cons (scm-from-latin1-symbol "c-routine") (scm-from-latin1-symbol __FUNCTION__))))))
 
 (pre-define (status->scm-error a) (scm-c-error (sp-status-name a) (sp-status-description a)))
-(pre-define (status->scm result) (if* status-success? result (status->scm-error status)))
+
+(pre-define (status->scm result)
+  (if* status-is-success result
+    (status->scm-error status)))
 
 (pre-define (status->scm-return result)
-  "call scm-c-error if status is not success or return result"
-  (return (status->scm result)))
+  (begin
+    "call scm-c-error if status is not success or return result"
+    (return (status->scm result))))
 
-(pre-define
-  scm-sp-object-type-init
-  ; sp-object is a guile smob that stores a sub type id and pointer
-  (set scm-type-sp-object (scm-make-smob-type "sp-object" 0))
-  (scm-set-smob-print scm-type-sp-object scm-sp-object-print)
-  (scm-set-smob-free scm-type-sp-object scm-sp-object-free))
+(pre-define scm-sp-object-type-init
+  (begin
+    "sp-object is a guile smob that stores a sub type id and pointer"
+    (set scm-type-sp-object (scm-make-smob-type "sp-object" 0))
+    (scm-set-smob-print scm-type-sp-object scm-sp-object-print)
+    (scm-set-smob-free scm-type-sp-object scm-sp-object-free)))
 
 (pre-define (sp-port-type->name a)
-  "integer -> string"
-  (cond* ((= sp-port-type-file a) "file") ((= sp-port-type-alsa a) "alsa") (else "unknown")))
+  (begin
+    "integer -> string"
+    (cond* ((= sp-port-type-file a) "file") ((= sp-port-type-alsa a) "alsa") (else "unknown"))))
 
 (pre-define
   sp-object-type-port 0
@@ -36,10 +41,15 @@
   scm-sp-object-type SCM-SMOB-FLAGS
   scm-sp-object-data SCM-SMOB-DATA)
 
-(pre-define (optional-sample-rate a) (if* (scm-is-undefined a) -1 (scm->int32 a)))
-(pre-define (optional-channel-count a) (if* (scm-is-undefined a) -1 (scm->int32 a)))
+(pre-define (optional-sample-rate a)
+  (if* (scm-is-undefined a) -1
+    (scm->int32 a)))
 
-(define
+(pre-define (optional-channel-count a)
+  (if* (scm-is-undefined a) -1
+    (scm->int32 a)))
+
+(declare
   scm-type-sp-object scm-t-bits
   scm-rnrs-raise SCM)
 
@@ -49,20 +59,21 @@
   (define result SCM SCM-EOL)
   (while channel-count
     (dec channel-count)
-    (set result (scm-cons (scm-take-f64vector (deref a channel-count) sample-count) result)))
+    (set result (scm-cons (scm-take-f64vector (array-get a channel-count) sample-count) result)))
   (free a)
   (return result))
 
 (define (scm->channel-data a channel-count sample-count) (sp-sample-t** SCM b32* size-t*)
   "only the result array is allocated, data is referenced to the scm vectors"
-  (set (deref channel-count) (scm->uint32 (scm-length a)))
-  (if (not (deref channel-count)) (return 0))
-  (define result sp-sample-t** (malloc (* (deref channel-count) (sizeof sp-sample-t*))))
+  (set *channel-count (scm->uint32 (scm-length a)))
+  (if (not *channel-count) (return 0))
+  (define result sp-sample-t** (malloc (* *channel-count (sizeof sp-sample-t*))))
   (if (not result) (return 0))
-  (set (deref sample-count) (sp-octets->samples (SCM-BYTEVECTOR-LENGTH (scm-first a))))
+  (set *sample-count (sp-octets->samples (SCM-BYTEVECTOR-LENGTH (scm-first a))))
   (define index size-t 0)
   (while (not (scm-is-null a))
-    (set (deref result index) (convert-type (SCM-BYTEVECTOR-CONTENTS (scm-first a)) sp-sample-t*))
+    (set (array-get result index)
+      (convert-type (SCM-BYTEVECTOR-CONTENTS (scm-first a)) sp-sample-t*))
     (inc index)
     (set a (scm-tail a)))
   (return result))
@@ -85,11 +96,13 @@
         result
         "#<sp-port %lx type:%s sample-rate:%d channel-count:%d closed?:%s input?:%s>"
         (convert-type a b0*)
-        (sp-port-type->name (struct-pointer-get sp-port type))
-        (struct-pointer-get sp-port sample-rate)
-        (struct-pointer-get sp-port channel-count)
-        (if* (bit-and sp-port-bit-closed (struct-pointer-get sp-port flags)) "#t" "#f")
-        (if* (bit-and sp-port-bit-input (struct-pointer-get sp-port flags)) "#t" "#f")))
+        (sp-port-type->name sp-port:type)
+        sp-port:sample-rate
+        sp-port:channel-count
+        (if* (bit-and sp-port-bit-closed sp-port:flags) "#t"
+          "#f")
+        (if* (bit-and sp-port-bit-input sp-port:flags) "#t"
+          "#f")))
     (sp-object-type-windowed-sinc
       (sprintf result "#<sp-state %lx type:windowed-sinc>" (convert-type a b0*)))
     (else (sprintf result "#<sp %lx>" (convert-type a b0*))))
@@ -113,22 +126,28 @@
     (scm-from-double
       (f64-sum
         (+
-          (if* (scm-is-undefined start) 0 (scm->size-t start))
+          (if* (scm-is-undefined start) 0
+            (scm->size-t start))
           (convert-type (SCM-BYTEVECTOR-CONTENTS a) f64-s*))
         (*
-          (if* (scm-is-undefined end) (SCM-BYTEVECTOR-LENGTH a) (- end (+ 1 start))) (sizeof f64-s))))))
+          (if* (scm-is-undefined end) (SCM-BYTEVECTOR-LENGTH a)
+            (- end (+ 1 start)))
+          (sizeof f64-s))))))
 
 (define (scm-f32vector-sum a start end) (SCM SCM SCM SCM)
   (return
     (scm-from-double
       (f32-sum
         (+
-          (if* (scm-is-undefined start) 0 (scm->size-t start))
+          (if* (scm-is-undefined start) 0
+            (scm->size-t start))
           (convert-type (SCM-BYTEVECTOR-CONTENTS a) f32-s*))
         (*
-          (if* (scm-is-undefined end) (SCM-BYTEVECTOR-LENGTH a) (- end (+ 1 start))) (sizeof f32-s))))))
+          (if* (scm-is-undefined end) (SCM-BYTEVECTOR-LENGTH a)
+            (- end (+ 1 start)))
+          (sizeof f32-s))))))
 
-(sc-include "guile/io" "guile/generate" "guile/transform")
+(pre-include "guile/io.c" "guile/generate.c" "guile/transform.c")
 
 (define (sp-init-guile) b0
   (init-sp-io)

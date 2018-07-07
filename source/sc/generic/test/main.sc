@@ -1,5 +1,4 @@
-(pre-include "sph-sp.h")
-(sc-include "generic/test/helper")
+(pre-include "sph-sp.h" "generic/test/helper.c")
 
 (pre-if
   (= sp-sample-type-f64 sp-sample-type)
@@ -17,7 +16,7 @@
 (define error-margin sp-sample-t 0.1)
 
 (define (test-base) status-t
-  status-init
+  status-declare
   (test-helper-assert "input 0.5" (sp-sample-nearly-equal? 0.63662 (sp-sinc 0.5) error-margin))
   (test-helper-assert "input 1" (sp-sample-nearly-equal? 1.0 (sp-sinc 0) error-margin))
   (test-helper-assert
@@ -27,9 +26,9 @@
     (return status)))
 
 (define (test-spectral-inversion-ir) status-t
-  status-init
+  status-declare
   (define a-len size-t 5)
-  (define-array a sp-sample-t (5) 0.1 -0.2 0.3 -0.2 0.1)
+  (declare a (array sp-sample-t 5 0.1 -0.2 0.3 -0.2 0.1))
   (sp-spectral-inversion-ir a a-len)
   (test-helper-assert
     "result check"
@@ -43,9 +42,9 @@
     (return status)))
 
 (define (test-spectral-reversal-ir) status-t
-  status-init
+  status-declare
   (define a-len size-t 5)
-  (define-array a sp-sample-t (5) 0.1 -0.2 0.3 -0.2 0.1)
+  (declare a (array sp-sample-t 5 0.1 -0.2 0.3 -0.2 0.1))
   (sp-spectral-reversal-ir a a-len)
   (test-helper-assert
     "result check"
@@ -61,36 +60,36 @@
 (define test-file-path b8* "/tmp/test-sph-sp-file")
 
 (define (test-port) status-t
-  status-init
+  status-declare
   (local-memory-init 2)
   (if (file-exists? test-file-path) (unlink test-file-path))
   (define channel-count b32 2)
   (define sample-rate b32 8000)
-  (define port sp-port-t)
+  (declare port sp-port-t)
   (define sample-count size-t 5)
   (define channel-data sp-sample-t** (sp-alloc-channel-array channel-count sample-count))
   (define channel-data-2 sp-sample-t** (sp-alloc-channel-array channel-count sample-count))
   (sp-alloc-require channel-data)
   (local-memory-add channel-data)
   (local-memory-add channel-data-2)
-  (define len size-t)
+  (declare len size-t)
   (define channel size-t channel-count)
   (while channel
     (dec channel)
     (set len sample-count)
     (while len
       (dec len)
-      (set (deref (deref channel-data channel) len) len)))
+      (set (array-get (array-get channel-data channel) len) len)))
   ; -- test create
-  (status-require! (sp-file-open (address-of port) test-file-path channel-count sample-rate))
+  (status-require (sp-file-open &port test-file-path channel-count sample-rate))
   (printf " create\n")
   (define position size-t 0)
-  (status-require! (sp-port-position (address-of position) (address-of port)))
-  (status-require! (sp-port-write (address-of port) sample-count channel-data))
-  (status-require! (sp-port-position (address-of position) (address-of port)))
+  (status-require (sp-port-position &position (&port)))
+  (status-require (sp-port-write &port sample-count channel-data))
+  (status-require (sp-port-position &position (&port)))
   (test-helper-assert "sp-port-position file after write" (= sample-count position))
-  (status-require! (sp-port-set-position (address-of port) 0))
-  (sp-port-read channel-data-2 (address-of port) sample-count)
+  (status-require (sp-port-set-position &port 0))
+  (sp-port-read channel-data-2 &port sample-count)
   ; compare read result with output data
   (set len channel-count)
   (define unequal b8-s 0)
@@ -99,16 +98,17 @@
     (set unequal
       (not
         (sp-sample-array-nearly-equal?
-          (deref channel-data len) sample-count (deref channel-data-2 len) sample-count error-margin))))
+          (array-get channel-data len)
+          sample-count (array-get channel-data-2 len) sample-count error-margin))))
   (test-helper-assert "sp-port-read new file result" (not unequal))
-  (status-require! (sp-port-close (address-of port)))
+  (status-require (sp-port-close &port))
   (printf "  write\n")
   ; -- test open
-  (status-require! (sp-file-open (address-of port) test-file-path 2 8000))
-  (status-require! (sp-port-position (address-of position) (address-of port)))
+  (status-require (sp-file-open &port test-file-path 2 8000))
+  (status-require (sp-port-position &position &port))
   (test-helper-assert "sp-port-position existing file" (= sample-count position))
-  (status-require! (sp-port-set-position (address-of port) 0))
-  (sp-port-read channel-data-2 (address-of port) sample-count)
+  (status-require (sp-port-set-position &port 0))
+  (sp-port-read channel-data-2 &port sample-count)
   ; compare read result with output data
   (set
     unequal 0
@@ -118,16 +118,17 @@
     (set unequal
       (not
         (sp-sample-array-nearly-equal?
-          (deref channel-data len) sample-count (deref channel-data-2 len) sample-count error-margin))))
+          (array-get channel-data len)
+          sample-count (array-get channel-data-2 len) sample-count error-margin))))
   (test-helper-assert "sp-port-read existing result" (not unequal))
-  (status-require! (sp-port-close (address-of port)))
+  (status-require (sp-port-close &port))
   (printf "  open\n")
   (label exit
     local-memory-free
     (return status)))
 
 (define (test-convolve) status-t
-  status-init
+  status-declare
   (define sample-count size-t 5)
   (define b-len size-t 3)
   (define result-len size-t sample-count)
@@ -175,7 +176,7 @@
     (return status)))
 
 (define (test-moving-average) status-t
-  status-init
+  status-declare
   (define source-len size-t 8)
   (define result-len size-t source-len)
   (define prev-len size-t 4)
@@ -205,7 +206,7 @@
     (return status)))
 
 (define (main) int
-  status-init
+  status-declare
   (test-helper-test-one test-port)
   (test-helper-test-one test-convolve)
   (test-helper-test-one test-moving-average)
@@ -214,4 +215,4 @@
   (test-helper-test-one test-spectral-inversion-ir)
   (label exit
     (test-helper-display-summary)
-    (return (struct-get status id))))
+    (return status.id)))

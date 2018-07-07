@@ -2,14 +2,10 @@
   "routines that take sample arrays as input and process them.
   depends on base.sc")
 
-(sc-include "generic/transform.h")
-
-(pre-include-once
-  kiss-fft "kiss_fft.h"
-  kiss-fftr "tools/kiss_fftr.h")
+(pre-include "generic/transform.h" "kiss_fft.h" "tools/kiss_fftr.h")
 
 (define (sp-fft result result-len source source-len) (status-t sp-sample-t* b32 sp-sample-t* b32)
-  sp-status-init
+  sp-status-declare
   (local-memory-init 2)
   (define fftr-state kiss-fftr-cfg (kiss-fftr-alloc result-len #f 0 0))
   (if (not fftr-state) (status-set-id-goto sp-status-id-memory))
@@ -20,13 +16,13 @@
   ; extract the real part
   (while result-len
     (dec result-len)
-    (set (deref result result-len) (struct-get (array-get out result-len) r)))
+    (set (array-get result result-len) (struct-get (array-get out result-len) r)))
   (label exit
     local-memory-free
     (return status)))
 
 (define (sp-ifft result result-len source source-len) (status-t sp-sample-t* b32 sp-sample-t* b32)
-  sp-status-init
+  sp-status-declare
   (local-memory-init 2)
   (define fftr-state kiss-fftr-cfg (kiss-fftr-alloc source-len #t 0 0))
   (if (not fftr-state) (status-set-id-goto sp-status-id-memory))
@@ -35,7 +31,8 @@
   (local-memory-add in)
   (while source-len
     (dec source-len)
-    (struct-set (array-get in source-len) r (deref source (* source-len (sizeof sp-sample-t)))))
+    (struct-set (array-get in source-len)
+      r (array-get source (* source-len (sizeof sp-sample-t)))))
   (kiss-fftri fftr-state in result)
   (label exit
     local-memory-free
@@ -70,7 +67,7 @@
   (while (<= start end)
     (if (and (>= start radius) (<= (+ start radius 1) source-len))
       ; all required samples are in source array
-      (set (deref result) (/ (sp-sample-sum (- (+ source start) radius) width) width))
+      (set *result (/ (sp-sample-sum (- (+ source start) radius) width) width))
       (begin
         (set window-index 0)
         ; get samples from previous segment
@@ -79,13 +76,15 @@
             (set right (- radius start))
             (if prev
               (begin
-                (set left (if* (> right prev-len) 0 (- prev-len right)))
+                (set left
+                  (if* (> right prev-len) 0
+                    (- prev-len right)))
                 (while (< left prev-len)
-                  (set (deref window window-index) (deref prev left))
+                  (set (array-get window window-index) (array-get prev left))
                   (inc window-index)
                   (inc left))))
             (while (< window-index right)
-              (set (deref window window-index) 0)
+              (set (array-get window window-index) 0)
               (inc window-index))
             (set left 0))
           (set left (- start radius)))
@@ -93,7 +92,7 @@
         (set right (+ start radius))
         (if (>= right source-len) (set right (- source-len 1)))
         (while (<= left right)
-          (set (deref window window-index) (deref source left))
+          (set (array-get window window-index) (array-get source left))
           (inc window-index)
           (inc left))
         ; get samples from next segment
@@ -105,14 +104,14 @@
               right (- right source-len))
             (if (>= right next-len) (set right (- next-len 1)))
             (while (<= left right)
-              (set (deref window window-index) (deref next left))
+              (set (array-get window window-index) (array-get next left))
               (inc window-index)
               (inc left))))
         ; fill unset values in window with zero
         (while (< window-index width)
-          (set (deref window window-index) 0)
+          (set (array-get window window-index) 0)
           (inc window-index))
-        (set (deref result) (/ (sp-sample-sum window width) width))))
+        (set *result (/ (sp-sample-sum window width) width))))
     (inc result)
     (inc start))
   (free window)
@@ -129,9 +128,9 @@
   flips the frequency response top to bottom"
   (while a-len
     (dec a-len)
-    (set (deref a a-len) (* -1 (deref a a-len))))
+    (set (array-get a a-len) (* -1 (array-get a a-len))))
   (define center size-t (/ (- a-len 1) 2))
-  (inc (deref a center)))
+  (inc (array-get a center)))
 
 (define (sp-spectral-reversal-ir a a-len) (b0 sp-sample-t* size-t)
   "inverts the sign for samples at odd indexes.
@@ -139,7 +138,7 @@
   flips the frequency response left to right"
   (while (> a-len 1)
     (set a-len (- a-len 2))
-    (set (deref a a-len) (* -1 (deref a a-len)))))
+    (set (array-get a a-len) (* -1 (array-get a a-len)))))
 
 (define (sp-convolve-one result a a-len b b-len)
   (b0 sp-sample-t* sp-sample-t* size-t sp-sample-t* size-t)
@@ -149,8 +148,8 @@
   (define b-index size-t 0)
   (while (< a-index a-len)
     (while (< b-index b-len)
-      (set (deref result (+ a-index b-index))
-        (+ (deref result (+ a-index b-index)) (* (deref a a-index) (deref b b-index))))
+      (set (array-get result (+ a-index b-index))
+        (+ (array-get result (+ a-index b-index)) (* (array-get a a-index) (array-get b b-index))))
       (inc b-index))
     (set b-index 0)
     (inc a-index)))
@@ -166,7 +165,9 @@
   (memset carryover 0 (* b-len (sizeof sp-sample-t)))
   ;-- result values
   ; restrict processed range to exclude input values that generate carryover
-  (define size size-t (if* (< a-len b-len) 0 (- a-len (- b-len 1))))
+  (define size size-t
+    (if* (< a-len b-len) 0
+      (- a-len (- b-len 1))))
   (if size (sp-convolve-one result a size b b-len))
   ;-- carryover values
   (define a-index size-t size)
@@ -176,14 +177,14 @@
     (while (< b-index b-len)
       (set c-index (+ a-index b-index))
       (if (< c-index a-len)
-        (set (deref result c-index)
-          (+ (deref result c-index) (* (deref a a-index) (deref b b-index))))
+        (set (array-get result c-index)
+          (+ (array-get result c-index) (* (array-get a a-index) (array-get b b-index))))
         (set
           c-index (- c-index a-len)
-          (deref carryover c-index)
-          (+ (deref carryover c-index) (* (deref a a-index) (deref b b-index)))))
+          (array-get carryover c-index)
+          (+ (array-get carryover c-index) (* (array-get a a-index) (array-get b b-index)))))
       (inc b-index))
     (set b-index 0)
     (inc a-index)))
 
-(sc-include "generic/transform/windowed-sinc")
+(pre-include "generic/transform/windowed-sinc.c")

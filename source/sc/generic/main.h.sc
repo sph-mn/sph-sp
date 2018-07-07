@@ -1,1 +1,1 @@
-(sc-include "generic/base.h" "generic/generate.h" "generic/transform.h")
+(pre-include "generic/base.h" "generic/generate.h" "generic/transform.h")

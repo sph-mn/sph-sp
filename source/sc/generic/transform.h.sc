@@ -1,23 +1,26 @@
-(pre-define kiss-fft-scalar sp-sample-t)
+(pre-define
+  kiss-fft-scalar sp-sample-t
+  (sp-windowed-sinc-cutoff freq sample-rate)
+  (begin
+    "sp-float-t integer -> sp-float-t
+    radians-per-second samples-per-second -> cutoff-value"
+    (/ (* 2 M_PI freq) sample-rate)))
 
-(pre-define (sp-windowed-sinc-cutoff freq sample-rate)
-  "sp-float-t integer -> sp-float-t
-  radians-per-second samples-per-second -> cutoff-value"
-  (/ (* 2 M_PI freq) sample-rate))
-
-(define-type sp-windowed-sinc-state-t
+(declare
   ; stores impulse response, parameters to create the current impulse response,
   ; and data needed for the next call
-  (struct
-    (data sp-sample-t*)
-    ; allocated len
-    (data-len size-t)
-    (ir-len-prev size-t)
-    (ir sp-sample-t*)
-    (ir-len size-t)
-    (sample-rate b32)
-    (freq sp-float-t)
-    (transition sp-float-t)))
+  sp-windowed-sinc-state-t
+  (type
+    (struct
+      (data sp-sample-t*)
+      ; allocated len
+      (data-len size-t)
+      (ir-len-prev size-t)
+      (ir sp-sample-t*)
+      (ir-len size-t)
+      (sample-rate b32)
+      (freq sp-float-t)
+      (transition sp-float-t))))
 
 (define (sp-windowed-sinc-ir-length transition) (size-t sp-float-t))
 

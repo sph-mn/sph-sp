@@ -1,27 +1,23 @@
 (sc-comment "depends on sph.sc")
-
-(pre-include-once
-  string-h "string.h"
-  ; malloc
-  stdlib-h "stdlib.h")
-
 ;-- string
+(pre-include "string.h" "stdlib.h")
 
 (define (ensure-trailing-slash a result) (b8 b8* b8**)
   "set result to a new string with a trailing slash added, or the given string if it already has a trailing slash.
   returns 0 if result is the given string, 1 if new memory could not be allocated, 2 if result is a new string"
   (define a-len b32 (strlen a))
-  (if (or (not a-len) (equal? #\/ (deref (+ a (- a-len 1)))))
+  (if (or (not a-len) (= #\/ (pointer-get (+ a (- a-len 1)))))
     (begin
-      (set (deref result) a)
+      (set *result a)
       (return 0))
     (begin
       (define new-a char* (malloc (+ 2 a-len)))
       (if (not new-a) (return 1))
       (memcpy new-a a a-len)
       (memcpy (+ new-a a-len) "/" 1)
-      (set (deref new-a (+ 1 a-len)) 0)
-      (set (deref result) new-a)
+      (set
+        *new-a 0
+        *result new-a)
       (return 2))))
 
 (define (string-append a b) (b8* b8* b8*)
@@ -43,17 +39,9 @@
   (return result))
 
 ;-- filesystem
-
-(pre-include-once
-  ; "access"
-  unistd-h "unistd.h"
-  ; mkdir
-  sys-stat-h "sys/stat.h"
-  ; dirname
-  libgen-h "libgen.h"
-  errno-h "errno.h")
-
-(pre-define (file-exists? path) (not (equal? (access path F-OK) -1)))
+; access, mkdir dirname
+(pre-include "unistd.h" "sys/stat.h" "libgen.h" "errno.h")
+(pre-define (file-exists? path) (not (= (access path F-OK) -1)))
 
 (define (dirname-2 a) (b8* b8*)
   "like posix dirname, but never modifies its argument and always returns a new string"
@@ -62,8 +50,7 @@
 
 (define (ensure-directory-structure path mkdir-mode) (boolean b8* mode-t)
   "return 1 if the path exists or has been successfully created"
-  (if (file-exists? path)
-    (return #t)
+  (if (file-exists? path) (return #t)
     (begin
       (define path-dirname b8* (dirname-2 path))
       (define status boolean (ensure-directory-structure path-dirname mkdir-mode))

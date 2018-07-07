@@ -1,14 +1,16 @@
-(define-type sp-port-t
+(declare
+  sp-port-t
   ; generic input/output port handle.
   ; type: any of sp-port-type-* value
   ; position?: true if the port supports random access
   ; position-offset: header length
-  (struct
-    (type b8)
-    (flags b8)
-    (sample-rate b32)
-    (channel-count b32)
-    (data b0*)))
+  (type
+    (struct
+      (type b8)
+      (flags b8)
+      (sample-rate b32)
+      (channel-count b32)
+      (data b0*))))
 
 (pre-define
   sp-port-type-alsa 0
