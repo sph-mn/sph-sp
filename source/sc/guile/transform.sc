@@ -1,14 +1,3 @@
-(define (scm-sp-convolve! result a b carryover carryover-len) (SCM SCM SCM SCM SCM SCM)
-  (define a-len b32 (sp-octets->samples (SCM-BYTEVECTOR-LENGTH a)))
-  (define b-len b32 (sp-octets->samples (SCM-BYTEVECTOR-LENGTH b)))
-  (sp-convolve
-    (convert-type (SCM-BYTEVECTOR-CONTENTS result) sp-sample-t*)
-    (convert-type (SCM-BYTEVECTOR-CONTENTS a) sp-sample-t*)
-    a-len
-    (convert-type (SCM-BYTEVECTOR-CONTENTS b) sp-sample-t*)
-    b-len (convert-type (SCM-BYTEVECTOR-CONTENTS carryover) sp-sample-t*) (scm->size-t carryover-len))
-  (return SCM-UNSPECIFIED))
-
 (pre-define
   (optional-samples a a-len scm)
   (if (scm-is-true scm)
@@ -19,18 +8,33 @@
       a 0
       a-len 0))
   (optional-index a default)
-  (if* (and (not (scm-is-undefined start)) (scm-is-true start))
-    (scm->uint32 a)
+  (if* (and (not (scm-is-undefined start)) (scm-is-true start)) (scm->uint32 a)
     default))
+
+(define (scm-sp-convolve! result a b carryover carryover-len) (SCM SCM SCM SCM SCM SCM)
+  (declare
+    a-len uint32-t
+    b-len uint32-t)
+  (set
+    a-len (sp-octets->samples (SCM-BYTEVECTOR-LENGTH a))
+    b-len (sp-octets->samples (SCM-BYTEVECTOR-LENGTH b)))
+  (sp-convolve
+    (convert-type (SCM-BYTEVECTOR-CONTENTS result) sp-sample-t*)
+    (convert-type (SCM-BYTEVECTOR-CONTENTS a) sp-sample-t*)
+    a-len
+    (convert-type (SCM-BYTEVECTOR-CONTENTS b) sp-sample-t*)
+    b-len (convert-type (SCM-BYTEVECTOR-CONTENTS carryover) sp-sample-t*) (scm->size-t carryover-len))
+  (return SCM-UNSPECIFIED))
 
 (define (scm-sp-moving-average! result source scm-prev scm-next distance start end)
   (SCM SCM SCM SCM SCM SCM SCM SCM)
-  (define source-len b32 (sp-octets->samples (SCM-BYTEVECTOR-LENGTH source)))
   (declare
+    source-len uint32-t
     prev sp-sample-t*
-    prev-len b32
+    prev-len uint32-t
     next sp-sample-t*
-    next-len b32)
+    next-len uint32-t)
+  (set source-len (sp-octets->samples (SCM-BYTEVECTOR-LENGTH source)))
   (optional-samples prev prev-len scm-prev)
   (optional-samples next next-len scm-next)
   (sp-moving-average
@@ -53,17 +57,16 @@
     (scm->uint32 sample-rate) (scm->double freq) (scm->double transition) &state)
   ; old-state has either been updated or a new state been created
   (return
-    (if* (scm-is-true old-state)
-      old-state
+    (if* (scm-is-true old-state) old-state
       (scm-sp-object-create state sp-object-type-windowed-sinc))))
 
 (define (scm-sp-windowed-sinc! result source state) (SCM SCM SCM SCM)
-  ;(define source-len b32 (sp-octets->samples (SCM-BYTEVECTOR-LENGTH source)))
+  ;(define source-len uint32-t (sp-octets->samples (SCM-BYTEVECTOR-LENGTH source)))
   #;(define
     prev sp-sample-t*
-    prev-len b32
+    prev-len uint32-t
     next sp-sample-t*
-    next-len b32)
+    next-len uint32-t)
   ;(define state sp-windowed-sinc-state-t* (scm-sp-object-data state))
   #;(sp-windowed-sinc (convert-type (SCM-BYTEVECTOR-CONTENTS result) sp-sample-t*)
     (convert-type (SCM-BYTEVECTOR-CONTENTS source) sp-sample-t*) source-len
@@ -72,8 +75,12 @@
 
 (define (scm-sp-fft source) (SCM SCM)
   status-declare
-  (define result-len b32 (/ (* 3 (SCM-BYTEVECTOR-LENGTH source)) 2))
-  (define result SCM (scm-make-f32vector (scm-from-uint32 result-len) (scm-from-uint8 0)))
+  (declare
+    result-len uint32-t
+    result SCM)
+  (set
+    result-len (/ (* 3 (SCM-BYTEVECTOR-LENGTH source)) 2)
+    result (scm-make-f32vector (scm-from-uint32 result-len) (scm-from-uint8 0)))
   (status-require
     (sp-fft
       (convert-type (SCM-BYTEVECTOR-CONTENTS result) sp-sample-t*)
@@ -84,8 +91,12 @@
 
 (define (scm-sp-ifft source) (SCM SCM)
   status-declare
-  (define result-len b32 (* (- (SCM-BYTEVECTOR-LENGTH source) 1) 2))
-  (define result SCM (scm-make-f32vector (scm-from-uint32 result-len) (scm-from-uint8 0)))
+  (declare
+    result-len uint32-t
+    result SCM)
+  (set
+    result-len (* (- (SCM-BYTEVECTOR-LENGTH source) 1) 2)
+    result (scm-make-f32vector (scm-from-uint32 result-len) (scm-from-uint8 0)))
   (status-require
     (sp-ifft
       (convert-type (SCM-BYTEVECTOR-CONTENTS result) sp-sample-t*)
@@ -94,7 +105,7 @@
   (label exit
     (status->scm-return result)))
 
-(define (init-sp-transform) b0
+(define (init-sp-transform) void
   scm-c-define-procedure-c-init
   (scm-c-define-procedure-c
     "sp-fft"

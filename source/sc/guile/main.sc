@@ -1,8 +1,9 @@
-(pre-include "libguile.h" "generic/main.c" "guile/foreign/sph/guile.c")
-(pre-define (inc a) (set a (+ 1 a)))
-(pre-define (dec a) (set a (- a 1)))
+(pre-include "libguile.h" "./guile/main.c" "./foreign/guile/sph/guile.c")
 
-(pre-define (scm-c-error name description)
+(pre-define
+  (inc a) (set a (+ 1 a))
+  (dec a) (set a (- a 1))
+  (scm-c-error name description)
   (begin
     "raise an exception with error information set as an alist with given values"
     (scm-call-1
@@ -10,42 +11,33 @@
       (scm-list-3
         (scm-from-latin1-symbol name)
         (scm-cons (scm-from-latin1-symbol "description") (scm-from-utf8-string description))
-        (scm-cons (scm-from-latin1-symbol "c-routine") (scm-from-latin1-symbol __FUNCTION__))))))
-
-(pre-define (status->scm-error a) (scm-c-error (sp-status-name a) (sp-status-description a)))
-
-(pre-define (status->scm result)
+        (scm-cons (scm-from-latin1-symbol "c-routine") (scm-from-latin1-symbol __FUNCTION__)))))
+  (status->scm-error a) (scm-c-error (sp-status-name a) (sp-status-description a))
+  (status->scm result)
   (if* status-is-success result
-    (status->scm-error status)))
-
-(pre-define (status->scm-return result)
+    (status->scm-error status))
+  (status->scm-return result)
   (begin
     "call scm-c-error if status is not success or return result"
-    (return (status->scm result))))
-
-(pre-define scm-sp-object-type-init
+    (return (status->scm result)))
+  scm-sp-object-type-init
   (begin
     "sp-object is a guile smob that stores a sub type id and pointer"
     (set scm-type-sp-object (scm-make-smob-type "sp-object" 0))
     (scm-set-smob-print scm-type-sp-object scm-sp-object-print)
-    (scm-set-smob-free scm-type-sp-object scm-sp-object-free)))
-
-(pre-define (sp-port-type->name a)
+    (scm-set-smob-free scm-type-sp-object scm-sp-object-free))
+  (sp-port-type->name a)
   (begin
     "integer -> string"
-    (cond* ((= sp-port-type-file a) "file") ((= sp-port-type-alsa a) "alsa") (else "unknown"))))
-
-(pre-define
+    (cond* ((= sp-port-type-file a) "file") ((= sp-port-type-alsa a) "alsa") (else "unknown")))
   sp-object-type-port 0
   sp-object-type-windowed-sinc 1
   scm-sp-object-type SCM-SMOB-FLAGS
-  scm-sp-object-data SCM-SMOB-DATA)
-
-(pre-define (optional-sample-rate a)
+  scm-sp-object-data SCM-SMOB-DATA
+  (optional-sample-rate a)
   (if* (scm-is-undefined a) -1
-    (scm->int32 a)))
-
-(pre-define (optional-channel-count a)
+    (scm->int32 a))
+  (optional-channel-count a)
   (if* (scm-is-undefined a) -1
     (scm->int32 a)))
 
@@ -53,24 +45,29 @@
   scm-type-sp-object scm-t-bits
   scm-rnrs-raise SCM)
 
-(define (scm-take-channel-data a channel-count sample-count) (SCM sp-sample-t** b32 b32)
+(define (scm-take-channel-data a channel-count sample-count) (SCM sp-sample-t** uint32-t uint32-t)
   "get a guile scheme object for channel data sample arrays. returns a list of f64vectors.
   eventually frees given data arrays"
-  (define result SCM SCM-EOL)
+  (declare result SCM)
+  (set result SCM-EOL)
   (while channel-count
     (dec channel-count)
     (set result (scm-cons (scm-take-f64vector (array-get a channel-count) sample-count) result)))
   (free a)
   (return result))
 
-(define (scm->channel-data a channel-count sample-count) (sp-sample-t** SCM b32* size-t*)
+(define (scm->channel-data a channel-count sample-count) (sp-sample-t** SCM uint32-t* size-t*)
   "only the result array is allocated, data is referenced to the scm vectors"
   (set *channel-count (scm->uint32 (scm-length a)))
   (if (not *channel-count) (return 0))
-  (define result sp-sample-t** (malloc (* *channel-count (sizeof sp-sample-t*))))
+  (declare
+    result sp-sample-t**
+    index size-t)
+  (set result (malloc (* *channel-count (sizeof sp-sample-t*))))
   (if (not result) (return 0))
-  (set *sample-count (sp-octets->samples (SCM-BYTEVECTOR-LENGTH (scm-first a))))
-  (define index size-t 0)
+  (set
+    *sample-count (sp-octets->samples (SCM-BYTEVECTOR-LENGTH (scm-first a)))
+    index 0)
   (while (not (scm-is-null a))
     (set (array-get result index)
       (convert-type (SCM-BYTEVECTOR-CONTENTS (scm-first a)) sp-sample-t*))
@@ -78,24 +75,29 @@
     (set a (scm-tail a)))
   (return result))
 
-(define (scm-sp-object-create pointer sp-object-type) (SCM b0* b8)
+(define (scm-sp-object-create pointer sp-object-type) (SCM void* uint8-t)
   "sp-object type for storing arbitrary pointers"
   ; failed without local variable and gcc optimisation level 3
-  (define result SCM (scm-new-smob scm-type-sp-object (convert-type pointer scm-t-bits)))
+  (declare result SCM)
+  (set result (scm-new-smob scm-type-sp-object (convert-type pointer scm-t-bits)))
   (SCM-SET-SMOB-FLAGS result (convert-type sp-object-type scm-t-bits))
   (return result))
 
 (define (scm-sp-object-print a output-port print-state) (int SCM SCM scm-print-state*)
-  (define result char* (malloc (+ 70 10 7 10 10 2 2)))
+  (declare
+    result char*
+    type uint8-t
+    sp-port sp-port-t*)
+  (set result (malloc (+ 70 10 7 10 10 2 2)))
   (if (not result) (return 0))
-  (define type b8 (scm-sp-object-type a))
+  (set type (scm-sp-object-type a))
   (case = type
     (sp-object-type-port
-      (define sp-port sp-port-t* (convert-type (scm-sp-object-data a) sp-port-t*))
+      (set sp-port (convert-type (scm-sp-object-data a) sp-port-t*))
       (sprintf
         result
         "#<sp-port %lx type:%s sample-rate:%d channel-count:%d closed?:%s input?:%s>"
-        (convert-type a b0*)
+        (convert-type a void*)
         (sp-port-type->name sp-port:type)
         sp-port:sample-rate
         sp-port:channel-count
@@ -104,15 +106,19 @@
         (if* (bit-and sp-port-bit-input sp-port:flags) "#t"
           "#f")))
     (sp-object-type-windowed-sinc
-      (sprintf result "#<sp-state %lx type:windowed-sinc>" (convert-type a b0*)))
-    (else (sprintf result "#<sp %lx>" (convert-type a b0*))))
+      (sprintf result "#<sp-state %lx type:windowed-sinc>" (convert-type a void*)))
+    (else (sprintf result "#<sp %lx>" (convert-type a void*))))
   ; scm-take eventually frees
   (scm-display (scm-take-locale-string result) output-port)
   (return 0))
 
 (define (scm-sp-object-free a) (size-t SCM)
-  (define type b8 (SCM-SMOB-FLAGS a))
-  (define data b0* (convert-type (scm-sp-object-data a) b0*))
+  (declare
+    type uint8-t
+    data void*)
+  (set
+    type (SCM-SMOB-FLAGS a)
+    data (convert-type (scm-sp-object-data a) void*))
   (case = type
     (sp-object-type-windowed-sinc (sp-windowed-sinc-state-destroy data))
     (sp-object-type-port (sp-port-close data)))
@@ -147,9 +153,9 @@
             (- end (+ 1 start)))
           (sizeof f32-s))))))
 
-(pre-include "guile/io.c" "guile/generate.c" "guile/transform.c")
+(pre-include "./guile/io.c" "./guile/generate.c" "./guile/transform.c")
 
-(define (sp-init-guile) b0
+(define (sp-init-guile) void
   (init-sp-io)
   (init-sp-generate)
   (init-sp-transform)

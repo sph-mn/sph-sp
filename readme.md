@@ -1,8 +1,10 @@
 # sph-sp
+*status 2018-08: wip, needs update for the newest sph-sc version, may not compile*
+
 scheme sound synthesis and processing toolset. c code, shared library, guile extension and scheme modules.
 see also [sph.mn](http://sph.mn/c/view/nm)
 
-status: this project is maintained as of 2018-03. you can contact me for any issues with using the code.
+this project is maintained as of 2018-03. you can contact me for any issues with using the code.
 
 # features
 ## scheme

@@ -1,16 +1,17 @@
-(pre-define
-  (define-sp-sine! scm-id id) "defines scm-sp-sine!, scm-sp-sine-lq!"
-  (define (scm-id data len sample-duration freq phase amp) (SCM SCM SCM SCM SCM SCM SCM)
-    (id
-      (convert-type (SCM-BYTEVECTOR-CONTENTS data) sp-sample-t*)
-      (scm->uint32 len)
-      (scm->double sample-duration) (scm->double freq) (scm->double phase) (scm->double amp))
-    (return SCM-UNSPECIFIED)))
+(pre-define (define-sp-sine! scm-id id)
+  (begin
+    "defines scm-sp-sine!, scm-sp-sine-lq!"
+    (define (scm-id data len sample-duration freq phase amp) (SCM SCM SCM SCM SCM SCM SCM)
+      (id
+        (convert-type (SCM-BYTEVECTOR-CONTENTS data) sp-sample-t*)
+        (scm->uint32 len)
+        (scm->double sample-duration) (scm->double freq) (scm->double phase) (scm->double amp))
+      (return SCM-UNSPECIFIED))))
 
 (define-sp-sine! scm-sp-sine! sp-sine)
 (define-sp-sine! scm-sp-sine-lq! sp-sine)
 
-(define (init-sp-generate) b0
+(define (init-sp-generate) void
   scm-c-define-procedure-c-init
   (scm-c-define-procedure-c
     "sp-sine!"

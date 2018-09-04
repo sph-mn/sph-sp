@@ -19,7 +19,7 @@
 
 (define (scm-sp-port-position port) (SCM SCM)
   "returns the current port position in number of octets"
-  (define position size-t)
+  (declare position size-t)
   (sp-port-position &position (scm-sp-port port))
   (return (scm-from-size-t position)))
 
@@ -30,24 +30,34 @@
 
 (define (scm-sp-port-read scm-port scm-sample-count) (SCM SCM SCM)
   status-declare
-  (define port sp-port-t* (scm-sp-port scm-port))
-  (define sample-count b32 (scm->uint32 scm-sample-count))
-  (define channel-count b32 (: port channel-count))
-  (define data sp-sample-t** (sp-alloc-channel-array channel-count sample-count))
+  (declare
+    port sp-port-t*
+    sample-count uint32-t
+    channel-count uint32-t
+    data sp-sample-t**
+    result SCM)
+  (set
+    port (scm-sp-port scm-port)
+    sample-count (scm->uint32 scm-sample-count)
+    channel-count (: port channel-count)
+    data (sp-alloc-channel-array channel-count sample-count))
   (sp-status-require-alloc data)
   (status-require (sp-port-read data port sample-count))
-  (define result SCM (scm-take-channel-data data channel-count sample-count))
+  (set result (scm-take-channel-data data channel-count sample-count))
   (label exit
     (status->scm-return result)))
 
 (define (scm-sp-port-write scm-port scm-channel-data scm-sample-count) (SCM SCM SCM SCM)
   status-declare
-  (define port sp-port-t* (scm-sp-port scm-port))
-  (local-memory-init 1)
   (declare
-    channel-count b32
+    port sp-port-t*
+    data sp-sample-t**
+    channel-count uint32-t
     sample-count size-t)
-  (define data sp-sample-t** (scm->channel-data scm-channel-data &channel-count &sample-count))
+  (local-memory-init 1)
+  (set
+    port (scm-sp-port scm-port)
+    data (scm->channel-data scm-channel-data &channel-count &sample-count))
   (sp-status-require-alloc data)
   (local-memory-add data)
   (status-require (sp-port-write port sample-count data))
@@ -62,30 +72,44 @@
 
 (define (scm-sp-file-open scm-path scm-channel-count scm-sample-rate) (SCM SCM SCM SCM)
   status-declare
-  (define path b8* (scm->locale-string scm-path))
-  (define channel-count b32 (scm->uint32 scm-channel-count))
-  (define sample-rate b32 (scm->uint32 scm-sample-rate))
+  (declare
+    path uint8-t*
+    channel-count uint32-t
+    sample-rate uint32-t
+    result SCM)
+  (set
+    path (scm->locale-string scm-path)
+    channel-count (scm->uint32 scm-channel-count)
+    sample-rate (scm->uint32 scm-sample-rate))
   (sp-alloc-define sp-port sp-port-t* (sizeof sp-port-t))
   (status-require (sp-file-open sp-port path channel-count sample-rate))
-  (define result SCM (scm-sp-object-create sp-port sp-object-type-port))
+  (set result (scm-sp-object-create sp-port sp-object-type-port))
   (label exit
     (status->scm-return result)))
 
 (define (scm-sp-alsa-open scm-device-name scm-input? scm-channel-count scm-sample-rate scm-latency)
   (SCM SCM SCM SCM SCM SCM)
   status-declare
-  (define device-name b8* (scm->locale-string scm-device-name))
-  (define input? boolean (scm->bool scm-input?))
-  (define channel-count b32 (scm->uint32 scm-channel-count))
-  (define sample-rate b32 (scm->uint32 scm-sample-rate))
-  (define latency b32 (scm->uint32 scm-latency))
+  (declare
+    device-name uint8-t*
+    input? boolean
+    channel-count uint32-t
+    sample-rate uint32-t
+    latency uint32-t
+    result SCM)
+  (set
+    device-name (scm->locale-string scm-device-name)
+    input? (scm->bool scm-input?)
+    channel-count (scm->uint32 scm-channel-count)
+    sample-rate (scm->uint32 scm-sample-rate)
+    latency (scm->uint32 scm-latency))
   (sp-alloc-define-zero sp-port sp-port-t* (sizeof sp-port-t))
   (status-require (sp-alsa-open sp-port device-name input? channel-count sample-rate latency))
-  (define result SCM (scm-sp-object-create sp-port sp-object-type-port))
+  (set result (scm-sp-object-create sp-port sp-object-type-port))
   (label exit
     (status->scm-return result)))
 
-(define (init-sp-io) b0
+(define (init-sp-io) void
   scm-c-define-procedure-c-init
   (scm-c-define-procedure-c "sp-port-close" 1 0 0 scm-sp-port-close "sp-port -> boolean")
   (scm-c-define-procedure-c "sp-port-input?" 1 0 0 scm-sp-port-input? "sp-port -> boolean")
