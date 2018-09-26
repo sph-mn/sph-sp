@@ -1,6 +1,8 @@
 (pre-include
   "byteswap.h"
-  "math.h" "./foreign/sph.c" "./foreign/sph/status.c" "./foreign/sph/float.c" "./main/config.c")
+  "math.h"
+  "./foreign/sph.c"
+  "./foreign/sph/status.c" "./foreign/sph/types.c" "./foreign/sph/float.c" "./main/config.c")
 
 (pre-define
   sp-port-type-alsa 0
@@ -96,8 +98,7 @@
   (void sp-windowed-sinc-state-t*) (sp-windowed-sinc-state-create sample-rate freq transition state)
   (uint8-t uint32-t sp-float-t sp-float-t sp-windowed-sinc-state-t**)
   (sp-windowed-sinc result source source-len sample-rate freq transition state)
-  (status-i-t
-    sp-sample-t* sp-sample-t* size-t uint32-t sp-float-t sp-float-t sp-windowed-sinc-state-t**)
+  (int sp-sample-t* sp-sample-t* size-t uint32-t sp-float-t sp-float-t sp-windowed-sinc-state-t**)
   (sp-window-blackman a width) (sp-float-t sp-float-t size-t)
   (sp-spectral-inversion-ir a a-len) (void sp-sample-t* size-t)
   (sp-spectral-reversal-ir a a-len) (void sp-sample-t* size-t)
@@ -105,7 +106,7 @@
   (sp-ifft result result-len source source-len)
   (status-t sp-sample-t* uint32-t sp-sample-t* uint32-t)
   (sp-moving-average result source source-len prev prev-len next next-len start end distance)
-  (status-i-t
+  (int
     sp-sample-t*
     sp-sample-t* uint32-t sp-sample-t* uint32-t sp-sample-t* uint32-t uint32-t uint32-t uint32-t)
   (sp-convolve-one result a a-len b b-len)

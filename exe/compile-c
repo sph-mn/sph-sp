@@ -1,25 +1,25 @@
 #!/bin/sh
 
 optimisation=0
-kissfft=source/c/transform/foreign/kissfft
+kissfft=source/c/foreign/kissfft
 target_dir=temp
-precompiled=source/c-precompiled
-gcc_options="-Wfatal-errors -Wunused-label -Wunused-value -Wunused-variable -O$optimisation -I$precompiled"
+c=source/c-precompiled
+gcc_options="-Wfatal-errors -Wunused-label -Wunused-value -Wunused-variable -O$optimisation -I$c"
 
 compile_libguile_sph_sp() {
   target="$target_dir/libguile-sph-sp.so"
-  source="$precompiled/main.c"
-  k="source/c/transform/foreign/kissfft"
-  gcc -Wl,--version-script=other/export -shared -fpic "$source" -o "$target" \
+  source="$c/main/main.c"
+  k="source/c/foreign/kissfft"
+  gcc -Wl,--version-script=other/shared-library-exports -shared -fpic "$source" -o "$target" \
     $gcc_options -lsndfile -lasound -lm $(guile-config link) -I"$kissfft" "$kissfft"/kiss_fft.c "$kissfft"/tools/kiss_fftr.c
 }
 
 compile_test() {
   # links with libguile_sph_sp and uses the header files
   export LIBRARY_PATH="$PWD/$target_dir"
-  gcc "$precompiled/test-main.c" -o "$target_dir"/test-libguile-sph-sp $gcc_options -lm -lguile-sph-sp
+  gcc "$c/test-main.c" -o "$target_dir"/test-libguile-sph-sp $gcc_options -lm -lguile-sph-sp
 }
 
 mkdir -p "$target_dir" &&
-compile_libguile_sph_sp &&
-compile_test
+compile_libguile_sph_sp
+#compile_test

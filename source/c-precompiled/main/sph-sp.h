@@ -2,6 +2,7 @@
 #include <math.h>
 #include "./foreign/sph.c"
 #include "./foreign/sph/status.c"
+#include "./foreign/sph/types.c"
 #include "./foreign/sph/float.c"
 #include "./main/config.c"
 #define sp_port_type_alsa 0
@@ -85,12 +86,12 @@ size_t sp_windowed_sinc_ir_length(sp_float_t transition);
 void sp_windowed_sinc_ir(sp_sample_t** result, size_t* result_len, uint32_t sample_rate, sp_float_t freq, sp_float_t transition);
 void sp_windowed_sinc_state_destroy(sp_windowed_sinc_state_t* state);
 uint8_t sp_windowed_sinc_state_create(uint32_t sample_rate, sp_float_t freq, sp_float_t transition, sp_windowed_sinc_state_t** state);
-status_i_t sp_windowed_sinc(sp_sample_t* result, sp_sample_t* source, size_t source_len, uint32_t sample_rate, sp_float_t freq, sp_float_t transition, sp_windowed_sinc_state_t** state);
+int sp_windowed_sinc(sp_sample_t* result, sp_sample_t* source, size_t source_len, uint32_t sample_rate, sp_float_t freq, sp_float_t transition, sp_windowed_sinc_state_t** state);
 sp_float_t sp_window_blackman(sp_float_t a, size_t width);
 void sp_spectral_inversion_ir(sp_sample_t* a, size_t a_len);
 void sp_spectral_reversal_ir(sp_sample_t* a, size_t a_len);
 status_t sp_fft(sp_sample_t* result, uint32_t result_len, sp_sample_t* source, uint32_t source_len);
 status_t sp_ifft(sp_sample_t* result, uint32_t result_len, sp_sample_t* source, uint32_t source_len);
-status_i_t sp_moving_average(sp_sample_t* result, sp_sample_t* source, uint32_t source_len, sp_sample_t* prev, uint32_t prev_len, sp_sample_t* next, uint32_t next_len, uint32_t start, uint32_t end, uint32_t distance);
+int sp_moving_average(sp_sample_t* result, sp_sample_t* source, uint32_t source_len, sp_sample_t* prev, uint32_t prev_len, sp_sample_t* next, uint32_t next_len, uint32_t start, uint32_t end, uint32_t distance);
 void sp_convolve_one(sp_sample_t* result, sp_sample_t* a, size_t a_len, sp_sample_t* b, size_t b_len);
 void sp_convolve(sp_sample_t* result, sp_sample_t* a, size_t a_len, sp_sample_t* b, size_t b_len, sp_sample_t* carryover, size_t carryover_len);

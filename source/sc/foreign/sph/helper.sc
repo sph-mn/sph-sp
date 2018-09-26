@@ -1,7 +1,8 @@
-(pre-include "stdlib.h" "inttypes.h" "./status.c")
+(sc-comment "depends on sph/status.c")
+(pre-include "stdlib.h" "inttypes.h" "stdio.h")
 
 (pre-define
-  status-group-sph "sph"
+  sph-helper-status-group "sph"
   (sph-helper-malloc size result)
   (begin
     "add explicit type cast to prevent compiler warning"
@@ -11,7 +12,19 @@
   (sph-helper-calloc size result) (sph-helper-primitive-calloc size (convert-type result void**))
   (sph-helper-realloc size result) (sph-helper-primitive-realloc size (convert-type result void**)))
 
-(enum (sph-status-id-memory))
+(enum (sph-helper-status-id-memory))
+
+(define (sph-helper-status-description a) (uint8-t* status-t)
+  (declare b char*)
+  (case = a.id
+    (sph-helper-status-id-memory (set b "not enough memory or other memory allocation error"))
+    (else (set b ""))))
+
+(define (sph-helper-status-name a) (uint8-t* status-t)
+  (declare b char*)
+  (case = a.id
+    (sph-helper-status-id-memory (set b "memory"))
+    (else (set b "unknown"))))
 
 (define (sph-helper-primitive-malloc size result) (status-t size-t void**)
   status-declare
@@ -19,8 +32,8 @@
   (set a (malloc size))
   (if a (set *result a)
     (set
-      status.group sph-status-group-sph
-      status.id sph-status-id-memory))
+      status.group sph-helper-status-group
+      status.id sph-helper-status-id-memory))
   (return status))
 
 (define (sph-helper-primitive-malloc-string length result) (status-t size-t uint8-t**)
@@ -40,8 +53,8 @@
   (set a (calloc size 1))
   (if a (set *result a)
     (set
-      status.group sph-status-group-sph
-      status.id sph-status-id-memory))
+      status.group sph-helper-status-group
+      status.id sph-helper-status-id-memory))
   (return status))
 
 (define (sph-helper-primitive-realloc size block) (status-t size-t void**)
@@ -50,8 +63,8 @@
   (set a (realloc *block size))
   (if a (set *block a)
     (set
-      status.group sph-status-group-sph
-      status.id sph-status-id-memory))
+      status.group sph-helper-status-group
+      status.id sph-helper-status-id-memory))
   (return status))
 
 (define (sph-helper-uint->string a result-len) (uint8-t* uintmax-t size-t*)
@@ -87,5 +100,5 @@
   "display the bits of the specified memory region"
   (declare i size-t)
   (for ((set i 0) (< i size) (set i (+ 1 i)))
-    (display-bits-u8 (array-get (convert-type a uint8-t*) i)))
+    (sph-helper-display-bits-u8 (array-get (convert-type a uint8-t*) i)))
   (printf "\n"))

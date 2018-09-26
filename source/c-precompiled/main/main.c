@@ -180,7 +180,7 @@ exit:
    * available values outside the start/end range are considered where needed to calculate averages
    * rounding errors are kept low by using modified kahan neumaier summation and not using a
      recursive implementation. both properties which make it much slower than many other implementations */
-status_i_t sp_moving_average(sp_sample_t* result, sp_sample_t* source, uint32_t source_len, sp_sample_t* prev, uint32_t prev_len, sp_sample_t* next, uint32_t next_len, uint32_t start, uint32_t end, uint32_t radius) {
+int sp_moving_average(sp_sample_t* result, sp_sample_t* source, uint32_t source_len, sp_sample_t* prev, uint32_t prev_len, sp_sample_t* next, uint32_t next_len, uint32_t start, uint32_t end, uint32_t radius) {
   uint32_t left;
   uint32_t right;
   uint32_t width;

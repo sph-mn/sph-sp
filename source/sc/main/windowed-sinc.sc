@@ -120,8 +120,7 @@
   (return 0))
 
 (define (sp-windowed-sinc result source source-len sample-rate freq transition state)
-  (status-i-t
-    sp-sample-t* sp-sample-t* size-t uint32-t sp-float-t sp-float-t sp-windowed-sinc-state-t**)
+  (int sp-sample-t* sp-sample-t* size-t uint32-t sp-float-t sp-float-t sp-windowed-sinc-state-t**)
   "a windowed sinc filter for segments of continuous streams with
   sample-rate, frequency and transition variable per call.
   state can be zero and it will be allocated"

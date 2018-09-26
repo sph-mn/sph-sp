@@ -113,7 +113,7 @@ uint8_t sp_windowed_sinc_state_create(uint32_t sample_rate, sp_float_t freq, sp_
 /** a windowed sinc filter for segments of continuous streams with
   sample-rate, frequency and transition variable per call.
   state can be zero and it will be allocated */
-status_i_t sp_windowed_sinc(sp_sample_t* result, sp_sample_t* source, size_t source_len, uint32_t sample_rate, sp_float_t freq, sp_float_t transition, sp_windowed_sinc_state_t** state) {
+int sp_windowed_sinc(sp_sample_t* result, sp_sample_t* source, size_t source_len, uint32_t sample_rate, sp_float_t freq, sp_float_t transition, sp_windowed_sinc_state_t** state) {
   if (sp_windowed_sinc_state_create(sample_rate, freq, transition, state)) {
     return (1);
   };

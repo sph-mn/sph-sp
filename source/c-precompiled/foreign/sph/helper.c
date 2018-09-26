@@ -1,13 +1,30 @@
+/* depends on sph/status.c */
 #include <stdlib.h>
 #include <inttypes.h>
-#include "./status.c"
-#define status_group_sph "sph"
+#include <stdio.h>
+#define sph_helper_status_group "sph"
 /** add explicit type cast to prevent compiler warning */
 #define sph_helper_malloc(size, result) sph_helper_primitive_malloc(size, ((void**)(result)))
 #define sph_helper_malloc_string(size, result) sph_helper_primitive_malloc_string(size, ((uint8_t**)(result)))
 #define sph_helper_calloc(size, result) sph_helper_primitive_calloc(size, ((void**)(result)))
 #define sph_helper_realloc(size, result) sph_helper_primitive_realloc(size, ((void**)(result)))
-enum { sph_status_id_memory };
+enum { sph_helper_status_id_memory };
+uint8_t* sph_helper_status_description(status_t a) {
+  char* b;
+  if (sph_helper_status_id_memory == a.id) {
+    b = "not enough memory or other memory allocation error";
+  } else {
+    b = "";
+  };
+};
+uint8_t* sph_helper_status_name(status_t a) {
+  char* b;
+  if (sph_helper_status_id_memory == a.id) {
+    b = "memory";
+  } else {
+    b = "unknown";
+  };
+};
 status_t sph_helper_primitive_malloc(size_t size, void** result) {
   status_declare;
   void* a;
@@ -15,8 +32,8 @@ status_t sph_helper_primitive_malloc(size_t size, void** result) {
   if (a) {
     *result = a;
   } else {
-    status.group = sph_status_group_sph;
-    status.id = sph_status_id_memory;
+    status.group = sph_helper_status_group;
+    status.id = sph_helper_status_id_memory;
   };
   return (status);
 };
@@ -37,8 +54,8 @@ status_t sph_helper_primitive_calloc(size_t size, void** result) {
   if (a) {
     *result = a;
   } else {
-    status.group = sph_status_group_sph;
-    status.id = sph_status_id_memory;
+    status.group = sph_helper_status_group;
+    status.id = sph_helper_status_id_memory;
   };
   return (status);
 };
@@ -49,8 +66,8 @@ status_t sph_helper_primitive_realloc(size_t size, void** block) {
   if (a) {
     *block = a;
   } else {
-    status.group = sph_status_group_sph;
-    status.id = sph_status_id_memory;
+    status.group = sph_helper_status_group;
+    status.id = sph_helper_status_id_memory;
   };
   return (status);
 };
@@ -83,7 +100,7 @@ void sph_helper_display_bits_u8(uint8_t a) {
 void sph_helper_display_bits(void* a, size_t size) {
   size_t i;
   for (i = 0; (i < size); i = (1 + i)) {
-    display_bits_u8((((uint8_t*)(a))[i]));
+    sph_helper_display_bits_u8((((uint8_t*)(a))[i]));
   };
   printf("\n");
 };

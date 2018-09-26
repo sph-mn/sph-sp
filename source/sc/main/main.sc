@@ -156,7 +156,7 @@
     (return status)))
 
 (define (sp-moving-average result source source-len prev prev-len next next-len start end radius)
-  (status-i-t
+  (int
     sp-sample-t*
     sp-sample-t* uint32-t sp-sample-t* uint32-t sp-sample-t* uint32-t uint32-t uint32-t uint32-t)
   "apply a centered moving average filter to source at index start to end inclusively and write to result.
