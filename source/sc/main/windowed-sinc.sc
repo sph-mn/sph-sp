@@ -1,7 +1,9 @@
 (sc-comment
   "implementation of a hq windowed sinc filter with a blackman window (common truncated version) for continuous streams.
   variable sample-rate, cutoff radian frequency and transition band width per call.
-  depends on some sp functions defined in main.sc and sph-sp.sc")
+  depends on some sp functions defined in main.sc and sph-sp.sc.
+  sp-windowed-sinc-state-t is used to store impulse response, parameters to create the current impulse response,
+  and data needed for the next call")
 
 (define (sp-windowed-sinc-ir-length transition) (size-t sp-float-t)
   "approximate impulse response length for a transition factor and
@@ -40,8 +42,9 @@
     (inc index))
   (set result-sum (sp-sample-sum result-temp len))
   (while len
-    (dec len)
-    (set (array-get result-temp index) (/ (array-get result-temp index) result-sum)))
+    (set
+      len (- len 1)
+      (array-get result-temp index) (/ (array-get result-temp index) result-sum)))
   (set *result result-temp))
 
 (define (sp-windowed-sinc-state-destroy state) (void sp-windowed-sinc-state-t*)
@@ -117,7 +120,8 @@
   (return 0))
 
 (define (sp-windowed-sinc result source source-len sample-rate freq transition state)
-  (status-i-t sp-sample-t* sp-sample-t* size-t uint32-t sp-float-t sp-float-t sp-windowed-sinc-state-t**)
+  (status-i-t
+    sp-sample-t* sp-sample-t* size-t uint32-t sp-float-t sp-float-t sp-windowed-sinc-state-t**)
   "a windowed sinc filter for segments of continuous streams with
   sample-rate, frequency and transition variable per call.
   state can be zero and it will be allocated"

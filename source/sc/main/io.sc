@@ -1,13 +1,17 @@
 (pre-define
-  (set-optional-number a default) (if (< a 0) (set a default))
+  (optional-set-number a default)
+  (begin
+    "set default if number is negative"
+    (if (> 0 a) (set a default)))
   (optional-number a default)
   (begin
-    "choose a default when number is negative"
-    (if* (< a 0) default
+    "default if number is negative"
+    (if* (> 0 a) default
       a))
   (define-sp-interleave name type body)
   (begin
-    "a: deinterleaved
+    "define a deinterleave, interleave or similar routine.
+    a: deinterleaved
     b: interleaved"
     (define (name a b a-size channel-count) (void type** type* size-t uint32-t)
       (declare
@@ -15,11 +19,13 @@
         channel uint32-t)
       (set b-size (* a-size channel-count))
       (while a-size
-        (dec a-size)
-        (set channel channel-count)
+        (set
+          a-size (- a-size 1)
+          channel channel-count)
         (while channel
-          (dec channel)
-          (dec b-size)
+          (set
+            channel (- channel 1)
+            b-size (- b-size 1))
           body)))))
 
 (define-sp-interleave
@@ -32,9 +38,7 @@
   sp-sample-t
   (compound-statement (set (array-get (array-get a channel) a-size) (array-get b b-size))))
 
-(sc-comment "-- file")
-(define sp-file-sf-format uint32-t (bit-or SF-FORMAT-AU SF-FORMAT-FLOAT))
-;(define sp-file-sf-format uint32-t (bit-or SF-FORMAT-WAV SF-FORMAT-DOUBLE))
+(sc-comment "file")
 
 (define (sp-file-close port) (status-t sp-port-t*)
   status-declare
@@ -42,7 +46,8 @@
   (if (not status.id) (set port:flags (bit-or sp-port-bit-closed port:flags)))
   (return status))
 
-(define (sp-file-open result path channel-count sample-rate) (status-t sp-port-t* uint8-t* uint32-t uint32-t)
+(define (sp-file-open result path channel-count sample-rate)
+  (status-t sp-port-t* uint8-t* uint32-t uint32-t)
   status-declare
   (declare
     bit-position uint8-t
@@ -143,7 +148,7 @@
   (declare alsa-port snd-pcm-t*)
   ; defaults
   (if (not device-name) (set device-name "default"))
-  (set-optional-number latency sp-default-alsa-latency)
+  (optional-set-number latency sp-default-alsa-latency)
   (set alsa-port 0)
   ; open
   (sp-alsa-status-require

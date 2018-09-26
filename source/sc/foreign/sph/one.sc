@@ -48,11 +48,11 @@
   (define path-copy uint8-t* (string-clone a))
   (return (dirname path-copy)))
 
-(define (ensure-directory-structure path mkdir-mode) (boolean uint8-t* mode-t)
+(define (ensure-directory-structure path mkdir-mode) (uint8-t uint8-t* mode-t)
   "return 1 if the path exists or has been successfully created"
   (if (file-exists? path) (return #t)
     (begin
       (define path-dirname uint8-t* (dirname-2 path))
-      (define status boolean (ensure-directory-structure path-dirname mkdir-mode))
+      (define status uint8-t (ensure-directory-structure path-dirname mkdir-mode))
       (free path-dirname)
       (return (and status (or (= EEXIST errno) (= 0 (mkdir path mkdir-mode))))))))

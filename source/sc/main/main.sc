@@ -4,13 +4,12 @@
   "alsa/asoundlib.h"
   "sndfile.h"
   "./main/sph-sp.h"
-  "./foreign/sph/one.c"
-  "./foreign/sph/local-memory.c" "foreign/kiss_fft.h" "foreign/tools/kiss_fftr.h")
+  "./foreign/sph/helper.c" "./foreign/sph/memreg.c" "foreign/kiss_fft.h" "foreign/tools/kiss_fftr.h")
 
 (pre-define
   sp-status-declare (status-declare-group sp-status-group-sp)
-  (sp-system-status-require-id id) (if (< id 0) (status-set-both-goto sp-status-group-libc id))
-  (sp-system-status-require expression)
+  (sp-libc-status-require-id id) (if (< id 0) (status-set-both-goto sp-status-group-libc id))
+  (sp-libc-status-require expression)
   (begin
     (status-set-id expression)
     (if (< status.id 0) (status-set-group-goto sp-status-group-libc)
@@ -20,80 +19,60 @@
     (status-set-id expression)
     (if status-is-failure (status-set-group-goto sp-status-group-alsa)))
   (sp-status-require-alloc a)
-  (if (not a) (status-set-both-goto sp-status-group-sp sp-status-id-memory)) (inc a)
-  (set a (+ 1 a)) (dec a) (set a (- a 1)))
-
-(enum
-  (sp-status-group-alsa
-    sp-status-group-libc
-    sp-status-group-sndfile
-    sp-status-group-sp
-    sp-status-id-file-channel-mismatch
-    sp-status-id-file-encoding
-    sp-status-id-file-header
-    sp-status-id-file-incompatible
-    sp-status-id-file-incomplete
-    sp-status-id-eof
-    sp-status-id-input-type
-    sp-status-id-memory
-    sp-status-id-not-implemented
-    sp-status-id-port-closed sp-status-id-port-position sp-status-id-port-type sp-status-id-undefined))
+  (if (not a) (status-set-both-goto sp-status-group-sp sp-status-id-memory)))
 
 (define (sp-status-description a) (uint8-t* status-t)
-  (return
-    (case* = a.group
-      (sp-status-group-sp
-        (convert-type
-          (case* = a.id
-            (sp-status-id-eof "end of file")
-            (sp-status-id-input-type "input argument is of wrong type")
-            (sp-status-id-not-implemented "not implemented")
-            (sp-status-id-memory "memory allocation error")
-            (sp-status-id-file-incompatible
-              "file channel count or sample rate is different from what was requested")
-            (sp-status-id-file-incomplete "incomplete write")
-            (sp-status-id-port-type "incompatible port type")
-            (else ""))
-          uint8-t*))
-      (sp-status-group-alsa (convert-type (sf-error-number a.id) uint8-t*))
-      (sp-status-group-sndfile (convert-type (sf-error-number a.id) uint8-t*))
-      (else (convert-type "" uint8-t*)))))
+  (declare b char*)
+  (case = a.group
+    (sp-status-group-sp
+      (case = a.id
+        (sp-status-id-eof (set b "end of file"))
+        (sp-status-id-input-type (set b "input argument is of wrong type"))
+        (sp-status-id-not-implemented (set b "not implemented"))
+        (sp-status-id-memory (set b "memory allocation error"))
+        (sp-status-id-file-incompatible
+          (set b "file channel count or sample rate is different from what was requested"))
+        (sp-status-id-file-incomplete (set b "incomplete write"))
+        (sp-status-id-port-type (set b "incompatible port type"))
+        (else (set b ""))))
+    (sp-status-group-alsa (set b (sf-error-number a.id)))
+    (sp-status-group-sndfile (set b (sf-error-number a.id)))
+    (sph-helper-status-group (set b (sph-helper-status-description a)))
+    (else (set b "")))
+  (return b))
 
 (define (sp-status-name a) (uint8-t* status-t)
-  (return
-    (case* = a.group
-      (sp-status-group-sp
-        (convert-type
-          (case* = a.id
-            (sp-status-id-input-type "input-type")
-            (sp-status-id-not-implemented "not-implemented")
-            (sp-status-id-memory "memory")
-            (else "unknown"))
-          uint8-t*))
-      (sp-status-group-alsa (convert-type "alsa" uint8-t*))
-      (sp-status-group-sndfile (convert-type "sndfile" uint8-t*))
-      (else (convert-type "unknown" uint8-t*)))))
+  (declare b char*)
+  (case = a.group
+    (sp-status-group-sp
+      (case = a.id
+        (sp-status-id-input-type (set b "input-type"))
+        (sp-status-id-not-implemented (set b "not-implemented"))
+        (sp-status-id-memory (set b "memory"))
+        (else (set b "unknown"))))
+    (sp-status-group-alsa (set b "alsa"))
+    (sp-status-group-sndfile (set b "sndfile"))
+    (else (set b "unknown"))))
 
-(define (sp-alloc-channel-array channel-count sample-count) (sp-sample-t** uint32-t uint32-t)
+(define (sp-alloc-channel-array channel-count sample-count result-array)
+  (status-t uint32-t uint32-t sp-sample-t***)
   "return an array for channels with data arrays for each channel.
   returns zero if memory could not be allocated"
-  (local-memory-init (+ channel-count 1))
+  status-declare
+  (memreg-init (+ channel-count 1))
   (declare
     channel sp-sample-t*
     result sp-sample-t**)
-  (set result (malloc (* channel-count (sizeof sp-sample-t*))))
-  (if (not result) (return 0))
-  (local-memory-add result)
+  (status-require (sph-helper-malloc (* channel-count (sizeof sp-sample-t*)) result))
+  (memreg-add result)
   (while channel-count
-    (dec channel-count)
-    (set channel (calloc (* sample-count (sizeof sp-sample-t)) 1))
-    (if (not channel)
-      (begin
-        local-memory-free
-        (return 0)))
-    (local-memory-add channel)
+    (set channel-count (- channel-count 1))
+    (status-require (sph-helper-calloc (* sample-count (sizeof sp-sample-t)) &channel))
+    (memreg-add channel)
     (set (array-get result channel-count) channel))
-  (return result))
+  (set *result-array result)
+  (label exit
+    (return status)))
 
 (define (sp-sin-lq a) (sp-sample-t sp-sample-t)
   "lower precision version of sin() that is faster to compute"
@@ -111,66 +90,75 @@
     (if* (= 0 a) 1
       (/ (sin (* M_PI a)) (* M_PI a)))))
 
-(sc-comment
-  "write samples for a sine wave into dest.
-   sample-duration: in seconds
-   freq: radian frequency
-   phase: phase offset
-   amp: amplitude. 0..1
-   defines sp-sine, sp-sine-lq")
-
 (pre-define
   (define-sp-sine id sin)
   ; todo: assumes that sin() returns sp-sample-t
-  (define (id dest len sample-duration freq phase amp)
-    (void sp-sample-t* uint32-t sp-float-t sp-float-t sp-float-t sp-float-t)
-    (define index uint32-t 0)
-    (while (<= index len)
-      (set (array-get dest index) (* amp (sin (* freq phase sample-duration))))
-      (inc phase)
-      (inc index))))
+  (begin
+    "write samples for a sine wave into dest.
+    sample-duration: seconds
+    freq: radian frequency
+    phase: phase offset
+    amp: amplitude. 0..1
+    used to define sp-sine, sp-sine-lq and similar"
+    (define (id dest len sample-duration freq phase amp)
+      (void sp-sample-t* uint32-t sp-float-t sp-float-t sp-float-t sp-float-t)
+      (define index uint32-t 0)
+      (while (<= index len)
+        (set
+          (array-get dest index) (* amp (sin (* freq phase sample-duration)))
+          phase (+ 1 phase)
+          index (+ 1 index))))))
 
 (define-sp-sine sp-sine sin)
 (define-sp-sine sp-sine-lq sp-sin-lq)
 
-(define (sp-fft result result-len source source-len) (status-t sp-sample-t* uint32-t sp-sample-t* uint32-t)
+(define (sp-fft result result-len source source-len)
+  (status-t sp-sample-t* uint32-t sp-sample-t* uint32-t)
   sp-status-declare
-  (declare fftr-state kiss-fftr-cfg)
-  (local-memory-init 2)
+  (declare
+    fftr-state kiss-fftr-cfg
+    out kiss-fft-cpx*)
+  (memreg-init 2)
   (set fftr-state (kiss-fftr-alloc result-len #f 0 0))
   (if (not fftr-state) (status-set-id-goto sp-status-id-memory))
-  (local-memory-add fftr-state)
-  (sp-alloc-define out kiss-fft-cpx* (* result-len (sizeof kiss-fft-cpx)))
-  (local-memory-add out)
+  (memreg-add fftr-state)
+  (status-require (sph-helper-malloc (* result-len (sizeof kiss-fft-cpx)) &out))
+  (memreg-add out)
   (kiss-fftr fftr-state source out)
-  ; extract the real part
+  (sc-comment "extract the real part")
   (while result-len
-    (dec result-len)
-    (set (array-get result result-len) (struct-get (array-get out result-len) r)))
+    (set
+      result-len (- result-len 1)
+      (array-get result result-len) (struct-get (array-get out result-len) r)))
   (label exit
-    local-memory-free
+    memreg-free
     (return status)))
 
-(define (sp-ifft result result-len source source-len) (status-t sp-sample-t* uint32-t sp-sample-t* uint32-t)
+(define (sp-ifft result result-len source source-len)
+  (status-t sp-sample-t* uint32-t sp-sample-t* uint32-t)
   sp-status-declare
-  (declare fftr-state kiss-fftr-cfg)
-  (local-memory-init 2)
+  (declare
+    fftr-state kiss-fftr-cfg
+    in kiss-fft-cpx*)
+  (memreg-init 2)
   (set fftr-state (kiss-fftr-alloc source-len #t 0 0))
   (if (not fftr-state) (status-set-id-goto sp-status-id-memory))
-  (local-memory-add fftr-state)
-  (sp-alloc-define in kiss-fft-cpx* (* source-len (sizeof kiss-fft-cpx)))
-  (local-memory-add in)
+  (memreg-add fftr-state)
+  (status-require (sph-helper-malloc (* source-len (sizeof kiss-fft-cpx)) &in))
+  (memreg-add in)
   (while source-len
-    (dec source-len)
+    (set source-len (- source-len 1))
     (struct-set (array-get in source-len)
       r (array-get source (* source-len (sizeof sp-sample-t)))))
   (kiss-fftri fftr-state in result)
   (label exit
-    local-memory-free
+    memreg-free
     (return status)))
 
 (define (sp-moving-average result source source-len prev prev-len next next-len start end radius)
-  (status-i-t sp-sample-t* sp-sample-t* uint32-t sp-sample-t* uint32-t sp-sample-t* uint32-t uint32-t uint32-t uint32-t)
+  (status-i-t
+    sp-sample-t*
+    sp-sample-t* uint32-t sp-sample-t* uint32-t sp-sample-t* uint32-t uint32-t uint32-t uint32-t)
   "apply a centered moving average filter to source at index start to end inclusively and write to result.
   removes higher frequencies with little distortion in the time domain.
    * only the result portion corresponding to the subvector from start to end is written to result
@@ -199,12 +187,12 @@
       (set window (malloc (* width (sizeof sp-sample-t))))
       (if (not window) (return 1))))
   (while (<= start end)
+    (sc-comment "all required samples are in source array")
     (if (and (>= start radius) (<= (+ start radius 1) source-len))
-      ; all required samples are in source array
       (set *result (/ (sp-sample-sum (- (+ source start) radius) width) width))
       (begin
         (set window-index 0)
-        ; get samples from previous segment
+        (sc-comment "get samples from previous segment")
         (if (< start radius)
           (begin
             (set right (- radius start))
@@ -214,22 +202,25 @@
                   (if* (> right prev-len) 0
                     (- prev-len right)))
                 (while (< left prev-len)
-                  (set (array-get window window-index) (array-get prev left))
-                  (inc window-index)
-                  (inc left))))
+                  (set
+                    (array-get window window-index) (array-get prev left)
+                    window-index (+ 1 window-index)
+                    left (+ 1 left)))))
             (while (< window-index right)
-              (set (array-get window window-index) 0)
-              (inc window-index))
+              (set
+                (array-get window window-index) 0
+                window-index (+ 1 window-index)))
             (set left 0))
           (set left (- start radius)))
-        ; get samples from source segment
+        (sc-comment "get samples from source segment")
         (set right (+ start radius))
         (if (>= right source-len) (set right (- source-len 1)))
         (while (<= left right)
-          (set (array-get window window-index) (array-get source left))
-          (inc window-index)
-          (inc left))
-        ; get samples from next segment
+          (set
+            (array-get window window-index) (array-get source left)
+            window-index (+ 1 window-index)
+            left (+ 1 left)))
+        (sc-comment "get samples from next segment")
         (set right (+ start radius))
         (if (and (>= right source-len) next)
           (begin
@@ -238,16 +229,19 @@
               right (- right source-len))
             (if (>= right next-len) (set right (- next-len 1)))
             (while (<= left right)
-              (set (array-get window window-index) (array-get next left))
-              (inc window-index)
-              (inc left))))
-        ; fill unset values in window with zero
+              (set
+                (array-get window window-index) (array-get next left)
+                window-index (+ 1 window-index)
+                left (+ 1 left)))))
+        (sc-comment "fill unset values in window with zero")
         (while (< window-index width)
-          (set (array-get window window-index) 0)
-          (inc window-index))
+          (set
+            (array-get window window-index) 0
+            window-index (+ 1 window-index)))
         (set *result (/ (sp-sample-sum window width) width))))
-    (inc result)
-    (inc start))
+    (set
+      result (+ 1 result)
+      start (+ 1 start)))
   (free window)
   (return 0))
 
@@ -262,10 +256,12 @@
   flips the frequency response top to bottom"
   (declare center size-t)
   (while a-len
-    (dec a-len)
-    (set (array-get a a-len) (* -1 (array-get a a-len))))
-  (set center (/ (- a-len 1) 2))
-  (inc (array-get a center)))
+    (set
+      a-len (- a-len 1)
+      (array-get a a-len) (* -1 (array-get a a-len))))
+  (set
+    center (/ (- a-len 1) 2)
+    (array-get a center) (+ 1 (array-get a center))))
 
 (define (sp-spectral-reversal-ir a a-len) (void sp-sample-t* size-t)
   "inverts the sign for samples at odd indexes.
@@ -296,9 +292,9 @@
 (define (sp-convolve result a a-len b b-len carryover carryover-len)
   (void sp-sample-t* sp-sample-t* size-t sp-sample-t* size-t sp-sample-t* size-t)
   "discrete linear convolution for segments of a continuous stream. maps segments (a, a-len) to result.
-  result length is a-len, carryover length is b-len or previous b-len. b-len must be greater than zero"
-  ; algorithm: copy results that overlap from previous call from carryover, add results that fit completely in result,
-  ; add results that overlap with next segment to carryover.
+  result length is a-len, carryover length is b-len or previous b-len. b-len must be greater than zero.
+  algorithm: copy results that overlap from previous call from carryover, add results that fit completely in result,
+  add results that overlap with next segment to carryover"
   (declare
     size size-t
     a-index size-t
@@ -307,13 +303,13 @@
   (memset result 0 (* a-len (sizeof sp-sample-t)))
   (memcpy result carryover (* carryover-len (sizeof sp-sample-t)))
   (memset carryover 0 (* b-len (sizeof sp-sample-t)))
-  ;-- result values
-  ; restrict processed range to exclude input values that generate carryover
+  (sc-comment
+    "result values" "restrict processed range to exclude input values that generate carryover")
   (set size
     (if* (< a-len b-len) 0
       (- a-len (- b-len 1))))
   (if size (sp-convolve-one result a size b b-len))
-  ;-- carryover values
+  (sc-comment "carryover values")
   (set
     a-index size
     b-index 0)

@@ -63,6 +63,18 @@ installed files
 * /usr/share/guile/site/sph/*
 * /usr/share/guile/site/test/sph/*
 
+# configuration options
+the file ``source/c-precompiled/config.c`` can be edited before compilation to edit the following compile-time settings
+
+| --- | --- | --- |
+|sp-file-sf-format|(SF-FORMAT-WAV \| SF-FORMAT-DOUBLE)|soundfile file format. a combination of soundfile constants, for example (SF-FORMAT-AU \| SF-FORMAT-DOUBLE)|
+|sp-sample-format|sp-sample-format-f64|sample format used for internal processing. currently available: sp-sample-format-f32, sp-sample-format-f64|
+|sp-float-t|double||
+|sp-default-sample-rate|16000|
+|sp-default-channel-count|1|
+|sp-default-alsa-enable-soft-resample|1|
+|sp-default-alsa-latency|128|
+
 # scheme usage
 
 ```scheme

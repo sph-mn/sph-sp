@@ -7,36 +7,37 @@
 # * clang-format
 
 root="$PWD"
-sc_dir=source/sc
-c_dir="source/c-precompiled"
+sc=source/sc
+c="source/c-precompiled"
 
 copy_example_config() {
   # the config file is not versioned so that users can customise it
-  if [ ! -f "$sc_dir/main/config.sc" ]
+  if [ ! -f "$sc/main/config.sc" ]
   then
-    cp "$sc_dir/main/config.example.sc" "$sc_dir/main/config.sc"
+    cp "$sc/main/config.example.sc" "$sc/main/config.sc"
   fi
 }
 
 copy_submodules() {
   # copy code files from submodules.
   # to not have the whole submodule repository in the source directory
-  sc_lib_dir=submodules/sph-sc-lib/source/sc
-  mkdir -p "$sc_dir/foreign/sph" &&
-  cp --update --target-directory="$sc_dir/foreign" "$sc_lib_dir/sph.sc" &&
-  cp --update --target-directory="$sc_dir/foreign/sph" \
-     "$sc_lib_dir/sph/status.sc" "$sc_lib_dir/sph/mi-list.sc" \
-     "$sc_lib_dir/sph/imht-set.sc" "$sc_lib_dir/sph/one.sc"
+  scl=submodules/sph-sc-lib/source/sc
+  mkdir -p "$sc/foreign/sph" &&
+  cp --update --target-directory="$sc/foreign" "$scl/sph.sc" &&
+  cp --update --target-directory="$sc/foreign/sph" \
+     "$scl/sph/status.sc" "$scl/sph/mi-list.sc" \
+     "$scl/sph/imht-set.sc" "$scl/sph/helper.sc" \
+     "$scl/sph/memreg.sc"
 }
 
 compile_sc() {
   # create the c source code
-  mkdir -p "$c_dir" &&
-  cd "$sc_dir" &&
-  find -type f -name "*.sc" -exec sc --parents '{}' "$root/$c_dir" \;
-  #cd "$root" &&
-  #find "$c_dir" -type f -exec ./exe/format-c -i '{}' \; &&
-  #mv "$c_dir/main/sph-db.c" "$c_dir/main/sph-db.h"
+  mkdir -p "$c" &&
+  cd "$sc" &&
+  find -type f -name "*.sc" -exec sc --parents '{}' "$root/$c" \;
+  cd "$root" &&
+  find "$c" -type f -exec ./exe/format-c -i '{}' \; &&
+  mv "$c/main/sph-sp.c" "$c/main/sph-sp.h"
 }
 
 copy_example_config &&
