@@ -13,7 +13,15 @@
   sp-port-bit-closed 8
   sp-sample-format-f64 1
   sp-sample-format-f32 2
-  (sp-octets->samples a) (/ a (sizeof sp-sample-t))
+  sp-status-group-libc "libc"
+  sp-status-group-sndfile "sndfile"
+  sp-status-group-sp "sp"
+  sp-status-group-sph "sph"
+  sp-status-group-alsa "alsa"
+  (sp-octets->samples a)
+  (begin
+    "sample count to bit octets count"
+    (/ a (sizeof sp-sample-t)))
   (sp-samples->octets a) (* a (sizeof sp-sample-t))
   (duration->sample-count seconds sample-rate) (* seconds sample-rate)
   (sample-count->duration sample-count sample-rate) (/ sample-count sample-rate)
@@ -40,11 +48,7 @@
       sp-alsa-snd-pcm-format SND_PCM_FORMAT_FLOAT_LE)))
 
 (enum
-  (sp-status-group-alsa
-    sp-status-group-libc
-    sp-status-group-sndfile
-    sp-status-group-sp
-    sp-status-id-file-channel-mismatch
+  (sp-status-id-file-channel-mismatch
     sp-status-id-file-encoding
     sp-status-id-file-header
     sp-status-id-file-incompatible
@@ -61,55 +65,62 @@
     (struct
       (type uint8-t)
       (flags uint8-t)
-      (sample-rate uint32-t)
-      (channel-count uint32-t)
+      (sample-rate sp-sample-rate-t)
+      (channel-count sp-channel-count-t)
       (data void*)))
-  (sp-port-read result port sample-count) (status-t sp-sample-t** sp-port-t* uint32-t)
-  (sp-port-write port sample-count channel-data) (status-t sp-port-t* size-t sp-sample-t**)
-  (sp-port-position result port) (status-t size-t* sp-port-t*)
-  (sp-port-set-position port sample-index) (status-t sp-port-t* size-t)
-  (sp-file-open result path channel-count sample-rate)
-  (status-t sp-port-t* uint8-t* uint32-t uint32-t)
-  (sp-alsa-open result device-name input? channel-count sample-rate latency)
-  (status-t sp-port-t* uint8-t* boolean uint32-t uint32-t int32-t) (sp-port-close a)
-  (status-t sp-port-t*) (sp-alloc-channel-array channel-count sample-count)
-  (sp-sample-t** uint32-t uint32-t) (sp-status-description a)
-  (uint8-t* status-t) (sp-status-name a)
-  (uint8-t* status-t) (sp-sin-lq a)
-  (sp-float-t sp-float-t) (sp-sinc a)
-  (sp-float-t sp-float-t) (sp-sine data len sample-duration freq phase amp)
-  (void sp-sample-t* uint32-t sp-float-t sp-float-t sp-float-t sp-float-t)
-  (sp-sine-lq data len sample-duration freq phase amp)
-  (void sp-sample-t* uint32-t sp-float-t sp-float-t sp-float-t sp-float-t) sp-windowed-sinc-state-t
+  sp-windowed-sinc-state-t
   (type
     (struct
-      (data sp-sample-t*)
-      ; allocated len
-      (data-len size-t)
-      (ir-len-prev size-t)
+      (carryover sp-sample-t*)
+      (carryover-len size-t)
+      (freq sp-float-t)
       (ir sp-sample-t*)
       (ir-len size-t)
-      (sample-rate uint32-t)
-      (freq sp-float-t)
+      (ir-len-prev size-t)
+      (sample-rate sp-sample-rate-t)
       (transition sp-float-t)))
-  (sp-windowed-sinc-ir-length transition) (size-t sp-float-t)
-  (sp-windowed-sinc-ir result result-len sample-rate freq transition)
-  (void sp-sample-t** size-t* uint32-t sp-float-t sp-float-t) (sp-windowed-sinc-state-destroy state)
-  (void sp-windowed-sinc-state-t*) (sp-windowed-sinc-state-create sample-rate freq transition state)
-  (uint8-t uint32-t sp-float-t sp-float-t sp-windowed-sinc-state-t**)
-  (sp-windowed-sinc result source source-len sample-rate freq transition state)
-  (int sp-sample-t* sp-sample-t* size-t uint32-t sp-float-t sp-float-t sp-windowed-sinc-state-t**)
+  (sp-port-read port sample-count result-samples)
+  (status-t sp-port-t* sp-sample-count-t sp-sample-t**)
+  (sp-port-write port sample-count channel-data) (status-t sp-port-t* size-t sp-sample-t**)
+  (sp-port-position port result-position) (status-t sp-port-t* size-t*)
+  (sp-port-set-position port sample-index) (status-t sp-port-t* size-t)
+  (sp-file-open path channel-count sample-rate result-port)
+  (status-t uint8-t* sp-channel-count-t sp-sample-count-t sp-port-t*)
+  (sp-alsa-open device-name is-input channel-count sample-rate latency result-port)
+  (status-t uint8-t* boolean sp-channel-count-t sp-sample-rate-t int32-t sp-port-t*)
+  (sp-port-close a) (status-t sp-port-t*)
+  (sp-alloc-channel-array channel-count sample-count result-array)
+  (status-t sp-channel-count-t sp-sample-count-t sp-sample-t***) (sp-status-description a)
+  (uint8-t* status-t) (sp-status-name a)
+  (uint8-t* status-t) (sp-sine len sample-duration freq phase amp result-samples)
+  (void sp-sample-count-t sp-float-t sp-float-t sp-float-t sp-float-t sp-sample-t*)
+  (sp-sine-lq len sample-duration freq phase amp result-samples)
+  (void sp-sample-count-t sp-float-t sp-float-t sp-float-t sp-float-t sp-sample-t*) (sp-sinc a)
+  (sp-float-t sp-float-t) (sp-windowed-sinc-ir-length transition)
+  (size-t sp-float-t) (sp-windowed-sinc-ir sample-rate freq transition result-len result-ir)
+  (status-t sp-sample-rate-t sp-float-t sp-float-t size-t* sp-sample-t**)
+  (sp-windowed-sinc-state-destroy state) (void sp-windowed-sinc-state-t*)
+  (sp-windowed-sinc-state-create sample-rate freq transition result-state)
+  (status-t sp-sample-rate-t sp-float-t sp-float-t sp-windowed-sinc-state-t**)
+  (sp-windowed-sinc source source-len sample-rate freq transition result-samples result-state)
+  (status-t
+    sp-sample-t*
+    size-t sp-sample-count-t sp-float-t sp-float-t sp-sample-t* sp-windowed-sinc-state-t**)
   (sp-window-blackman a width) (sp-float-t sp-float-t size-t)
   (sp-spectral-inversion-ir a a-len) (void sp-sample-t* size-t)
   (sp-spectral-reversal-ir a a-len) (void sp-sample-t* size-t)
-  (sp-fft result result-len source source-len) (status-t sp-sample-t* uint32-t sp-sample-t* uint32-t)
-  (sp-ifft result result-len source source-len)
-  (status-t sp-sample-t* uint32-t sp-sample-t* uint32-t)
-  (sp-moving-average result source source-len prev prev-len next next-len start end distance)
-  (int
+  (sp-fft len source source-len result-samples)
+  (status-t sp-sample-count-t sp-sample-t* sp-sample-count-t sp-sample-t*)
+  (sp-ifft len source source-len result-samples)
+  (status-t sp-sample-count-t sp-sample-t* sp-sample-count-t sp-sample-t*)
+  (sp-moving-average source source-len prev prev-len next next-len start end radius result-samples)
+  (status-t
     sp-sample-t*
-    sp-sample-t* uint32-t sp-sample-t* uint32-t sp-sample-t* uint32-t uint32-t uint32-t uint32-t)
-  (sp-convolve-one result a a-len b b-len)
-  (void sp-sample-t* sp-sample-t* size-t sp-sample-t* size-t)
-  (sp-convolve result a a-len b b-len carryover carryover-len)
-  (void sp-sample-t* sp-sample-t* size-t sp-sample-t* size-t sp-sample-t* size-t))
+    sp-sample-count-t
+    sp-sample-t*
+    sp-sample-count-t
+    sp-sample-t* sp-sample-count-t sp-sample-count-t sp-sample-count-t sp-sample-count-t sp-sample-t*)
+  (sp-convolve-one a a-len b b-len result-samples)
+  (void sp-sample-t* size-t sp-sample-t* size-t sp-sample-t*)
+  (sp-convolve a a-len b b-len result-carryover-len result-carryover result-samples)
+  (void sp-sample-t* size-t sp-sample-t* size-t size-t sp-sample-t* sp-sample-t*))

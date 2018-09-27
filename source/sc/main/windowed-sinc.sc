@@ -5,126 +5,124 @@
   sp-windowed-sinc-state-t is used to store impulse response, parameters to create the current impulse response,
   and data needed for the next call")
 
+(define (sp-window-blackman a width) (sp-float-t sp-float-t size-t)
+  (return
+    (+
+      (- 0.42 (* 0.5 (cos (/ (* 2 M_PI a) (- width 1))))) (* 0.8 (cos (/ (* 4 M_PI a) (- width 1)))))))
+
 (define (sp-windowed-sinc-ir-length transition) (size-t sp-float-t)
   "approximate impulse response length for a transition factor and
   ensure that the length is odd"
-  (declare result uint32-t)
+  (declare result size-t)
   (set result (ceil (/ 4 transition)))
-  (if (not (modulo result 2)) (inc result))
+  (if (not (modulo result 2)) (set result (+ 1 result)))
   (return result))
 
-(define (sp-windowed-sinc-ir result result-len sample-rate freq transition)
-  (void sp-sample-t** size-t* uint32-t sp-float-t sp-float-t)
+(define (sp-windowed-sinc-ir sample-rate freq transition result-len result-ir)
+  (status-t sp-sample-rate-t sp-float-t sp-float-t size-t* sp-sample-t**)
   "create an impulse response kernel for a windowed sinc filter. uses a blackman window (truncated version).
-  allocates result, sets result-len.
-  failed if result is null"
+  allocates result, sets result-len"
+  status-declare
   (declare
-    len size-t
     center-index sp-float-t
     cutoff sp-float-t
-    result-temp sp-sample-t*
-    index size-t
-    result-sum sp-float-t)
+    i size-t
+    len size-t
+    sum sp-float-t
+    ir sp-sample-t*)
   (set
     len (sp-windowed-sinc-ir-length transition)
-    *result-len len
     center-index (/ (- len 1.0) 2.0)
-    cutoff (sp-windowed-sinc-cutoff freq sample-rate)
-    result-temp (malloc (* len (sizeof sp-sample-t))))
-  (if (not result-temp)
-    (begin
-      (set *result 0)
-      (return)))
-  (set index 0)
-  (while (< index len)
-    (set (array-get result-temp index)
-      (sp-window-blackman (sp-sinc (* 2 cutoff (- index center-index))) len))
-    (inc index))
-  (set result-sum (sp-sample-sum result-temp len))
+    cutoff (sp-windowed-sinc-cutoff freq sample-rate))
+  (status-require (sph-helper-malloc (* len (sizeof sp-sample-t)) &ir))
+  (for ((set i 0) (< i len) (set i (+ 1 i)))
+    (set (array-get ir i) (sp-window-blackman (sp-sinc (* 2 cutoff (- i center-index))) len)))
+  (set sum (sp-sample-sum ir len))
   (while len
     (set
       len (- len 1)
-      (array-get result-temp index) (/ (array-get result-temp index) result-sum)))
-  (set *result result-temp))
+      (array-get ir i) (/ (array-get ir i) sum)))
+  (set
+    *result-ir ir
+    *result-len len)
+  (label exit
+    (return status)))
 
 (define (sp-windowed-sinc-state-destroy state) (void sp-windowed-sinc-state-t*)
   (free state:ir)
-  (free state:data)
+  (free state:carryover)
   (free state))
 
-(define (sp-windowed-sinc-state-create sample-rate freq transition state)
-  (uint8-t uint32-t sp-float-t sp-float-t sp-windowed-sinc-state-t**)
+(define (sp-windowed-sinc-state-create sample-rate freq transition result-state)
+  (status-t sp-sample-rate-t sp-float-t sp-float-t sp-windowed-sinc-state-t**)
   "create or update a state object. impulse response array properties are calculated
   from sample-rate, freq and transition.
   eventually frees state.ir.
-  ir-len-prev data elements have to be copied to the next result"
-  ; create state if not exists
+  ir-len-prev carryover elements have to be copied to the next result"
+  status-declare
   (declare
-    state-temp sp-windowed-sinc-state-t*
-    ir-len size-t
+    carryover sp-sample-t*
     ir sp-sample-t*
-    data sp-sample-t*)
-  (if (not *state)
+    ir-len size-t
+    state sp-windowed-sinc-state-t*)
+  (memreg-init 2)
+  (sc-comment "create state if not exists")
+  (if *result-state (set state *result-state)
     (begin
-      (set state-temp (malloc (sizeof sp-windowed-sinc-state-t)))
-      (if (not state-temp) (return 1))
+      (status-require (sph-helper-malloc (sizeof sp-windowed-sinc-state-t) state))
+      (memreg-add state)
       (set
-        state-temp:sample-rate 0
-        state-temp:freq 0
-        state-temp:transition 0
-        state-temp:data 0
-        state-temp:data-len 0
-        state-temp:ir-len-prev 0))
-    (set state-temp *state))
-  ; re-use ir, nothing changed
-  (if
-    (and
-      (= state-temp:sample-rate sample-rate)
-      (= state-temp:freq freq) (= state-temp:transition transition))
-    (return 0))
-  ; replace ir
-  (if state
-    (begin
-      (free state-temp:ir)))
-  (sp-windowed-sinc-ir &ir &ir-len sample-rate freq transition)
-  (if (not ir)
-    (begin
-      (if (not *state) (free state-temp))
-      (return 1)))
-  (set state-temp:ir-len-prev
-    (if* state state-temp:ir-len
+        state:sample-rate 0
+        state:freq 0
+        state:transition 0
+        state:carryover 0
+        state:carryover-len 0
+        state:ir-len-prev 0)))
+  (sc-comment "re-use ir if nothing changed")
+  (if (and (= state:sample-rate sample-rate) (= state:freq freq) (= state:transition transition))
+    (goto exit))
+  (sc-comment "replace ir")
+  (if result-state (free state:ir))
+  (status-require (sp-windowed-sinc-ir sample-rate freq transition &ir-len &ir))
+  (set state:ir-len-prev
+    (if* result-state state:ir-len
       ir-len))
-  ; set bigger data buffer if needed
-  (if (> ir-len state-temp:data-len)
+  (sc-comment "set bigger carryover buffer if needed")
+  (if (> ir-len state:carryover-len)
     (begin
-      (set data (calloc ir-len (sizeof sp-sample-t)))
-      (if (not data)
+      (status-require (sph-helper-calloc (* ir-len (sizeof sp-sample-t)) &carryover))
+      (memreg-add carryover)
+      (if state:carryover
         (begin
-          (free ir)
-          (if (not *state) (free state-temp))
-          (return 1)))
-      (if state-temp:data
-        (begin
-          (memcpy data state-temp:data (* state-temp:ir-len-prev (sizeof sp-sample-t)))
-          (free state-temp:data)))
+          (memcpy carryover state:carryover (* state:ir-len-prev (sizeof sp-sample-t)))
+          (free state:carryover)))
       (set
-        state-temp:data data
-        state-temp:data-len ir-len)))
+        state:carryover carryover
+        state:carryover-len ir-len)))
   (set
-    state-temp:ir ir
-    state-temp:ir-len ir-len
-    state-temp:sample-rate sample-rate
-    state-temp:freq freq
-    statet-temp:transition transition)
-  (set *state state-temp)
-  (return 0))
+    state:ir ir
+    state:ir-len ir-len
+    state:sample-rate sample-rate
+    state:freq freq
+    state:transition transition
+    *result-state state)
+  (label exit
+    (if status-is-failure memreg-free)
+    (return status)))
 
-(define (sp-windowed-sinc result source source-len sample-rate freq transition state)
-  (int sp-sample-t* sp-sample-t* size-t uint32-t sp-float-t sp-float-t sp-windowed-sinc-state-t**)
+(define
+  (sp-windowed-sinc source source-len sample-rate freq transition result-samples result-state)
+  (status-t
+    sp-sample-t* size-t uint32-t sp-float-t sp-float-t sp-sample-t* sp-windowed-sinc-state-t**)
   "a windowed sinc filter for segments of continuous streams with
   sample-rate, frequency and transition variable per call.
   state can be zero and it will be allocated"
-  (if (sp-windowed-sinc-state-create sample-rate freq transition state) (return 1))
+  status-declare
+  (status-require (sp-windowed-sinc-state-create sample-rate freq transition result-state))
   (sp-convolve
-    result source source-len (: *state ir) (: *state ir-len) (: *state data) (: *state ir-len-prev))
-  (return 0))
+    source
+    source-len
+    (: *result-state ir)
+    (: *result-state ir-len) (: *result-state ir-len-prev) (: *result-state carryover) result-samples)
+  (label exit
+    (return status)))

@@ -13,6 +13,12 @@
 #define sp_port_bit_closed 8
 #define sp_sample_format_f64 1
 #define sp_sample_format_f32 2
+#define sp_status_group_libc "libc"
+#define sp_status_group_sndfile "sndfile"
+#define sp_status_group_sp "sp"
+#define sp_status_group_sph "sph"
+#define sp_status_group_alsa "alsa"
+/** sample count to bit octets count */
 #define sp_octets_to_samples(a) (a / sizeof(sp_sample_t))
 #define sp_samples_to_octets(a) (a * sizeof(sp_sample_t))
 #define duration_to_sample_count(seconds, sample_rate) (seconds * sample_rate)
@@ -34,11 +40,7 @@
 #define sp_alsa_snd_pcm_format SND_PCM_FORMAT_FLOAT_LE
 #endif
 #endif
-enum { sp_status_group_alsa,
-  sp_status_group_libc,
-  sp_status_group_sndfile,
-  sp_status_group_sp,
-  sp_status_id_file_channel_mismatch,
+enum { sp_status_id_file_channel_mismatch,
   sp_status_id_file_encoding,
   sp_status_id_file_header,
   sp_status_id_file_incompatible,
@@ -54,44 +56,43 @@ enum { sp_status_group_alsa,
 typedef struct {
   uint8_t type;
   uint8_t flags;
-  uint32_t sample_rate;
-  uint32_t channel_count;
+  sp_sample_rate_t sample_rate;
+  sp_channel_count_t channel_count;
   void* data;
 } sp_port_t;
-status_t sp_port_read(sp_sample_t** result, sp_port_t* port, uint32_t sample_count);
-status_t sp_port_write(sp_port_t* port, size_t sample_count, sp_sample_t** channel_data);
-status_t sp_port_position(size_t* result, sp_port_t* port);
-status_t sp_port_set_position(sp_port_t* port, size_t sample_index);
-status_t sp_file_open(sp_port_t* result, uint8_t* path, uint32_t channel_count, uint32_t sample_rate);
-status_t sp_alsa_open(sp_port_t* result, uint8_t* device_name, boolean input_p, uint32_t channel_count, uint32_t sample_rate, int32_t latency);
-status_t sp_port_close(sp_port_t* a);
-sp_sample_t** sp_alloc_channel_array(uint32_t channel_count, uint32_t sample_count);
-uint8_t* sp_status_description(status_t a);
-uint8_t* sp_status_name(status_t a);
-sp_float_t sp_sin_lq(sp_float_t a);
-sp_float_t sp_sinc(sp_float_t a);
-void sp_sine(sp_sample_t* data, uint32_t len, sp_float_t sample_duration, sp_float_t freq, sp_float_t phase, sp_float_t amp);
-void sp_sine_lq(sp_sample_t* data, uint32_t len, sp_float_t sample_duration, sp_float_t freq, sp_float_t phase, sp_float_t amp);
 typedef struct {
-  sp_sample_t* data;
-  size_t data_len;
-  size_t ir_len_prev;
+  sp_sample_t* carryover;
+  size_t carryover_len;
+  sp_float_t freq;
   sp_sample_t* ir;
   size_t ir_len;
-  uint32_t sample_rate;
-  sp_float_t freq;
+  size_t ir_len_prev;
+  sp_sample_rate_t sample_rate;
   sp_float_t transition;
 } sp_windowed_sinc_state_t;
+status_t sp_port_read(sp_port_t* port, sp_sample_count_t sample_count, sp_sample_t** result_samples);
+status_t sp_port_write(sp_port_t* port, size_t sample_count, sp_sample_t** channel_data);
+status_t sp_port_position(sp_port_t* port, size_t* result_position);
+status_t sp_port_set_position(sp_port_t* port, size_t sample_index);
+status_t sp_file_open(uint8_t* path, sp_channel_count_t channel_count, sp_sample_count_t sample_rate, sp_port_t* result_port);
+status_t sp_alsa_open(uint8_t* device_name, boolean is_input, sp_channel_count_t channel_count, sp_sample_rate_t sample_rate, int32_t latency, sp_port_t* result_port);
+status_t sp_port_close(sp_port_t* a);
+status_t sp_alloc_channel_array(sp_channel_count_t channel_count, sp_sample_count_t sample_count, sp_sample_t*** result_array);
+uint8_t* sp_status_description(status_t a);
+uint8_t* sp_status_name(status_t a);
+void sp_sine(sp_sample_count_t len, sp_float_t sample_duration, sp_float_t freq, sp_float_t phase, sp_float_t amp, sp_sample_t* result_samples);
+void sp_sine_lq(sp_sample_count_t len, sp_float_t sample_duration, sp_float_t freq, sp_float_t phase, sp_float_t amp, sp_sample_t* result_samples);
+sp_float_t sp_sinc(sp_float_t a);
 size_t sp_windowed_sinc_ir_length(sp_float_t transition);
-void sp_windowed_sinc_ir(sp_sample_t** result, size_t* result_len, uint32_t sample_rate, sp_float_t freq, sp_float_t transition);
+status_t sp_windowed_sinc_ir(sp_sample_rate_t sample_rate, sp_float_t freq, sp_float_t transition, size_t* result_len, sp_sample_t** result_ir);
 void sp_windowed_sinc_state_destroy(sp_windowed_sinc_state_t* state);
-uint8_t sp_windowed_sinc_state_create(uint32_t sample_rate, sp_float_t freq, sp_float_t transition, sp_windowed_sinc_state_t** state);
-int sp_windowed_sinc(sp_sample_t* result, sp_sample_t* source, size_t source_len, uint32_t sample_rate, sp_float_t freq, sp_float_t transition, sp_windowed_sinc_state_t** state);
+status_t sp_windowed_sinc_state_create(sp_sample_rate_t sample_rate, sp_float_t freq, sp_float_t transition, sp_windowed_sinc_state_t** result_state);
+status_t sp_windowed_sinc(sp_sample_t* source, size_t source_len, sp_sample_count_t sample_rate, sp_float_t freq, sp_float_t transition, sp_sample_t* result_samples, sp_windowed_sinc_state_t** result_state);
 sp_float_t sp_window_blackman(sp_float_t a, size_t width);
 void sp_spectral_inversion_ir(sp_sample_t* a, size_t a_len);
 void sp_spectral_reversal_ir(sp_sample_t* a, size_t a_len);
-status_t sp_fft(sp_sample_t* result, uint32_t result_len, sp_sample_t* source, uint32_t source_len);
-status_t sp_ifft(sp_sample_t* result, uint32_t result_len, sp_sample_t* source, uint32_t source_len);
-int sp_moving_average(sp_sample_t* result, sp_sample_t* source, uint32_t source_len, sp_sample_t* prev, uint32_t prev_len, sp_sample_t* next, uint32_t next_len, uint32_t start, uint32_t end, uint32_t distance);
-void sp_convolve_one(sp_sample_t* result, sp_sample_t* a, size_t a_len, sp_sample_t* b, size_t b_len);
-void sp_convolve(sp_sample_t* result, sp_sample_t* a, size_t a_len, sp_sample_t* b, size_t b_len, sp_sample_t* carryover, size_t carryover_len);
+status_t sp_fft(sp_sample_count_t len, sp_sample_t* source, sp_sample_count_t source_len, sp_sample_t* result_samples);
+status_t sp_ifft(sp_sample_count_t len, sp_sample_t* source, sp_sample_count_t source_len, sp_sample_t* result_samples);
+status_t sp_moving_average(sp_sample_t* source, sp_sample_count_t source_len, sp_sample_t* prev, sp_sample_count_t prev_len, sp_sample_t* next, sp_sample_count_t next_len, sp_sample_count_t start, sp_sample_count_t end, sp_sample_count_t radius, sp_sample_t* result_samples);
+void sp_convolve_one(sp_sample_t* a, size_t a_len, sp_sample_t* b, size_t b_len, sp_sample_t* result_samples);
+void sp_convolve(sp_sample_t* a, size_t a_len, sp_sample_t* b, size_t b_len, size_t result_carryover_len, sp_sample_t* result_carryover, sp_sample_t* result_samples);

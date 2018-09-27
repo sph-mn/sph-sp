@@ -21,11 +21,10 @@
       (array-get memreg-register memreg-index) address
       memreg-index (+ 1 memreg-index)))
   memreg-free
-  (begin
-    "free all currently registered pointers"
-    (while memreg-index
-      (set memreg-index (- memreg-index 1))
-      (free (pointer-get (+ memreg-register memreg-index))))))
+  (while memreg-index
+    (sc-comment "free all currently registered pointers")
+    (set memreg-index (- memreg-index 1))
+    (free (pointer-get (+ memreg-register memreg-index)))))
 
 (sc-comment
   "the *_named variant of memreg supports multiple concurrent registers identified by name"

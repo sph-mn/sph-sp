@@ -5,32 +5,68 @@
 #include "./main/sph-sp.h"
 #include "./foreign/sph/helper.c"
 #include "./foreign/sph/memreg.c"
-#include <foreign/kiss_fft.h>
-#include <foreign/tools/kiss_fftr.h>
+#include "./kiss_fft.h"
+#include "./tools/kiss_fftr.h"
 #define sp_status_declare status_declare_group(sp_status_group_sp)
 #define sp_libc_status_require_id(id) \
   if (id < 0) { \
     status_set_both_goto(sp_status_group_libc, id); \
   }
 #define sp_libc_status_require(expression) \
-  status_set_id(expression); \
+  status.id = expression; \
   if (status.id < 0) { \
     status_set_group_goto(sp_status_group_libc); \
   } else { \
     status_reset; \
   }
 #define sp_alsa_status_require(expression) \
-  status_set_id(expression); \
+  status.id = expression; \
   if (status_is_failure) { \
     status_set_group_goto(sp_status_group_alsa); \
   }
-#define sp_status_require_alloc(a) \
-  if (!a) { \
-    status_set_both_goto(sp_status_group_sp, sp_status_id_memory); \
+/** write samples for a sine wave into result-samples.
+    sample-duration: seconds
+    freq: radian frequency
+    phase: phase offset
+    amp: amplitude. 0..1
+    used to define sp-sine, sp-sine-lq and similar */
+#define define_sp_sine(id, sin) \
+  void id(sp_sample_count_t len, sp_float_t sample_duration, sp_float_t freq, sp_float_t phase, sp_float_t amp, sp_sample_t* result_samples) { \
+    sp_sample_count_t index = 0; \
+    while ((index <= len)) { \
+      result_samples[index] = (amp * sin((freq * phase * sample_duration))); \
+      phase = (1 + phase); \
+      index = (1 + index); \
+    }; \
+  }
+/** set default if number is negative */
+#define optional_set_number(a, default) \
+  if (0 > a) { \
+    a = default; \
+  }
+/** default if number is negative */
+#define optional_number(a, default) ((0 > a) ? default : a)
+/** define a deinterleave, interleave or similar routine.
+    a: deinterleaved
+    b: interleaved */
+#define define_sp_interleave(name, type, body) \
+  void name(type** a, type* b, size_t a_size, sp_channel_count_t channel_count) { \
+    size_t b_size; \
+    sp_channel_count_t channel; \
+    b_size = (a_size * channel_count); \
+    while (a_size) { \
+      a_size = (a_size - 1); \
+      channel = channel_count; \
+      while (channel) { \
+        channel = (channel - 1); \
+        b_size = (b_size - 1); \
+        body; \
+      }; \
+    }; \
   }
 uint8_t* sp_status_description(status_t a) {
   char* b;
-  if (sp_status_group_sp == a.group) {
+  if (!strcmp(sp_status_group_sp, (a.group))) {
     if (sp_status_id_eof == a.id) {
       b = "end of file";
     } else if (sp_status_id_input_type == a.id) {
@@ -48,11 +84,11 @@ uint8_t* sp_status_description(status_t a) {
     } else {
       b = "";
     };
-  } else if (sp_status_group_alsa == a.group) {
-    b = sf_error_number((a.id));
-  } else if (sp_status_group_sndfile == a.group) {
-    b = sf_error_number((a.id));
-  } else if (sph_helper_status_group == a.group) {
+  } else if (!strcmp(sp_status_group_alsa, (a.group))) {
+    b = ((char*)(snd_strerror((a.id))));
+  } else if (!strcmp(sp_status_group_sndfile, (a.group))) {
+    b = ((char*)(sf_error_number((a.id))));
+  } else if (!strcmp(sp_status_group_sph, (a.group))) {
     b = sph_helper_status_description(a);
   } else {
     b = "";
@@ -61,7 +97,7 @@ uint8_t* sp_status_description(status_t a) {
 };
 uint8_t* sp_status_name(status_t a) {
   char* b;
-  if (sp_status_group_sp == a.group) {
+  if (!strcmp(sp_status_group_alsa, (a.group))) {
     if (sp_status_id_input_type == a.id) {
       b = "input-type";
     } else if (sp_status_id_not_implemented == a.id) {
@@ -71,17 +107,17 @@ uint8_t* sp_status_name(status_t a) {
     } else {
       b = "unknown";
     };
-  } else if (sp_status_group_alsa == a.group) {
+  } else if (!strcmp(sp_status_group_alsa, (a.group))) {
     b = "alsa";
-  } else if (sp_status_group_sndfile == a.group) {
+  } else if (!strcmp(sp_status_group_sndfile, (a.group))) {
     b = "sndfile";
   } else {
     b = "unknown";
   };
 };
-/** return an array for channels with data arrays for each channel.
+/** return a newly allocated array for channels with data arrays for each channel.
   returns zero if memory could not be allocated */
-status_t sp_alloc_channel_array(uint32_t channel_count, uint32_t sample_count, sp_sample_t*** result_array) {
+status_t sp_alloc_channel_array(sp_channel_count_t channel_count, sp_sample_count_t sample_count, sp_sample_t*** result_array) {
   status_declare;
   memreg_init((channel_count + 1));
   sp_sample_t* channel;
@@ -96,9 +132,12 @@ status_t sp_alloc_channel_array(uint32_t channel_count, uint32_t sample_count, s
   };
   *result_array = result;
 exit:
+  if (status_is_failure) {
+    memreg_free;
+  };
   return (status);
 };
-/** lower precision version of sin() that is faster to compute */
+/** lower precision version of sin() that could be faster */
 sp_sample_t sp_sin_lq(sp_sample_t a) {
   sp_sample_t b;
   sp_sample_t c;
@@ -108,46 +147,31 @@ sp_sample_t sp_sin_lq(sp_sample_t a) {
 };
 /** the normalised sinc function */
 sp_sample_t sp_sinc(sp_sample_t a) { return (((0 == a) ? 1 : (sin((M_PI * a)) / (M_PI * a)))); };
-/** write samples for a sine wave into dest.
-    sample-duration: seconds
-    freq: radian frequency
-    phase: phase offset
-    amp: amplitude. 0..1
-    used to define sp-sine, sp-sine-lq and similar */
-#define define_sp_sine(id, sin) \
-  void id(sp_sample_t* dest, uint32_t len, sp_float_t sample_duration, sp_float_t freq, sp_float_t phase, sp_float_t amp) { \
-    uint32_t index = 0; \
-    while ((index <= len)) { \
-      dest[index] = (amp * sin((freq * phase * sample_duration))); \
-      phase = (1 + phase); \
-      index = (1 + index); \
-    }; \
-  }
-define_sp_sine(sp_sine, sin);
-define_sp_sine(sp_sine_lq, sp_sin_lq);
-status_t sp_fft(sp_sample_t* result, uint32_t result_len, sp_sample_t* source, uint32_t source_len) {
+/** result-samples is owned and allocated by the caller.
+  fast fourier transform */
+status_t sp_fft(sp_sample_count_t len, sp_sample_t* source, sp_sample_count_t source_len, sp_sample_t* result_samples) {
   sp_status_declare;
   kiss_fftr_cfg fftr_state;
   kiss_fft_cpx* out;
   memreg_init(2);
-  fftr_state = kiss_fftr_alloc(result_len, 0, 0, 0);
+  fftr_state = kiss_fftr_alloc(len, 0, 0, 0);
   if (!fftr_state) {
-    status_set_id_goto(sp_status_id_memory);
+    status_set_both_goto(sp_status_group_sp, sp_status_id_memory);
   };
   memreg_add(fftr_state);
-  status_require((sph_helper_malloc((result_len * sizeof(kiss_fft_cpx)), (&out))));
+  status_require((sph_helper_malloc((len * sizeof(kiss_fft_cpx)), (&out))));
   memreg_add(out);
   kiss_fftr(fftr_state, source, out);
   /* extract the real part */
-  while (result_len) {
-    result_len = (result_len - 1);
-    result[result_len] = (out[result_len]).r;
+  while (len) {
+    len = (len - 1);
+    result_samples[len] = (out[len]).r;
   };
 exit:
   memreg_free;
   return (status);
 };
-status_t sp_ifft(sp_sample_t* result, uint32_t result_len, sp_sample_t* source, uint32_t source_len) {
+status_t sp_ifft(sp_sample_count_t len, sp_sample_t* source, sp_sample_count_t source_len, sp_sample_t* result_samples) {
   sp_status_declare;
   kiss_fftr_cfg fftr_state;
   kiss_fft_cpx* in;
@@ -163,13 +187,14 @@ status_t sp_ifft(sp_sample_t* result, uint32_t result_len, sp_sample_t* source, 
     source_len = (source_len - 1);
     (in[source_len]).r = source[(source_len * sizeof(sp_sample_t))];
   };
-  kiss_fftri(fftr_state, in, result);
+  kiss_fftri(fftr_state, in, result_samples);
 exit:
   memreg_free;
   return (status);
 };
 /** apply a centered moving average filter to source at index start to end inclusively and write to result.
   removes higher frequencies with little distortion in the time domain.
+  result-samples is owned and allocated by the caller.
    * only the result portion corresponding to the subvector from start to end is written to result
    * prev and next are unprocessed segments and can be null pointers,
      for example at the beginning and end of a stream
@@ -180,27 +205,28 @@ exit:
    * available values outside the start/end range are considered where needed to calculate averages
    * rounding errors are kept low by using modified kahan neumaier summation and not using a
      recursive implementation. both properties which make it much slower than many other implementations */
-int sp_moving_average(sp_sample_t* result, sp_sample_t* source, uint32_t source_len, sp_sample_t* prev, uint32_t prev_len, sp_sample_t* next, uint32_t next_len, uint32_t start, uint32_t end, uint32_t radius) {
-  uint32_t left;
-  uint32_t right;
-  uint32_t width;
+status_t sp_moving_average(sp_sample_t* source, sp_sample_count_t source_len, sp_sample_t* prev, sp_sample_count_t prev_len, sp_sample_t* next, sp_sample_count_t next_len, sp_sample_count_t start, sp_sample_count_t end, sp_sample_count_t radius, sp_sample_t* result_samples) {
+  status_declare;
+  memreg_init(1);
+  sp_sample_count_t left;
+  sp_sample_count_t right;
+  sp_sample_count_t width;
   sp_sample_t* window;
-  uint32_t window_index;
+  sp_sample_count_t window_index;
   if (!source_len) {
-    return (1);
+    goto exit;
   };
   width = (1 + (2 * radius));
   window = 0;
+  /* not all required samples in source array */
   if (!((start >= radius) && ((start + radius + 1) <= source_len))) {
-    window = malloc((width * sizeof(sp_sample_t)));
-    if (!window) {
-      return (1);
-    };
+    status_require((sph_helper_malloc((width * sizeof(sp_sample_t)), (&window))));
+    memreg_add(window);
   };
   while ((start <= end)) {
     /* all required samples are in source array */
     if ((start >= radius) && ((start + radius + 1) <= source_len)) {
-      *result = (sp_sample_sum(((source + start) - radius), width) / width);
+      *result_samples = (sp_sample_sum(((source + start) - radius), width) / width);
     } else {
       window_index = 0;
       /* get samples from previous segment */
@@ -251,15 +277,15 @@ int sp_moving_average(sp_sample_t* result, sp_sample_t* source, uint32_t source_
         window[window_index] = 0;
         window_index = (1 + window_index);
       };
-      *result = (sp_sample_sum(window, width) / width);
+      *result_samples = (sp_sample_sum(window, width) / width);
     };
-    result = (1 + result);
+    result_samples = (1 + result_samples);
     start = (1 + start);
   };
-  free(window);
-  return (0);
+exit:
+  memreg_free;
+  return (status);
 };
-sp_float_t sp_window_blackman(sp_float_t a, size_t width) { return (((0.42 - (0.5 * cos(((2 * M_PI * a) / (width - 1))))) + (0.8 * cos(((4 * M_PI * a) / (width - 1)))))); };
 /** modify an impulse response kernel for spectral inversion.
    a-len must be odd and "a" must have left-right symmetry.
   flips the frequency response top to bottom */
@@ -282,38 +308,39 @@ void sp_spectral_reversal_ir(sp_sample_t* a, size_t a_len) {
   };
 };
 /** discrete linear convolution.
-  result length must be at least a-len + b-len - 1 */
-void sp_convolve_one(sp_sample_t* result, sp_sample_t* a, size_t a_len, sp_sample_t* b, size_t b_len) {
+  result length must be at least a-len + b-len - 1.
+  result-samples is owned and allocated by the caller */
+void sp_convolve_one(sp_sample_t* a, size_t a_len, sp_sample_t* b, size_t b_len, sp_sample_t* result_samples) {
   size_t a_index;
   size_t b_index;
   a_index = 0;
   b_index = 0;
   while ((a_index < a_len)) {
     while ((b_index < b_len)) {
-      result[(a_index + b_index)] = (result[(a_index + b_index)] + (a[a_index] * b[b_index]));
-      inc(b_index);
+      result_samples[(a_index + b_index)] = (result_samples[(a_index + b_index)] + (a[a_index] * b[b_index]));
+      b_index = (1 + b_index);
     };
     b_index = 0;
-    inc(a_index);
+    a_index = (1 + a_index);
   };
 };
 /** discrete linear convolution for segments of a continuous stream. maps segments (a, a-len) to result.
   result length is a-len, carryover length is b-len or previous b-len. b-len must be greater than zero.
   algorithm: copy results that overlap from previous call from carryover, add results that fit completely in result,
   add results that overlap with next segment to carryover */
-void sp_convolve(sp_sample_t* result, sp_sample_t* a, size_t a_len, sp_sample_t* b, size_t b_len, sp_sample_t* carryover, size_t carryover_len) {
+void sp_convolve(sp_sample_t* a, size_t a_len, sp_sample_t* b, size_t b_len, size_t carryover_len, sp_sample_t* result_carryover, sp_sample_t* result_samples) {
   size_t size;
   size_t a_index;
   size_t b_index;
   size_t c_index;
-  memset(result, 0, (a_len * sizeof(sp_sample_t)));
-  memcpy(result, carryover, (carryover_len * sizeof(sp_sample_t)));
-  memset(carryover, 0, (b_len * sizeof(sp_sample_t)));
+  memset(result_samples, 0, (a_len * sizeof(sp_sample_t)));
+  memcpy(result_samples, result_carryover, (carryover_len * sizeof(sp_sample_t)));
+  memset(result_carryover, 0, (b_len * sizeof(sp_sample_t)));
   /* result values
 restrict processed range to exclude input values that generate carryover */
   size = ((a_len < b_len) ? 0 : (a_len - (b_len - 1)));
   if (size) {
-    sp_convolve_one(result, a, size, b, b_len);
+    sp_convolve_one(a, size, b, b_len, result_samples);
   };
   /* carryover values */
   a_index = size;
@@ -322,16 +349,20 @@ restrict processed range to exclude input values that generate carryover */
     while ((b_index < b_len)) {
       c_index = (a_index + b_index);
       if (c_index < a_len) {
-        result[c_index] = (result[c_index] + (a[a_index] * b[b_index]));
+        result_samples[c_index] = (result_samples[c_index] + (a[a_index] * b[b_index]));
       } else {
         c_index = (c_index - a_len);
-        carryover[c_index] = (carryover[c_index] + (a[a_index] * b[b_index]));
+        result_carryover[c_index] = (result_carryover[c_index] + (a[a_index] * b[b_index]));
       };
-      inc(b_index);
+      b_index = (1 + b_index);
     };
     b_index = 0;
-    inc(a_index);
+    a_index = (1 + a_index);
   };
 };
+define_sp_interleave(sp_interleave, sp_sample_t, ({ b[b_size] = (a[channel])[a_size]; }));
+define_sp_interleave(sp_deinterleave, sp_sample_t, ({ (a[channel])[a_size] = b[b_size]; }));
+define_sp_sine(sp_sine, sin);
+define_sp_sine(sp_sine_lq, sp_sin_lq);
 #include "./main/windowed-sinc.c"
-#include "./main/io.sc"
+#include "./main/io.c"
