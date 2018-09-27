@@ -25,10 +25,9 @@ copy_submodules() {
   mkdir -p "$sc/foreign/sph" &&
   cp --update --target-directory="$sc/foreign" "$scl/sph.sc" &&
   cp --update --target-directory="$sc/foreign/sph" \
-     "$scl/sph/status.sc" "$scl/sph/mi-list.sc" \
-     "$scl/sph/imht-set.sc" "$scl/sph/helper.sc" \
-     "$scl/sph/memreg.sc" "$scl/sph/float.sc" \
-     "$scl/sph/types.sc"
+     "$scl/sph/status.sc" "$scl/sph/mi-list.sc" "$scl/sph/imht-set.sc" \
+     "$scl/sph/helper.sc" "$scl/sph/memreg.sc" "$scl/sph/float.sc" \
+     "$scl/sph/types.sc" "$scl/sph/filesystem.sc" "$scl/sph/string.sc"
 }
 
 compile_sc() {

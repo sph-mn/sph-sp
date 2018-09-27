@@ -48,14 +48,14 @@
   (label exit
     (return status)))
 
-(define (sp-windowed-sinc-state-destroy state) (void sp-windowed-sinc-state-t*)
+(define (sp-windowed-sinc-state-free state) (void sp-windowed-sinc-state-t*)
   (free state:ir)
   (free state:carryover)
   (free state))
 
 (define (sp-windowed-sinc-state-create sample-rate freq transition result-state)
   (status-t sp-sample-rate-t sp-float-t sp-float-t sp-windowed-sinc-state-t**)
-  "create or update a state object. impulse response array properties are calculated
+  "create or update a previously created state object. impulse response array properties are calculated
   from sample-rate, freq and transition.
   eventually frees state.ir.
   ir-len-prev carryover elements have to be copied to the next result"
@@ -69,11 +69,12 @@
   (sc-comment "create state if not exists")
   (if *result-state (set state *result-state)
     (begin
-      (status-require (sph-helper-malloc (sizeof sp-windowed-sinc-state-t) state))
+      (status-require (sph-helper-malloc (sizeof sp-windowed-sinc-state-t) &state))
       (memreg-add state)
       (set
         state:sample-rate 0
         state:freq 0
+        state:ir 0
         state:transition 0
         state:carryover 0
         state:carryover-len 0
@@ -111,12 +112,13 @@
     (return status)))
 
 (define
-  (sp-windowed-sinc source source-len sample-rate freq transition result-samples result-state)
+  (sp-windowed-sinc source source-len sample-rate freq transition result-state result-samples)
   (status-t
-    sp-sample-t* size-t uint32-t sp-float-t sp-float-t sp-sample-t* sp-windowed-sinc-state-t**)
+    sp-sample-t* size-t uint32-t sp-float-t sp-float-t sp-windowed-sinc-state-t** sp-sample-t*)
   "a windowed sinc filter for segments of continuous streams with
-  sample-rate, frequency and transition variable per call.
-  state can be zero and it will be allocated"
+  possibly variable sample-rate, frequency and transition per call.
+  state can be zero and it will be allocated.
+  result-samples length is source-len"
   status-declare
   (status-require (sp-windowed-sinc-state-create sample-rate freq transition result-state))
   (sp-convolve

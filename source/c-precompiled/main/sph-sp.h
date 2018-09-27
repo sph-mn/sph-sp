@@ -1,10 +1,11 @@
 #include <byteswap.h>
 #include <math.h>
-#include "./foreign/sph.c"
-#include "./foreign/sph/status.c"
-#include "./foreign/sph/types.c"
-#include "./foreign/sph/float.c"
-#include "./main/config.c"
+#include <inttypes.h>
+#include "../foreign/sph.c"
+#include "../foreign/sph/status.c"
+#include "../foreign/sph/types.c"
+#include "../foreign/sph/float.c"
+#include "./config.c"
 #define sp_port_type_alsa 0
 #define sp_port_type_file 1
 #define sp_port_bit_input 1
@@ -28,13 +29,13 @@
     radians-per-second samples-per-second -> cutoff-value */
 #define sp_windowed_sinc_cutoff(freq, sample_rate) ((2 * M_PI * freq) / sample_rate)
 #if (sp_sample_format == sp_sample_format_f64)
-#define sp_sample_t f64
+#define sp_sample_t double
 #define sample_reverse_endian __bswap_64
 #define sp_sample_sum f64_sum
 #define sp_alsa_snd_pcm_format SND_PCM_FORMAT_FLOAT64_LE
 #else
 #if (sp_sample_format_f32 == sp_sample_format)
-#define sp_sample_t f32
+#define sp_sample_t float
 #define sample_reverse_endian __bswap_32
 #define sp_sample_sum f32_sum
 #define sp_alsa_snd_pcm_format SND_PCM_FORMAT_FLOAT_LE
@@ -85,9 +86,9 @@ void sp_sine_lq(sp_sample_count_t len, sp_float_t sample_duration, sp_float_t fr
 sp_float_t sp_sinc(sp_float_t a);
 size_t sp_windowed_sinc_ir_length(sp_float_t transition);
 status_t sp_windowed_sinc_ir(sp_sample_rate_t sample_rate, sp_float_t freq, sp_float_t transition, size_t* result_len, sp_sample_t** result_ir);
-void sp_windowed_sinc_state_destroy(sp_windowed_sinc_state_t* state);
+void sp_windowed_sinc_state_free(sp_windowed_sinc_state_t* state);
 status_t sp_windowed_sinc_state_create(sp_sample_rate_t sample_rate, sp_float_t freq, sp_float_t transition, sp_windowed_sinc_state_t** result_state);
-status_t sp_windowed_sinc(sp_sample_t* source, size_t source_len, sp_sample_count_t sample_rate, sp_float_t freq, sp_float_t transition, sp_sample_t* result_samples, sp_windowed_sinc_state_t** result_state);
+status_t sp_windowed_sinc(sp_sample_t* source, size_t source_len, sp_sample_count_t sample_rate, sp_float_t freq, sp_float_t transition, sp_windowed_sinc_state_t** result_state, sp_sample_t* result_samples);
 sp_float_t sp_window_blackman(sp_float_t a, size_t width);
 void sp_spectral_inversion_ir(sp_sample_t* a, size_t a_len);
 void sp_spectral_reversal_ir(sp_sample_t* a, size_t a_len);

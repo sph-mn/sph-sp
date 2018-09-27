@@ -1,8 +1,9 @@
 (pre-include
   "byteswap.h"
   "math.h"
-  "./foreign/sph.c"
-  "./foreign/sph/status.c" "./foreign/sph/types.c" "./foreign/sph/float.c" "./main/config.c")
+  "inttypes.h"
+  "../foreign/sph.c"
+  "../foreign/sph/status.c" "../foreign/sph/types.c" "../foreign/sph/float.c" "./config.c")
 
 (pre-define
   sp-port-type-alsa 0
@@ -35,14 +36,14 @@
 (pre-if
   (= sp-sample-format sp-sample-format-f64)
   (pre-define
-    sp-sample-t f64
+    sp-sample-t double
     sample-reverse-endian __bswap_64
     sp-sample-sum f64-sum
     sp-alsa-snd-pcm-format SND_PCM_FORMAT_FLOAT64_LE)
   (pre-if
     (= sp-sample-format-f32 sp-sample-format)
     (pre-define
-      sp-sample-t f32
+      sp-sample-t float
       sample-reverse-endian __bswap_32
       sp-sample-sum f32-sum
       sp-alsa-snd-pcm-format SND_PCM_FORMAT_FLOAT_LE)))
@@ -99,13 +100,13 @@
   (sp-float-t sp-float-t) (sp-windowed-sinc-ir-length transition)
   (size-t sp-float-t) (sp-windowed-sinc-ir sample-rate freq transition result-len result-ir)
   (status-t sp-sample-rate-t sp-float-t sp-float-t size-t* sp-sample-t**)
-  (sp-windowed-sinc-state-destroy state) (void sp-windowed-sinc-state-t*)
+  (sp-windowed-sinc-state-free state) (void sp-windowed-sinc-state-t*)
   (sp-windowed-sinc-state-create sample-rate freq transition result-state)
   (status-t sp-sample-rate-t sp-float-t sp-float-t sp-windowed-sinc-state-t**)
-  (sp-windowed-sinc source source-len sample-rate freq transition result-samples result-state)
+  (sp-windowed-sinc source source-len sample-rate freq transition result-state result-samples)
   (status-t
     sp-sample-t*
-    size-t sp-sample-count-t sp-float-t sp-float-t sp-sample-t* sp-windowed-sinc-state-t**)
+    size-t sp-sample-count-t sp-float-t sp-float-t sp-windowed-sinc-state-t** sp-sample-t*)
   (sp-window-blackman a width) (sp-float-t sp-float-t size-t)
   (sp-spectral-inversion-ir a a-len) (void sp-sample-t* size-t)
   (sp-spectral-reversal-ir a a-len) (void sp-sample-t* size-t)

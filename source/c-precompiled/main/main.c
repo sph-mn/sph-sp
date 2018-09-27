@@ -2,9 +2,9 @@
 #include <fcntl.h>
 #include <alsa/asoundlib.h>
 #include <sndfile.h>
-#include "./main/sph-sp.h"
-#include "./foreign/sph/helper.c"
-#include "./foreign/sph/memreg.c"
+#include "../main/sph-sp.h"
+#include "../foreign/sph/helper.c"
+#include "../foreign/sph/memreg.c"
 #include "./kiss_fft.h"
 #include "./tools/kiss_fftr.h"
 #define sp_status_declare status_declare_group(sp_status_group_sp)
@@ -122,7 +122,7 @@ status_t sp_alloc_channel_array(sp_channel_count_t channel_count, sp_sample_coun
   memreg_init((channel_count + 1));
   sp_sample_t* channel;
   sp_sample_t** result;
-  status_require((sph_helper_malloc((channel_count * sizeof(sp_sample_t*)), result)));
+  status_require((sph_helper_malloc((channel_count * sizeof(sp_sample_t*)), (&result))));
   memreg_add(result);
   while (channel_count) {
     channel_count = (channel_count - 1);
@@ -364,5 +364,5 @@ define_sp_interleave(sp_interleave, sp_sample_t, ({ b[b_size] = (a[channel])[a_s
 define_sp_interleave(sp_deinterleave, sp_sample_t, ({ (a[channel])[a_size] = b[b_size]; }));
 define_sp_sine(sp_sine, sin);
 define_sp_sine(sp_sine_lq, sp_sin_lq);
-#include "./main/windowed-sinc.c"
-#include "./main/io.c"
+#include "../main/windowed-sinc.c"
+#include "../main/io.c"

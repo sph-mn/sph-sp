@@ -1,11 +1,14 @@
 (pre-include
   "stdio.h"
   "stdlib.h"
-  "errno.h" "pthread.h" "float.h" "math.h" "./foreign/sph/one.c" "./foreign/sph/local-memory.c")
+  "errno.h"
+  "pthread.h"
+  "float.h"
+  "math.h"
+  "../foreign/sph/helper.c"
+  "../foreign/sph/memreg.c" "../foreign/sph/string.c" "../foreign/sph/filesystem.c")
 
 (pre-define
-  (inc a) (set a (+ 1 a))
-  (dec a) (set a (- a 1))
   (test-helper-test-one func)
   (begin
     (printf "%s\n" (pre-stringify func))

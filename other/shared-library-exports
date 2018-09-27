@@ -27,6 +27,6 @@ exports {
     sp_windowed_sinc_ir;
     sp_windowed_sinc_ir_length;
     sp_windowed_sinc_state_create;
-    sp_windowed_sinc_state_destroy;
+    sp_windowed_sinc_state_free;
   local: *;
 };

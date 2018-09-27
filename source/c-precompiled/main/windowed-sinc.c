@@ -41,12 +41,12 @@ status_t sp_windowed_sinc_ir(sp_sample_rate_t sample_rate, sp_float_t freq, sp_f
 exit:
   return (status);
 };
-void sp_windowed_sinc_state_destroy(sp_windowed_sinc_state_t* state) {
+void sp_windowed_sinc_state_free(sp_windowed_sinc_state_t* state) {
   free((state->ir));
   free((state->carryover));
   free(state);
 };
-/** create or update a state object. impulse response array properties are calculated
+/** create or update a previously created state object. impulse response array properties are calculated
   from sample-rate, freq and transition.
   eventually frees state.ir.
   ir-len-prev carryover elements have to be copied to the next result */
@@ -61,10 +61,11 @@ status_t sp_windowed_sinc_state_create(sp_sample_rate_t sample_rate, sp_float_t 
   if (*result_state) {
     state = *result_state;
   } else {
-    status_require((sph_helper_malloc((sizeof(sp_windowed_sinc_state_t)), state)));
+    status_require((sph_helper_malloc((sizeof(sp_windowed_sinc_state_t)), (&state))));
     memreg_add(state);
     state->sample_rate = 0;
     state->freq = 0;
+    state->ir = 0;
     state->transition = 0;
     state->carryover = 0;
     state->carryover_len = 0;
@@ -104,9 +105,10 @@ exit:
   return (status);
 };
 /** a windowed sinc filter for segments of continuous streams with
-  sample-rate, frequency and transition variable per call.
-  state can be zero and it will be allocated */
-status_t sp_windowed_sinc(sp_sample_t* source, size_t source_len, uint32_t sample_rate, sp_float_t freq, sp_float_t transition, sp_sample_t* result_samples, sp_windowed_sinc_state_t** result_state) {
+  possibly variable sample-rate, frequency and transition per call.
+  state can be zero and it will be allocated.
+  result-samples length is source-len */
+status_t sp_windowed_sinc(sp_sample_t* source, size_t source_len, uint32_t sample_rate, sp_float_t freq, sp_float_t transition, sp_windowed_sinc_state_t** result_state, sp_sample_t* result_samples) {
   status_declare;
   status_require((sp_windowed_sinc_state_create(sample_rate, freq, transition, result_state)));
   sp_convolve(source, source_len, ((*result_state)->ir), ((*result_state)->ir_len), ((*result_state)->ir_len_prev), ((*result_state)->carryover), result_samples);

@@ -3,8 +3,8 @@
   "fcntl.h"
   "alsa/asoundlib.h"
   "sndfile.h"
-  "./main/sph-sp.h"
-  "./foreign/sph/helper.c" "./foreign/sph/memreg.c" "./kiss_fft.h" "./tools/kiss_fftr.h")
+  "../main/sph-sp.h"
+  "../foreign/sph/helper.c" "../foreign/sph/memreg.c" "./kiss_fft.h" "./tools/kiss_fftr.h")
 
 (pre-define
   sp-status-declare (status-declare-group sp-status-group-sp)
@@ -106,7 +106,7 @@
   (declare
     channel sp-sample-t*
     result sp-sample-t**)
-  (status-require (sph-helper-malloc (* channel-count (sizeof sp-sample-t*)) result))
+  (status-require (sph-helper-malloc (* channel-count (sizeof sp-sample-t*)) &result))
   (memreg-add result)
   (while channel-count
     (set channel-count (- channel-count 1))
@@ -373,4 +373,4 @@
 
 (define-sp-sine sp-sine sin)
 (define-sp-sine sp-sine-lq sp-sin-lq)
-(pre-include "./main/windowed-sinc.c" "./main/io.c")
+(pre-include "../main/windowed-sinc.c" "../main/io.c")

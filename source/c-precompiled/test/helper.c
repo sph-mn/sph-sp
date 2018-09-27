@@ -4,10 +4,10 @@
 #include <pthread.h>
 #include <float.h>
 #include <math.h>
-#include "./foreign/sph/one.c"
-#include "./foreign/sph/local-memory.c"
-#define inc(a) a = (1 + a)
-#define dec(a) a = (a - 1)
+#include "../foreign/sph/helper.c"
+#include "../foreign/sph/memreg.c"
+#include "../foreign/sph/string.c"
+#include "../foreign/sph/filesystem.c"
 #define test_helper_test_one(func) \
   printf("%s\n", #func); \
   status_require((func()))
