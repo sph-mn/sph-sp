@@ -1,43 +1,30 @@
-(pre-define (define-sp-sine! scm-id id)
-  (begin
-    "defines scm-sp-sine!, scm-sp-sine-lq!"
-    (define (scm-id data len sample-duration freq phase amp) (SCM SCM SCM SCM SCM SCM SCM)
-      (id
-        (convert-type (SCM-BYTEVECTOR-CONTENTS data) sp-sample-t*)
-        (scm->uint32 len)
-        (scm->double sample-duration) (scm->double freq) (scm->double phase) (scm->double amp))
-      (return SCM-UNSPECIFIED))))
+(pre-include "./helper.c")
 
 (define-sp-sine! scm-sp-sine! sp-sine)
 (define-sp-sine! scm-sp-sine-lq! sp-sine)
-(pre-define (scm-sp-port a) (convert-type (scm-sp-object-data a) sp-port-t*))
 
-(define (scm-sp-port? a) (SCM SCM)
-  (return
-    (scm-from-bool
-      (and (SCM-SMOB-PREDICATE scm-type-sp-object a) (= sp-object-type-port (scm-sp-object-type a))))))
+#;(
+(define (scm-sp-port-channel-count scm-port) (SCM SCM)
+  (return (scm-from-uint32 (: (scm->sp-port scm-port) channel-count))))
 
-(define (scm-sp-port-channel-count port) (SCM SCM)
-  (return (scm-from-uint32 (: (scm-sp-port port) channel-count))))
+(define (scm-sp-port-sample-rate scm-port) (SCM SCM)
+  (return (scm-from-uint32 (: (scm->sp-port scm-port) sample-rate))))
 
-(define (scm-sp-port-sample-rate port) (SCM SCM)
-  (return (scm-from-uint32 (: (scm-sp-port port) sample-rate))))
+(define (scm-sp-port-position? scm-port) (SCM SCM)
+  (return (scm-from-bool (bit-and sp-port-bit-position (: (scm->sp-port scm-port) flags)))))
 
-(define (scm-sp-port-position? port) (SCM SCM)
-  (return (scm-from-bool (bit-and sp-port-bit-position (: (scm-sp-port port) flags)))))
+(define (scm-sp-port-input? scm-port) (SCM SCM)
+  (return (scm-from-bool (bit-and sp-port-bit-input (: (scm-sp-port scm-port) flags)))))
 
-(define (scm-sp-port-input? port) (SCM SCM)
-  (return (scm-from-bool (bit-and sp-port-bit-input (: (scm-sp-port port) flags)))))
-
-(define (scm-sp-port-position port) (SCM SCM)
-  "returns the current port position in number of octets"
-  (declare position size-t)
-  (sp-port-position &position (scm-sp-port port))
-  (return (scm-from-size-t position)))
+(define (scm-sp-port-position scm-port) (SCM SCM)
+  "returns the current port position offset in number of samples"
+  (declare position sp-sample-count-t)
+  (sp-port-position (scm->sp-port port) &position)
+  (return (scm-from-uint32 position)))
 
 (define (scm-sp-port-close a) (SCM SCM)
   status-declare
-  (set status (sp-port-close (scm-sp-port a)))
+  (set status (sp-port-close (scm->sp-port a)))
   (status->scm-return SCM-UNSPECIFIED))
 
 (define (scm-sp-port-read scm-port scm-sample-count) (SCM SCM SCM)
@@ -199,6 +186,7 @@
   (label exit
     (status->scm-return result)))
 
+
 (define (scm-sp-ifft source) (SCM SCM)
   status-declare
   (declare
@@ -214,24 +202,25 @@
       (convert-type (SCM-BYTEVECTOR-CONTENTS source) sp-sample-t*) (SCM-BYTEVECTOR-LENGTH source)))
   (label exit
     (status->scm-return result)))
+)
+
 
 (define (sp-guile-init) void
+  #;(
   (declare
     type-slots SCM
     scm-symbol-data SCM)
   (set
+    scm-rnrs-raise (scm-c-public-ref "rnrs exceptions" "raise")
     scm-symbol-data (scm-from-latin1-symbol "data")
     type-slots (scm-list-1 scm-symbol-data)
     scm-type-port (scm-make-foreign-object-type (scm-from-latin1-symbol "sp-port") type-slots 0)
     scm-type-windowed-sinc
     (scm-make-foreign-object-type (scm-from-latin1-symbol "sp-windowed-sinc") type-slots 0))
-  scm-type-txn
-  (scm-make-foreign-object-type (scm-from-latin1-symbol "db-txn") type-slots 0)
-  (init-sp-io)
-  (init-sp-generate)
-  (init-sp-transform)
+  ; check (sizeof sp-sample-t)
+  ; chec (sizeof sp-sample-count-t)
+  ; chec (sizeof sp-sample-rate-t)
   scm-c-define-procedure-c-init
-  (set scm-rnrs-raise (scm-c-public-ref "rnrs exceptions" "raise"))
   (scm-c-define-procedure-c
     "f32vector-sum" 1 2 0 scm-f32vector-sum "f32vector [start end] -> number")
   (scm-c-define-procedure-c
@@ -248,7 +237,7 @@
     0
     scm-sp-sine!
     "data len sample-duration freq phase amp -> unspecified
-    f32vector integer integer rational rational rational rational")
+    sample-vector integer integer rational rational rational rational")
   (scm-c-define-procedure-c
     "sp-sine-lq!"
     6
@@ -256,7 +245,7 @@
     0
     scm-sp-sine-lq!
     "data len sample-duration freq phase amp -> unspecified
-    f32vector integer integer rational rational rational rational
+    sample-vector integer integer rational rational rational rational
     faster, lower precision version of sp-sine!.
     currently faster by a factor of about 2.6")
   (scm-c-define-procedure-c "sp-port-close" 1 0 0 scm-sp-port-close "sp-port -> boolean")
@@ -326,4 +315,8 @@
     "result source previous next sample-rate freq transition [start end] -> unspecified
     f32vector f32vector f32vector f32vector number number integer integer -> boolean")
   (scm-c-define-procedure-c
-    "sp-convolve!" 3 0 0 scm-sp-convolve! "a b state:(integer . f32vector) -> state"))
+  "sp-convolve!" 3 0 0 scm-sp-convolve! "a b state:(integer . f32vector) -> state")
+
+  )
+
+  )

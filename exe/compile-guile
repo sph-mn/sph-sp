@@ -1,0 +1,17 @@
+#!/bin/sh
+
+optimisation=0
+warnings="-Wunused-label -Wunused-value -Wunused-variable"
+gcc_options="-Wfatal-errors $warnings -std=c11 -O$optimisation $(guile-config link)"
+target_dir=temp
+target="$target_dir/libguile-sph-sp.so"
+source=source/c-precompiled/guile/main.c
+
+compile_c() {
+  gcc -shared -fpic -lsph-sp "$source" -o "$target" $gcc_options
+}
+
+mkdir -p "$target_dir" &&
+compile_c &&
+chmod -R 755 "$target_dir" &&
+chmod 644 "$target"

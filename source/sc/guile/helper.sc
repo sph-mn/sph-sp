@@ -1,6 +1,35 @@
-(pre-include "libguile.h" "./guile/main.c" "./foreign/guile/sph/guile.c")
+(pre-include "libguile.h" "../main/sph-sp.h" "../foreign/sph/helper.c" "../foreign/sph/guile.c")
 
 (pre-define
+  (scm-from-sp-channel-count a) (scm-from-uint32 a)
+  (scm-from-sp-sample-count a) (scm-from-uint32 a)
+  (scm-from-sp-sample-rate a) (scm-from-uint32 a)
+  (scm-from-sp-sample a) (scm-from-double a)
+  (scm-from-sp-float a) (scm-from-double a)
+  (scm->sp-channel-count a) (scm->uint32 a)
+  (scm->sp-sample-count a) (scm->uint32 a)
+  (scm->sp-sample-rate a) (scm->uint32 a)
+  (scm->sp-sample a) (scm->double a)
+  (scm->sp-float a) (scm->double a)
+  (define-sp-sine! scm-id f)
+  (begin
+    "defines scm-sp-sine!, scm-sp-sine-lq!"
+    (define (scm-id scm-data scm-len scm-sample-duration scm-freq scm-phase scm-amp)
+      (SCM SCM SCM SCM SCM SCM SCM)
+      (f
+        (scm->sp-sample-count scm-len)
+        (scm->sp-float scm-sample-duration)
+        (scm->sp-float scm-freq)
+        (scm->sp-float scm-phase)
+        (scm->sp-float scm-amp) (convert-type (SCM-BYTEVECTOR-CONTENTS scm-data) sp-sample-t*))
+      (return SCM-UNSPECIFIED))))
+
+#;(
+(pre-define
+  status-group-db-guile "db-guile"
+  (scm-from-channel-count-t a) (scm-from-uint32 a)
+  (scm-from-sample-count-t a) (scm-from-uint32 a)
+  (scm-from-sample a) (scm-from-double a)
   (optional-sample-rate a)
   (if* (scm-is-undefined a) -1
     (scm->int32 a))
@@ -18,16 +47,7 @@
   (optional-index a default)
   (if* (and (not (scm-is-undefined start)) (scm-is-true start)) (scm->uint32 a)
     default)
-  (sp-port-type->name a)
-  (begin
-    "integer -> string"
-    (cond* ((= sp-port-type-file a) "file") ((= sp-port-type-alsa a) "alsa") (else "unknown")))
-  sp-object-type-port 0
-  sp-object-type-windowed-sinc 1
-  scm-sp-object-type SCM-SMOB-FLAGS
-  scm-sp-object-data SCM-SMOB-DATA
   ; error handling
-  status-group-db-guile "db-guile"
   (scm-from-status-error a)
   (scm-c-error a.group (db-guile-status-name a) (db-guile-status-description a))
   (scm-c-error group name description)
@@ -50,7 +70,8 @@
     (return (scm-from-status-error status))))
 
 (declare
-  scm-type-port scm-type-windowed-sinc
+  scm-type-port SCM
+  scm-type-windowed-sinc SCM
   scm-rnrs-raise SCM)
 
 (define (scm-take-channel-data a channel-count sample-count) (SCM sp-sample-t** uint32-t uint32-t)
@@ -160,3 +181,6 @@
           (if* (scm-is-undefined end) (SCM-BYTEVECTOR-LENGTH a)
             (- end (+ 1 start)))
           (sizeof f32-s))))))
+
+
+)

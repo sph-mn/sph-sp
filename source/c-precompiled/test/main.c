@@ -21,17 +21,17 @@ exit:
 };
 status_t test_spectral_inversion_ir() {
   status_declare;
-  size_t a_len;
+  sp_sample_count_t a_len;
   sp_sample_t a[5] = { 0.1, -0.2, 0.3, -0.2, 0.1 };
   a_len = 5;
   sp_spectral_inversion_ir(a, a_len);
-  test_helper_assert("result check", (sp_sample_nearly_equal((-0.1), (a[0]), error_margin) && sp_sample_nearly_equal((0.2), (a[1]), error_margin) && sp_sample_nearly_equal((-0.3), (a[2]), error_margin) && sp_sample_nearly_equal((0.2), (a[3]), error_margin) && sp_sample_nearly_equal((-0.1), (a[4]), error_margin)));
+  test_helper_assert("result check", (sp_sample_nearly_equal((-0.1), (a[0]), error_margin) && sp_sample_nearly_equal((0.2), (a[1]), error_margin) && sp_sample_nearly_equal((0.7), (a[2]), error_margin) && sp_sample_nearly_equal((0.2), (a[3]), error_margin) && sp_sample_nearly_equal((-0.1), (a[4]), error_margin)));
 exit:
   return (status);
 };
 status_t test_spectral_reversal_ir() {
   status_declare;
-  size_t a_len;
+  sp_sample_count_t a_len;
   sp_sample_t a[5] = { 0.1, -0.2, 0.3, -0.2, 0.1 };
   a_len = 5;
   sp_spectral_reversal_ir(a, a_len);
@@ -42,14 +42,14 @@ exit:
 status_t test_convolve() {
   status_declare;
   sp_sample_t* a;
-  size_t a_len;
+  sp_sample_count_t a_len;
   sp_sample_t* b;
-  size_t b_len;
+  sp_sample_count_t b_len;
   sp_sample_t* carryover;
-  size_t carryover_len;
+  sp_sample_count_t carryover_len;
   sp_sample_t* result;
-  size_t result_len;
-  size_t sample_count;
+  sp_sample_count_t result_len;
+  sp_sample_count_t sample_count;
   sp_sample_t expected_result[5] = { 2, 7, 16, 22, 28 };
   sp_sample_t expected_carryover[3] = { 27, 18, 0 };
   memreg_init(4);
@@ -105,11 +105,11 @@ exit:
 };
 status_t test_moving_average() {
   status_declare;
-  size_t source_len;
-  size_t result_len;
-  size_t prev_len;
-  size_t next_len;
-  size_t radius;
+  sp_sample_count_t source_len;
+  sp_sample_count_t result_len;
+  sp_sample_count_t prev_len;
+  sp_sample_count_t next_len;
+  sp_sample_count_t radius;
   sp_sample_t* result;
   sp_sample_t* source;
   sp_sample_t* prev;
@@ -167,14 +167,14 @@ exit:
 };
 status_t test_port() {
   status_declare;
-  size_t channel;
+  sp_sample_count_t channel;
   sp_channel_count_t channel_count;
   sp_sample_t** channel_data;
   sp_sample_t** channel_data_2;
-  size_t len;
+  sp_sample_count_t len;
   sp_port_t port;
-  size_t position;
-  size_t sample_count;
+  sp_sample_count_t position;
+  sp_sample_count_t sample_count;
   sp_sample_rate_t sample_rate;
   int8_t unequal;
   memreg_init(2);
@@ -240,6 +240,12 @@ exit:
 };
 int main() {
   status_declare;
+  test_helper_test_one(test_spectral_inversion_ir);
+  test_helper_test_one(test_base);
+  test_helper_test_one(test_spectral_reversal_ir);
+  test_helper_test_one(test_convolve);
+  test_helper_test_one(test_port);
+  test_helper_test_one(test_moving_average);
   test_helper_test_one(test_windowed_sinc);
 exit:
   test_helper_display_summary();

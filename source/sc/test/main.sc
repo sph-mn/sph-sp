@@ -27,7 +27,7 @@
 (define (test-spectral-inversion-ir) status-t
   status-declare
   (declare
-    a-len size-t
+    a-len sp-sample-count-t
     a (array sp-sample-t 5 0.1 -0.2 0.3 -0.2 0.1))
   (set a-len 5)
   (sp-spectral-inversion-ir a a-len)
@@ -36,7 +36,7 @@
     (and
       (sp-sample-nearly-equal -0.1 (array-get a 0) error-margin)
       (sp-sample-nearly-equal 0.2 (array-get a 1) error-margin)
-      (sp-sample-nearly-equal -0.3 (array-get a 2) error-margin)
+      (sp-sample-nearly-equal 0.7 (array-get a 2) error-margin)
       (sp-sample-nearly-equal 0.2 (array-get a 3) error-margin)
       (sp-sample-nearly-equal -0.1 (array-get a 4) error-margin)))
   (label exit
@@ -45,7 +45,7 @@
 (define (test-spectral-reversal-ir) status-t
   status-declare
   (declare
-    a-len size-t
+    a-len sp-sample-count-t
     a (array sp-sample-t 5 0.1 -0.2 0.3 -0.2 0.1))
   (set a-len 5)
   (sp-spectral-reversal-ir a a-len)
@@ -64,14 +64,14 @@
   status-declare
   (declare
     a sp-sample-t*
-    a-len size-t
+    a-len sp-sample-count-t
     b sp-sample-t*
-    b-len size-t
+    b-len sp-sample-count-t
     carryover sp-sample-t*
-    carryover-len size-t
+    carryover-len sp-sample-count-t
     result sp-sample-t*
-    result-len size-t
-    sample-count size-t
+    result-len sp-sample-count-t
+    sample-count sp-sample-count-t
     expected-result (array sp-sample-t (5) 2 7 16 22 28)
     expected-carryover (array sp-sample-t (3) 27 18 0))
   (memreg-init 4)
@@ -121,11 +121,11 @@
 (define (test-moving-average) status-t
   status-declare
   (declare
-    source-len size-t
-    result-len size-t
-    prev-len size-t
-    next-len size-t
-    radius size-t
+    source-len sp-sample-count-t
+    result-len sp-sample-count-t
+    prev-len sp-sample-count-t
+    next-len sp-sample-count-t
+    radius sp-sample-count-t
     result sp-sample-t*
     source sp-sample-t*
     prev sp-sample-t*
@@ -157,6 +157,7 @@
   (sc-comment "without prev and next")
   (status-require
     (sp-moving-average source source-len 0 0 0 0 0 (- source-len 1) (+ 1 (/ source-len 2)) result))
+  ; todo: actually check results
   (label exit
     memreg-free
     (return status)))
@@ -171,20 +172,21 @@
   (status-require (sp-windowed-sinc source 10 8000 100 0.1 &state result))
   (status-require (sp-windowed-sinc source 10 8000 100 0.1 &state result))
   (sp-windowed-sinc-state-free state)
+  ; todo: actually check results
   (label exit
     (return status)))
 
 (define (test-port) status-t
   status-declare
   (declare
-    channel size-t
+    channel sp-sample-count-t
     channel-count sp-channel-count-t
     channel-data sp-sample-t**
     channel-data-2 sp-sample-t**
-    len size-t
+    len sp-sample-count-t
     port sp-port-t
-    position size-t
-    sample-count size-t
+    position sp-sample-count-t
+    sample-count sp-sample-count-t
     sample-rate sp-sample-rate-t
     unequal int8-t)
   (memreg-init 2)
@@ -259,12 +261,12 @@
 
 (define (main) int
   status-declare
-  ;(test-helper-test-one test-base)
-  ;(test-helper-test-one test-spectral-reversal-ir)
-  ;(test-helper-test-one test-spectral-inversion-ir)
-  ;(test-helper-test-one test-convolve)
-  ;(test-helper-test-one test-port)
-  ;(test-helper-test-one test-moving-average)
+  (test-helper-test-one test-spectral-inversion-ir)
+  (test-helper-test-one test-base)
+  (test-helper-test-one test-spectral-reversal-ir)
+  (test-helper-test-one test-convolve)
+  (test-helper-test-one test-port)
+  (test-helper-test-one test-moving-average)
   (test-helper-test-one test-windowed-sinc)
   (label exit
     (test-helper-display-summary)

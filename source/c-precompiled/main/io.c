@@ -31,12 +31,12 @@ status_t sp_file_open(uint8_t* path, sp_channel_count_t channel_count, sp_sample
 exit:
   return (status);
 };
-status_t sp_file_write(sp_port_t* port, size_t sample_count, sp_sample_t** channel_data) {
+status_t sp_file_write(sp_port_t* port, sp_sample_count_t sample_count, sp_sample_t** channel_data) {
   status_declare;
   sp_channel_count_t channel_count;
   SNDFILE* file;
   sp_sample_t* interleaved;
-  size_t interleaved_size;
+  sp_sample_count_t interleaved_size;
   sf_count_t write_count;
   memreg_init(1);
   channel_count = port->channel_count;
@@ -53,10 +53,10 @@ exit:
   memreg_free;
   return (status);
 };
-status_t sp_file_read(sp_port_t* port, size_t sample_count, sp_sample_t** result_channel_data) {
+status_t sp_file_read(sp_port_t* port, sp_sample_count_t sample_count, sp_sample_t** result_channel_data) {
   status_declare;
   sp_channel_count_t channel_count;
-  size_t interleaved_size;
+  sp_sample_count_t interleaved_size;
   sp_sample_t* interleaved;
   sf_count_t read_count;
   memreg_init(1);
@@ -73,10 +73,11 @@ exit:
   memreg_free;
   return (status);
 };
-status_t sp_file_set_position(sp_port_t* port, size_t a) {
+status_t sp_file_set_position(sp_port_t* port, sp_sample_count_t a) {
   status_declare;
   SNDFILE* file;
   sf_count_t count;
+  a = (a / sizeof(sp_sample_t));
   file = port->data;
   count = sf_seek(file, a, SEEK_SET);
   if (count == -1) {
@@ -85,7 +86,7 @@ status_t sp_file_set_position(sp_port_t* port, size_t a) {
 exit:
   return (status);
 };
-status_t sp_file_position(sp_port_t* port, size_t* result_position) {
+status_t sp_file_position(sp_port_t* port, sp_sample_count_t* result_position) {
   status_declare;
   SNDFILE* file;
   sf_count_t count;
@@ -94,7 +95,7 @@ status_t sp_file_position(sp_port_t* port, size_t* result_position) {
   if (count == -1) {
     status_set_both_goto(sp_status_group_sndfile, (sf_error(file)));
   };
-  *result_position = count;
+  *result_position = (count / sizeof(sp_sample_t));
 exit:
   return (status);
 };
@@ -118,7 +119,7 @@ exit:
   };
   return (status);
 };
-status_t sp_alsa_write(sp_port_t* port, size_t sample_count, sp_sample_t** channel_data) {
+status_t sp_alsa_write(sp_port_t* port, sp_sample_count_t sample_count, sp_sample_t** channel_data) {
   status_declare;
   snd_pcm_t* alsa_port;
   snd_pcm_sframes_t frames_count;
@@ -150,7 +151,7 @@ status_t sp_port_read(sp_port_t* port, sp_sample_count_t sample_count, sp_sample
     return ((sp_alsa_read(port, sample_count, result_channel_data)));
   };
 };
-status_t sp_port_write(sp_port_t* port, size_t sample_count, sp_sample_t** channel_data) {
+status_t sp_port_write(sp_port_t* port, sp_sample_count_t sample_count, sp_sample_t** channel_data) {
   if (sp_port_type_file == port->type) {
     return ((sp_file_write(port, sample_count, channel_data)));
   } else if (sp_port_type_alsa == port->type) {
@@ -170,7 +171,7 @@ status_t sp_port_close(sp_port_t* a) {
 exit:
   return (status);
 };
-status_t sp_port_position(sp_port_t* port, size_t* result_position) {
+status_t sp_port_position(sp_port_t* port, sp_sample_count_t* result_position) {
   status_declare;
   if (sp_port_type_file == port->type) {
     return ((sp_file_position(port, result_position)));
@@ -179,7 +180,7 @@ status_t sp_port_position(sp_port_t* port, size_t* result_position) {
     return (status);
   };
 };
-status_t sp_port_set_position(sp_port_t* port, size_t sample_index) {
+status_t sp_port_set_position(sp_port_t* port, sp_sample_count_t sample_index) {
   status_declare;
   if (sp_port_type_file == port->type) {
     return ((sp_file_set_position(port, sample_index)));

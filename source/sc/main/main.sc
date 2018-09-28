@@ -49,9 +49,10 @@
     "define a deinterleave, interleave or similar routine.
     a: deinterleaved
     b: interleaved"
-    (define (name a b a-size channel-count) (void type** type* size-t sp-channel-count-t)
+    (define (name a b a-size channel-count)
+      (void type** type* sp-sample-count-t sp-channel-count-t)
       (declare
-        b-size size-t
+        b-size sp-sample-count-t
         channel sp-channel-count-t)
       (set b-size (* a-size channel-count))
       (while a-size
@@ -277,20 +278,20 @@
     memreg-free
     (return status)))
 
-(define (sp-spectral-inversion-ir a a-len) (void sp-sample-t* size-t)
+(define (sp-spectral-inversion-ir a a-len) (void sp-sample-t* sp-sample-count-t)
   "modify an impulse response kernel for spectral inversion.
    a-len must be odd and \"a\" must have left-right symmetry.
   flips the frequency response top to bottom"
-  (declare center size-t)
-  (while a-len
-    (set
-      a-len (- a-len 1)
-      (array-get a a-len) (* -1 (array-get a a-len))))
+  (declare
+    center sp-sample-count-t
+    i sp-sample-count-t)
+  (for ((set i 0) (< i a-len) (set i (+ 1 i)))
+    (set (array-get a i) (* -1 (array-get a i))))
   (set
     center (/ (- a-len 1) 2)
     (array-get a center) (+ 1 (array-get a center))))
 
-(define (sp-spectral-reversal-ir a a-len) (void sp-sample-t* size-t)
+(define (sp-spectral-reversal-ir a a-len) (void sp-sample-t* sp-sample-count-t)
   "inverts the sign for samples at odd indexes.
   a-len must be odd and \"a\" must have left-right symmetry.
   flips the frequency response left to right"
@@ -300,13 +301,13 @@
       (array-get a a-len) (* -1 (array-get a a-len)))))
 
 (define (sp-convolve-one a a-len b b-len result-samples)
-  (void sp-sample-t* size-t sp-sample-t* size-t sp-sample-t*)
+  (void sp-sample-t* sp-sample-count-t sp-sample-t* sp-sample-count-t sp-sample-t*)
   "discrete linear convolution.
   result length must be at least a-len + b-len - 1.
   result-samples is owned and allocated by the caller"
   (declare
-    a-index size-t
-    b-index size-t)
+    a-index sp-sample-count-t
+    b-index sp-sample-count-t)
   (set
     a-index 0
     b-index 0)
@@ -323,31 +324,32 @@
       a-index (+ 1 a-index))))
 
 (define (sp-convolve a a-len b b-len carryover-len result-carryover result-samples)
-  (void sp-sample-t* size-t sp-sample-t* size-t size-t sp-sample-t* sp-sample-t*)
-  "discrete linear convolution for segments of a continuous stream. maps segments (a, a-len) to result.
-  result length is a-len, carryover length is b-len or previous b-len. b-len must be greater than zero.
-  algorithm: copy results that overlap from previous call from carryover, add results that fit completely in result,
-  add results that overlap with next segment to carryover"
+  (void
+    sp-sample-t*
+    sp-sample-count-t sp-sample-t* sp-sample-count-t sp-sample-count-t sp-sample-t* sp-sample-t*)
+  "discrete linear convolution for segments of a continuous stream. maps segments (a, a-len) to result-samples
+  using (b, b-len) as the impulse response. b-len must be greater than zero.
+  result-samples length is a-len, carryover length is b-len or carryover length from previous call.
+  all heap memory is owned and allocated by the caller.
+  algorithm: copy into result from carryover what overlaps from previous call, write to result,
+  copy results that overlap with the next segment to carryover"
   (declare
-    size size-t
-    a-index size-t
-    b-index size-t
-    c-index size-t)
+    size sp-sample-count-t
+    a-index sp-sample-count-t
+    b-index sp-sample-count-t
+    c-index sp-sample-count-t)
   (memset result-samples 0 (* a-len (sizeof sp-sample-t)))
   (memcpy result-samples result-carryover (* carryover-len (sizeof sp-sample-t)))
   (memset result-carryover 0 (* b-len (sizeof sp-sample-t)))
   (sc-comment
-    "result values" "restrict processed range to exclude input values that generate carryover")
+    "result values." "restrict processed range to exclude input values that generate carryover")
   (set size
     (if* (< a-len b-len) 0
       (- a-len (- b-len 1))))
   (if size (sp-convolve-one a size b b-len result-samples))
   (sc-comment "carryover values")
-  (set
-    a-index size
-    b-index 0)
-  (while (< a-index a-len)
-    (while (< b-index b-len)
+  (for ((set a-index size) (< a-index a-len) (set a-index (+ 1 a-index)))
+    (for ((set b-index 0) (< b-index b-len) (set b-index (+ 1 b-index)))
       (set c-index (+ a-index b-index))
       (if (< c-index a-len)
         (set (array-get result-samples c-index)
@@ -355,11 +357,7 @@
         (set
           c-index (- c-index a-len)
           (array-get result-carryover c-index)
-          (+ (array-get result-carryover c-index) (* (array-get a a-index) (array-get b b-index)))))
-      (set b-index (+ 1 b-index)))
-    (set
-      b-index 0
-      a-index (+ 1 a-index))))
+          (+ (array-get result-carryover c-index) (* (array-get a a-index) (array-get b b-index))))))))
 
 (define-sp-interleave
   sp-interleave

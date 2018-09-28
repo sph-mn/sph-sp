@@ -50,8 +50,8 @@
     a: deinterleaved
     b: interleaved */
 #define define_sp_interleave(name, type, body) \
-  void name(type** a, type* b, size_t a_size, sp_channel_count_t channel_count) { \
-    size_t b_size; \
+  void name(type** a, type* b, sp_sample_count_t a_size, sp_channel_count_t channel_count) { \
+    sp_sample_count_t b_size; \
     sp_channel_count_t channel; \
     b_size = (a_size * channel_count); \
     while (a_size) { \
@@ -289,11 +289,11 @@ exit:
 /** modify an impulse response kernel for spectral inversion.
    a-len must be odd and "a" must have left-right symmetry.
   flips the frequency response top to bottom */
-void sp_spectral_inversion_ir(sp_sample_t* a, size_t a_len) {
-  size_t center;
-  while (a_len) {
-    a_len = (a_len - 1);
-    a[a_len] = (-1 * a[a_len]);
+void sp_spectral_inversion_ir(sp_sample_t* a, sp_sample_count_t a_len) {
+  sp_sample_count_t center;
+  sp_sample_count_t i;
+  for (i = 0; (i < a_len); i = (1 + i)) {
+    a[i] = (-1 * a[i]);
   };
   center = ((a_len - 1) / 2);
   a[center] = (1 + a[center]);
@@ -301,7 +301,7 @@ void sp_spectral_inversion_ir(sp_sample_t* a, size_t a_len) {
 /** inverts the sign for samples at odd indexes.
   a-len must be odd and "a" must have left-right symmetry.
   flips the frequency response left to right */
-void sp_spectral_reversal_ir(sp_sample_t* a, size_t a_len) {
+void sp_spectral_reversal_ir(sp_sample_t* a, sp_sample_count_t a_len) {
   while ((a_len > 1)) {
     a_len = (a_len - 2);
     a[a_len] = (-1 * a[a_len]);
@@ -310,9 +310,9 @@ void sp_spectral_reversal_ir(sp_sample_t* a, size_t a_len) {
 /** discrete linear convolution.
   result length must be at least a-len + b-len - 1.
   result-samples is owned and allocated by the caller */
-void sp_convolve_one(sp_sample_t* a, size_t a_len, sp_sample_t* b, size_t b_len, sp_sample_t* result_samples) {
-  size_t a_index;
-  size_t b_index;
+void sp_convolve_one(sp_sample_t* a, sp_sample_count_t a_len, sp_sample_t* b, sp_sample_count_t b_len, sp_sample_t* result_samples) {
+  sp_sample_count_t a_index;
+  sp_sample_count_t b_index;
   a_index = 0;
   b_index = 0;
   while ((a_index < a_len)) {
@@ -324,29 +324,29 @@ void sp_convolve_one(sp_sample_t* a, size_t a_len, sp_sample_t* b, size_t b_len,
     a_index = (1 + a_index);
   };
 };
-/** discrete linear convolution for segments of a continuous stream. maps segments (a, a-len) to result.
-  result length is a-len, carryover length is b-len or previous b-len. b-len must be greater than zero.
-  algorithm: copy results that overlap from previous call from carryover, add results that fit completely in result,
-  add results that overlap with next segment to carryover */
-void sp_convolve(sp_sample_t* a, size_t a_len, sp_sample_t* b, size_t b_len, size_t carryover_len, sp_sample_t* result_carryover, sp_sample_t* result_samples) {
-  size_t size;
-  size_t a_index;
-  size_t b_index;
-  size_t c_index;
+/** discrete linear convolution for segments of a continuous stream. maps segments (a, a-len) to result-samples
+  using (b, b-len) as the impulse response. b-len must be greater than zero.
+  result-samples length is a-len, carryover length is b-len or carryover length from previous call.
+  all heap memory is owned and allocated by the caller.
+  algorithm: copy into result from carryover what overlaps from previous call, write to result,
+  copy results that overlap with the next segment to carryover */
+void sp_convolve(sp_sample_t* a, sp_sample_count_t a_len, sp_sample_t* b, sp_sample_count_t b_len, sp_sample_count_t carryover_len, sp_sample_t* result_carryover, sp_sample_t* result_samples) {
+  sp_sample_count_t size;
+  sp_sample_count_t a_index;
+  sp_sample_count_t b_index;
+  sp_sample_count_t c_index;
   memset(result_samples, 0, (a_len * sizeof(sp_sample_t)));
   memcpy(result_samples, result_carryover, (carryover_len * sizeof(sp_sample_t)));
   memset(result_carryover, 0, (b_len * sizeof(sp_sample_t)));
-  /* result values
+  /* result values.
 restrict processed range to exclude input values that generate carryover */
   size = ((a_len < b_len) ? 0 : (a_len - (b_len - 1)));
   if (size) {
     sp_convolve_one(a, size, b, b_len, result_samples);
   };
   /* carryover values */
-  a_index = size;
-  b_index = 0;
-  while ((a_index < a_len)) {
-    while ((b_index < b_len)) {
+  for (a_index = size; (a_index < a_len); a_index = (1 + a_index)) {
+    for (b_index = 0; (b_index < b_len); b_index = (1 + b_index)) {
       c_index = (a_index + b_index);
       if (c_index < a_len) {
         result_samples[c_index] = (result_samples[c_index] + (a[a_index] * b[b_index]));
@@ -354,10 +354,7 @@ restrict processed range to exclude input values that generate carryover */
         c_index = (c_index - a_len);
         result_carryover[c_index] = (result_carryover[c_index] + (a[a_index] * b[b_index]));
       };
-      b_index = (1 + b_index);
     };
-    b_index = 0;
-    a_index = (1 + a_index);
   };
 };
 define_sp_interleave(sp_interleave, sp_sample_t, ({ b[b_size] = (a[channel])[a_size]; }));
