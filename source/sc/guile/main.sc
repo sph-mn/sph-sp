@@ -1,38 +1,58 @@
 (pre-include "./helper.c")
-
 (define-sp-sine! scm-sp-sine! sp-sine)
 (define-sp-sine! scm-sp-sine-lq! sp-sine)
 
-#;(
-(define (scm-sp-port-channel-count scm-port) (SCM SCM)
-  (return (scm-from-uint32 (: (scm->sp-port scm-port) channel-count))))
+(define (scm-sp-port-channel-count scm-a) (SCM SCM)
+  (return (scm-from-sp-channel-count (: (scm->sp-port scm-a) channel-count))))
 
-(define (scm-sp-port-sample-rate scm-port) (SCM SCM)
-  (return (scm-from-uint32 (: (scm->sp-port scm-port) sample-rate))))
+(define (scm-sp-port-sample-rate scm-a) (SCM SCM)
+  (return (scm-from-sp-sample-rate (: (scm->sp-port scm-a) sample-rate))))
 
-(define (scm-sp-port-position? scm-port) (SCM SCM)
-  (return (scm-from-bool (bit-and sp-port-bit-position (: (scm->sp-port scm-port) flags)))))
+(define (scm-sp-port-position? scm-a) (SCM SCM)
+  (return (scm-from-bool (bit-and sp-port-bit-position (: (scm->sp-port scm-a) flags)))))
 
-(define (scm-sp-port-input? scm-port) (SCM SCM)
-  (return (scm-from-bool (bit-and sp-port-bit-input (: (scm-sp-port scm-port) flags)))))
+(define (scm-sp-port-input? scm-a) (SCM SCM)
+  (return (scm-from-bool (bit-and sp-port-bit-input (: (scm->sp-port scm-a) flags)))))
 
-(define (scm-sp-port-position scm-port) (SCM SCM)
+(define (scm-sp-port-position scm-a) (SCM SCM)
   "returns the current port position offset in number of samples"
   (declare position sp-sample-count-t)
-  (sp-port-position (scm->sp-port port) &position)
-  (return (scm-from-uint32 position)))
+  (sp-port-position (scm->sp-port scm-a) &position)
+  (return (scm-from-sp-sample-count position)))
 
 (define (scm-sp-port-close a) (SCM SCM)
   status-declare
   (set status (sp-port-close (scm->sp-port a)))
-  (status->scm-return SCM-UNSPECIFIED))
+  (scm-from-status-return SCM-UNSPECIFIED))
 
+(define (scm-sp-port-set-position scm-port scm-sample-offset) (SCM SCM SCM)
+  status-declare
+  (set status
+    (sp-port-set-position (scm->sp-port scm-port) (scm->sp-sample-count scm-sample-offset)))
+  (scm-from-status-return SCM-UNSPECIFIED))
+
+(define (scm-sp-convolve! result a b carryover carryover-len) (SCM SCM SCM SCM SCM SCM)
+  (declare
+    a-len sp-sample-count-t
+    b-len sp-sample-count-t)
+  (set
+    a-len (sp-octets->samples (SCM-BYTEVECTOR-LENGTH a))
+    b-len (sp-octets->samples (SCM-BYTEVECTOR-LENGTH b)))
+  (sp-convolve
+    (convert-type (SCM-BYTEVECTOR-CONTENTS result) sp-sample-t*)
+    (convert-type (SCM-BYTEVECTOR-CONTENTS a) sp-sample-t*)
+    a-len
+    (convert-type (SCM-BYTEVECTOR-CONTENTS b) sp-sample-t*)
+    b-len (convert-type (SCM-BYTEVECTOR-CONTENTS carryover) sp-sample-t*) (scm->size-t carryover-len))
+  (return SCM-UNSPECIFIED))
+
+#;(
 (define (scm-sp-port-read scm-port scm-sample-count) (SCM SCM SCM)
   status-declare
   (declare
     port sp-port-t*
-    sample-count uint32-t
-    channel-count uint32-t
+    sample-count sp-sample-count-t
+    channel-count sp-sample-count-t
     data sp-sample-t**
     result SCM)
   (set
@@ -51,7 +71,7 @@
   (declare
     port sp-port-t*
     data sp-sample-t**
-    channel-count uint32-t
+    channel-count sp-sample-count-t
     sample-count size-t)
   (local-memory-init 1)
   (set
@@ -64,17 +84,12 @@
     local-memory-free
     (status->scm-return SCM-UNSPECIFIED)))
 
-(define (scm-sp-port-set-position scm-port scm-sample-offset) (SCM SCM SCM)
-  status-declare
-  (set status (sp-port-set-position (scm-sp-port scm-port) (scm->uint64 scm-sample-offset)))
-  (status->scm-return SCM-UNSPECIFIED))
-
 (define (scm-sp-file-open scm-path scm-channel-count scm-sample-rate) (SCM SCM SCM SCM)
   status-declare
   (declare
     path uint8-t*
-    channel-count uint32-t
-    sample-rate uint32-t
+    channel-count sp-sample-count-t
+    sample-rate sp-sample-count-t
     result SCM)
   (set
     path (scm->locale-string scm-path)
@@ -92,9 +107,9 @@
   (declare
     device-name uint8-t*
     input? boolean
-    channel-count uint32-t
-    sample-rate uint32-t
-    latency uint32-t
+    channel-count sp-sample-count-t
+    sample-rate sp-sample-count-t
+    latency sp-sample-count-t
     result SCM)
   (set
     device-name (scm->locale-string scm-device-name)
@@ -108,29 +123,16 @@
   (label exit
     (status->scm-return result)))
 
-(define (scm-sp-convolve! result a b carryover carryover-len) (SCM SCM SCM SCM SCM SCM)
-  (declare
-    a-len uint32-t
-    b-len uint32-t)
-  (set
-    a-len (sp-octets->samples (SCM-BYTEVECTOR-LENGTH a))
-    b-len (sp-octets->samples (SCM-BYTEVECTOR-LENGTH b)))
-  (sp-convolve
-    (convert-type (SCM-BYTEVECTOR-CONTENTS result) sp-sample-t*)
-    (convert-type (SCM-BYTEVECTOR-CONTENTS a) sp-sample-t*)
-    a-len
-    (convert-type (SCM-BYTEVECTOR-CONTENTS b) sp-sample-t*)
-    b-len (convert-type (SCM-BYTEVECTOR-CONTENTS carryover) sp-sample-t*) (scm->size-t carryover-len))
-  (return SCM-UNSPECIFIED))
+
 
 (define (scm-sp-moving-average! result source scm-prev scm-next distance start end)
   (SCM SCM SCM SCM SCM SCM SCM SCM)
   (declare
-    source-len uint32-t
+    source-len sp-sample-count-t
     prev sp-sample-t*
-    prev-len uint32-t
+    prev-len sp-sample-count-t
     next sp-sample-t*
-    next-len uint32-t)
+    next-len sp-sample-count-t)
   (set source-len (sp-octets->samples (SCM-BYTEVECTOR-LENGTH source)))
   (optional-samples prev prev-len scm-prev)
   (optional-samples next next-len scm-next)
@@ -158,12 +160,12 @@
       (scm-sp-object-create state sp-object-type-windowed-sinc))))
 
 (define (scm-sp-windowed-sinc! result source state) (SCM SCM SCM SCM)
-  ;(define source-len uint32-t (sp-octets->samples (SCM-BYTEVECTOR-LENGTH source)))
+  ;(define source-len sp-sample-count-t (sp-octets->samples (SCM-BYTEVECTOR-LENGTH source)))
   #;(define
     prev sp-sample-t*
-    prev-len uint32-t
+    prev-len sp-sample-count-t
     next sp-sample-t*
-    next-len uint32-t)
+    next-len sp-sample-count-t)
   ;(define state sp-windowed-sinc-state-t* (scm-sp-object-data state))
   #;(sp-windowed-sinc (convert-type (SCM-BYTEVECTOR-CONTENTS result) sp-sample-t*)
     (convert-type (SCM-BYTEVECTOR-CONTENTS source) sp-sample-t*) source-len
@@ -173,7 +175,7 @@
 (define (scm-sp-fft source) (SCM SCM)
   status-declare
   (declare
-    result-len uint32-t
+    result-len sp-sample-count-t
     result SCM)
   (set
     result-len (/ (* 3 (SCM-BYTEVECTOR-LENGTH source)) 2)
@@ -186,11 +188,10 @@
   (label exit
     (status->scm-return result)))
 
-
 (define (scm-sp-ifft source) (SCM SCM)
   status-declare
   (declare
-    result-len uint32-t
+    result-len sp-sample-count-t
     result SCM)
   (set
     result-len (* (- (SCM-BYTEVECTOR-LENGTH source) 1) 2)
@@ -204,12 +205,11 @@
     (status->scm-return result)))
 )
 
-
 (define (sp-guile-init) void
-  #;(
   (declare
     type-slots SCM
     scm-symbol-data SCM)
+  scm-c-define-procedure-c-init
   (set
     scm-rnrs-raise (scm-c-public-ref "rnrs exceptions" "raise")
     scm-symbol-data (scm-from-latin1-symbol "data")
@@ -217,19 +217,6 @@
     scm-type-port (scm-make-foreign-object-type (scm-from-latin1-symbol "sp-port") type-slots 0)
     scm-type-windowed-sinc
     (scm-make-foreign-object-type (scm-from-latin1-symbol "sp-windowed-sinc") type-slots 0))
-  ; check (sizeof sp-sample-t)
-  ; chec (sizeof sp-sample-count-t)
-  ; chec (sizeof sp-sample-rate-t)
-  scm-c-define-procedure-c-init
-  (scm-c-define-procedure-c
-    "f32vector-sum" 1 2 0 scm-f32vector-sum "f32vector [start end] -> number")
-  (scm-c-define-procedure-c
-    "f64vector-sum" 1 2 0 scm-f64vector-sum "f64vector [start end] -> number")
-  (scm-c-define-procedure-c
-    "float-nearly-equal?"
-    3 0 0 scm-float-nearly-equal?
-    "a b margin -> boolean
-    number number number -> boolean")
   (scm-c-define-procedure-c
     "sp-sine!"
     6
@@ -244,10 +231,26 @@
     0
     0
     scm-sp-sine-lq!
-    "data len sample-duration freq phase amp -> unspecified
+    "data len sample-duration freq phase amp  -> unspecified
     sample-vector integer integer rational rational rational rational
     faster, lower precision version of sp-sine!.
     currently faster by a factor of about 2.6")
+  #;(
+
+
+  ; check (sizeof sp-sample-t)
+  ; chec (sizeof sp-sample-count-t)
+  ; chec (sizeof sp-sample-rate-t)
+  (scm-c-define-procedure-c
+    "f32vector-sum" 1 2 0 scm-f32vector-sum "f32vector [start end] -> number")
+  (scm-c-define-procedure-c
+    "f64vector-sum" 1 2 0 scm-f64vector-sum "f64vector [start end] -> number")
+  (scm-c-define-procedure-c
+    "float-nearly-equal?"
+    3 0 0 scm-float-nearly-equal?
+    "a b margin -> boolean
+    number number number -> boolean")
+
   (scm-c-define-procedure-c "sp-port-close" 1 0 0 scm-sp-port-close "sp-port -> boolean")
   (scm-c-define-procedure-c "sp-port-input?" 1 0 0 scm-sp-port-input? "sp-port -> boolean")
   (scm-c-define-procedure-c "sp-port-position?" 1 0 0 scm-sp-port-position? "sp-port -> boolean")
@@ -317,6 +320,4 @@
   (scm-c-define-procedure-c
   "sp-convolve!" 3 0 0 scm-sp-convolve! "a b state:(integer . f32vector) -> state")
 
-  )
-
-  )
+  ))

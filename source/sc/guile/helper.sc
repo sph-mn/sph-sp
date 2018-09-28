@@ -1,6 +1,7 @@
 (pre-include "libguile.h" "../main/sph-sp.h" "../foreign/sph/helper.c" "../foreign/sph/guile.c")
 
 (pre-define
+  status-group-sp-guile "sp-guile"
   (scm-from-sp-channel-count a) (scm-from-uint32 a)
   (scm-from-sp-sample-count a) (scm-from-uint32 a)
   (scm-from-sp-sample-rate a) (scm-from-uint32 a)
@@ -11,6 +12,10 @@
   (scm->sp-sample-rate a) (scm->uint32 a)
   (scm->sp-sample a) (scm->double a)
   (scm->sp-float a) (scm->double a)
+  (scm-from-sp-port pointer) (scm-make-foreign-object-1 scm-type-port pointer)
+  (scm-from-sp-windowed-sinc pointer) (scm-make-foreign-object-1 scm-type-windowed-sinc pointer)
+  (scm->sp-port a) (convert-type (scm-foreign-object-ref a 0) sp-port-t*)
+  (scm->sp-windowed-sinc a) (convert-type (scm-foreign-object-ref a 0) sp-windowed-sinc-state-t*)
   (define-sp-sine! scm-id f)
   (begin
     "defines scm-sp-sine!, scm-sp-sine-lq!"
@@ -22,34 +27,10 @@
         (scm->sp-float scm-freq)
         (scm->sp-float scm-phase)
         (scm->sp-float scm-amp) (convert-type (SCM-BYTEVECTOR-CONTENTS scm-data) sp-sample-t*))
-      (return SCM-UNSPECIFIED))))
-
-#;(
-(pre-define
-  status-group-db-guile "db-guile"
-  (scm-from-channel-count-t a) (scm-from-uint32 a)
-  (scm-from-sample-count-t a) (scm-from-uint32 a)
-  (scm-from-sample a) (scm-from-double a)
-  (optional-sample-rate a)
-  (if* (scm-is-undefined a) -1
-    (scm->int32 a))
-  (optional-channel-count a)
-  (if* (scm-is-undefined a) -1
-    (scm->int32 a))
-  (optional-samples a a-len scm)
-  (if (scm-is-true scm)
-    (set
-      a (convert-type (SCM-BYTEVECTOR-CONTENTS scm) sp-sample-t*)
-      a-len (sp-octets->samples (SCM-BYTEVECTOR-LENGTH scm)))
-    (set
-      a 0
-      a-len 0))
-  (optional-index a default)
-  (if* (and (not (scm-is-undefined start)) (scm-is-true start)) (scm->uint32 a)
-    default)
+      (return SCM-UNSPECIFIED)))
   ; error handling
   (scm-from-status-error a)
-  (scm-c-error a.group (db-guile-status-name a) (db-guile-status-description a))
+  (scm-c-error a.group (sp-guile-status-name a) (sp-guile-status-description a))
   (scm-c-error group name description)
   (scm-call-1
     scm-rnrs-raise
@@ -69,10 +50,47 @@
       (return result))
     (return (scm-from-status-error status))))
 
+(define (sp-guile-status-description a) (uint8-t* status-t)
+  "get the description if available for a status"
+  (declare b char*)
+  (cond
+    ((not (strcmp status-group-sp-guile a.group)) (set b ""))
+    (else (set b (sp-status-description a))))
+  (return (convert-type b uint8-t*)))
+
+(define (sp-guile-status-name a) (uint8-t* status-t)
+  "get the name if available for a status"
+  (declare b char*)
+  (cond
+    ((not (strcmp status-group-sp-guile a.group)) (set b "unknown"))
+    (else (set b (sp-status-name a))))
+  (return (convert-type b uint8-t*)))
+
 (declare
   scm-type-port SCM
   scm-type-windowed-sinc SCM
   scm-rnrs-raise SCM)
+
+#;(
+(pre-define
+  (optional-sample-rate a)
+  (if* (scm-is-undefined a) -1
+    (scm->int32 a))
+  (optional-channel-count a)
+  (if* (scm-is-undefined a) -1
+    (scm->int32 a))
+  (optional-samples a a-len scm)
+  (if (scm-is-true scm)
+    (set
+      a (convert-type (SCM-BYTEVECTOR-CONTENTS scm) sp-sample-t*)
+      a-len (sp-octets->samples (SCM-BYTEVECTOR-LENGTH scm)))
+    (set
+      a 0
+      a-len 0))
+  (optional-index a default)
+  (if* (and (not (scm-is-undefined start)) (scm-is-true start)) (scm->uint32 a)
+    default)
+  )
 
 (define (scm-take-channel-data a channel-count sample-count) (SCM sp-sample-t** uint32-t uint32-t)
   "get a guile scheme object for channel data sample arrays. returns a list of f64vectors.
