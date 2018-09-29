@@ -66,14 +66,26 @@ installed files
 # configuration options
 the file ``source/c-precompiled/config.c`` can be edited before compilation to edit the following compile-time settings
 
+| name | default | description |
 | --- | --- | --- |
-|sp-file-sf-format|(SF-FORMAT-WAV \| SF-FORMAT-DOUBLE)|soundfile file format. a combination of soundfile constants, for example (SF-FORMAT-AU \| SF-FORMAT-DOUBLE)|
-|sp-sample-format|sp-sample-format-f64|sample format used for internal processing. currently available: sp-sample-format-f32, sp-sample-format-f64|
+|sp-file-format|(SF-FORMAT-WAV \| SF-FORMAT-DOUBLE)|soundfile file format. a combination of file and sample format soundfile constants, for example (SF-FORMAT-AU \| SF-FORMAT-DOUBLE). when writing to files resampling is done automatically as necessary|
+|sp-sample-format|sp-sample-format-f64|sample format used for internal processing. see below for possible values|
 |sp-float-t|double||
-|sp-default-sample-rate|16000|
-|sp-default-channel-count|1|
-|sp-default-alsa-enable-soft-resample|1|
-|sp-default-alsa-latency|128|
+|sp-default-sample-rate|16000||
+|sp-default-channel-count|1||
+|sp-default-alsa-enable-soft-resample|1||
+|sp-default-alsa-latency|128||
+
+## possible values for sp-sample-format
+all formats are currently lower endian. the alternatives are available mostly for performance reasons
+
+| name | description |
+| --- | --- |
+|sp-sample-format-f64|64 bit floating point|
+|sp-sample-format-f32|32 bit floating point|
+|sp-sample-format-int32|32 bit signed integer|
+|sp-sample-format-int16|16 bit signed integer|
+|sp-sample-format-int8|8 bit signed integer|
 
 # scheme usage
 

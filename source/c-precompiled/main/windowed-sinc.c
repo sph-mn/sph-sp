@@ -61,7 +61,9 @@ status_t sp_windowed_sinc_state_create(sp_sample_rate_t sample_rate, sp_float_t 
     if ((state->sample_rate == sample_rate) && (state->freq == freq) && (state->transition == transition)) {
       return (status);
     } else {
-      free((state->ir));
+      if (state->ir) {
+        free((state->ir));
+      };
     };
   } else {
     status_require((sph_helper_malloc((sizeof(sp_windowed_sinc_state_t)), (&state))));

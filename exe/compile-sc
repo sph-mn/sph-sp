@@ -16,6 +16,10 @@ copy_example_config() {
   then
     cp "$sc/main/config.example.sc" "$sc/main/config.sc"
   fi
+  if [ ! -f "$sc/guile/config.sc" ]
+  then
+    cp "$sc/guile/config.example.sc" "$sc/guile/config.sc"
+  fi
 }
 
 copy_submodules() {
@@ -41,6 +45,6 @@ compile_sc() {
   mv "$c/main/sph-sp.c" "$c/main/sph-sp.h"
 }
 
-#copy_example_config &&
-#copy_submodules &&
+copy_example_config &&
+copy_submodules &&
 compile_sc $@

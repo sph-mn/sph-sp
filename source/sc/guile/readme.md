@@ -1,0 +1,1 @@
+this directory contains code for the making sph-sp bindings available to guile scheme

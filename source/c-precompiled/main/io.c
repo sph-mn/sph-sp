@@ -73,7 +73,9 @@ exit:
   memreg_free;
   return (status);
 };
-status_t sp_file_set_position(sp_port_t* port, sp_sample_count_t a) {
+/** seeks are defined in number of (multichannel) frames.
+  therefore, a seek in a stereo file from the current position forward with an offset of 1 would skip forward by one sample of both channels */
+status_t sp_file_set_position(sp_port_t* port, int64_t a) {
   status_declare;
   SNDFILE* file;
   sf_count_t count;
@@ -180,10 +182,10 @@ status_t sp_port_position(sp_port_t* port, sp_sample_count_t* result_position) {
     return (status);
   };
 };
-status_t sp_port_set_position(sp_port_t* port, sp_sample_count_t sample_index) {
+status_t sp_port_set_position(sp_port_t* port, int64_t sample_offset) {
   status_declare;
   if (sp_port_type_file == port->type) {
-    return ((sp_file_set_position(port, sample_index)));
+    return ((sp_file_set_position(port, sample_offset)));
   } else if (sp_port_type_alsa == port->type) {
     status_set_both(sp_status_group_sp, sp_status_id_not_implemented);
     return (status);

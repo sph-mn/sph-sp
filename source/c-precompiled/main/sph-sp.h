@@ -14,6 +14,9 @@
 #define sp_port_bit_closed 8
 #define sp_sample_format_f64 1
 #define sp_sample_format_f32 2
+#define sp_sample_format_int32 3
+#define sp_sample_format_int16 4
+#define sp_sample_format_int8 5
 #define sp_status_group_libc "libc"
 #define sp_status_group_sndfile "sndfile"
 #define sp_status_group_sp "sp"
@@ -30,16 +33,24 @@
 #define sp_windowed_sinc_cutoff(freq, sample_rate) ((2 * M_PI * freq) / sample_rate)
 #if (sp_sample_format == sp_sample_format_f64)
 #define sp_sample_t double
-#define sample_reverse_endian __bswap_64
 #define sp_sample_sum f64_sum
 #define sp_alsa_snd_pcm_format SND_PCM_FORMAT_FLOAT64_LE
-#else
-#if (sp_sample_format_f32 == sp_sample_format)
+#elif (sp_sample_format_f32 == sp_sample_format)
 #define sp_sample_t float
-#define sample_reverse_endian __bswap_32
 #define sp_sample_sum f32_sum
 #define sp_alsa_snd_pcm_format SND_PCM_FORMAT_FLOAT_LE
-#endif
+#elif (sp_sample_format_int32 == sp_sample_format)
+#define sp_sample_t int32_t
+#define sp_sample_sum(a, b) (a + b)
+#define sp_alsa_snd_pcm_format SND_PCM_FORMAT_S32_LE
+#elif (sp_sample_format_int16 == sp_sample_format)
+#define sp_sample_t int16_t
+#define sp_sample_sum(a, b) (a + b)
+#define sp_alsa_snd_pcm_format SND_PCM_FORMAT_S16_LE
+#elif (sp_sample_format_int8 == sp_sample_format)
+#define sp_sample_t int8_t
+#define sp_sample_sum(a, b) (a + b)
+#define sp_alsa_snd_pcm_format SND_PCM_FORMAT_S8_LE
 #endif
 enum { sp_status_id_file_channel_mismatch,
   sp_status_id_file_encoding,
@@ -74,8 +85,8 @@ typedef struct {
 status_t sp_port_read(sp_port_t* port, sp_sample_count_t sample_count, sp_sample_t** result_samples);
 status_t sp_port_write(sp_port_t* port, sp_sample_count_t sample_count, sp_sample_t** channel_data);
 status_t sp_port_position(sp_port_t* port, sp_sample_count_t* result_position);
-status_t sp_port_set_position(sp_port_t* port, sp_sample_count_t sample_index);
-status_t sp_file_open(uint8_t* path, sp_channel_count_t channel_count, sp_sample_count_t sample_rate, sp_port_t* result_port);
+status_t sp_port_set_position(sp_port_t* port, int64_t sample_offset);
+status_t sp_file_open(uint8_t* path, sp_channel_count_t channel_count, sp_sample_rate_t sample_rate, sp_port_t* result_port);
 status_t sp_alsa_open(uint8_t* device_name, boolean is_input, sp_channel_count_t channel_count, sp_sample_rate_t sample_rate, int32_t latency, sp_port_t* result_port);
 status_t sp_port_close(sp_port_t* a);
 status_t sp_alloc_channel_array(sp_channel_count_t channel_count, sp_sample_count_t sample_count, sp_sample_t*** result_array);
@@ -97,3 +108,4 @@ status_t sp_ifft(sp_sample_count_t len, sp_sample_t* source, sp_sample_count_t s
 status_t sp_moving_average(sp_sample_t* source, sp_sample_count_t source_len, sp_sample_t* prev, sp_sample_count_t prev_len, sp_sample_t* next, sp_sample_count_t next_len, sp_sample_count_t radius, sp_sample_count_t start, sp_sample_count_t end, sp_sample_t* result_samples);
 void sp_convolve_one(sp_sample_t* a, sp_sample_count_t a_len, sp_sample_t* b, sp_sample_count_t b_len, sp_sample_t* result_samples);
 void sp_convolve(sp_sample_t* a, sp_sample_count_t a_len, sp_sample_t* b, sp_sample_count_t b_len, sp_sample_count_t result_carryover_len, sp_sample_t* result_carryover, sp_sample_t* result_samples);
+void sp_channel_data_free(sp_sample_t** a, sp_channel_count_t channel_count);

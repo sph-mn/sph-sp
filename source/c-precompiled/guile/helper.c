@@ -2,22 +2,12 @@
 #include "../main/sph-sp.h"
 #include "../foreign/sph/helper.c"
 #include "../foreign/sph/guile.c"
+#include "./config.c"
 #define status_group_sp_guile "sp-guile"
-#define scm_from_sp_channel_count(a) scm_from_uint32(a)
-#define scm_from_sp_sample_count(a) scm_from_uint32(a)
-#define scm_from_sp_sample_rate(a) scm_from_uint32(a)
-#define scm_from_sp_sample(a) scm_from_double(a)
-#define scm_from_sp_float(a) scm_from_double(a)
 #define scm_from_sp_port(pointer) scm_make_foreign_object_1(scm_type_port, pointer)
 #define scm_from_sp_windowed_sinc(pointer) scm_make_foreign_object_1(scm_type_windowed_sinc, pointer)
-#define scm_to_sp_channel_count(a) scm_to_uint32(a)
-#define scm_to_sp_sample_count(a) scm_to_uint32(a)
-#define scm_to_sp_sample_rate(a) scm_to_uint32(a)
-#define scm_to_sp_sample(a) scm_to_double(a)
-#define scm_to_sp_float(a) scm_to_double(a)
 #define scm_to_sp_port(a) ((sp_port_t*)(scm_foreign_object_ref(a, 0)))
 #define scm_to_sp_windowed_sinc(a) ((sp_windowed_sinc_state_t*)(scm_foreign_object_ref(a, 0)))
-#define scm_c_make_sp_samples(length) scm_make_f64vector((scm_from_sp_sample_count(length)), (scm_from_uint8(0)))
 /** defines scm-sp-sine!, scm-sp-sine-lq! */
 #define define_sp_sine_x(scm_id, f) \
   SCM scm_id(SCM scm_data, SCM scm_len, SCM scm_sample_duration, SCM scm_freq, SCM scm_phase, SCM scm_amp) { \
@@ -57,3 +47,39 @@ uint8_t* sp_guile_status_name(status_t a) {
 SCM scm_type_port;
 SCM scm_type_windowed_sinc;
 SCM scm_rnrs_raise;
+/** only the result array is allocated, data is referenced to the scm vectors.
+  result is set to null if channel-data is empty */
+status_t scm_to_channel_data(SCM a, sp_channel_count_t* result_channel_count, sp_sample_count_t* result_sample_count, sp_sample_t*** result_channel_data) {
+  status_declare;
+  sp_sample_t** channel_data;
+  sp_channel_count_t channel_count;
+  sp_sample_count_t sample_count;
+  sp_channel_count_t i;
+  channel_count = scm_to_sp_channel_count((scm_length(a)));
+  if (!channel_count) {
+    *result_channel_data = 0;
+    *result_channel_count = 0;
+    *result_sample_count = 0;
+    goto exit;
+  };
+  sample_count = sp_octets_to_samples((SCM_BYTEVECTOR_LENGTH((scm_first(a)))));
+  status_require((sp_alloc_channel_array(channel_count, sample_count, (&channel_data))));
+  for (i = 0; (i < channel_count); i = (1 + i), a = scm_tail(a)) {
+    channel_data[i] = ((sp_sample_t*)(SCM_BYTEVECTOR_CONTENTS((scm_first(a)))));
+  };
+  *result_channel_data = channel_data;
+exit:
+  return (status);
+};
+/** get a guile scheme object for channel data sample arrays. returns a list of sample-vectors.
+  eventually frees given data arrays */
+SCM scm_c_take_channel_data(sp_sample_t** a, sp_channel_count_t channel_count, sp_sample_count_t sample_count) {
+  SCM scm_result;
+  scm_result = SCM_EOL;
+  while (channel_count) {
+    channel_count = (channel_count - 1);
+    scm_result = scm_cons((scm_c_take_samples((a[channel_count]), sample_count)), scm_result);
+  };
+  free(a);
+  return (scm_result);
+};

@@ -115,6 +115,13 @@ uint8_t* sp_status_name(status_t a) {
     b = "unknown";
   };
 };
+void sp_channel_data_free(sp_sample_t** a, sp_channel_count_t channel_count) {
+  while (channel_count) {
+    channel_count = (channel_count - 1);
+    free((a[channel_count]));
+  };
+  free(a);
+};
 /** return a newly allocated array for channels with data arrays for each channel.
   returns zero if memory could not be allocated */
 status_t sp_alloc_channel_array(sp_channel_count_t channel_count, sp_sample_count_t sample_count, sp_sample_t*** result_array) {

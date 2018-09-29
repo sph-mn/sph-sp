@@ -77,7 +77,9 @@
     memreg-free
     (return status)))
 
-(define (sp-file-set-position port a) (status-t sp-port-t* sp-sample-count-t)
+(define (sp-file-set-position port a) (status-t sp-port-t* int64-t)
+  "seeks are defined in number of (multichannel) frames.
+  therefore, a seek in a stereo file from the current position forward with an offset of 1 would skip forward by one sample of both channels"
   status-declare
   (declare
     file SNDFILE*
@@ -193,9 +195,9 @@
     (sp-port-type-alsa
       (status-set-both sp-status-group-sp sp-status-id-not-implemented) (return status))))
 
-(define (sp-port-set-position port sample-index) (status-t sp-port-t* sp-sample-count-t)
+(define (sp-port-set-position port sample-offset) (status-t sp-port-t* int64-t)
   status-declare
   (case = port:type
-    (sp-port-type-file (return (sp-file-set-position port sample-index)))
+    (sp-port-type-file (return (sp-file-set-position port sample-offset)))
     (sp-port-type-alsa
       (status-set-both sp-status-group-sp sp-status-id-not-implemented) (return status))))

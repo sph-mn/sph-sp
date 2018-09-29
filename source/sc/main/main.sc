@@ -98,6 +98,12 @@
     ((not (strcmp sp-status-group-alsa a.group)) (set b "alsa"))
     ((not (strcmp sp-status-group-sndfile a.group)) (set b "sndfile")) (else (set b "unknown"))))
 
+(define (sp-channel-data-free a channel-count) (void sp-sample-t** sp-channel-count-t)
+  (while channel-count
+    (set channel-count (- channel-count 1))
+    (free (array-get a channel-count)))
+  (free a))
+
 (define (sp-alloc-channel-array channel-count sample-count result-array)
   (status-t sp-channel-count-t sp-sample-count-t sp-sample-t***)
   "return a newly allocated array for channels with data arrays for each channel.
@@ -129,7 +135,7 @@
     c (/ -4 (* M_PI M_PI)))
   (return (- (+ (* b a) (* c a (abs a))))))
 
-(define (sp-sinc a) (sp-sample-t sp-sample-t)
+(define (sp-sinc a) (sp-float-t sp-float-t)
   "the normalised sinc function"
   (return
     (if* (= 0 a) 1

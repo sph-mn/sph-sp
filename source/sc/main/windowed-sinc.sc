@@ -70,7 +70,7 @@
       (if
         (and (= state:sample-rate sample-rate) (= state:freq freq) (= state:transition transition))
         (return status)
-        (free state:ir)))
+        (if state:ir (free state:ir))))
     (begin
       (status-require (sph-helper-malloc (sizeof sp-windowed-sinc-state-t) &state))
       (memreg-add state)
