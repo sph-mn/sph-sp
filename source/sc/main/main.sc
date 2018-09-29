@@ -181,7 +181,7 @@
     (return status)))
 
 (define
-  (sp-moving-average source source-len prev prev-len next next-len start end radius result-samples)
+  (sp-moving-average source source-len prev prev-len next next-len radius start end result-samples)
   (status-t
     sp-sample-t*
     sp-sample-count-t
@@ -196,9 +196,9 @@
      for example at the beginning and end of a stream
    * since the result value for a sample is calculated using samples left and right of it,
      a previous and following part of a stream is eventually needed to reference values
-     outside the source segment to create a valid continuous result.
+     outside the source segment to create an accurate continuous result.
      zero is used for unavailable values outside the source segment
-   * available values outside the start/end range are considered where needed to calculate averages
+   * available values outside the start/end range are still considered when needed to calculate averages
    * rounding errors are kept low by using modified kahan neumaier summation and not using a
      recursive implementation. both properties which make it much slower than many other implementations"
   status-declare

@@ -41,6 +41,6 @@ compile_sc() {
   mv "$c/main/sph-sp.c" "$c/main/sph-sp.h"
 }
 
-copy_example_config &&
-copy_submodules &&
+#copy_example_config &&
+#copy_submodules &&
 compile_sc $@

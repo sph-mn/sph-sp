@@ -200,12 +200,12 @@ exit:
      for example at the beginning and end of a stream
    * since the result value for a sample is calculated using samples left and right of it,
      a previous and following part of a stream is eventually needed to reference values
-     outside the source segment to create a valid continuous result.
+     outside the source segment to create an accurate continuous result.
      zero is used for unavailable values outside the source segment
-   * available values outside the start/end range are considered where needed to calculate averages
+   * available values outside the start/end range are still considered when needed to calculate averages
    * rounding errors are kept low by using modified kahan neumaier summation and not using a
      recursive implementation. both properties which make it much slower than many other implementations */
-status_t sp_moving_average(sp_sample_t* source, sp_sample_count_t source_len, sp_sample_t* prev, sp_sample_count_t prev_len, sp_sample_t* next, sp_sample_count_t next_len, sp_sample_count_t start, sp_sample_count_t end, sp_sample_count_t radius, sp_sample_t* result_samples) {
+status_t sp_moving_average(sp_sample_t* source, sp_sample_count_t source_len, sp_sample_t* prev, sp_sample_count_t prev_len, sp_sample_t* next, sp_sample_count_t next_len, sp_sample_count_t radius, sp_sample_count_t start, sp_sample_count_t end, sp_sample_t* result_samples) {
   status_declare;
   memreg_init(1);
   sp_sample_count_t left;

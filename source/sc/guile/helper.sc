@@ -7,15 +7,17 @@
   (scm-from-sp-sample-rate a) (scm-from-uint32 a)
   (scm-from-sp-sample a) (scm-from-double a)
   (scm-from-sp-float a) (scm-from-double a)
+  (scm-from-sp-port pointer) (scm-make-foreign-object-1 scm-type-port pointer)
+  (scm-from-sp-windowed-sinc pointer) (scm-make-foreign-object-1 scm-type-windowed-sinc pointer)
   (scm->sp-channel-count a) (scm->uint32 a)
   (scm->sp-sample-count a) (scm->uint32 a)
   (scm->sp-sample-rate a) (scm->uint32 a)
   (scm->sp-sample a) (scm->double a)
   (scm->sp-float a) (scm->double a)
-  (scm-from-sp-port pointer) (scm-make-foreign-object-1 scm-type-port pointer)
-  (scm-from-sp-windowed-sinc pointer) (scm-make-foreign-object-1 scm-type-windowed-sinc pointer)
   (scm->sp-port a) (convert-type (scm-foreign-object-ref a 0) sp-port-t*)
   (scm->sp-windowed-sinc a) (convert-type (scm-foreign-object-ref a 0) sp-windowed-sinc-state-t*)
+  (scm-c-make-sp-samples length)
+  (scm-make-f64vector (scm-from-sp-sample-count length) (scm-from-uint8 0))
   (define-sp-sine! scm-id f)
   (begin
     "defines scm-sp-sine!, scm-sp-sine-lq!"
@@ -79,17 +81,8 @@
   (optional-channel-count a)
   (if* (scm-is-undefined a) -1
     (scm->int32 a))
-  (optional-samples a a-len scm)
-  (if (scm-is-true scm)
-    (set
-      a (convert-type (SCM-BYTEVECTOR-CONTENTS scm) sp-sample-t*)
-      a-len (sp-octets->samples (SCM-BYTEVECTOR-LENGTH scm)))
-    (set
-      a 0
-      a-len 0))
-  (optional-index a default)
-  (if* (and (not (scm-is-undefined start)) (scm-is-true start)) (scm->uint32 a)
-    default)
+
+
   )
 
 (define (scm-take-channel-data a channel-count sample-count) (SCM sp-sample-t** uint32-t uint32-t)

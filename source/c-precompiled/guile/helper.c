@@ -8,15 +8,16 @@
 #define scm_from_sp_sample_rate(a) scm_from_uint32(a)
 #define scm_from_sp_sample(a) scm_from_double(a)
 #define scm_from_sp_float(a) scm_from_double(a)
+#define scm_from_sp_port(pointer) scm_make_foreign_object_1(scm_type_port, pointer)
+#define scm_from_sp_windowed_sinc(pointer) scm_make_foreign_object_1(scm_type_windowed_sinc, pointer)
 #define scm_to_sp_channel_count(a) scm_to_uint32(a)
 #define scm_to_sp_sample_count(a) scm_to_uint32(a)
 #define scm_to_sp_sample_rate(a) scm_to_uint32(a)
 #define scm_to_sp_sample(a) scm_to_double(a)
 #define scm_to_sp_float(a) scm_to_double(a)
-#define scm_from_sp_port(pointer) scm_make_foreign_object_1(scm_type_port, pointer)
-#define scm_from_sp_windowed_sinc(pointer) scm_make_foreign_object_1(scm_type_windowed_sinc, pointer)
 #define scm_to_sp_port(a) ((sp_port_t*)(scm_foreign_object_ref(a, 0)))
 #define scm_to_sp_windowed_sinc(a) ((sp_windowed_sinc_state_t*)(scm_foreign_object_ref(a, 0)))
+#define scm_c_make_sp_samples(length) scm_make_f64vector((scm_from_sp_sample_count(length)), (scm_from_uint8(0)))
 /** defines scm-sp-sine!, scm-sp-sine-lq! */
 #define define_sp_sine_x(scm_id, f) \
   SCM scm_id(SCM scm_data, SCM scm_len, SCM scm_sample_duration, SCM scm_freq, SCM scm_phase, SCM scm_amp) { \

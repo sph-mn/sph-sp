@@ -115,7 +115,7 @@
   (status-t sp-sample-count-t sp-sample-t* sp-sample-count-t sp-sample-t*)
   (sp-ifft len source source-len result-samples)
   (status-t sp-sample-count-t sp-sample-t* sp-sample-count-t sp-sample-t*)
-  (sp-moving-average source source-len prev prev-len next next-len start end radius result-samples)
+  (sp-moving-average source source-len prev prev-len next next-len radius start end result-samples)
   (status-t
     sp-sample-t*
     sp-sample-count-t
