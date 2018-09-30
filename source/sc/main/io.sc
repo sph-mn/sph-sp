@@ -5,19 +5,23 @@
     (set port:flags (bit-or sp-port-bit-closed port:flags)))
   (return status))
 
-(define (sp-file-open path channel-count sample-rate result-port)
-  (status-t uint8-t* sp-channel-count-t sp-sample-rate-t sp-port-t*)
+(define (sp-file-open path mode channel-count sample-rate result-port)
+  (status-t uint8-t* int sp-channel-count-t sp-sample-rate-t sp-port-t*)
   status-declare
   (declare
     bit-position uint8-t
     info SF_INFO
     file SNDFILE*
-    mode int)
+    sf-mode int)
+  (case = mode
+    (sp-port-mode-write (set sf-mode SFM-WRITE))
+    (sp-port-mode-read (set sf-mode SFM-READ))
+    (sp-port-mode-read-write (set sf-mode SFM-RDWR))
+    (else (status-set-both-goto sp-status-group-sp sp-status-id-port-type)))
   (set
     info.format sp-file-format
     info.channels channel-count
     info.samplerate sample-rate
-    mode SFM-RDWR
     file (sf-open path mode &info))
   (if (not file) (status-set-both-goto sp-status-group-sndfile (sf-error file)))
   (set
@@ -105,20 +109,21 @@
   (label exit
     (return status)))
 
-(define (sp-alsa-open device-name is-input channel-count sample-rate latency result-port)
-  (status-t uint8-t* boolean sp-channel-count-t sp-sample-rate-t int32-t sp-port-t*)
+(define (sp-alsa-open device-name mode channel-count sample-rate latency result-port)
+  (status-t uint8-t* int sp-channel-count-t sp-sample-rate-t int32-t sp-port-t*)
   "open alsa sound output for capture or playback"
   status-declare
-  (declare alsa-port snd-pcm-t*)
-  (if (not device-name) (set device-name "default"))
-  (optional-set-number latency sp-default-alsa-latency)
+  (declare
+    alsa-port snd-pcm-t*
+    alsa-mode int)
   (set alsa-port 0)
-  (sp-alsa-status-require
-    (snd-pcm-open
-      &alsa-port device-name
-      (if* is-input SND_PCM_STREAM_CAPTURE
-        SND_PCM_STREAM_PLAYBACK)
-      0))
+  (if (not device-name) (set device-name "default"))
+  (if (> 0 latency) (set latency sp-default-alsa-latency))
+  (case = mode
+    (sp-port-mode-write (set alsa-mode SND_PCM_STREAM_CAPTURE))
+    (sp-port-mode-read (set alsa-mode SND_PCM_STREAM_PLAYBACK))
+    (else (status-set-both-goto sp-status-group-sp sp-status-id-port-type)))
+  (sp-alsa-status-require (snd-pcm-open &alsa-port device-name alsa-mode 0))
   (sp-alsa-status-require
     (snd-pcm-set-params
       alsa-port
@@ -128,8 +133,8 @@
   (set
     result-port:type sp-port-type-alsa
     result-port:flags
-    (if* is-input sp-port-bit-input
-      sp-port-bit-output)
+    (if* (= mode sp-port-mode-write) sp-port-bit-output
+      sp-port-bit-input)
     result-port:data (convert-type alsa-port void*))
   (label exit
     (if (and status-is-failure alsa-port) (snd-pcm-close alsa-port))

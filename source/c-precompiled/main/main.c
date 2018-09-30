@@ -40,11 +40,6 @@
       index = (1 + index); \
     }; \
   }
-/** set default if number is negative */
-#define optional_set_number(a, default) \
-  if (0 > a) { \
-    a = default; \
-  }
 /** default if number is negative */
 #define optional_number(a, default) ((0 > a) ? default : a)
 /** define a deinterleave, interleave or similar routine.

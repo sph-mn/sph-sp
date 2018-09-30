@@ -12,6 +12,9 @@
   sp-port-bit-output 2
   sp-port-bit-position 4
   sp-port-bit-closed 8
+  sp-port-mode-read 1
+  sp-port-mode-write 2
+  sp-port-mode-read-write 3
   sp-sample-format-f64 1
   sp-sample-format-f32 2
   sp-sample-format-int32 3
@@ -114,12 +117,11 @@
   (sp-port-write port sample-count channel-data)
   (status-t sp-port-t* sp-sample-count-t sp-sample-t**) (sp-port-position port result-position)
   (status-t sp-port-t* sp-sample-count-t*) (sp-port-set-position port sample-offset)
-  (status-t sp-port-t* int64-t) (sp-file-open path channel-count sample-rate result-port)
-  (status-t uint8-t* sp-channel-count-t sp-sample-rate-t sp-port-t*)
-  (sp-alsa-open device-name is-input channel-count sample-rate latency result-port)
-  (status-t uint8-t* boolean sp-channel-count-t sp-sample-rate-t int32-t sp-port-t*)
-  (sp-port-close a) (status-t sp-port-t*)
-  (sp-alloc-channel-array channel-count sample-count result-array)
+  (status-t sp-port-t* int64-t) (sp-file-open path mode channel-count sample-rate result-port)
+  (status-t uint8-t* int sp-channel-count-t sp-sample-rate-t sp-port-t*)
+  (sp-alsa-open device-name mode channel-count sample-rate latency result-port)
+  (status-t uint8-t* int sp-channel-count-t sp-sample-rate-t int32-t sp-port-t*) (sp-port-close a)
+  (status-t sp-port-t*) (sp-alloc-channel-array channel-count sample-count result-array)
   (status-t sp-channel-count-t sp-sample-count-t sp-sample-t***) (sp-status-description a)
   (uint8-t* status-t) (sp-status-name a)
   (uint8-t* status-t) (sp-sine len sample-duration freq phase amp result-samples)

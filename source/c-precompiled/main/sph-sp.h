@@ -75,6 +75,9 @@ typedef struct {
 #define sp_port_bit_output 2
 #define sp_port_bit_position 4
 #define sp_port_bit_closed 8
+#define sp_port_mode_read 1
+#define sp_port_mode_write 2
+#define sp_port_mode_read_write 3
 #define sp_sample_format_f64 1
 #define sp_sample_format_f32 2
 #define sp_sample_format_int32 3
@@ -163,8 +166,8 @@ status_t sp_port_read(sp_port_t* port, sp_sample_count_t sample_count, sp_sample
 status_t sp_port_write(sp_port_t* port, sp_sample_count_t sample_count, sp_sample_t** channel_data);
 status_t sp_port_position(sp_port_t* port, sp_sample_count_t* result_position);
 status_t sp_port_set_position(sp_port_t* port, int64_t sample_offset);
-status_t sp_file_open(uint8_t* path, sp_channel_count_t channel_count, sp_sample_rate_t sample_rate, sp_port_t* result_port);
-status_t sp_alsa_open(uint8_t* device_name, boolean is_input, sp_channel_count_t channel_count, sp_sample_rate_t sample_rate, int32_t latency, sp_port_t* result_port);
+status_t sp_file_open(uint8_t* path, int mode, sp_channel_count_t channel_count, sp_sample_rate_t sample_rate, sp_port_t* result_port);
+status_t sp_alsa_open(uint8_t* device_name, int mode, sp_channel_count_t channel_count, sp_sample_rate_t sample_rate, int32_t latency, sp_port_t* result_port);
 status_t sp_port_close(sp_port_t* a);
 status_t sp_alloc_channel_array(sp_channel_count_t channel_count, sp_sample_count_t sample_count, sp_sample_t*** result_array);
 uint8_t* sp_status_description(status_t a);

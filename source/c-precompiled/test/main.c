@@ -197,7 +197,7 @@ status_t test_port() {
   };
   goto exit;
   /* test create */
-  status_require((sp_file_open(test_file_path, channel_count, sample_rate, (&port))));
+  status_require((sp_file_open(test_file_path, sp_port_mode_read_write, channel_count, sample_rate, (&port))));
   printf("  create\n");
   status_require((sp_port_position((&port), (&position))));
   status_require((sp_port_write((&port), sample_count, channel_data)));
@@ -216,7 +216,7 @@ status_t test_port() {
   status_require((sp_port_close((&port))));
   printf("  write\n");
   /* test open */
-  status_require((sp_file_open(test_file_path, 2, 8000, (&port))));
+  status_require((sp_file_open(test_file_path, sp_port_mode_read_write, 2, 8000, (&port))));
   status_require((sp_port_position((&port), (&position))));
   test_helper_assert("sp-port-position existing file", (sample_count == position));
   status_require((sp_port_set_position((&port), 0)));

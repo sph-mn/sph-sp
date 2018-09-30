@@ -210,7 +210,8 @@
         (array-get (array-get channel-data channel) len) len)))
   (goto exit)
   (sc-comment "test create")
-  (status-require (sp-file-open test-file-path channel-count sample-rate &port))
+  (status-require
+    (sp-file-open test-file-path sp-port-mode-read-write channel-count sample-rate &port))
   (printf "  create\n")
   (status-require (sp-port-position &port &position))
   (status-require (sp-port-write &port sample-count channel-data))
@@ -234,7 +235,7 @@
   (status-require (sp-port-close &port))
   (printf "  write\n")
   (sc-comment "test open")
-  (status-require (sp-file-open test-file-path 2 8000 &port))
+  (status-require (sp-file-open test-file-path sp-port-mode-read-write 2 8000 &port))
   (status-require (sp-port-position &port &position))
   (test-helper-assert "sp-port-position existing file" (= sample-count position))
   (status-require (sp-port-set-position &port 0))

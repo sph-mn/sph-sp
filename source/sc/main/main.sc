@@ -36,10 +36,6 @@
           (array-get result-samples index) (* amp (sin (* freq phase sample-duration)))
           phase (+ 1 phase)
           index (+ 1 index)))))
-  (optional-set-number a default)
-  (begin
-    "set default if number is negative"
-    (if (> 0 a) (set a default)))
   (optional-number a default)
   (begin
     "default if number is negative"
