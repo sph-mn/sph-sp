@@ -186,6 +186,9 @@ sp_status_id_file_channel_mismatch sp_status_id_file_encoding sp_status_id_file_
   sp_status_id_undefined
 ```
 
+# other language bindings
+* scheme: [sph-sp-guile](https://github.com/sph-mn/sph-sp-guile)
+
 # other interesting projects
 * [soundpipe](https://github.com/PaulBatchelor/Soundpipe)
-* [ciglet](https://github.com/Sleepwalking/ciglet)## routines
+* [ciglet](https://github.com/Sleepwalking/ciglet)
