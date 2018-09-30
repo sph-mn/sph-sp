@@ -62,6 +62,8 @@
             b-size (- b-size 1))
           body)))))
 
+;(set (array-get b b-size) (array-get (array-get a channel) a-size))
+
 (define (sp-status-description a) (uint8-t* status-t)
   (declare b char*)
   (cond

@@ -89,6 +89,7 @@
     sp-status-id-eof
     sp-status-id-input-type
     sp-status-id-memory
+    sp-status-id-invalid-argument
     sp-status-id-not-implemented
     sp-status-id-port-closed sp-status-id-port-position sp-status-id-port-type sp-status-id-undefined))
 
@@ -112,12 +113,12 @@
       (ir-len sp-sample-count-t)
       (sample-rate sp-sample-rate-t)
       (transition sp-float-t)))
-  (sp-port-read port sample-count result-samples)
-  (status-t sp-port-t* sp-sample-count-t sp-sample-t**)
-  (sp-port-write port sample-count channel-data)
-  (status-t sp-port-t* sp-sample-count-t sp-sample-t**) (sp-port-position port result-position)
+  (sp-port-read port sample-count result-channel-data result-sample-count)
+  (status-t sp-port-t* sp-sample-count-t sp-sample-t** sp-sample-count-t*)
+  (sp-port-write port channel-data sample-count result-sample-count)
+  (status-t sp-port-t* sp-sample-t** sp-sample-count-t sp-sample-count-t*) (sp-port-position port result-position)
   (status-t sp-port-t* sp-sample-count-t*) (sp-port-set-position port sample-offset)
-  (status-t sp-port-t* int64-t) (sp-file-open path mode channel-count sample-rate result-port)
+  (status-t sp-port-t* size-t) (sp-file-open path mode channel-count sample-rate result-port)
   (status-t uint8-t* int sp-channel-count-t sp-sample-rate-t sp-port-t*)
   (sp-alsa-open device-name mode channel-count sample-rate latency result-port)
   (status-t uint8-t* int sp-channel-count-t sp-sample-rate-t int32-t sp-port-t*) (sp-port-close a)

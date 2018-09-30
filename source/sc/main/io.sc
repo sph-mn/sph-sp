@@ -9,35 +9,43 @@
   (status-t uint8-t* int sp-channel-count-t sp-sample-rate-t sp-port-t*)
   status-declare
   (declare
-    bit-position uint8-t
     info SF_INFO
     file SNDFILE*
-    sf-mode int)
+    sf-mode int
+    flags uint8-t)
   (case = mode
-    (sp-port-mode-write (set sf-mode SFM-WRITE))
-    (sp-port-mode-read (set sf-mode SFM-READ))
-    (sp-port-mode-read-write (set sf-mode SFM-RDWR))
+    (sp-port-mode-write
+      (set
+        sf-mode SFM-WRITE
+        flags sp-port-bit-output))
+    (sp-port-mode-read
+      (set
+        sf-mode SFM-READ
+        flags sp-port-bit-input))
+    (sp-port-mode-read-write
+      (set
+        sf-mode SFM-RDWR
+        flags (bit-or sp-port-bit-input sp-port-bit-output)))
     (else (status-set-both-goto sp-status-group-sp sp-status-id-port-type)))
   (set
     info.format sp-file-format
     info.channels channel-count
     info.samplerate sample-rate
-    file (sf-open path mode &info))
+    file (sf-open path sf-mode &info))
   (if (not file) (status-set-both-goto sp-status-group-sndfile (sf-error file)))
   (set
-    bit-position
-    (if* info.seekable sp-port-bit-position
-      0)
+    result-port:flags
+    (if* info.seekable (bit-or sp-port-bit-position flags)
+      flags)
     result-port:channel-count channel-count
     result-port:sample-rate sample-rate
     result-port:type sp-port-type-file
-    result-port:flags (bit-or sp-port-bit-input sp-port-bit-output bit-position)
     result-port:data file)
   (label exit
     (return status)))
 
-(define (sp-file-write port sample-count channel-data)
-  (status-t sp-port-t* sp-sample-count-t sp-sample-t**)
+(define (sp-file-write port channel-data sample-count result-write-count)
+  (status-t sp-port-t* sp-sample-t** sp-sample-count-t sp-sample-count-t*)
   status-declare
   (declare
     channel-count sp-channel-count-t
@@ -49,19 +57,20 @@
   (set
     channel-count port:channel-count
     file port:data
-    interleaved-size (* channel-count sample-count (sizeof sp-sample-t*)))
+    interleaved-size (* channel-count sample-count (sizeof sp-sample-t)))
   (status-require (sph-helper-malloc interleaved-size &interleaved))
   (memreg-add interleaved)
   (sp-interleave channel-data interleaved sample-count channel-count)
   (set write-count (sp-sf-write file interleaved sample-count))
   (if (not (= sample-count write-count))
-    (status-set-both-goto sp-status-group-sp sp-status-id-file-incomplete))
+    (status-set-both sp-status-group-sp sp-status-id-file-incomplete))
+  (set *result-write-count write-count)
   (label exit
     memreg-free
     (return status)))
 
-(define (sp-file-read port sample-count result-channel-data)
-  (status-t sp-port-t* sp-sample-count-t sp-sample-t**)
+(define (sp-file-read port sample-count result-channel-data result-read-count)
+  (status-t sp-port-t* sp-sample-count-t sp-sample-t** sp-sample-count-t*)
   status-declare
   (declare
     channel-count sp-channel-count-t
@@ -75,8 +84,9 @@
   (status-require (sph-helper-malloc interleaved-size &interleaved))
   (memreg-add interleaved)
   (set read-count (sp-sf-read (convert-type port:data SNDFILE*) interleaved sample-count))
-  (if (not (= interleaved-size read-count)) (status-set-both sp-status-group-sp sp-status-id-eof))
   (sp-deinterleave result-channel-data interleaved read-count channel-count)
+  (if (not (= sample-count read-count)) (status-set-both sp-status-group-sp sp-status-id-eof))
+  (set *result-read-count read-count)
   (label exit
     memreg-free
     (return status)))
@@ -89,7 +99,6 @@
     file SNDFILE*
     count sf-count-t)
   (set
-    a (/ a (sizeof sp-sample-t))
     file port:data
     count (sf-seek file a SEEK-SET))
   (if (= count -1) (status-set-both-goto sp-status-group-sndfile (sf-error file)))
@@ -105,7 +114,7 @@
     file port:data
     count (sf-seek file 0 SEEK-CUR))
   (if (= count -1) (status-set-both-goto sp-status-group-sndfile (sf-error file)))
-  (set *result-position (/ count (sizeof sp-sample-t)))
+  (set *result-position count)
   (label exit
     (return status)))
 
@@ -140,8 +149,8 @@
     (if (and status-is-failure alsa-port) (snd-pcm-close alsa-port))
     (return status)))
 
-(define (sp-alsa-write port sample-count channel-data)
-  (status-t sp-port-t* sp-sample-count-t sp-sample-t**)
+(define (sp-alsa-write port channel-data sample-count result-sample-count)
+  (status-t sp-port-t* sp-sample-t** sp-sample-count-t sp-sample-count-t*)
   status-declare
   (declare
     alsa-port snd-pcm-t*
@@ -153,10 +162,11 @@
       alsa-port (convert-type channel-data void**) (convert-type sample-count snd_pcm_uframes_t)))
   (if (and (< frames-count 0) (< (snd-pcm-recover alsa-port frames-count 0) 0))
     (status-set-both sp-status-group-alsa frames-count))
+  (set *result-sample-count frames-count)
   (return status))
 
-(define (sp-alsa-read port sample-count result-channel-data)
-  (status-t sp-port-t* sp-sample-count-t sp-sample-t**)
+(define (sp-alsa-read port sample-count result-channel-data result-sample-count)
+  (status-t sp-port-t* sp-sample-count-t sp-sample-t** sp-sample-count-t)
   status-declare
   (declare
     alsa-port snd-pcm-t*
@@ -166,23 +176,25 @@
     frames-count (snd-pcm-readn alsa-port (convert-type result-channel-data void**) sample-count))
   (if (and (< frames-count 0) (< (snd-pcm-recover alsa-port frames-count 0) 0))
     (status-set-both sp-status-group-alsa frames-count))
+  (set *result-sample-count frames-count)
   (return status))
 
 (define (sp-port-position? a) (boolean sp-port-t*) (return (bit-and sp-port-bit-position a:flags)))
 (define (sp-port-input? a) (boolean sp-port-t*) (return (bit-and sp-port-bit-input a:flags)))
 (define (sp-port-output? a) (boolean sp-port-t*) (return (bit-and sp-port-bit-output a:flags)))
 
-(define (sp-port-read port sample-count result-channel-data)
-  (status-t sp-port-t* sp-sample-count-t sp-sample-t**)
+(define (sp-port-read port sample-count result-channel-data result-read-count)
+  (status-t sp-port-t* sp-sample-count-t sp-sample-t** sp-sample-count-t)
   (case = port:type
-    (sp-port-type-file (return (sp-file-read port sample-count result-channel-data)))
+    (sp-port-type-file
+      (return (sp-file-read port sample-count result-channel-data result-read-count)))
     (sp-port-type-alsa (return (sp-alsa-read port sample-count result-channel-data)))))
 
-(define (sp-port-write port sample-count channel-data)
-  (status-t sp-port-t* sp-sample-count-t sp-sample-t**)
+(define (sp-port-write port channel-data sample-count)
+  (status-t sp-port-t* sp-sample-t** sp-sample-count-t)
   (case = port:type
-    (sp-port-type-file (return (sp-file-write port sample-count channel-data)))
-    (sp-port-type-alsa (return (sp-alsa-write port sample-count channel-data)))))
+    (sp-port-type-file (return (sp-file-write port channel-data sample-count)))
+    (sp-port-type-alsa (return (sp-alsa-write port channel-data sample-count)))))
 
 (define (sp-port-close a) (status-t sp-port-t*)
   status-declare
@@ -200,9 +212,10 @@
     (sp-port-type-alsa
       (status-set-both sp-status-group-sp sp-status-id-not-implemented) (return status))))
 
-(define (sp-port-set-position port sample-offset) (status-t sp-port-t* int64-t)
+(define (sp-port-set-position port sample-offset) (status-t sp-port-t* size-t)
   status-declare
   (case = port:type
     (sp-port-type-file (return (sp-file-set-position port sample-offset)))
     (sp-port-type-alsa
-      (status-set-both sp-status-group-sp sp-status-id-not-implemented) (return status))))
+      (status-set-both sp-status-group-sp sp-status-id-not-implemented) (return status))
+    (else (status-set-both sp-status-group-sp sp-status-id-invalid-argument) (return status))))

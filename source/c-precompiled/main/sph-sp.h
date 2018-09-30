@@ -140,6 +140,7 @@ enum { sp_status_id_file_channel_mismatch,
   sp_status_id_eof,
   sp_status_id_input_type,
   sp_status_id_memory,
+  sp_status_id_invalid_argument,
   sp_status_id_not_implemented,
   sp_status_id_port_closed,
   sp_status_id_port_position,
@@ -162,10 +163,10 @@ typedef struct {
   sp_sample_rate_t sample_rate;
   sp_float_t transition;
 } sp_windowed_sinc_state_t;
-status_t sp_port_read(sp_port_t* port, sp_sample_count_t sample_count, sp_sample_t** result_samples);
-status_t sp_port_write(sp_port_t* port, sp_sample_count_t sample_count, sp_sample_t** channel_data);
+status_t sp_port_read(sp_port_t* port, sp_sample_count_t sample_count, sp_sample_t** result_channel_data, sp_sample_count_t* result_sample_count);
+status_t sp_port_write(sp_port_t* port, sp_sample_t** channel_data, sp_sample_count_t sample_count, sp_sample_count_t* result_sample_count);
 status_t sp_port_position(sp_port_t* port, sp_sample_count_t* result_position);
-status_t sp_port_set_position(sp_port_t* port, int64_t sample_offset);
+status_t sp_port_set_position(sp_port_t* port, size_t sample_offset);
 status_t sp_file_open(uint8_t* path, int mode, sp_channel_count_t channel_count, sp_sample_rate_t sample_rate, sp_port_t* result_port);
 status_t sp_alsa_open(uint8_t* device_name, int mode, sp_channel_count_t channel_count, sp_sample_rate_t sample_rate, int32_t latency, sp_port_t* result_port);
 status_t sp_port_close(sp_port_t* a);

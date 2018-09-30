@@ -2,6 +2,7 @@ exports {
   global:
     sp_alloc_channel_array;
     sp_alsa_open;
+    sp_channel_data_free;
     sp_convolve;
     sp_convolve_one;
     sp_fft;

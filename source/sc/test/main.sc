@@ -214,7 +214,7 @@
     (sp-file-open test-file-path sp-port-mode-read-write channel-count sample-rate &port))
   (printf "  create\n")
   (status-require (sp-port-position &port &position))
-  (status-require (sp-port-write &port sample-count channel-data))
+  (status-require (sp-port-write &port channel-data sample-count))
   (status-require (sp-port-position &port &position))
   (test-helper-assert "sp-port-position file after write" (= sample-count position))
   (status-require (sp-port-set-position &port 0))

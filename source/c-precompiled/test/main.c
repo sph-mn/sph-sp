@@ -200,7 +200,7 @@ status_t test_port() {
   status_require((sp_file_open(test_file_path, sp_port_mode_read_write, channel_count, sample_rate, (&port))));
   printf("  create\n");
   status_require((sp_port_position((&port), (&position))));
-  status_require((sp_port_write((&port), sample_count, channel_data)));
+  status_require((sp_port_write((&port), channel_data, sample_count)));
   status_require((sp_port_position((&port), (&position))));
   test_helper_assert("sp-port-position file after write", (sample_count == position));
   status_require((sp_port_set_position((&port), 0)));
