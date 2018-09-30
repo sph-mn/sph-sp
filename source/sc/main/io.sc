@@ -49,7 +49,7 @@
   (status-require (sph-helper-malloc interleaved-size &interleaved))
   (memreg-add interleaved)
   (sp-interleave channel-data interleaved sample-count channel-count)
-  (set write-count (sf-writef-double file interleaved sample-count))
+  (set write-count (sp-sf-write file interleaved sample-count))
   (if (not (= sample-count write-count))
     (status-set-both-goto sp-status-group-sp sp-status-id-file-incomplete))
   (label exit
@@ -70,7 +70,7 @@
     interleaved-size (* channel-count sample-count (sizeof sp-sample-t)))
   (status-require (sph-helper-malloc interleaved-size &interleaved))
   (memreg-add interleaved)
-  (set read-count (sf-readf-double (convert-type port:data SNDFILE*) interleaved sample-count))
+  (set read-count (sp-sf-read (convert-type port:data SNDFILE*) interleaved sample-count))
   (if (not (= interleaved-size read-count)) (status-set-both sp-status-group-sp sp-status-id-eof))
   (sp-deinterleave result-channel-data interleaved read-count channel-count)
   (label exit

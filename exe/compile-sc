@@ -16,10 +16,6 @@ copy_example_config() {
   then
     cp "$sc/main/config.example.sc" "$sc/main/config.sc"
   fi
-  if [ ! -f "$sc/guile/config.sc" ]
-  then
-    cp "$sc/guile/config.example.sc" "$sc/guile/config.sc"
-  fi
 }
 
 copy_submodules() {
@@ -31,8 +27,7 @@ copy_submodules() {
   cp --update --target-directory="$sc/foreign/sph" \
      "$scl/sph/status.sc" "$scl/sph/mi-list.sc" "$scl/sph/imht-set.sc" \
      "$scl/sph/helper.sc" "$scl/sph/memreg.sc" "$scl/sph/float.sc" \
-     "$scl/sph/types.sc" "$scl/sph/filesystem.sc" "$scl/sph/string.sc" \
-     "$scl/sph/guile.sc"
+     "$scl/sph/types.sc" "$scl/sph/filesystem.sc" "$scl/sph/string.sc"
 }
 
 compile_sc() {

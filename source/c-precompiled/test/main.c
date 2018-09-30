@@ -1,13 +1,10 @@
-#include "../main/sph-sp.h"
 #include "./helper.c"
-#if (sp_sample_type_f64 == sp_sample_type)
+#if (sp_sample_format_f64 == sp_sample_format)
 #define sp_sample_nearly_equal f64_nearly_equal
 #define sp_sample_array_nearly_equal f64_array_nearly_equal
-#else
-#if (sp_sample_type_f32 == sp_sample_type)
+#elif (sp_sample_format_f32 == sp_sample_format)
 #define sp_sample_nearly_equal f32_nearly_equal
 #define sp_sample_array_nearly_equal f32_array_nearly_equal
-#endif
 #endif
 sp_sample_t error_margin = 0.1;
 uint8_t* test_file_path = "/tmp/test-sph-sp-file";
@@ -240,6 +237,10 @@ exit:
 };
 int main() {
   status_declare;
+  if (!((sp_sample_format_f64 == sp_sample_format) || (sp_sample_format_f32 == sp_sample_format))) {
+    printf("error: the tests only support f64 or f32 sample type");
+    exit(1);
+  };
   test_helper_test_one(test_spectral_inversion_ir);
   test_helper_test_one(test_base);
   test_helper_test_one(test_spectral_reversal_ir);

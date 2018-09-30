@@ -4,6 +4,8 @@
 #include <pthread.h>
 #include <float.h>
 #include <math.h>
+#include "../main/sph-sp.h"
+#include "../foreign/sph/float.c"
 #include "../foreign/sph/helper.c"
 #include "../foreign/sph/memreg.c"
 #include "../foreign/sph/string.c"

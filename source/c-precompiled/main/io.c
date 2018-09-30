@@ -45,7 +45,7 @@ status_t sp_file_write(sp_port_t* port, sp_sample_count_t sample_count, sp_sampl
   status_require((sph_helper_malloc(interleaved_size, (&interleaved))));
   memreg_add(interleaved);
   sp_interleave(channel_data, interleaved, sample_count, channel_count);
-  write_count = sf_writef_double(file, interleaved, sample_count);
+  write_count = sp_sf_write(file, interleaved, sample_count);
   if (!(sample_count == write_count)) {
     status_set_both_goto(sp_status_group_sp, sp_status_id_file_incomplete);
   };
@@ -64,7 +64,7 @@ status_t sp_file_read(sp_port_t* port, sp_sample_count_t sample_count, sp_sample
   interleaved_size = (channel_count * sample_count * sizeof(sp_sample_t));
   status_require((sph_helper_malloc(interleaved_size, (&interleaved))));
   memreg_add(interleaved);
-  read_count = sf_readf_double(((SNDFILE*)(port->data)), interleaved, sample_count);
+  read_count = sp_sf_read(((SNDFILE*)(port->data)), interleaved, sample_count);
   if (!(interleaved_size == read_count)) {
     status_set_both(sp_status_group_sp, sp_status_id_eof);
   };

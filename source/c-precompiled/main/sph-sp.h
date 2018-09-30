@@ -1,11 +1,74 @@
 #include <byteswap.h>
 #include <math.h>
 #include <inttypes.h>
-#include "../foreign/sph.c"
-#include "../foreign/sph/status.c"
-#include "../foreign/sph/types.c"
-#include "../foreign/sph/float.c"
-#include "./config.c"
+#include <stdio.h>
+/** writes values with current routine name and line info to standard output.
+    example: (debug-log "%d" 1)
+    otherwise like printf */
+#define debug_log(format, ...) fprintf(stdout, "%s:%d " format "\n", __func__, __LINE__, __VA_ARGS__)
+/** display current function name and given number.
+    example call: (debug-trace 1) */
+#define debug_trace(n) fprintf(stdout, "%s %d\n", __func__, n)
+/* return status code and error handling. uses a local variable named "status" and a goto label named "exit".
+      a status has an identifier and a group to discern between status identifiers of different libraries.
+      status id 0 is success, everything else can be considered a failure or special case.
+      status ids are 32 bit signed integers for compatibility with error return codes from many other existing libraries.
+      group ids are strings to make it easier to create new groups that dont conflict with others compared to using numbers */
+#define sph_status 1
+#define status_id_success 0
+#define status_group_undefined ""
+#define status_declare status_t status = { status_id_success, status_group_undefined }
+#define status_reset status_set_both(status_group_undefined, status_id_success)
+#define status_is_success (status_id_success == status.id)
+#define status_is_failure !status_is_success
+#define status_goto goto exit
+/** like status declare but with a default group */
+#define status_declare_group(group) status_t status = { status_id_success, group }
+#define status_set_both(group_id, status_id) \
+  status.group = group_id; \
+  status.id = status_id
+/** update status with the result of expression and goto error on failure */
+#define status_require(expression) \
+  status = expression; \
+  if (status_is_failure) { \
+    status_goto; \
+  }
+/** set the status id and goto error */
+#define status_set_id_goto(status_id) \
+  status.id = status_id; \
+  status_goto
+#define status_set_group_goto(group_id) \
+  status.group = group_id; \
+  status_goto
+#define status_set_both_goto(group_id, status_id) \
+  status_set_both(group_id, status_id); \
+  status_goto
+/** like status-require but expression returns only status.id */
+#define status_id_require(expression) \
+  status.id = expression; \
+  if (status_is_failure) { \
+    status_goto; \
+  }
+typedef int32_t status_id_t;
+typedef struct {
+  status_id_t id;
+  uint8_t* group;
+} status_t;
+#ifndef sp_sample_format
+#define sp_channel_count_t uint32_t
+#define sp_default_alsa_enable_soft_resample 1
+#define sp_default_alsa_latency 128
+#define sp_default_channel_count 1
+#define sp_default_sample_rate 16000
+#define sp_file_format (SF_FORMAT_WAV | SF_FORMAT_FLOAT)
+#define sp_float_t double
+#define sp_sample_count_t size_t
+#define sp_sample_format sp_sample_format_f32
+#define sp_sample_rate_t uint32_t
+#endif
+#define f32 float
+#define f64 double
+#define boolean uint8_t
 #define sp_port_type_alsa 0
 #define sp_port_type_file 1
 #define sp_port_bit_input 1
@@ -27,30 +90,44 @@
 #define sp_samples_to_octets(a) (a * sizeof(sp_sample_t))
 #define duration_to_sample_count(seconds, sample_rate) (seconds * sample_rate)
 #define sample_count_to_duration(sample_count, sample_rate) (sample_count / sample_rate)
-#define kiss_fft_scalar sp_sample_t
 /** sp-float-t integer -> sp-float-t
     radians-per-second samples-per-second -> cutoff-value */
 #define sp_windowed_sinc_cutoff(freq, sample_rate) ((2 * M_PI * freq) / sample_rate)
-#if (sp_sample_format == sp_sample_format_f64)
+#if (sp_sample_format_f64 == sp_sample_format)
 #define sp_sample_t double
 #define sp_sample_sum f64_sum
 #define sp_alsa_snd_pcm_format SND_PCM_FORMAT_FLOAT64_LE
+#define sp_sf_write sf_writef_double
+#define sp_sf_read sf_readf_double
+#define kiss_fft_scalar sp_sample_t
 #elif (sp_sample_format_f32 == sp_sample_format)
 #define sp_sample_t float
 #define sp_sample_sum f32_sum
 #define sp_alsa_snd_pcm_format SND_PCM_FORMAT_FLOAT_LE
+#define sp_sf_write sf_writef_float
+#define sp_sf_read sf_readf_float
+#define kiss_fft_scalar sp_sample_t
 #elif (sp_sample_format_int32 == sp_sample_format)
 #define sp_sample_t int32_t
 #define sp_sample_sum(a, b) (a + b)
 #define sp_alsa_snd_pcm_format SND_PCM_FORMAT_S32_LE
+#define sp_sf_write sf_writef_int
+#define sp_sf_read sf_readf_int
+#define FIXED_POINT 32
 #elif (sp_sample_format_int16 == sp_sample_format)
 #define sp_sample_t int16_t
 #define sp_sample_sum(a, b) (a + b)
 #define sp_alsa_snd_pcm_format SND_PCM_FORMAT_S16_LE
+#define sp_sf_write sf_writef_short
+#define sp_sf_read sf_readf_short
+#define FIXED_POINT 16
 #elif (sp_sample_format_int8 == sp_sample_format)
 #define sp_sample_t int8_t
 #define sp_sample_sum(a, b) (a + b)
 #define sp_alsa_snd_pcm_format SND_PCM_FORMAT_S8_LE
+#define sp_sf_write sf_writef_short
+#define sp_sf_read sf_readf_short
+#define FIXED_POINT 8
 #endif
 enum { sp_status_id_file_channel_mismatch,
   sp_status_id_file_encoding,

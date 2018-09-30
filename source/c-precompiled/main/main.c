@@ -3,6 +3,7 @@
 #include <alsa/asoundlib.h>
 #include <sndfile.h>
 #include "../main/sph-sp.h"
+#include "../foreign/sph/float.c"
 #include "../foreign/sph/helper.c"
 #include "../foreign/sph/memreg.c"
 #include "./kiss_fft.h"
@@ -153,7 +154,7 @@ sp_sample_t sp_sin_lq(sp_sample_t a) {
   return ((((b * a) + (c * a * abs(a)))));
 };
 /** the normalised sinc function */
-sp_sample_t sp_sinc(sp_sample_t a) { return (((0 == a) ? 1 : (sin((M_PI * a)) / (M_PI * a)))); };
+sp_float_t sp_sinc(sp_float_t a) { return (((0 == a) ? 1 : (sin((M_PI * a)) / (M_PI * a)))); };
 /** result-samples is owned and allocated by the caller.
   fast fourier transform */
 status_t sp_fft(sp_sample_count_t len, sp_sample_t* source, sp_sample_count_t source_len, sp_sample_t* result_samples) {

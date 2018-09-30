@@ -4,6 +4,7 @@
   "alsa/asoundlib.h"
   "sndfile.h"
   "../main/sph-sp.h"
+  "../foreign/sph/float.c"
   "../foreign/sph/helper.c" "../foreign/sph/memreg.c" "./kiss_fft.h" "./tools/kiss_fftr.h")
 
 (pre-define

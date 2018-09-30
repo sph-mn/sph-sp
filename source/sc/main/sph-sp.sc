@@ -1,11 +1,11 @@
-(pre-include
-  "byteswap.h"
-  "math.h"
-  "inttypes.h"
-  "../foreign/sph.c"
-  "../foreign/sph/status.c" "../foreign/sph/types.c" "../foreign/sph/float.c" "./config.c")
+(pre-include "byteswap.h" "math.h" "inttypes.h")
+(sc-include "../foreign/sph" "../foreign/sph/status")
+(pre-if-not-defined sp-sample-format (sc-include "config"))
 
 (pre-define
+  f32 float
+  f64 double
+  boolean uint8-t
   sp-port-type-alsa 0
   sp-port-type-file 1
   sp-port-bit-input 1
@@ -29,7 +29,6 @@
   (sp-samples->octets a) (* a (sizeof sp-sample-t))
   (duration->sample-count seconds sample-rate) (* seconds sample-rate)
   (sample-count->duration sample-count sample-rate) (/ sample-count sample-rate)
-  kiss-fft-scalar sp-sample-t
   (sp-windowed-sinc-cutoff freq sample-rate)
   (begin
     "sp-float-t integer -> sp-float-t
@@ -37,31 +36,46 @@
     (/ (* 2 M_PI freq) sample-rate)))
 
 (pre-cond
-  ( (= sp-sample-format sp-sample-format-f64)
+  ( (= sp-sample-format-f64 sp-sample-format)
     (pre-define
       sp-sample-t double
       sp-sample-sum f64-sum
-      sp-alsa-snd-pcm-format SND_PCM_FORMAT_FLOAT64_LE))
+      sp-alsa-snd-pcm-format SND_PCM_FORMAT_FLOAT64_LE
+      sp-sf-write sf-writef-double
+      sp-sf-read sf-readf-double
+      kiss-fft-scalar sp-sample-t))
   ( (= sp-sample-format-f32 sp-sample-format)
     (pre-define
       sp-sample-t float
       sp-sample-sum f32-sum
-      sp-alsa-snd-pcm-format SND_PCM_FORMAT_FLOAT_LE))
+      sp-alsa-snd-pcm-format SND_PCM_FORMAT_FLOAT_LE
+      sp-sf-write sf-writef-float
+      sp-sf-read sf-readf-float
+      kiss-fft-scalar sp-sample-t))
   ( (= sp-sample-format-int32 sp-sample-format)
     (pre-define
       sp-sample-t int32-t
       (sp-sample-sum a b) (+ a b)
-      sp-alsa-snd-pcm-format SND_PCM_FORMAT_S32_LE))
+      sp-alsa-snd-pcm-format SND_PCM_FORMAT_S32_LE
+      sp-sf-write sf-writef-int
+      sp-sf-read sf-readf-int
+      FIXED_POINT 32))
   ( (= sp-sample-format-int16 sp-sample-format)
     (pre-define
       sp-sample-t int16-t
       (sp-sample-sum a b) (+ a b)
-      sp-alsa-snd-pcm-format SND_PCM_FORMAT_S16_LE))
+      sp-alsa-snd-pcm-format SND_PCM_FORMAT_S16_LE
+      sp-sf-write sf-writef-short
+      sp-sf-read sf-readf-short
+      FIXED_POINT 16))
   ( (= sp-sample-format-int8 sp-sample-format)
     (pre-define
       sp-sample-t int8-t
       (sp-sample-sum a b) (+ a b)
-      sp-alsa-snd-pcm-format SND_PCM_FORMAT_S8_LE)))
+      sp-alsa-snd-pcm-format SND_PCM_FORMAT_S8_LE
+      sp-sf-write sf-writef-short
+      sp-sf-read sf-readf-short
+      FIXED_POINT 8)))
 
 (enum
   (sp-status-id-file-channel-mismatch

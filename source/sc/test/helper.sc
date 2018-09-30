@@ -5,6 +5,8 @@
   "pthread.h"
   "float.h"
   "math.h"
+  "../main/sph-sp.h"
+  "../foreign/sph/float.c"
   "../foreign/sph/helper.c"
   "../foreign/sph/memreg.c" "../foreign/sph/string.c" "../foreign/sph/filesystem.c")
 

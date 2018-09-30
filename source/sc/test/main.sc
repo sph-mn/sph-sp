@@ -1,12 +1,11 @@
-(pre-include "../main/sph-sp.h" "./helper.c")
+(pre-include "./helper.c")
 
-(pre-if
-  (= sp-sample-type-f64 sp-sample-type)
-  (pre-define
-    sp-sample-nearly-equal f64-nearly-equal
-    sp-sample-array-nearly-equal f64-array-nearly-equal)
-  (pre-if
-    (= sp-sample-type-f32 sp-sample-type)
+(pre-cond
+  ( (= sp-sample-format-f64 sp-sample-format)
+    (pre-define
+      sp-sample-nearly-equal f64-nearly-equal
+      sp-sample-array-nearly-equal f64-array-nearly-equal))
+  ( (= sp-sample-format-f32 sp-sample-format)
     (pre-define
       sp-sample-nearly-equal f32-nearly-equal
       sp-sample-array-nearly-equal f32-array-nearly-equal)))
@@ -261,6 +260,11 @@
 
 (define (main) int
   status-declare
+  (if
+    (not (or (= sp-sample-format-f64 sp-sample-format) (= sp-sample-format-f32 sp-sample-format)))
+    (begin
+      (printf "error: the tests only support f64 or f32 sample type")
+      (exit 1)))
   (test-helper-test-one test-spectral-inversion-ir)
   (test-helper-test-one test-base)
   (test-helper-test-one test-spectral-reversal-ir)
