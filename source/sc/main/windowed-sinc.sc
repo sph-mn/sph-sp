@@ -1,9 +1,8 @@
 (sc-comment
   "implementation of a hq windowed sinc filter with a blackman window (common truncated version) for continuous streams.
   variable sample-rate, cutoff radian frequency and transition band width per call.
-  depends on some sp functions defined in main.sc and sph-sp.sc.
-  sp-windowed-sinc-state-t is used to store impulse response, parameters to create the current impulse response,
-  and data needed for the next call")
+  sp-windowed-sinc-state-t is used to store the impulse response, the parameters that where used to create it, and
+  data that has to be carried over between calls")
 
 (define (sp-window-blackman a width) (sp-float-t sp-float-t sp-sample-count-t)
   (return
@@ -21,7 +20,7 @@
 (define (sp-windowed-sinc-ir sample-rate freq transition result-len result-ir)
   (status-t sp-sample-rate-t sp-float-t sp-float-t sp-sample-count-t* sp-sample-t**)
   "create an impulse response kernel for a windowed sinc filter. uses a blackman window (truncated version).
-  allocates result, sets result-len"
+  allocates result-ir, sets result-len"
   status-declare
   (declare
     center-index sp-float-t
@@ -84,7 +83,9 @@
         state:carryover-len 0)))
   (sc-comment "create new ir")
   (status-require (sp-windowed-sinc-ir sample-rate freq transition &ir-len &ir))
-  (sc-comment "eventually extend carryover array. the array is never shrunk")
+  (sc-comment
+    "eventually extend carryover array. the array is never shrunk."
+    "carryover-alloc-len is the length of the whole array")
   (if state:carryover
     (if (> ir-len state:carryover-alloc-len)
       (begin
@@ -94,9 +95,7 @@
       (status-require (sph-helper-calloc (* ir-len (sizeof sp-sample-t)) &carryover))
       (set state:carryover-alloc-len ir-len)))
   (sc-comment
-    "carryover-alloc-len is the length of the whole array.
-    carryover-len is the actual number of elements that has to be carried over from the last call
-    and is to be written into the next segment")
+    "carryover-len is the number of elements that have to be carried over from the last call")
   (set
     state:carryover carryover
     state:carryover-len

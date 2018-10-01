@@ -41,13 +41,14 @@ status_t sp_file_open(uint8_t* path, int mode, sp_channel_count_t channel_count,
 exit:
   return (status);
 };
-status_t sp_file_write(sp_port_t* port, sp_sample_t** channel_data, sp_sample_count_t sample_count, sp_sample_count_t* result_write_count) {
+/** failure status if not all samples could be written (sp-status-id-file-incomplete) */
+status_t sp_file_write(sp_port_t* port, sp_sample_t** channel_data, sp_sample_count_t sample_count, sp_sample_count_t* result_sample_count) {
   status_declare;
   sp_channel_count_t channel_count;
   SNDFILE* file;
   sp_sample_t* interleaved;
   sp_sample_count_t interleaved_size;
-  sf_count_t write_count;
+  sf_count_t frames_count;
   memreg_init(1);
   channel_count = port->channel_count;
   file = port->data;
@@ -55,32 +56,34 @@ status_t sp_file_write(sp_port_t* port, sp_sample_t** channel_data, sp_sample_co
   status_require((sph_helper_malloc(interleaved_size, (&interleaved))));
   memreg_add(interleaved);
   sp_interleave(channel_data, interleaved, sample_count, channel_count);
-  write_count = sp_sf_write(file, interleaved, sample_count);
-  if (!(sample_count == write_count)) {
+  frames_count = sp_sf_write(file, interleaved, sample_count);
+  if (!(sample_count == frames_count)) {
     status_set_both(sp_status_group_sp, sp_status_id_file_incomplete);
   };
-  *result_write_count = write_count;
+  *result_sample_count = frames_count;
 exit:
   memreg_free;
   return (status);
 };
-status_t sp_file_read(sp_port_t* port, sp_sample_count_t sample_count, sp_sample_t** result_channel_data, sp_sample_count_t* result_read_count) {
+/** failure status only if no results read (sp-status-id-eof) */
+status_t sp_file_read(sp_port_t* port, sp_sample_count_t sample_count, sp_sample_t** result_channel_data, sp_sample_count_t* result_sample_count) {
   status_declare;
   sp_channel_count_t channel_count;
   sp_sample_count_t interleaved_size;
   sp_sample_t* interleaved;
-  sf_count_t read_count;
+  sf_count_t frames_count;
   memreg_init(1);
   channel_count = port->channel_count;
   interleaved_size = (channel_count * sample_count * sizeof(sp_sample_t));
   status_require((sph_helper_malloc(interleaved_size, (&interleaved))));
   memreg_add(interleaved);
-  read_count = sp_sf_read(((SNDFILE*)(port->data)), interleaved, sample_count);
-  sp_deinterleave(result_channel_data, interleaved, read_count, channel_count);
-  if (!(sample_count == read_count)) {
+  frames_count = sp_sf_read(((SNDFILE*)(port->data)), interleaved, sample_count);
+  if (frames_count) {
+    sp_deinterleave(result_channel_data, interleaved, frames_count, channel_count);
+  } else {
     status_set_both(sp_status_group_sp, sp_status_id_eof);
   };
-  *result_read_count = read_count;
+  *result_sample_count = frames_count;
 exit:
   memreg_free;
   return (status);
@@ -148,39 +151,50 @@ status_t sp_alsa_write(sp_port_t* port, sp_sample_t** channel_data, sp_sample_co
   snd_pcm_sframes_t frames_count;
   alsa_port = port->data;
   frames_count = snd_pcm_writen(alsa_port, ((void**)(channel_data)), ((snd_pcm_uframes_t)(sample_count)));
-  if ((frames_count < 0) && (snd_pcm_recover(alsa_port, frames_count, 0) < 0)) {
-    status_set_both(sp_status_group_alsa, frames_count);
+  if (frames_count < 0) {
+    if (snd_pcm_recover(alsa_port, frames_count, 0)) {
+      status_set_both(sp_status_group_alsa, frames_count);
+    };
+    *result_sample_count = 0;
+  } else {
+    *result_sample_count = frames_count;
   };
-  *result_sample_count = frames_count;
   return (status);
 };
-status_t sp_alsa_read(sp_port_t* port, sp_sample_count_t sample_count, sp_sample_t** result_channel_data, sp_sample_count_t result_sample_count) {
+/** snd_pcm_recover handles some errors to prepare the stream for next io.
+  if frames_count is negative there is no way to know how much has been
+  read if any and result_sample_count is zero */
+status_t sp_alsa_read(sp_port_t* port, sp_sample_count_t sample_count, sp_sample_t** result_channel_data, sp_sample_count_t* result_sample_count) {
   status_declare;
   snd_pcm_t* alsa_port;
   snd_pcm_sframes_t frames_count;
   alsa_port = port->data;
   frames_count = snd_pcm_readn(alsa_port, ((void**)(result_channel_data)), sample_count);
-  if ((frames_count < 0) && (snd_pcm_recover(alsa_port, frames_count, 0) < 0)) {
-    status_set_both(sp_status_group_alsa, frames_count);
+  if (frames_count < 0) {
+    if (snd_pcm_recover(alsa_port, frames_count, 0)) {
+      status_set_both(sp_status_group_alsa, frames_count);
+    };
+    *result_sample_count = 0;
+  } else {
+    *result_sample_count = frames_count;
   };
-  *result_sample_count = frames_count;
   return (status);
 };
 boolean sp_port_position_p(sp_port_t* a) { return ((sp_port_bit_position & a->flags)); };
 boolean sp_port_input_p(sp_port_t* a) { return ((sp_port_bit_input & a->flags)); };
 boolean sp_port_output_p(sp_port_t* a) { return ((sp_port_bit_output & a->flags)); };
-status_t sp_port_read(sp_port_t* port, sp_sample_count_t sample_count, sp_sample_t** result_channel_data, sp_sample_count_t result_read_count) {
+status_t sp_port_read(sp_port_t* port, sp_sample_count_t sample_count, sp_sample_t** result_channel_data, sp_sample_count_t* result_sample_count) {
   if (sp_port_type_file == port->type) {
-    return ((sp_file_read(port, sample_count, result_channel_data, result_read_count)));
+    return ((sp_file_read(port, sample_count, result_channel_data, result_sample_count)));
   } else if (sp_port_type_alsa == port->type) {
-    return ((sp_alsa_read(port, sample_count, result_channel_data)));
+    return ((sp_alsa_read(port, sample_count, result_channel_data, result_sample_count)));
   };
 };
-status_t sp_port_write(sp_port_t* port, sp_sample_t** channel_data, sp_sample_count_t sample_count) {
+status_t sp_port_write(sp_port_t* port, sp_sample_t** channel_data, sp_sample_count_t sample_count, sp_sample_count_t* result_sample_count) {
   if (sp_port_type_file == port->type) {
-    return ((sp_file_write(port, channel_data, sample_count)));
+    return ((sp_file_write(port, channel_data, sample_count, result_sample_count)));
   } else if (sp_port_type_alsa == port->type) {
-    return ((sp_alsa_write(port, channel_data, sample_count)));
+    return ((sp_alsa_write(port, channel_data, sample_count, result_sample_count)));
   };
 };
 status_t sp_port_close(sp_port_t* a) {

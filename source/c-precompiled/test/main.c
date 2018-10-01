@@ -172,6 +172,7 @@ status_t test_port() {
   sp_port_t port;
   sp_sample_count_t position;
   sp_sample_count_t sample_count;
+  sp_sample_count_t result_sample_count;
   sp_sample_rate_t sample_rate;
   int8_t unequal;
   memreg_init(2);
@@ -200,11 +201,11 @@ status_t test_port() {
   status_require((sp_file_open(test_file_path, sp_port_mode_read_write, channel_count, sample_rate, (&port))));
   printf("  create\n");
   status_require((sp_port_position((&port), (&position))));
-  status_require((sp_port_write((&port), channel_data, sample_count)));
+  status_require((sp_port_write((&port), channel_data, sample_count, (&result_sample_count))));
   status_require((sp_port_position((&port), (&position))));
   test_helper_assert("sp-port-position file after write", (sample_count == position));
   status_require((sp_port_set_position((&port), 0)));
-  status_require((sp_port_read((&port), sample_count, channel_data_2)));
+  status_require((sp_port_read((&port), sample_count, channel_data_2, (&result_sample_count))));
   /* compare read result with output data */
   len = channel_count;
   unequal = 0;
@@ -220,7 +221,7 @@ status_t test_port() {
   status_require((sp_port_position((&port), (&position))));
   test_helper_assert("sp-port-position existing file", (sample_count == position));
   status_require((sp_port_set_position((&port), 0)));
-  sp_port_read((&port), sample_count, channel_data_2);
+  sp_port_read((&port), sample_count, channel_data_2, (&result_sample_count));
   /* compare read result with output data */
   unequal = 0;
   len = channel_count;

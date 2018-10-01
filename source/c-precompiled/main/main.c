@@ -40,11 +40,9 @@
       index = (1 + index); \
     }; \
   }
-/** default if number is negative */
-#define optional_number(a, default) ((0 > a) ? default : a)
 /** define a deinterleave, interleave or similar routine.
-    a: deinterleaved
-    b: interleaved */
+    a: source
+    b: target */
 #define define_sp_interleave(name, type, body) \
   void name(type** a, type* b, sp_sample_count_t a_size, sp_channel_count_t channel_count) { \
     sp_sample_count_t b_size; \
@@ -60,6 +58,8 @@
       }; \
     }; \
   }
+define_sp_interleave(sp_interleave, sp_sample_t, ({ b[b_size] = (a[channel])[a_size]; }));
+define_sp_interleave(sp_deinterleave, sp_sample_t, ({ (a[channel])[a_size] = b[b_size]; }));
 uint8_t* sp_status_description(status_t a) {
   char* b;
   if (!strcmp(sp_status_group_sp, (a.group))) {
@@ -151,8 +151,8 @@ sp_sample_t sp_sin_lq(sp_sample_t a) {
 /** the normalised sinc function */
 sp_float_t sp_sinc(sp_float_t a) { return (((0 == a) ? 1 : (sin((M_PI * a)) / (M_PI * a)))); };
 /** result-samples is owned and allocated by the caller.
-  fast fourier transform */
-status_t sp_fft(sp_sample_count_t len, sp_sample_t* source, sp_sample_count_t source_len, sp_sample_t* result_samples) {
+  only the real part of the fast fourier transform */
+status_t sp_fftr(sp_sample_count_t len, sp_sample_t* source, sp_sample_count_t source_len, sp_sample_t* result_samples) {
   sp_status_declare;
   kiss_fftr_cfg fftr_state;
   kiss_fft_cpx* out;
@@ -174,7 +174,7 @@ exit:
   memreg_free;
   return (status);
 };
-status_t sp_ifft(sp_sample_count_t len, sp_sample_t* source, sp_sample_count_t source_len, sp_sample_t* result_samples) {
+status_t sp_fftri(sp_sample_count_t len, sp_sample_t* source, sp_sample_count_t source_len, sp_sample_t* result_samples) {
   sp_status_declare;
   kiss_fftr_cfg fftr_state;
   kiss_fft_cpx* in;
@@ -329,17 +329,19 @@ void sp_convolve_one(sp_sample_t* a, sp_sample_count_t a_len, sp_sample_t* b, sp
 };
 /** discrete linear convolution for segments of a continuous stream. maps segments (a, a-len) to result-samples
   using (b, b-len) as the impulse response. b-len must be greater than zero.
-  result-samples length is a-len, carryover length is b-len or carryover length from previous call.
-  all heap memory is owned and allocated by the caller.
-  algorithm: copy into result from carryover what overlaps from previous call, write to result,
-  copy results that overlap with the next segment to carryover */
+  result-samples length is a-len.
+  carryover length must at least b-len.
+  carryover-len should be zero for the first call, b-len or if b-len changed b-len from the previous call.
+  all heap memory is owned and allocated by the caller */
 void sp_convolve(sp_sample_t* a, sp_sample_count_t a_len, sp_sample_t* b, sp_sample_count_t b_len, sp_sample_count_t carryover_len, sp_sample_t* result_carryover, sp_sample_t* result_samples) {
   sp_sample_count_t size;
   sp_sample_count_t a_index;
   sp_sample_count_t b_index;
   sp_sample_count_t c_index;
   memset(result_samples, 0, (a_len * sizeof(sp_sample_t)));
-  memcpy(result_samples, result_carryover, (carryover_len * sizeof(sp_sample_t)));
+  if (carryover_len) {
+    memcpy(result_samples, result_carryover, (carryover_len * sizeof(sp_sample_t)));
+  };
   memset(result_carryover, 0, (b_len * sizeof(sp_sample_t)));
   /* result values.
 restrict processed range to exclude input values that generate carryover */
@@ -360,8 +362,6 @@ restrict processed range to exclude input values that generate carryover */
     };
   };
 };
-define_sp_interleave(sp_interleave, sp_sample_t, ({ b[b_size] = (a[channel])[a_size]; }));
-define_sp_interleave(sp_deinterleave, sp_sample_t, ({ (a[channel])[a_size] = b[b_size]; }));
 define_sp_sine(sp_sine, sin);
 define_sp_sine(sp_sine_lq, sp_sin_lq);
 #include "../main/windowed-sinc.c"

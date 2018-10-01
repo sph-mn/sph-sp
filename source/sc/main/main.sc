@@ -36,16 +36,11 @@
           (array-get result-samples index) (* amp (sin (* freq phase sample-duration)))
           phase (+ 1 phase)
           index (+ 1 index)))))
-  (optional-number a default)
-  (begin
-    "default if number is negative"
-    (if* (> 0 a) default
-      a))
   (define-sp-interleave name type body)
   (begin
     "define a deinterleave, interleave or similar routine.
-    a: deinterleaved
-    b: interleaved"
+    a: source
+    b: target"
     (define (name a b a-size channel-count)
       (void type** type* sp-sample-count-t sp-channel-count-t)
       (declare
@@ -62,7 +57,15 @@
             b-size (- b-size 1))
           body)))))
 
-;(set (array-get b b-size) (array-get (array-get a channel) a-size))
+(define-sp-interleave
+  sp-interleave
+  sp-sample-t
+  (compound-statement (set (array-get b b-size) (array-get (array-get a channel) a-size))))
+
+(define-sp-interleave
+  sp-deinterleave
+  sp-sample-t
+  (compound-statement (set (array-get (array-get a channel) a-size) (array-get b b-size))))
 
 (define (sp-status-description a) (uint8-t* status-t)
   (declare b char*)
@@ -140,10 +143,10 @@
     (if* (= 0 a) 1
       (/ (sin (* M_PI a)) (* M_PI a)))))
 
-(define (sp-fft len source source-len result-samples)
+(define (sp-fftr len source source-len result-samples)
   (status-t sp-sample-count-t sp-sample-t* sp-sample-count-t sp-sample-t*)
   "result-samples is owned and allocated by the caller.
-  fast fourier transform"
+  only the real part of the fast fourier transform"
   sp-status-declare
   (declare
     fftr-state kiss-fftr-cfg
@@ -164,7 +167,7 @@
     memreg-free
     (return status)))
 
-(define (sp-ifft len source source-len result-samples)
+(define (sp-fftri len source source-len result-samples)
   (status-t sp-sample-count-t sp-sample-t* sp-sample-count-t sp-sample-t*)
   sp-status-declare
   (declare
@@ -334,17 +337,17 @@
     sp-sample-count-t sp-sample-t* sp-sample-count-t sp-sample-count-t sp-sample-t* sp-sample-t*)
   "discrete linear convolution for segments of a continuous stream. maps segments (a, a-len) to result-samples
   using (b, b-len) as the impulse response. b-len must be greater than zero.
-  result-samples length is a-len, carryover length is b-len or carryover length from previous call.
-  all heap memory is owned and allocated by the caller.
-  algorithm: copy into result from carryover what overlaps from previous call, write to result,
-  copy results that overlap with the next segment to carryover"
+  result-samples length is a-len.
+  carryover length must at least b-len.
+  carryover-len should be zero for the first call, b-len or if b-len changed b-len from the previous call.
+  all heap memory is owned and allocated by the caller"
   (declare
     size sp-sample-count-t
     a-index sp-sample-count-t
     b-index sp-sample-count-t
     c-index sp-sample-count-t)
   (memset result-samples 0 (* a-len (sizeof sp-sample-t)))
-  (memcpy result-samples result-carryover (* carryover-len (sizeof sp-sample-t)))
+  (if carryover-len (memcpy result-samples result-carryover (* carryover-len (sizeof sp-sample-t))))
   (memset result-carryover 0 (* b-len (sizeof sp-sample-t)))
   (sc-comment
     "result values." "restrict processed range to exclude input values that generate carryover")
@@ -363,16 +366,6 @@
           c-index (- c-index a-len)
           (array-get result-carryover c-index)
           (+ (array-get result-carryover c-index) (* (array-get a a-index) (array-get b b-index))))))))
-
-(define-sp-interleave
-  sp-interleave
-  sp-sample-t
-  (compound-statement (set (array-get b b-size) (array-get (array-get a channel) a-size))))
-
-(define-sp-interleave
-  sp-deinterleave
-  sp-sample-t
-  (compound-statement (set (array-get (array-get a channel) a-size) (array-get b b-size))))
 
 (define-sp-sine sp-sine sin)
 (define-sp-sine sp-sine-lq sp-sin-lq)

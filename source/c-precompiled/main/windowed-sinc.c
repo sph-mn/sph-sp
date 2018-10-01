@@ -1,8 +1,7 @@
 /* implementation of a hq windowed sinc filter with a blackman window (common truncated version) for continuous streams.
   variable sample-rate, cutoff radian frequency and transition band width per call.
-  depends on some sp functions defined in main.sc and sph-sp.sc.
-  sp-windowed-sinc-state-t is used to store impulse response, parameters to create the current impulse response,
-  and data needed for the next call */
+  sp-windowed-sinc-state-t is used to store the impulse response, the parameters that where used to create it, and
+  data that has to be carried over between calls */
 sp_float_t sp_window_blackman(sp_float_t a, sp_sample_count_t width) { return (((0.42 - (0.5 * cos(((2 * M_PI * a) / (width - 1))))) + (0.8 * cos(((4 * M_PI * a) / (width - 1)))))); };
 /** approximate impulse response length for a transition factor and
   ensure that the length is odd */
@@ -15,7 +14,7 @@ sp_sample_count_t sp_windowed_sinc_ir_length(sp_float_t transition) {
   return (result);
 };
 /** create an impulse response kernel for a windowed sinc filter. uses a blackman window (truncated version).
-  allocates result, sets result-len */
+  allocates result-ir, sets result-len */
 status_t sp_windowed_sinc_ir(sp_sample_rate_t sample_rate, sp_float_t freq, sp_float_t transition, sp_sample_count_t* result_len, sp_sample_t** result_ir) {
   status_declare;
   sp_float_t center_index;
@@ -78,7 +77,8 @@ status_t sp_windowed_sinc_state_create(sp_sample_rate_t sample_rate, sp_float_t 
   };
   /* create new ir */
   status_require((sp_windowed_sinc_ir(sample_rate, freq, transition, (&ir_len), (&ir))));
-  /* eventually extend carryover array. the array is never shrunk */
+  /* eventually extend carryover array. the array is never shrunk.
+carryover-alloc-len is the length of the whole array */
   if (state->carryover) {
     if (ir_len > state->carryover_alloc_len) {
       status_require((sph_helper_realloc((ir_len * sizeof(sp_sample_t)), (&carryover))));
@@ -88,9 +88,7 @@ status_t sp_windowed_sinc_state_create(sp_sample_rate_t sample_rate, sp_float_t 
     status_require((sph_helper_calloc((ir_len * sizeof(sp_sample_t)), (&carryover))));
     state->carryover_alloc_len = ir_len;
   };
-  /* carryover-alloc-len is the length of the whole array.
-    carryover-len is the actual number of elements that has to be carried over from the last call
-    and is to be written into the next segment */
+  /* carryover-len is the number of elements that have to be carried over from the last call */
   state->carryover = carryover;
   state->carryover_len = (state->carryover_len ? state->carryover_len : 0);
   state->ir = ir;
