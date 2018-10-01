@@ -117,7 +117,7 @@
   (status-t sp-port-t* sp-sample-count-t sp-sample-t** sp-sample-count-t*)
   (sp-port-write port channel-data sample-count result-sample-count)
   (status-t sp-port-t* sp-sample-t** sp-sample-count-t sp-sample-count-t*) (sp-port-position port result-position)
-  (status-t sp-port-t* sp-sample-count-t*) (sp-port-set-position port sample-offset)
+  (status-t sp-port-t* sp-sample-count-t*) (sp-port-position-set port sample-offset)
   (status-t sp-port-t* size-t) (sp-file-open path mode channel-count sample-rate result-port)
   (status-t uint8-t* int sp-channel-count-t sp-sample-rate-t sp-port-t*)
   (sp-alsa-open device-name mode channel-count sample-rate latency result-port)

@@ -204,7 +204,7 @@ status_t test_port() {
   status_require((sp_port_write((&port), channel_data, sample_count, (&result_sample_count))));
   status_require((sp_port_position((&port), (&position))));
   test_helper_assert("sp-port-position file after write", (sample_count == position));
-  status_require((sp_port_set_position((&port), 0)));
+  status_require((sp_port_position_set((&port), 0)));
   status_require((sp_port_read((&port), sample_count, channel_data_2, (&result_sample_count))));
   /* compare read result with output data */
   len = channel_count;
@@ -220,7 +220,7 @@ status_t test_port() {
   status_require((sp_file_open(test_file_path, sp_port_mode_read_write, 2, 8000, (&port))));
   status_require((sp_port_position((&port), (&position))));
   test_helper_assert("sp-port-position existing file", (sample_count == position));
-  status_require((sp_port_set_position((&port), 0)));
+  status_require((sp_port_position_set((&port), 0)));
   sp_port_read((&port), sample_count, channel_data_2, (&result_sample_count));
   /* compare read result with output data */
   unequal = 0;
