@@ -5,9 +5,9 @@ exports {
     sp_channel_data_free;
     sp_convolve;
     sp_convolve_one;
-    sp_fft;
+    sp_fftr;
+    sp_fftri;
     sp_file_open;
-    sp_ifft;
     sp_init_guile;
     sp_moving_average;
     sp_port_close;

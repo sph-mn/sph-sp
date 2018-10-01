@@ -17,25 +17,31 @@ status_t sp_file_open(uint8_t* path, int mode, sp_channel_count_t channel_count,
   if (sp_port_mode_write == mode) {
     sf_mode = SFM_WRITE;
     flags = sp_port_bit_output;
+    info.format = sp_file_format;
+    info.channels = channel_count;
+    info.samplerate = sample_rate;
   } else if (sp_port_mode_read == mode) {
     sf_mode = SFM_READ;
     flags = sp_port_bit_input;
+    info.format = 0;
+    info.channels = 0;
+    info.samplerate = 0;
   } else if (sp_port_mode_read_write == mode) {
     sf_mode = SFM_RDWR;
     flags = (sp_port_bit_input | sp_port_bit_output);
+    info.format = sp_file_format;
+    info.channels = channel_count;
+    info.samplerate = sample_rate;
   } else {
     status_set_both_goto(sp_status_group_sp, sp_status_id_port_type);
   };
-  info.format = sp_file_format;
-  info.channels = channel_count;
-  info.samplerate = sample_rate;
   file = sf_open(path, sf_mode, (&info));
   if (!file) {
     status_set_both_goto(sp_status_group_sndfile, (sf_error(file)));
   };
   result_port->flags = (info.seekable ? (sp_port_bit_position | flags) : flags);
-  result_port->channel_count = channel_count;
-  result_port->sample_rate = sample_rate;
+  result_port->channel_count = info.channels;
+  result_port->sample_rate = info.samplerate;
   result_port->type = sp_port_type_file;
   result_port->data = file;
 exit:

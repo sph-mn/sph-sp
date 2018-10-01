@@ -17,28 +17,33 @@
     (sp-port-mode-write
       (set
         sf-mode SFM-WRITE
-        flags sp-port-bit-output))
+        flags sp-port-bit-output
+        info.format sp-file-format
+        info.channels channel-count
+        info.samplerate sample-rate))
     (sp-port-mode-read
       (set
         sf-mode SFM-READ
-        flags sp-port-bit-input))
+        flags sp-port-bit-input
+        info.format 0
+        info.channels 0
+        info.samplerate 0))
     (sp-port-mode-read-write
       (set
         sf-mode SFM-RDWR
-        flags (bit-or sp-port-bit-input sp-port-bit-output)))
+        flags (bit-or sp-port-bit-input sp-port-bit-output)
+        info.format sp-file-format
+        info.channels channel-count
+        info.samplerate sample-rate))
     (else (status-set-both-goto sp-status-group-sp sp-status-id-port-type)))
-  (set
-    info.format sp-file-format
-    info.channels channel-count
-    info.samplerate sample-rate
-    file (sf-open path sf-mode &info))
+  (set file (sf-open path sf-mode &info))
   (if (not file) (status-set-both-goto sp-status-group-sndfile (sf-error file)))
   (set
     result-port:flags
     (if* info.seekable (bit-or sp-port-bit-position flags)
       flags)
-    result-port:channel-count channel-count
-    result-port:sample-rate sample-rate
+    result-port:channel-count info.channels
+    result-port:sample-rate info.samplerate
     result-port:type sp-port-type-file
     result-port:data file)
   (label exit
