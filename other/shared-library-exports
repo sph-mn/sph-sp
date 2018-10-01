@@ -12,8 +12,8 @@ exports {
     sp_moving_average;
     sp_port_close;
     sp_port_position;
+    sp_port_position_set;
     sp_port_read;
-    sp_port_set_position;
     sp_port_write;
     sp_sin_lq;
     sp_sinc;
