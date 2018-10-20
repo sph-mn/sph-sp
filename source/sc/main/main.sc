@@ -227,7 +227,6 @@
       (status-require (sph-helper-malloc (* width (sizeof sp-sample-t)) &window))
       (memreg-add window)))
   (while (<= start end)
-    (sc-comment "all required samples are in source array")
     (if (and (>= start radius) (<= (+ start radius 1) source-len))
       (set *result-samples (/ (sp-sample-sum (- (+ source start) radius) width) width))
       (begin

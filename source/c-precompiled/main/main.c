@@ -227,7 +227,6 @@ status_t sp_moving_average(sp_sample_t* source, sp_sample_count_t source_len, sp
     memreg_add(window);
   };
   while ((start <= end)) {
-    /* all required samples are in source array */
     if ((start >= radius) && ((start + radius + 1) <= source_len)) {
       *result_samples = (sp_sample_sum(((source + start) - radius), width) / width);
     } else {
