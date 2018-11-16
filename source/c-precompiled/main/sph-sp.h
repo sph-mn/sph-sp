@@ -99,35 +99,35 @@ typedef struct {
 #if (sp_sample_format_f64 == sp_sample_format)
 #define sp_sample_t double
 #define sp_sample_sum f64_sum
-#define sp_alsa_snd_pcm_format SND_PCM_FORMAT_FLOAT64_LE
+#define sp_alsa_snd_pcm_format SND_PCM_FORMAT_FLOAT64
 #define sp_sf_write sf_writef_double
 #define sp_sf_read sf_readf_double
 #define kiss_fft_scalar sp_sample_t
 #elif (sp_sample_format_f32 == sp_sample_format)
 #define sp_sample_t float
 #define sp_sample_sum f32_sum
-#define sp_alsa_snd_pcm_format SND_PCM_FORMAT_FLOAT_LE
+#define sp_alsa_snd_pcm_format SND_PCM_FORMAT_FLOAT
 #define sp_sf_write sf_writef_float
 #define sp_sf_read sf_readf_float
 #define kiss_fft_scalar sp_sample_t
 #elif (sp_sample_format_int32 == sp_sample_format)
 #define sp_sample_t int32_t
 #define sp_sample_sum(a, b) (a + b)
-#define sp_alsa_snd_pcm_format SND_PCM_FORMAT_S32_LE
+#define sp_alsa_snd_pcm_format SND_PCM_FORMAT_S32
 #define sp_sf_write sf_writef_int
 #define sp_sf_read sf_readf_int
 #define FIXED_POINT 32
 #elif (sp_sample_format_int16 == sp_sample_format)
 #define sp_sample_t int16_t
 #define sp_sample_sum(a, b) (a + b)
-#define sp_alsa_snd_pcm_format SND_PCM_FORMAT_S16_LE
+#define sp_alsa_snd_pcm_format SND_PCM_FORMAT_S16
 #define sp_sf_write sf_writef_short
 #define sp_sf_read sf_readf_short
 #define FIXED_POINT 16
 #elif (sp_sample_format_int8 == sp_sample_format)
 #define sp_sample_t int8_t
 #define sp_sample_sum(a, b) (a + b)
-#define sp_alsa_snd_pcm_format SND_PCM_FORMAT_S8_LE
+#define sp_alsa_snd_pcm_format SND_PCM_FORMAT_S8
 #define sp_sf_write sf_writef_short
 #define sp_sf_read sf_readf_short
 #define FIXED_POINT 8

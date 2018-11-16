@@ -131,20 +131,20 @@
   status-declare
   (declare
     alsa-port snd-pcm-t*
-    alsa-mode int)
+    alsa-stream int)
   (set alsa-port 0)
   (if (not device-name) (set device-name "default"))
   (if (> 0 latency) (set latency sp-default-alsa-latency))
   (case = mode
-    (sp-port-mode-write (set alsa-mode SND_PCM_STREAM_CAPTURE))
-    (sp-port-mode-read (set alsa-mode SND_PCM_STREAM_PLAYBACK))
+    (sp-port-mode-write (set alsa-stream SND-PCM-STREAM-PLAYBACK))
+    (sp-port-mode-read (set alsa-stream SND-PCM-STREAM-CAPTURE))
     (else (status-set-both-goto sp-status-group-sp sp-status-id-port-type)))
-  (sp-alsa-status-require (snd-pcm-open &alsa-port device-name alsa-mode 0))
+  (sp-alsa-status-require (snd-pcm-open &alsa-port device-name alsa-stream 0))
   (sp-alsa-status-require
     (snd-pcm-set-params
       alsa-port
       sp-alsa-snd-pcm-format
-      SND_PCM_ACCESS_RW_NONINTERLEAVED
+      SND-PCM-ACCESS-RW-NONINTERLEAVED
       channel-count sample-rate sp-default-alsa-enable-soft-resample latency))
   (set
     result-port:type sp-port-type-alsa

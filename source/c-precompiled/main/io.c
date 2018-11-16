@@ -125,7 +125,7 @@ exit:
 status_t sp_alsa_open(uint8_t* device_name, int mode, sp_channel_count_t channel_count, sp_sample_rate_t sample_rate, int32_t latency, sp_port_t* result_port) {
   status_declare;
   snd_pcm_t* alsa_port;
-  int alsa_mode;
+  int alsa_stream;
   alsa_port = 0;
   if (!device_name) {
     device_name = "default";
@@ -134,13 +134,13 @@ status_t sp_alsa_open(uint8_t* device_name, int mode, sp_channel_count_t channel
     latency = sp_default_alsa_latency;
   };
   if (sp_port_mode_write == mode) {
-    alsa_mode = SND_PCM_STREAM_CAPTURE;
+    alsa_stream = SND_PCM_STREAM_PLAYBACK;
   } else if (sp_port_mode_read == mode) {
-    alsa_mode = SND_PCM_STREAM_PLAYBACK;
+    alsa_stream = SND_PCM_STREAM_CAPTURE;
   } else {
     status_set_both_goto(sp_status_group_sp, sp_status_id_port_type);
   };
-  sp_alsa_status_require((snd_pcm_open((&alsa_port), device_name, alsa_mode, 0)));
+  sp_alsa_status_require((snd_pcm_open((&alsa_port), device_name, alsa_stream, 0)));
   sp_alsa_status_require((snd_pcm_set_params(alsa_port, sp_alsa_snd_pcm_format, SND_PCM_ACCESS_RW_NONINTERLEAVED, channel_count, sample_rate, sp_default_alsa_enable_soft_resample, latency)));
   result_port->type = sp_port_type_alsa;
   result_port->flags = ((mode == sp_port_mode_write) ? sp_port_bit_output : sp_port_bit_input);

@@ -43,7 +43,7 @@
     (pre-define
       sp-sample-t double
       sp-sample-sum f64-sum
-      sp-alsa-snd-pcm-format SND_PCM_FORMAT_FLOAT64_LE
+      sp-alsa-snd-pcm-format SND_PCM_FORMAT_FLOAT64
       sp-sf-write sf-writef-double
       sp-sf-read sf-readf-double
       kiss-fft-scalar sp-sample-t))
@@ -51,7 +51,7 @@
     (pre-define
       sp-sample-t float
       sp-sample-sum f32-sum
-      sp-alsa-snd-pcm-format SND_PCM_FORMAT_FLOAT_LE
+      sp-alsa-snd-pcm-format SND_PCM_FORMAT_FLOAT
       sp-sf-write sf-writef-float
       sp-sf-read sf-readf-float
       kiss-fft-scalar sp-sample-t))
@@ -59,7 +59,7 @@
     (pre-define
       sp-sample-t int32-t
       (sp-sample-sum a b) (+ a b)
-      sp-alsa-snd-pcm-format SND_PCM_FORMAT_S32_LE
+      sp-alsa-snd-pcm-format SND_PCM_FORMAT_S32
       sp-sf-write sf-writef-int
       sp-sf-read sf-readf-int
       FIXED_POINT 32))
@@ -67,7 +67,7 @@
     (pre-define
       sp-sample-t int16-t
       (sp-sample-sum a b) (+ a b)
-      sp-alsa-snd-pcm-format SND_PCM_FORMAT_S16_LE
+      sp-alsa-snd-pcm-format SND_PCM_FORMAT_S16
       sp-sf-write sf-writef-short
       sp-sf-read sf-readf-short
       FIXED_POINT 16))
@@ -75,7 +75,7 @@
     (pre-define
       sp-sample-t int8-t
       (sp-sample-sum a b) (+ a b)
-      sp-alsa-snd-pcm-format SND_PCM_FORMAT_S8_LE
+      sp-alsa-snd-pcm-format SND_PCM_FORMAT_S8
       sp-sf-write sf-writef-short
       sp-sf-read sf-readf-short
       FIXED_POINT 8)))
@@ -116,9 +116,10 @@
   (sp-port-read port sample-count result-channel-data result-sample-count)
   (status-t sp-port-t* sp-sample-count-t sp-sample-t** sp-sample-count-t*)
   (sp-port-write port channel-data sample-count result-sample-count)
-  (status-t sp-port-t* sp-sample-t** sp-sample-count-t sp-sample-count-t*) (sp-port-position port result-position)
-  (status-t sp-port-t* sp-sample-count-t*) (sp-port-position-set port sample-offset)
-  (status-t sp-port-t* size-t) (sp-file-open path mode channel-count sample-rate result-port)
+  (status-t sp-port-t* sp-sample-t** sp-sample-count-t sp-sample-count-t*)
+  (sp-port-position port result-position) (status-t sp-port-t* sp-sample-count-t*)
+  (sp-port-position-set port sample-offset) (status-t sp-port-t* size-t)
+  (sp-file-open path mode channel-count sample-rate result-port)
   (status-t uint8-t* int sp-channel-count-t sp-sample-rate-t sp-port-t*)
   (sp-alsa-open device-name mode channel-count sample-rate latency result-port)
   (status-t uint8-t* int sp-channel-count-t sp-sample-rate-t int32-t sp-port-t*) (sp-port-close a)
