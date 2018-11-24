@@ -143,47 +143,58 @@
     (if* (= 0 a) 1
       (/ (sin (* M_PI a)) (* M_PI a)))))
 
-(define (sp-fftr len source source-len result-samples)
-  (status-t sp-sample-count-t sp-sample-t* sp-sample-count-t sp-sample-t*)
-  "result-samples is owned and allocated by the caller.
-  only the real part of the fast fourier transform"
+(define (sp-fftr input input-len output output-len)
+  (status-t sp-sample-t* sp-sample-count-t sp-sample-t* sp-sample-count-t*)
+  "real-numbers -> [[real, imaginary] ...]:complex-numbers
+  write to output real and imaginary part alternatingly
+  output-len will be set to the count of complex numbers, (+ 1 (/ input-len 2)).
+  output is allocated and owned by the caller"
   sp-status-declare
   (declare
-    fftr-state kiss-fftr-cfg
-    out kiss-fft-cpx*)
+    cfg kiss-fftr-cfg
+    out kiss-fft-cpx*
+    out-len sp-sample-count-t
+    i sp-sample-count-t)
   (memreg-init 2)
-  (set fftr-state (kiss-fftr-alloc len #f 0 0))
-  (if (not fftr-state) (status-set-both-goto sp-status-group-sp sp-status-id-memory))
-  (memreg-add fftr-state)
-  (status-require (sph-helper-malloc (* len (sizeof kiss-fft-cpx)) &out))
+  (set cfg (kiss-fftr-alloc input-len #f 0 0))
+  (if (not cfg) (status-set-both-goto sp-status-group-sp sp-status-id-memory))
+  (memreg-add cfg)
+  ; out must be input-len or it segfaults but only the first half of the result will be non-zero
+  (status-require (sph-helper-calloc (* input-len (sizeof kiss-fft-cpx)) &out))
   (memreg-add out)
-  (kiss-fftr fftr-state source out)
-  (sc-comment "extract the real part")
-  (while len
+  (kiss-fftr cfg input out)
+  (set
+    out-len (+ 1 (/ input-len 2))
+    *output-len out-len)
+  (for ((set i 0) (< i out-len) (set i (+ 1 i)))
     (set
-      len (- len 1)
-      (array-get result-samples len) (struct-get (array-get out len) r)))
+      (array-get output (* 2 i)) (struct-get (array-get out i) r)
+      (array-get output (+ 1 (* 2 i))) (struct-get (array-get out i) i)))
   (label exit
     memreg-free
     (return status)))
 
-(define (sp-fftri len source source-len result-samples)
-  (status-t sp-sample-count-t sp-sample-t* sp-sample-count-t sp-sample-t*)
+(define (sp-fftri input input-len output output-len)
+  (status-t sp-sample-t* sp-sample-count-t sp-sample-t* sp-sample-count-t*)
+  "[[real, imaginary], ...]:complex-numbers -> real-numbers
+  input-length > 0"
   sp-status-declare
   (declare
-    fftr-state kiss-fftr-cfg
-    in kiss-fft-cpx*)
+    cfg kiss-fftr-cfg
+    in kiss-fft-cpx*
+    i sp-sample-count-t)
   (memreg-init 2)
-  (set fftr-state (kiss-fftr-alloc source-len #t 0 0))
-  (if (not fftr-state) (status-set-id-goto sp-status-id-memory))
-  (memreg-add fftr-state)
-  (status-require (sph-helper-malloc (* source-len (sizeof kiss-fft-cpx)) &in))
+  (set cfg (kiss-fftr-alloc input-len #t 0 0))
+  (if (not cfg) (status-set-id-goto sp-status-id-memory))
+  (memreg-add cfg)
+  (status-require (sph-helper-malloc (* input-len (sizeof kiss-fft-cpx)) &in))
   (memreg-add in)
-  (while source-len
-    (set source-len (- source-len 1))
-    (struct-set (array-get in source-len)
-      r (array-get source (* source-len (sizeof sp-sample-t)))))
-  (kiss-fftri fftr-state in result-samples)
+  (for ((set i 0) (< i input-len) (set i (+ 1 i)))
+    (set
+      (struct-get (array-get in i) r) (array-get input (* 2 i))
+      (struct-get (array-get in i) i) (array-get input (+ 1 (* 2 i)))))
+  (kiss-fftri cfg in output)
+  (set *output-len (* 2 (- input-len 1)))
   (label exit
     memreg-free
     (return status)))

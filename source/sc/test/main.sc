@@ -260,6 +260,27 @@
     memreg-free
     (return status)))
 
+(define (test-fftr) status-t
+  status-declare
+  (declare
+    a (array sp-sample-t 6 0 0.1 0.4 0.8 0 0)
+    a-len sp-sample-count-t
+    a-again (array sp-sample-t 6 0 0 0 0 0 0)
+    a-again-len sp-sample-count-t
+    b-len sp-sample-count-t
+    b (array sp-sample-t 8 0 0 0 0 0 0 0 0))
+  (set a-len 6)
+  (status-require (sp-fftr a a-len b &b-len))
+  (test-helper-assert "result length" (= 4 b-len))
+  (test-helper-assert "result first bin" (< 1 (array-get b 0)))
+  (test-helper-assert "result second bin" (> -0.5 (array-get b 2)))
+  (test-helper-assert "result third bin" (< 0 (array-get b 4)))
+  (test-helper-assert "result fourth bin" (> 0 (array-get b 6)))
+  (status-require (sp-fftri b b-len a-again &a-again-len))
+  (test-helper-assert "result 2 length" (= a-len a-again-len))
+  (label exit
+    (return status)))
+
 (define (main) int
   status-declare
   (if
@@ -267,6 +288,7 @@
     (begin
       (printf "error: the tests only support f64 or f32 sample type")
       (exit 1)))
+  (test-helper-test-one test-fftr)
   (test-helper-test-one test-spectral-inversion-ir)
   (test-helper-test-one test-base)
   (test-helper-test-one test-spectral-reversal-ir)

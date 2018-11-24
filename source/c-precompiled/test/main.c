@@ -236,12 +236,33 @@ exit:
   memreg_free;
   return (status);
 };
+status_t test_fftr() {
+  status_declare;
+  sp_sample_t a[6] = { 0, 0.1, 0.4, 0.8, 0, 0 };
+  sp_sample_count_t a_len;
+  sp_sample_t a_again[6] = { 0, 0, 0, 0, 0, 0 };
+  sp_sample_count_t a_again_len;
+  sp_sample_count_t b_len;
+  sp_sample_t b[8] = { 0, 0, 0, 0, 0, 0, 0, 0 };
+  a_len = 6;
+  status_require((sp_fftr(a, a_len, b, (&b_len))));
+  test_helper_assert("result length", (4 == b_len));
+  test_helper_assert("result first bin", (1 < b[0]));
+  test_helper_assert("result second bin", (-0.5 > b[2]));
+  test_helper_assert("result third bin", (0 < b[4]));
+  test_helper_assert("result fourth bin", (0 > b[6]));
+  status_require((sp_fftri(b, b_len, a_again, (&a_again_len))));
+  test_helper_assert("result 2 length", (a_len == a_again_len));
+exit:
+  return (status);
+};
 int main() {
   status_declare;
   if (!((sp_sample_format_f64 == sp_sample_format) || (sp_sample_format_f32 == sp_sample_format))) {
     printf("error: the tests only support f64 or f32 sample type");
     exit(1);
   };
+  test_helper_test_one(test_fftr);
   test_helper_test_one(test_spectral_inversion_ir);
   test_helper_test_one(test_base);
   test_helper_test_one(test_spectral_reversal_ir);

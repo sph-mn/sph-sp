@@ -150,47 +150,56 @@ sp_sample_t sp_sin_lq(sp_sample_t a) {
 };
 /** the normalised sinc function */
 sp_float_t sp_sinc(sp_float_t a) { return (((0 == a) ? 1 : (sin((M_PI * a)) / (M_PI * a)))); };
-/** result-samples is owned and allocated by the caller.
-  only the real part of the fast fourier transform */
-status_t sp_fftr(sp_sample_count_t len, sp_sample_t* source, sp_sample_count_t source_len, sp_sample_t* result_samples) {
+/** real-numbers -> [[real, imaginary] ...]:complex-numbers
+  write to output real and imaginary part alternatingly
+  output-len will be set to the count of complex numbers, (+ 1 (/ input-len 2)).
+  output is allocated and owned by the caller */
+status_t sp_fftr(sp_sample_t* input, sp_sample_count_t input_len, sp_sample_t* output, sp_sample_count_t* output_len) {
   sp_status_declare;
-  kiss_fftr_cfg fftr_state;
+  kiss_fftr_cfg cfg;
   kiss_fft_cpx* out;
+  sp_sample_count_t out_len;
+  sp_sample_count_t i;
   memreg_init(2);
-  fftr_state = kiss_fftr_alloc(len, 0, 0, 0);
-  if (!fftr_state) {
+  cfg = kiss_fftr_alloc(input_len, 0, 0, 0);
+  if (!cfg) {
     status_set_both_goto(sp_status_group_sp, sp_status_id_memory);
   };
-  memreg_add(fftr_state);
-  status_require((sph_helper_malloc((len * sizeof(kiss_fft_cpx)), (&out))));
+  memreg_add(cfg);
+  status_require((sph_helper_calloc((input_len * sizeof(kiss_fft_cpx)), (&out))));
   memreg_add(out);
-  kiss_fftr(fftr_state, source, out);
-  /* extract the real part */
-  while (len) {
-    len = (len - 1);
-    result_samples[len] = (out[len]).r;
+  kiss_fftr(cfg, input, out);
+  out_len = (1 + (input_len / 2));
+  *output_len = out_len;
+  for (i = 0; (i < out_len); i = (1 + i)) {
+    output[(2 * i)] = (out[i]).r;
+    output[(1 + (2 * i))] = (out[i]).i;
   };
 exit:
   memreg_free;
   return (status);
 };
-status_t sp_fftri(sp_sample_count_t len, sp_sample_t* source, sp_sample_count_t source_len, sp_sample_t* result_samples) {
+/** [[real, imaginary], ...]:complex-numbers -> real-numbers
+  input-length > 0 */
+status_t sp_fftri(sp_sample_t* input, sp_sample_count_t input_len, sp_sample_t* output, sp_sample_count_t* output_len) {
   sp_status_declare;
-  kiss_fftr_cfg fftr_state;
+  kiss_fftr_cfg cfg;
   kiss_fft_cpx* in;
+  sp_sample_count_t i;
   memreg_init(2);
-  fftr_state = kiss_fftr_alloc(source_len, 1, 0, 0);
-  if (!fftr_state) {
+  cfg = kiss_fftr_alloc(input_len, 1, 0, 0);
+  if (!cfg) {
     status_set_id_goto(sp_status_id_memory);
   };
-  memreg_add(fftr_state);
-  status_require((sph_helper_malloc((source_len * sizeof(kiss_fft_cpx)), (&in))));
+  memreg_add(cfg);
+  status_require((sph_helper_malloc((input_len * sizeof(kiss_fft_cpx)), (&in))));
   memreg_add(in);
-  while (source_len) {
-    source_len = (source_len - 1);
-    (in[source_len]).r = source[(source_len * sizeof(sp_sample_t))];
+  for (i = 0; (i < input_len); i = (1 + i)) {
+    (in[i]).r = input[(2 * i)];
+    (in[i]).i = input[(1 + (2 * i))];
   };
-  kiss_fftri(fftr_state, in, result_samples);
+  kiss_fftri(cfg, in, output);
+  *output_len = (2 * (input_len - 1));
 exit:
   memreg_free;
   return (status);
