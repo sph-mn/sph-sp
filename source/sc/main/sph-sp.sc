@@ -36,7 +36,9 @@
   (begin
     "sp-float-t integer -> sp-float-t
     radians-per-second samples-per-second -> cutoff-value"
-    (/ (* 2 M_PI freq) sample-rate)))
+    (/ (* 2 M_PI freq) sample-rate))
+  (sp-fftr-output-len input-len) (+ 1 (/ input-len 2))
+  (sp-fftri-output-len input-len) (* 2 (- input-len 1)))
 
 (pre-cond
   ( (= sp-sample-format-f64 sp-sample-format)
@@ -144,10 +146,8 @@
   (sp-window-blackman a width) (sp-float-t sp-float-t sp-sample-count-t)
   (sp-spectral-inversion-ir a a-len) (void sp-sample-t* sp-sample-count-t)
   (sp-spectral-reversal-ir a a-len) (void sp-sample-t* sp-sample-count-t)
-  (sp-fftr input input-len output output-len)
-  (status-t sp-sample-t* sp-sample-count-t sp-sample-t* sp-sample-count-t*)
-  (sp-fftri input input-len output output-len)
-  (status-t sp-sample-t* sp-sample-count-t sp-sample-t* sp-sample-count-t*)
+  (sp-fftr input input-len output) (status-t sp-sample-t* sp-sample-count-t sp-sample-t*)
+  (sp-fftri input input-len output) (status-t sp-sample-t* sp-sample-count-t sp-sample-t*)
   (sp-moving-average source source-len prev prev-len next next-len radius start end result-samples)
   (status-t
     sp-sample-t*

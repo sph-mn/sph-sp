@@ -96,6 +96,8 @@ typedef struct {
 /** sp-float-t integer -> sp-float-t
     radians-per-second samples-per-second -> cutoff-value */
 #define sp_windowed_sinc_cutoff(freq, sample_rate) ((2 * M_PI * freq) / sample_rate)
+#define sp_fftr_output_len(input_len) (1 + (input_len / 2))
+#define sp_fftri_output_len(input_len) (2 * (input_len - 1))
 #if (sp_sample_format_f64 == sp_sample_format)
 #define sp_sample_t double
 #define sp_sample_sum f64_sum
@@ -184,8 +186,8 @@ status_t sp_windowed_sinc(sp_sample_t* source, sp_sample_count_t source_len, sp_
 sp_float_t sp_window_blackman(sp_float_t a, sp_sample_count_t width);
 void sp_spectral_inversion_ir(sp_sample_t* a, sp_sample_count_t a_len);
 void sp_spectral_reversal_ir(sp_sample_t* a, sp_sample_count_t a_len);
-status_t sp_fftr(sp_sample_t* input, sp_sample_count_t input_len, sp_sample_t* output, sp_sample_count_t* output_len);
-status_t sp_fftri(sp_sample_t* input, sp_sample_count_t input_len, sp_sample_t* output, sp_sample_count_t* output_len);
+status_t sp_fftr(sp_sample_t* input, sp_sample_count_t input_len, sp_sample_t* output);
+status_t sp_fftri(sp_sample_t* input, sp_sample_count_t input_len, sp_sample_t* output);
 status_t sp_moving_average(sp_sample_t* source, sp_sample_count_t source_len, sp_sample_t* prev, sp_sample_count_t prev_len, sp_sample_t* next, sp_sample_count_t next_len, sp_sample_count_t radius, sp_sample_count_t start, sp_sample_count_t end, sp_sample_t* result_samples);
 void sp_convolve_one(sp_sample_t* a, sp_sample_count_t a_len, sp_sample_t* b, sp_sample_count_t b_len, sp_sample_t* result_samples);
 void sp_convolve(sp_sample_t* a, sp_sample_count_t a_len, sp_sample_t* b, sp_sample_count_t b_len, sp_sample_count_t result_carryover_len, sp_sample_t* result_carryover, sp_sample_t* result_samples);

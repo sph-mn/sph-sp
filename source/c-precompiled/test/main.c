@@ -245,13 +245,15 @@ status_t test_fftr() {
   sp_sample_count_t b_len;
   sp_sample_t b[8] = { 0, 0, 0, 0, 0, 0, 0, 0 };
   a_len = 6;
-  status_require((sp_fftr(a, a_len, b, (&b_len))));
+  b_len = sp_fftr_output_len(a_len);
+  a_again_len = sp_fftri_output_len(b_len);
+  status_require((sp_fftr(a, a_len, b)));
   test_helper_assert("result length", (4 == b_len));
   test_helper_assert("result first bin", (1 < b[0]));
   test_helper_assert("result second bin", (-0.5 > b[2]));
   test_helper_assert("result third bin", (0 < b[4]));
   test_helper_assert("result fourth bin", (0 > b[6]));
-  status_require((sp_fftri(b, b_len, a_again, (&a_again_len))));
+  status_require((sp_fftri(b, b_len, a_again)));
   test_helper_assert("result 2 length", (a_len == a_again_len));
 exit:
   return (status);

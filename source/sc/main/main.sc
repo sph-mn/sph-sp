@@ -143,8 +143,7 @@
     (if* (= 0 a) 1
       (/ (sin (* M_PI a)) (* M_PI a)))))
 
-(define (sp-fftr input input-len output output-len)
-  (status-t sp-sample-t* sp-sample-count-t sp-sample-t* sp-sample-count-t*)
+(define (sp-fftr input input-len output) (status-t sp-sample-t* sp-sample-count-t sp-sample-t*)
   "real-numbers -> [[real, imaginary] ...]:complex-numbers
   write to output real and imaginary part alternatingly
   output-len will be set to the count of complex numbers, (+ 1 (/ input-len 2)).
@@ -163,9 +162,7 @@
   (status-require (sph-helper-calloc (* input-len (sizeof kiss-fft-cpx)) &out))
   (memreg-add out)
   (kiss-fftr cfg input out)
-  (set
-    out-len (+ 1 (/ input-len 2))
-    *output-len out-len)
+  (set out-len (sp-fftr-output-len input-len))
   (for ((set i 0) (< i out-len) (set i (+ 1 i)))
     (set
       (array-get output (* 2 i)) (struct-get (array-get out i) r)
@@ -174,8 +171,7 @@
     memreg-free
     (return status)))
 
-(define (sp-fftri input input-len output output-len)
-  (status-t sp-sample-t* sp-sample-count-t sp-sample-t* sp-sample-count-t*)
+(define (sp-fftri input input-len output) (status-t sp-sample-t* sp-sample-count-t sp-sample-t*)
   "[[real, imaginary], ...]:complex-numbers -> real-numbers
   input-length > 0"
   sp-status-declare
@@ -194,7 +190,6 @@
       (struct-get (array-get in i) r) (array-get input (* 2 i))
       (struct-get (array-get in i) i) (array-get input (+ 1 (* 2 i)))))
   (kiss-fftri cfg in output)
-  (set *output-len (* 2 (- input-len 1)))
   (label exit
     memreg-free
     (return status)))

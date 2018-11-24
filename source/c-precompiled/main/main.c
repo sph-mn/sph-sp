@@ -154,7 +154,7 @@ sp_float_t sp_sinc(sp_float_t a) { return (((0 == a) ? 1 : (sin((M_PI * a)) / (M
   write to output real and imaginary part alternatingly
   output-len will be set to the count of complex numbers, (+ 1 (/ input-len 2)).
   output is allocated and owned by the caller */
-status_t sp_fftr(sp_sample_t* input, sp_sample_count_t input_len, sp_sample_t* output, sp_sample_count_t* output_len) {
+status_t sp_fftr(sp_sample_t* input, sp_sample_count_t input_len, sp_sample_t* output) {
   sp_status_declare;
   kiss_fftr_cfg cfg;
   kiss_fft_cpx* out;
@@ -169,8 +169,7 @@ status_t sp_fftr(sp_sample_t* input, sp_sample_count_t input_len, sp_sample_t* o
   status_require((sph_helper_calloc((input_len * sizeof(kiss_fft_cpx)), (&out))));
   memreg_add(out);
   kiss_fftr(cfg, input, out);
-  out_len = (1 + (input_len / 2));
-  *output_len = out_len;
+  out_len = sp_fftr_output_len(input_len);
   for (i = 0; (i < out_len); i = (1 + i)) {
     output[(2 * i)] = (out[i]).r;
     output[(1 + (2 * i))] = (out[i]).i;
@@ -181,7 +180,7 @@ exit:
 };
 /** [[real, imaginary], ...]:complex-numbers -> real-numbers
   input-length > 0 */
-status_t sp_fftri(sp_sample_t* input, sp_sample_count_t input_len, sp_sample_t* output, sp_sample_count_t* output_len) {
+status_t sp_fftri(sp_sample_t* input, sp_sample_count_t input_len, sp_sample_t* output) {
   sp_status_declare;
   kiss_fftr_cfg cfg;
   kiss_fft_cpx* in;
@@ -199,7 +198,6 @@ status_t sp_fftri(sp_sample_t* input, sp_sample_count_t input_len, sp_sample_t* 
     (in[i]).i = input[(1 + (2 * i))];
   };
   kiss_fftri(cfg, in, output);
-  *output_len = (2 * (input_len - 1));
 exit:
   memreg_free;
   return (status);

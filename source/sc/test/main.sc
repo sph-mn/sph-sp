@@ -269,14 +269,17 @@
     a-again-len sp-sample-count-t
     b-len sp-sample-count-t
     b (array sp-sample-t 8 0 0 0 0 0 0 0 0))
-  (set a-len 6)
-  (status-require (sp-fftr a a-len b &b-len))
+  (set
+    a-len 6
+    b-len (sp-fftr-output-len a-len)
+    a-again-len (sp-fftri-output-len b-len))
+  (status-require (sp-fftr a a-len b))
   (test-helper-assert "result length" (= 4 b-len))
   (test-helper-assert "result first bin" (< 1 (array-get b 0)))
   (test-helper-assert "result second bin" (> -0.5 (array-get b 2)))
   (test-helper-assert "result third bin" (< 0 (array-get b 4)))
   (test-helper-assert "result fourth bin" (> 0 (array-get b 6)))
-  (status-require (sp-fftri b b-len a-again &a-again-len))
+  (status-require (sp-fftri b b-len a-again))
   (test-helper-assert "result 2 length" (= a-len a-again-len))
   (label exit
     (return status)))
