@@ -64,7 +64,7 @@
     sp-sample-rate-t sp-float-t sp-float-t sp-windowed-sinc-ir-f-t sp-windowed-sinc-state-t**)
   "create or update a previously created state object. impulse response array properties are calculated
   from sample-rate, freq and transition.
-  eventually frees state.ir."
+  eventually frees state.ir"
   status-declare
   (declare
     carryover sp-sample-t*
@@ -87,18 +87,15 @@
       (status-require (sph-helper-malloc (sizeof sp-windowed-sinc-state-t) &state))
       (memreg-add state)
       (set
-        state:sample-rate 0
-        state:freq 0
-        state:ir 0
-        state:ir-len 0
-        state:ir-f ir-f
-        state:transition 0
+        state:carryover-alloc-len 0
+        state:carryover-len 0
         state:carryover 0
-        state:carryover-len 0)))
+        state:ir 0)))
   (sc-comment "create new ir")
   (status-require (ir-f sample-rate freq transition &ir-len &ir))
   (sc-comment
     "eventually extend carryover array. the array is never shrunk."
+    "carryover-len is always at least ir-len - 1."
     "carryover-alloc-len is the length of the whole array")
   (if state:carryover
     (if (> ir-len state:carryover-alloc-len)
@@ -110,20 +107,14 @@
     (begin
       (status-require (sph-helper-calloc (* (- ir-len 1) (sizeof sp-sample-t)) &carryover))
       (set state:carryover-alloc-len (- ir-len 1))))
-  (sc-comment
-    "carryover-len is the number of elements that have to be carried over from the last call")
   (set
     state:carryover carryover
-    state:carryover-len
-    (if* state:carryover-len state:carryover-len
-      0)
     state:ir ir
     state:ir-len ir-len
     state:sample-rate sample-rate
     state:freq freq
     state:transition transition
     *result-state state)
-  (memset state:carryover 0 (* state:carryover-alloc-len (sizeof sp-sample-t)))
   (label exit
     (if status-is-failure memreg-free)
     (return status)))
@@ -140,6 +131,10 @@
   if state is zero it will be allocated.
   result-samples length is source-len"
   status-declare
+  (declare carryover-len sp-sample-count-t)
+  (set carryover-len
+    (if* *result-state (- (: *result-state ir-len) 1)
+      0))
   (status-require
     (sp-windowed-sinc-state-update
       sample-rate
@@ -152,7 +147,6 @@
     source
     source-len
     (: *result-state ir)
-    (: *result-state ir-len)
-    (: *result-state carryover-len) (: *result-state carryover) result-samples)
+    (: *result-state ir-len) carryover-len (: *result-state carryover) result-samples)
   (label exit
     (return status)))

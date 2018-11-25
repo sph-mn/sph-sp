@@ -343,8 +343,12 @@
   "discrete linear convolution for segments of a continuous stream. maps segments (a, a-len) to result-samples
   using (b, b-len) as the impulse response. b-len must be greater than zero.
   result-samples length is a-len.
-  carryover length must at least b-len - 1 .
-  carryover-len should be zero for the first call, b-len or if b-len changed b-len from the previous call.
+  result-carryover is previous carryover or an empty array.
+  result-carryover length must at least b-len - 1.
+  continuous processing does not work correctly if result-samples is smaller than b-len - 1, in this case
+  result-carryover will contain values after index a-len - 1 that will not be carried over to the next call.
+  carryover-len should be zero for the first call or its content should be zeros.
+  carryover-len for subsequent calls should be b-len - 1 or if b-len changed b-len - 1  from the previous call.
   all heap memory is owned and allocated by the caller.
   if b-len is one there is no carryover"
   (declare
@@ -353,7 +357,14 @@
     b-index sp-sample-count-t
     c-index sp-sample-count-t)
   (memset result-samples 0 (* a-len (sizeof sp-sample-t)))
-  (if carryover-len (memcpy result-samples result-carryover (* carryover-len (sizeof sp-sample-t))))
+  (if carryover-len
+    (memcpy
+      result-samples
+      result-carryover
+      (*
+        (if* (< a-len carryover-len) a-len
+          carryover-len)
+        (sizeof sp-sample-t))))
   (memset result-carryover 0 (* (- b-len 1) (sizeof sp-sample-t)))
   (sc-comment "result values." "first process values that dont lead to carryover")
   (set size

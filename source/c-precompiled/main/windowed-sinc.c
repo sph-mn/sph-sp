@@ -54,7 +54,7 @@ void sp_windowed_sinc_state_free(sp_windowed_sinc_state_t* state) {
 };
 /** create or update a previously created state object. impulse response array properties are calculated
   from sample-rate, freq and transition.
-  eventually frees state.ir. */
+  eventually frees state.ir */
 status_t sp_windowed_sinc_state_update(sp_sample_rate_t sample_rate, sp_float_t freq, sp_float_t transition, sp_windowed_sinc_ir_f_t ir_f, sp_windowed_sinc_state_t** result_state) {
   status_declare;
   sp_sample_t* carryover;
@@ -75,18 +75,15 @@ status_t sp_windowed_sinc_state_update(sp_sample_rate_t sample_rate, sp_float_t 
   } else {
     status_require((sph_helper_malloc((sizeof(sp_windowed_sinc_state_t)), (&state))));
     memreg_add(state);
-    state->sample_rate = 0;
-    state->freq = 0;
-    state->ir = 0;
-    state->ir_len = 0;
-    state->ir_f = ir_f;
-    state->transition = 0;
-    state->carryover = 0;
+    state->carryover_alloc_len = 0;
     state->carryover_len = 0;
+    state->carryover = 0;
+    state->ir = 0;
   };
   /* create new ir */
   status_require((ir_f(sample_rate, freq, transition, (&ir_len), (&ir))));
   /* eventually extend carryover array. the array is never shrunk.
+carryover-len is always at least ir-len - 1.
 carryover-alloc-len is the length of the whole array */
   if (state->carryover) {
     if (ir_len > state->carryover_alloc_len) {
@@ -100,16 +97,13 @@ carryover-alloc-len is the length of the whole array */
     status_require((sph_helper_calloc(((ir_len - 1) * sizeof(sp_sample_t)), (&carryover))));
     state->carryover_alloc_len = (ir_len - 1);
   };
-  /* carryover-len is the number of elements that have to be carried over from the last call */
   state->carryover = carryover;
-  state->carryover_len = (state->carryover_len ? state->carryover_len : 0);
   state->ir = ir;
   state->ir_len = ir_len;
   state->sample_rate = sample_rate;
   state->freq = freq;
   state->transition = transition;
   *result_state = state;
-  memset((state->carryover), 0, (state->carryover_alloc_len * sizeof(sp_sample_t)));
 exit:
   if (status_is_failure) {
     memreg_free;
@@ -122,8 +116,10 @@ exit:
   result-samples length is source-len */
 status_t sp_windowed_sinc(sp_sample_t* source, sp_sample_count_t source_len, sp_sample_rate_t sample_rate, sp_float_t freq, sp_float_t transition, boolean is_high_pass, sp_windowed_sinc_state_t** result_state, sp_sample_t* result_samples) {
   status_declare;
+  sp_sample_count_t carryover_len;
+  carryover_len = (*result_state ? ((*result_state)->ir_len - 1) : 0);
   status_require((sp_windowed_sinc_state_update(sample_rate, freq, transition, (is_high_pass ? sp_windowed_sinc_hp_ir : sp_windowed_sinc_ir), result_state)));
-  sp_convolve(source, source_len, ((*result_state)->ir), ((*result_state)->ir_len), ((*result_state)->carryover_len), ((*result_state)->carryover), result_samples);
+  sp_convolve(source, source_len, ((*result_state)->ir), ((*result_state)->ir_len), carryover_len, ((*result_state)->carryover), result_samples);
 exit:
   return (status);
 };
