@@ -155,12 +155,14 @@ typedef struct {
   sp_channel_count_t channel_count;
   void* data;
 } sp_port_t;
+typedef status_t (*sp_windowed_sinc_ir_f_t)(sp_sample_rate_t, sp_float_t, sp_float_t, sp_sample_count_t*, sp_sample_t**);
 typedef struct {
   sp_sample_t* carryover;
   sp_sample_count_t carryover_len;
   sp_sample_count_t carryover_alloc_len;
   sp_float_t freq;
   sp_sample_t* ir;
+  sp_windowed_sinc_ir_f_t ir_f;
   sp_sample_count_t ir_len;
   sp_sample_rate_t sample_rate;
   sp_float_t transition;
@@ -180,9 +182,10 @@ void sp_sine_lq(sp_sample_count_t len, sp_float_t sample_duration, sp_float_t fr
 sp_float_t sp_sinc(sp_float_t a);
 sp_sample_count_t sp_windowed_sinc_ir_length(sp_float_t transition);
 status_t sp_windowed_sinc_ir(sp_sample_rate_t sample_rate, sp_float_t freq, sp_float_t transition, sp_sample_count_t* result_len, sp_sample_t** result_ir);
+status_t sp_windowed_sinc_hp_ir(sp_sample_rate_t sample_rate, sp_float_t freq, sp_float_t transition, sp_sample_count_t* result_len, sp_sample_t** result_ir);
 void sp_windowed_sinc_state_free(sp_windowed_sinc_state_t* state);
-status_t sp_windowed_sinc_state_create(sp_sample_rate_t sample_rate, sp_float_t freq, sp_float_t transition, sp_windowed_sinc_state_t** result_state);
-status_t sp_windowed_sinc(sp_sample_t* source, sp_sample_count_t source_len, sp_sample_rate_t sample_rate, sp_float_t freq, sp_float_t transition, sp_windowed_sinc_state_t** result_state, sp_sample_t* result_samples);
+status_t sp_windowed_sinc_state_update(sp_sample_rate_t sample_rate, sp_float_t freq, sp_float_t transition, sp_windowed_sinc_ir_f_t ir_f, sp_windowed_sinc_state_t** result_state);
+status_t sp_windowed_sinc(sp_sample_t* source, sp_sample_count_t source_len, sp_sample_rate_t sample_rate, sp_float_t freq, sp_float_t transition, boolean is_high_pass, sp_windowed_sinc_state_t** result_state, sp_sample_t* result_samples);
 sp_float_t sp_window_blackman(sp_float_t a, sp_sample_count_t width);
 void sp_spectral_inversion_ir(sp_sample_t* a, sp_sample_count_t a_len);
 void sp_spectral_reversal_ir(sp_sample_t* a, sp_sample_count_t a_len);

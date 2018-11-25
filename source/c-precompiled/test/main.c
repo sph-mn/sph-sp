@@ -156,8 +156,8 @@ status_t test_windowed_sinc() {
   sp_sample_t source[10] = { 3, 4, 5, 6, 7, 8, 9, 0, 1, 2 };
   sp_sample_t result[10] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
   state = 0;
-  status_require((sp_windowed_sinc(source, 10, 8000, 100, (0.1), (&state), result)));
-  status_require((sp_windowed_sinc(source, 10, 8000, 100, (0.1), (&state), result)));
+  status_require((sp_windowed_sinc(source, 10, 8000, 100, (0.1), 0, (&state), result)));
+  status_require((sp_windowed_sinc(source, 10, 8000, 100, (0.1), 0, (&state), result)));
   sp_windowed_sinc_state_free(state);
 exit:
   return (status);

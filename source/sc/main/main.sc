@@ -316,7 +316,7 @@
 (define (sp-convolve-one a a-len b b-len result-samples)
   (void sp-sample-t* sp-sample-count-t sp-sample-t* sp-sample-count-t sp-sample-t*)
   "discrete linear convolution.
-  result length must be at least a-len + b-len - 1.
+  result-samples length must be at least a-len + b-len - 1.
   result-samples is owned and allocated by the caller"
   (declare
     a-index sp-sample-count-t
@@ -343,9 +343,10 @@
   "discrete linear convolution for segments of a continuous stream. maps segments (a, a-len) to result-samples
   using (b, b-len) as the impulse response. b-len must be greater than zero.
   result-samples length is a-len.
-  carryover length must at least b-len.
+  carryover length must at least b-len - 1 .
   carryover-len should be zero for the first call, b-len or if b-len changed b-len from the previous call.
-  all heap memory is owned and allocated by the caller"
+  all heap memory is owned and allocated by the caller.
+  if b-len is one there is no carryover"
   (declare
     size sp-sample-count-t
     a-index sp-sample-count-t
@@ -353,14 +354,13 @@
     c-index sp-sample-count-t)
   (memset result-samples 0 (* a-len (sizeof sp-sample-t)))
   (if carryover-len (memcpy result-samples result-carryover (* carryover-len (sizeof sp-sample-t))))
-  (memset result-carryover 0 (* b-len (sizeof sp-sample-t)))
-  (sc-comment
-    "result values." "restrict processed range to exclude input values that generate carryover")
+  (memset result-carryover 0 (* (- b-len 1) (sizeof sp-sample-t)))
+  (sc-comment "result values." "first process values that dont lead to carryover")
   (set size
     (if* (< a-len b-len) 0
       (- a-len (- b-len 1))))
   (if size (sp-convolve-one a size b b-len result-samples))
-  (sc-comment "carryover values")
+  (sc-comment "process values with carryover")
   (for ((set a-index size) (< a-index a-len) (set a-index (+ 1 a-index)))
     (for ((set b-index 0) (< b-index b-len) (set b-index (+ 1 b-index)))
       (set c-index (+ a-index b-index))

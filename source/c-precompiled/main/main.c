@@ -317,7 +317,7 @@ void sp_spectral_reversal_ir(sp_sample_t* a, sp_sample_count_t a_len) {
   };
 };
 /** discrete linear convolution.
-  result length must be at least a-len + b-len - 1.
+  result-samples length must be at least a-len + b-len - 1.
   result-samples is owned and allocated by the caller */
 void sp_convolve_one(sp_sample_t* a, sp_sample_count_t a_len, sp_sample_t* b, sp_sample_count_t b_len, sp_sample_t* result_samples) {
   sp_sample_count_t a_index;
@@ -336,9 +336,10 @@ void sp_convolve_one(sp_sample_t* a, sp_sample_count_t a_len, sp_sample_t* b, sp
 /** discrete linear convolution for segments of a continuous stream. maps segments (a, a-len) to result-samples
   using (b, b-len) as the impulse response. b-len must be greater than zero.
   result-samples length is a-len.
-  carryover length must at least b-len.
+  carryover length must at least b-len - 1 .
   carryover-len should be zero for the first call, b-len or if b-len changed b-len from the previous call.
-  all heap memory is owned and allocated by the caller */
+  all heap memory is owned and allocated by the caller.
+  if b-len is one there is no carryover */
 void sp_convolve(sp_sample_t* a, sp_sample_count_t a_len, sp_sample_t* b, sp_sample_count_t b_len, sp_sample_count_t carryover_len, sp_sample_t* result_carryover, sp_sample_t* result_samples) {
   sp_sample_count_t size;
   sp_sample_count_t a_index;
@@ -348,14 +349,14 @@ void sp_convolve(sp_sample_t* a, sp_sample_count_t a_len, sp_sample_t* b, sp_sam
   if (carryover_len) {
     memcpy(result_samples, result_carryover, (carryover_len * sizeof(sp_sample_t)));
   };
-  memset(result_carryover, 0, (b_len * sizeof(sp_sample_t)));
+  memset(result_carryover, 0, ((b_len - 1) * sizeof(sp_sample_t)));
   /* result values.
-restrict processed range to exclude input values that generate carryover */
+first process values that dont lead to carryover */
   size = ((a_len < b_len) ? 0 : (a_len - (b_len - 1)));
   if (size) {
     sp_convolve_one(a, size, b, b_len, result_samples);
   };
-  /* carryover values */
+  /* process values with carryover */
   for (a_index = size; (a_index < a_len); a_index = (1 + a_index)) {
     for (b_index = 0; (b_index < b_len); b_index = (1 + b_index)) {
       c_index = (a_index + b_index);

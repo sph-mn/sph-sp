@@ -104,6 +104,10 @@
       (sample-rate sp-sample-rate-t)
       (channel-count sp-channel-count-t)
       (data void*)))
+  sp-windowed-sinc-ir-f-t
+  (type
+    (function-pointer
+      status-t sp-sample-rate-t sp-float-t sp-float-t sp-sample-count-t* sp-sample-t**))
   sp-windowed-sinc-state-t
   (type
     (struct
@@ -112,6 +116,7 @@
       (carryover-alloc-len sp-sample-count-t)
       (freq sp-float-t)
       (ir sp-sample-t*)
+      (ir-f sp-windowed-sinc-ir-f-t)
       (ir-len sp-sample-count-t)
       (sample-rate sp-sample-rate-t)
       (transition sp-float-t)))
@@ -136,13 +141,18 @@
   (sp-sample-count-t sp-float-t)
   (sp-windowed-sinc-ir sample-rate freq transition result-len result-ir)
   (status-t sp-sample-rate-t sp-float-t sp-float-t sp-sample-count-t* sp-sample-t**)
+  (sp-windowed-sinc-hp-ir sample-rate freq transition result-len result-ir)
+  (status-t sp-sample-rate-t sp-float-t sp-float-t sp-sample-count-t* sp-sample-t**)
   (sp-windowed-sinc-state-free state) (void sp-windowed-sinc-state-t*)
-  (sp-windowed-sinc-state-create sample-rate freq transition result-state)
-  (status-t sp-sample-rate-t sp-float-t sp-float-t sp-windowed-sinc-state-t**)
-  (sp-windowed-sinc source source-len sample-rate freq transition result-state result-samples)
+  (sp-windowed-sinc-state-update sample-rate freq transition ir-f result-state)
+  (status-t
+    sp-sample-rate-t sp-float-t sp-float-t sp-windowed-sinc-ir-f-t sp-windowed-sinc-state-t**)
+  (sp-windowed-sinc
+    source source-len sample-rate freq transition is-high-pass result-state result-samples)
   (status-t
     sp-sample-t*
-    sp-sample-count-t sp-sample-rate-t sp-float-t sp-float-t sp-windowed-sinc-state-t** sp-sample-t*)
+    sp-sample-count-t
+    sp-sample-rate-t sp-float-t sp-float-t boolean sp-windowed-sinc-state-t** sp-sample-t*)
   (sp-window-blackman a width) (sp-float-t sp-float-t sp-sample-count-t)
   (sp-spectral-inversion-ir a a-len) (void sp-sample-t* sp-sample-count-t)
   (sp-spectral-reversal-ir a a-len) (void sp-sample-t* sp-sample-count-t)
