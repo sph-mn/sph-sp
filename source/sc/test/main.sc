@@ -18,8 +18,9 @@
   (test-helper-assert "input 0.5" (sp-sample-nearly-equal 0.63662 (sp-sinc 0.5) error-margin))
   (test-helper-assert "input 1" (sp-sample-nearly-equal 1.0 (sp-sinc 0) error-margin))
   (test-helper-assert
-    "window-blackman 1.1 20"
-    (sp-sample-nearly-equal 0.550175 (sp-window-blackman 1.1 20) error-margin))
+    "window-blackman 0 51" (sp-sample-nearly-equal 0 (sp-window-blackman 0 51) error-margin))
+  (test-helper-assert
+    "window-blackman 25 51" (sp-sample-nearly-equal 1 (sp-window-blackman 25 51) error-margin))
   (label exit
     (return status)))
 
@@ -164,14 +165,22 @@
 (define (test-windowed-sinc) status-t
   status-declare
   (declare
+    transition sp-float-t
+    cutoff sp-float-t
+    ir sp-sample-t*
+    ir-len sp-sample-count-t
     state sp-windowed-sinc-state-t*
     source (array sp-sample-t 10 3 4 5 6 7 8 9 0 1 2)
     result (array sp-sample-t 10 0 0 0 0 0 0 0 0 0 0))
-  (set state 0)
-  (status-require (sp-windowed-sinc source 10 8000 100 0.1 0 &state result))
-  (status-require (sp-windowed-sinc source 10 8000 100 0.1 0 &state result))
+  (set
+    state 0
+    cutoff 0.1
+    transition 0.08)
+  (status-require (sp-windowed-sinc-ir cutoff transition &ir-len &ir))
+  (test-helper-assert "ir" (sp-sample-nearly-equal 0.0952 (array-get ir 28) error-margin))
+  (status-require (sp-windowed-sinc source 10 10000 100 800 0 &state result))
+  (status-require (sp-windowed-sinc source 10 10000 100 800 0 &state result))
   (sp-windowed-sinc-state-free state)
-  ; todo: actually check results
   (label exit
     (return status)))
 

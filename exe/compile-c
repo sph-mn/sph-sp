@@ -20,13 +20,6 @@ compile_test_sph_sp() {
   gcc "$c/test/main.c" -o temp/test-libsph-sp -lsph-sp -lm $gcc_options
 }
 
-compile_libguile_sph_sp() {
-  target="$target_dir/libguile-sph-sp.so"
-  source="$c/guile/main.c"
-  gcc -shared -fpic "$source" -o "$target" $gcc_options $(guile-config link)
-}
-
 mkdir -p "$target_dir" &&
 compile_sph_sp
 compile_test_sph_sp
-#compile_libguile_sph_sp

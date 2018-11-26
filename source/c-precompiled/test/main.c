@@ -12,7 +12,8 @@ status_t test_base() {
   status_declare;
   test_helper_assert(("input 0.5"), (sp_sample_nearly_equal((0.63662), (sp_sinc((0.5))), error_margin)));
   test_helper_assert("input 1", (sp_sample_nearly_equal((1.0), (sp_sinc(0)), error_margin)));
-  test_helper_assert(("window-blackman 1.1 20"), (sp_sample_nearly_equal((0.550175), (sp_window_blackman((1.1), 20)), error_margin)));
+  test_helper_assert("window-blackman 0 51", (sp_sample_nearly_equal(0, (sp_window_blackman(0, 51)), error_margin)));
+  test_helper_assert("window-blackman 25 51", (sp_sample_nearly_equal(1, (sp_window_blackman(25, 51)), error_margin)));
 exit:
   return (status);
 };
@@ -152,12 +153,20 @@ exit:
 };
 status_t test_windowed_sinc() {
   status_declare;
+  sp_float_t transition;
+  sp_float_t cutoff;
+  sp_sample_t* ir;
+  sp_sample_count_t ir_len;
   sp_windowed_sinc_state_t* state;
   sp_sample_t source[10] = { 3, 4, 5, 6, 7, 8, 9, 0, 1, 2 };
   sp_sample_t result[10] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
   state = 0;
-  status_require((sp_windowed_sinc(source, 10, 8000, 100, (0.1), 0, (&state), result)));
-  status_require((sp_windowed_sinc(source, 10, 8000, 100, (0.1), 0, (&state), result)));
+  cutoff = 0.1;
+  transition = 0.08;
+  status_require((sp_windowed_sinc_ir(cutoff, transition, (&ir_len), (&ir))));
+  test_helper_assert("ir", (sp_sample_nearly_equal((0.0952), (ir[28]), error_margin)));
+  status_require((sp_windowed_sinc(source, 10, 10000, 100, 800, 0, (&state), result)));
+  status_require((sp_windowed_sinc(source, 10, 10000, 100, 800, 0, (&state), result)));
   sp_windowed_sinc_state_free(state);
 exit:
   return (status);

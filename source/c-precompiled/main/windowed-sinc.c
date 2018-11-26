@@ -2,7 +2,7 @@
   variable sample-rate, cutoff radian frequency and transition band width per call.
   sp-windowed-sinc-state-t is used to store the impulse response, the parameters that where used to create it, and
   data that has to be carried over between calls */
-sp_float_t sp_window_blackman(sp_float_t a, sp_sample_count_t width) { return (((0.42 - (0.5 * cos(((2 * M_PI * a) / (width - 1))))) + (0.8 * cos(((4 * M_PI * a) / (width - 1)))))); };
+sp_float_t sp_window_blackman(sp_float_t a, sp_sample_count_t width) { return (((0.42 - (0.5 * cos(((2 * M_PI * a) / (width - 1))))) + (0.08 * cos(((4 * M_PI * a) / (width - 1)))))); };
 /** approximate impulse response length for a transition factor and
   ensure that the length is odd */
 sp_sample_count_t sp_windowed_sinc_ir_length(sp_float_t transition) {
@@ -14,22 +14,23 @@ sp_sample_count_t sp_windowed_sinc_ir_length(sp_float_t transition) {
   return (result);
 };
 /** create an impulse response kernel for a windowed sinc filter. uses a blackman window (truncated version).
-  allocates result-ir, sets result-len */
-status_t sp_windowed_sinc_ir(sp_sample_rate_t sample_rate, sp_float_t freq, sp_float_t transition, sp_sample_count_t* result_len, sp_sample_t** result_ir) {
+  allocates result-ir, sets result-len.
+  cutoff and transition are as a fraction 0..1 of the sampling rate */
+status_t sp_windowed_sinc_ir(sp_float_t cutoff, sp_float_t transition, sp_sample_count_t* result_len, sp_sample_t** result_ir) {
   status_declare;
   sp_float_t center_index;
-  sp_float_t cutoff;
   sp_sample_count_t i;
   sp_sample_t* ir;
   sp_sample_count_t len;
   sp_float_t sum;
   len = sp_windowed_sinc_ir_length(transition);
   center_index = ((len - 1.0) / 2.0);
-  cutoff = sp_windowed_sinc_cutoff(freq, sample_rate);
   status_require((sph_helper_malloc((len * sizeof(sp_sample_t)), (&ir))));
+  /* nan can be set here if the freq and transition values are invalid */
   for (i = 0; (i < len); i = (1 + i)) {
-    ir[i] = sp_window_blackman((sp_sinc((2 * cutoff * (i - center_index)))), len);
+    ir[i] = (sp_window_blackman(i, len) * sp_sinc((2 * cutoff * (i - center_index))));
   };
+  /* scale */
   sum = sp_sample_sum(ir, len);
   for (i = 0; (i < len); i = (1 + i)) {
     ir[i] = (ir[i] / sum);
@@ -40,9 +41,9 @@ exit:
   return (status);
 };
 /** a high-pass filter version of the windowed-sinc impulse response with spectral inversion */
-status_t sp_windowed_sinc_hp_ir(sp_sample_rate_t sample_rate, sp_float_t freq, sp_float_t transition, sp_sample_count_t* result_len, sp_sample_t** result_ir) {
+status_t sp_windowed_sinc_hp_ir(sp_float_t cutoff, sp_float_t transition, sp_sample_count_t* result_len, sp_sample_t** result_ir) {
   status_declare;
-  status_require((sp_windowed_sinc_ir(sample_rate, freq, transition, result_len, result_ir)));
+  status_require((sp_windowed_sinc_ir(cutoff, transition, result_len, result_ir)));
   sp_spectral_inversion_ir((*result_ir), (*result_len));
 exit:
   return (status);
@@ -53,9 +54,9 @@ void sp_windowed_sinc_state_free(sp_windowed_sinc_state_t* state) {
   free(state);
 };
 /** create or update a previously created state object. impulse response array properties are calculated
-  from sample-rate, freq and transition.
+  with ir-f from cutoff and transition.
   eventually frees state.ir */
-status_t sp_windowed_sinc_state_update(sp_sample_rate_t sample_rate, sp_float_t freq, sp_float_t transition, sp_windowed_sinc_ir_f_t ir_f, sp_windowed_sinc_state_t** result_state) {
+status_t sp_windowed_sinc_state_set(sp_sample_count_t sample_rate, sp_float_t cutoff, sp_float_t transition, sp_windowed_sinc_ir_f_t ir_f, sp_windowed_sinc_state_t** result_state) {
   status_declare;
   sp_sample_t* carryover;
   sp_sample_t* ir;
@@ -65,7 +66,7 @@ status_t sp_windowed_sinc_state_update(sp_sample_rate_t sample_rate, sp_float_t 
   /* create state if not exists. re-use if exists and return early if ir needs not be updated */
   if (*result_state) {
     state = *result_state;
-    if ((state->sample_rate == sample_rate) && (state->freq == freq) && (state->transition == transition) && (state->ir_f == ir_f)) {
+    if ((state->sample_rate == sample_rate) && (state->cutoff == cutoff) && (state->transition == transition) && (state->ir_f == ir_f)) {
       return (status);
     } else {
       if (state->ir) {
@@ -81,9 +82,9 @@ status_t sp_windowed_sinc_state_update(sp_sample_rate_t sample_rate, sp_float_t 
     state->ir = 0;
   };
   /* create new ir */
-  status_require((ir_f(sample_rate, freq, transition, (&ir_len), (&ir))));
+  status_require((ir_f((sp_windowed_sinc_ir_cutoff(cutoff, sample_rate)), (sp_windowed_sinc_ir_transition(transition, sample_rate)), (&ir_len), (&ir))));
   /* eventually extend carryover array. the array is never shrunk.
-carryover-len is always at least ir-len - 1.
+carryover-len is at least ir-len - 1.
 carryover-alloc-len is the length of the whole array */
   if (state->carryover) {
     if (ir_len > state->carryover_alloc_len) {
@@ -101,7 +102,7 @@ carryover-alloc-len is the length of the whole array */
   state->ir = ir;
   state->ir_len = ir_len;
   state->sample_rate = sample_rate;
-  state->freq = freq;
+  state->cutoff = cutoff;
   state->transition = transition;
   *result_state = state;
 exit:
@@ -112,13 +113,16 @@ exit:
 };
 /** a windowed sinc filter for segments of continuous streams with
   variable sample-rate, frequency, transition and impulse response type per call.
-  if state is zero it will be allocated.
-  result-samples length is source-len */
-status_t sp_windowed_sinc(sp_sample_t* source, sp_sample_count_t source_len, sp_sample_rate_t sample_rate, sp_float_t freq, sp_float_t transition, boolean is_high_pass, sp_windowed_sinc_state_t** result_state, sp_sample_t* result_samples) {
+  * cutoff: radian frequency
+  * transition: radian frequency, describes a frequency band.
+  * is-high-pass: if true then it will filter low frequencies
+  * state: if zero then state will be allocated.
+  * result-samples: owned by the caller. length must be at least source-len */
+status_t sp_windowed_sinc(sp_sample_t* source, sp_sample_count_t source_len, sp_sample_rate_t sample_rate, sp_float_t cutoff, sp_float_t transition, boolean is_high_pass, sp_windowed_sinc_state_t** result_state, sp_sample_t* result_samples) {
   status_declare;
   sp_sample_count_t carryover_len;
   carryover_len = (*result_state ? ((*result_state)->ir_len - 1) : 0);
-  status_require((sp_windowed_sinc_state_update(sample_rate, freq, transition, (is_high_pass ? sp_windowed_sinc_hp_ir : sp_windowed_sinc_ir), result_state)));
+  status_require((sp_windowed_sinc_state_set(sample_rate, cutoff, transition, (is_high_pass ? sp_windowed_sinc_hp_ir : sp_windowed_sinc_ir), result_state)));
   sp_convolve(source, source_len, ((*result_state)->ir), ((*result_state)->ir_len), carryover_len, ((*result_state)->carryover), result_samples);
 exit:
   return (status);

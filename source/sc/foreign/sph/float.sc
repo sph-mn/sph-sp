@@ -37,24 +37,12 @@
     (return #t)))
 
 (define (f64-nearly-equal a b margin) (uint8-t f64 f64 f64)
-  "approximate float comparison. margin is a factor and is low for low accepted differences.
-   http://floating-point-gui.de/errors/comparison/"
-  (if (= a b) (return #t)
-    (begin
-      (define diff f64 (fabs (- a b)))
-      (return
-        (if* (or (= 0 a) (= 0 b) (< diff DBL-MIN)) (< diff (* margin DBL-MIN))
-          (< (/ diff (fmin (+ (fabs a) (fabs b)) DBL-MAX)) margin))))))
+  "approximate float comparison. margin is a factor and is low for low accepted differences"
+  (return (< (fabs (- a b)) margin)))
 
 (define (f32-nearly-equal a b margin) (uint8-t f32 f32 f32)
-  "approximate float comparison. margin is a factor and is low for low accepted differences.
-   http://floating-point-gui.de/errors/comparison/"
-  (if (= a b) (return #t)
-    (begin
-      (define diff f32 (fabs (- a b)))
-      (return
-        (if* (or (= 0 a) (= 0 b) (< diff FLT-MIN)) (< diff (* margin FLT-MIN))
-          (< (/ diff (fmin (+ (fabs a) (fabs b)) FLT-MAX)) margin))))))
+  "approximate float comparison. margin is a factor and is low for low accepted differences"
+  (return (< (fabs (- a b)) margin)))
 
 (define-float-array-nearly-equal f32 f32)
 (define-float-array-nearly-equal f64 f64)

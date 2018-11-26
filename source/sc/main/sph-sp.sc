@@ -32,11 +32,12 @@
   (sp-samples->octets a) (* a (sizeof sp-sample-t))
   (duration->sample-count seconds sample-rate) (* seconds sample-rate)
   (sample-count->duration sample-count sample-rate) (/ sample-count sample-rate)
-  (sp-windowed-sinc-cutoff freq sample-rate)
+  (sp-windowed-sinc-ir-cutoff freq sample-rate)
   (begin
     "sp-float-t integer -> sp-float-t
     radians-per-second samples-per-second -> cutoff-value"
     (/ (* 2 M_PI freq) sample-rate))
+  sp-windowed-sinc-ir-transition sp-windowed-sinc-ir-cutoff
   (sp-fftr-output-len input-len) (+ 1 (/ input-len 2))
   (sp-fftri-output-len input-len) (* 2 (- input-len 1)))
 
@@ -105,16 +106,14 @@
       (channel-count sp-channel-count-t)
       (data void*)))
   sp-windowed-sinc-ir-f-t
-  (type
-    (function-pointer
-      status-t sp-sample-rate-t sp-float-t sp-float-t sp-sample-count-t* sp-sample-t**))
+  (type (function-pointer status-t sp-float-t sp-float-t sp-sample-count-t* sp-sample-t**))
   sp-windowed-sinc-state-t
   (type
     (struct
       (carryover sp-sample-t*)
       (carryover-len sp-sample-count-t)
       (carryover-alloc-len sp-sample-count-t)
-      (freq sp-float-t)
+      (cutoff sp-float-t)
       (ir sp-sample-t*)
       (ir-f sp-windowed-sinc-ir-f-t)
       (ir-len sp-sample-count-t)
@@ -138,17 +137,16 @@
   (sp-sine-lq len sample-duration freq phase amp result-samples)
   (void sp-sample-count-t sp-float-t sp-float-t sp-float-t sp-float-t sp-sample-t*) (sp-sinc a)
   (sp-float-t sp-float-t) (sp-windowed-sinc-ir-length transition)
-  (sp-sample-count-t sp-float-t)
-  (sp-windowed-sinc-ir sample-rate freq transition result-len result-ir)
-  (status-t sp-sample-rate-t sp-float-t sp-float-t sp-sample-count-t* sp-sample-t**)
-  (sp-windowed-sinc-hp-ir sample-rate freq transition result-len result-ir)
-  (status-t sp-sample-rate-t sp-float-t sp-float-t sp-sample-count-t* sp-sample-t**)
+  (sp-sample-count-t sp-float-t) (sp-windowed-sinc-ir cutoff transition result-len result-ir)
+  (status-t sp-float-t sp-float-t sp-sample-count-t* sp-sample-t**)
+  (sp-windowed-sinc-hp-ir cutoff transition result-len result-ir)
+  (status-t sp-float-t sp-float-t sp-sample-count-t* sp-sample-t**)
   (sp-windowed-sinc-state-free state) (void sp-windowed-sinc-state-t*)
-  (sp-windowed-sinc-state-update sample-rate freq transition ir-f result-state)
+  (sp-windowed-sinc-state-set sample-rate cutoff transition ir-f result-state)
   (status-t
-    sp-sample-rate-t sp-float-t sp-float-t sp-windowed-sinc-ir-f-t sp-windowed-sinc-state-t**)
+    sp-sample-count-t sp-float-t sp-float-t sp-windowed-sinc-ir-f-t sp-windowed-sinc-state-t**)
   (sp-windowed-sinc
-    source source-len sample-rate freq transition is-high-pass result-state result-samples)
+    source source-len sample-rate cutoff transition is-high-pass result-state result-samples)
   (status-t
     sp-sample-t*
     sp-sample-count-t
