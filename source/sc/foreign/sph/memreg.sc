@@ -24,7 +24,7 @@
   (while memreg-index
     (sc-comment "free all currently registered pointers")
     (set memreg-index (- memreg-index 1))
-    (free (pointer-get (+ memreg-register memreg-index)))))
+    (free (array-get memreg-register memreg-index))))
 
 (sc-comment
   "the *_named variant of memreg supports multiple concurrent registers identified by name"
@@ -50,5 +50,4 @@
   (while (pre-concat memreg-index _ register-id)
     (set (pre-concat memreg-index _ register-id) (- (pre-concat memreg-index _ register-id) 1))
     (free
-      (pointer-get
-        (+ (pre-concat memreg-register _ register-id) (pre-concat memreg-index _ register-id))))))
+      (array-get (pre-concat memreg-register _ register-id) (pre-concat memreg-index _ register-id)))))

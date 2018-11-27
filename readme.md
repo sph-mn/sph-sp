@@ -1,12 +1,9 @@
 # sph-sp
-basic sound processing toolset. c code and shared library
-
-* create sample arrays and write them to files or alsa sound output using a generic port object
-* various exemplary utilities, for example for convolution and filters
+c code and shared library for a sound io port object and example implementations of some sound processors
 
 # features
 * generic port object for alsa and file io with many supported file [formats](http://www.mega-nerd.com/libsndfile/)
-* compile-time customisable sample format
+* compile-time customisable sample and file format
 * unlimited number of channels and sample rate
 * by default, processing on non-interleaved sample arrays with one array per channel
 * tries to avoid floating point errors, prioritises precision over performance
@@ -31,15 +28,14 @@ basic sound processing toolset. c code and shared library
 ./exe/install
 ```
 
-first argument to `exe/install` can be the destination path prefix, for example `./exe/install /tmp`.
-there is also exe/install-extended which can symlink files but needs [sph-lib](https://github.com/sph-mn/sph-lib)
+first argument to `exe/install` can be the destination path prefix, for example `./exe/install /tmp`
 
 installed files
 * /usr/include/sph-sp.h
 * /usr/lib/libsph-sp.so
 
 # configuration options
-the file ``source/c-precompiled/config.c`` can be edited before compilation to set the following options
+the file `source/c-precompiled/config.c` can be edited before compilation to set the following options
 
 | name | default | description |
 | --- | --- | --- |
@@ -52,8 +48,8 @@ the file ``source/c-precompiled/config.c`` can be edited before compilation to s
 |sp-default-alsa-latency|128||
 
 ## possible values for sp-sample-format
-sp-sample-format is the format used internally for processing and is independent of the file format.
-all internal sample formats are currently lower endian. the integer formats are preliminary because some dependencies which dont usually use integers like libc `sin` and therefore `sp-sine` might not work
+sp-sample-format is the datatype used internally for sample values and is independent of the file format.
+integer formats are only supported for use with ports because most other routines expect floats
 
 | name | description |
 | --- | --- |
@@ -81,19 +77,19 @@ status.id zero is success
 ## routines
 ```
 sp_alloc_channel_array :: sp_channel_count_t:channel_count sp_sample_count_t:sample_count sp_sample_t***:result_array -> status_t
-sp_alsa_open :: uint8_t*:device_name boolean:is_input sp_channel_count_t:channel_count sp_sample_rate_t:sample_rate int32_t:latency sp_port_t*:result_port -> status_t
+sp_alsa_open :: uint8_t*:device_name int:mode sp_channel_count_t:channel_count sp_sample_rate_t:sample_rate int32_t:latency sp_port_t*:result_port -> status_t
 sp_channel_data_free :: sp_sample_t**:a sp_channel_count_t:channel_count -> void
 sp_convolve :: sp_sample_t*:a sp_sample_count_t:a_len sp_sample_t*:b sp_sample_count_t:b_len sp_sample_count_t:result_carryover_len sp_sample_t*:result_carryover sp_sample_t*:result_samples -> void
 sp_convolve_one :: sp_sample_t*:a sp_sample_count_t:a_len sp_sample_t*:b sp_sample_count_t:b_len sp_sample_t*:result_samples -> void
-sp_fft :: sp_sample_count_t:len sp_sample_t*:source sp_sample_count_t:source_len sp_sample_t*:result_samples -> status_t
-sp_file_open :: uint8_t*:path sp_channel_count_t:channel_count sp_sample_rate_t:sample_rate sp_port_t*:result_port -> status_t
-sp_ifft :: sp_sample_count_t:len sp_sample_t*:source sp_sample_count_t:source_len sp_sample_t*:result_samples -> status_t
+sp_fftr :: sp_sample_t*:input sp_sample_count_t:input_len sp_sample_t*:output -> status_t
+sp_fftri :: sp_sample_t*:input sp_sample_count_t:input_len sp_sample_t*:output -> status_t
+sp_file_open :: uint8_t*:path int:mode sp_channel_count_t:channel_count sp_sample_rate_t:sample_rate sp_port_t*:result_port -> status_t
 sp_moving_average :: sp_sample_t*:source sp_sample_count_t:source_len sp_sample_t*:prev sp_sample_count_t:prev_len sp_sample_t*:next sp_sample_count_t:next_len sp_sample_count_t:radius sp_sample_count_t:start sp_sample_count_t:end sp_sample_t*:result_samples -> status_t
 sp_port_close :: sp_port_t*:a -> status_t
 sp_port_position :: sp_port_t*:port sp_sample_count_t*:result_position -> status_t
-sp_port_read :: sp_port_t*:port sp_sample_count_t:sample_count sp_sample_t**:result_samples -> status_t
-sp_port_set_position :: sp_port_t*:port int64_t:sample_offset -> status_t
-sp_port_write :: sp_port_t*:port sp_sample_count_t:sample_count sp_sample_t**:channel_data -> status_t
+sp_port_position_set :: sp_port_t*:port size_t:sample_offset -> status_t
+sp_port_read :: sp_port_t*:port sp_sample_count_t:sample_count sp_sample_t**:result_channel_data sp_sample_count_t*:result_sample_count -> status_t
+sp_port_write :: sp_port_t*:port sp_sample_t**:channel_data sp_sample_count_t:sample_count sp_sample_count_t*:result_sample_count -> status_t
 sp_sinc :: sp_float_t:a -> sp_float_t
 sp_sine :: sp_sample_count_t:len sp_float_t:sample_duration sp_float_t:freq sp_float_t:phase sp_float_t:amp sp_sample_t*:result_samples -> void
 sp_sine_lq :: sp_sample_count_t:len sp_float_t:sample_duration sp_float_t:freq sp_float_t:phase sp_float_t:amp sp_sample_t*:result_samples -> void
@@ -102,11 +98,12 @@ sp_spectral_reversal_ir :: sp_sample_t*:a sp_sample_count_t:a_len -> void
 sp_status_description :: status_t:a -> uint8_t*
 sp_status_name :: status_t:a -> uint8_t*
 sp_window_blackman :: sp_float_t:a sp_sample_count_t:width -> sp_float_t
-sp_windowed_sinc :: sp_sample_t*:source sp_sample_count_t:source_len sp_sample_rate_t:sample_rate sp_float_t:freq sp_float_t:transition sp_windowed_sinc_state_t**:result_state sp_sample_t*:result_samples -> status_t
-sp_windowed_sinc_ir :: sp_sample_rate_t:sample_rate sp_float_t:freq sp_float_t:transition sp_sample_count_t*:result_len sp_sample_t**:result_ir -> status_t
+sp_windowed_sinc :: sp_sample_t*:source sp_sample_count_t:source_len sp_sample_rate_t:sample_rate sp_float_t:cutoff sp_float_t:transition boolean:is_high_pass sp_windowed_sinc_state_t**:result_state sp_sample_t*:result_samples -> status_t
+sp_windowed_sinc_hp_ir :: sp_float_t:cutoff sp_float_t:transition sp_sample_count_t*:result_len sp_sample_t**:result_ir -> status_t
+sp_windowed_sinc_ir :: sp_float_t:cutoff sp_float_t:transition sp_sample_count_t*:result_len sp_sample_t**:result_ir -> status_t
 sp_windowed_sinc_ir_length :: sp_float_t:transition -> sp_sample_count_t
-sp_windowed_sinc_state_create :: sp_sample_rate_t:sample_rate sp_float_t:freq sp_float_t:transition sp_windowed_sinc_state_t**:result_state -> status_t
 sp_windowed_sinc_state_free :: sp_windowed_sinc_state_t*:state -> void
+sp_windowed_sinc_state_set :: sp_sample_count_t:sample_rate sp_float_t:cutoff sp_float_t:transition sp_windowed_sinc_ir_f_t:ir_f sp_windowed_sinc_state_t**:result_state -> status_t
 ```
 
 ## macros
@@ -114,15 +111,19 @@ sp_windowed_sinc_state_free :: sp_windowed_sinc_state_t*:state -> void
 boolean
 debug_log(format, ...)
 debug_trace(n)
-duration_to_sample_count(seconds, sample_rate)
 f32
 f64
 sample_count_to_duration(sample_count, sample_rate)
+sp_fftr_output_len(input_len)
+sp_fftri_output_len(input_len)
 sp_octets_to_samples(a)
 sp_port_bit_closed
 sp_port_bit_input
 sp_port_bit_output
 sp_port_bit_position
+sp_port_mode_read
+sp_port_mode_read_write
+sp_port_mode_write
 sp_port_type_alsa
 sp_port_type_file
 sp_sample_format_f32
@@ -136,7 +137,8 @@ sp_status_group_libc
 sp_status_group_sndfile
 sp_status_group_sp
 sp_status_group_sph
-sp_windowed_sinc_cutoff(freq, sample_rate)
+sp_windowed_sinc_ir_cutoff(freq, sample_rate)
+sp_windowed_sinc_ir_transition
 sph_status
 status_declare
 status_declare_group(group)
@@ -157,6 +159,7 @@ status_set_id_goto(status_id)
 ## types
 ```
 status_id_t: int32_t
+sp_windowed_sinc_ir_f_t: sp_float_t sp_float_t sp_sample_count_t* sp_sample_t** -> status_t
 sp_port_t: struct
   type: uint8_t
   flags: uint8_t
@@ -167,8 +170,9 @@ sp_windowed_sinc_state_t: struct
   carryover: sp_sample_t*
   carryover_len: sp_sample_count_t
   carryover_alloc_len: sp_sample_count_t
-  freq: sp_float_t
+  cutoff: sp_float_t
   ir: sp_sample_t*
+  ir_f: sp_windowed_sinc_ir_f_t
   ir_len: sp_sample_count_t
   sample_rate: sp_sample_rate_t
   transition: sp_float_t
@@ -181,9 +185,9 @@ status_t: struct
 ```
 sp_status_id_file_channel_mismatch sp_status_id_file_encoding sp_status_id_file_header
   sp_status_id_file_incompatible sp_status_id_file_incomplete sp_status_id_eof
-  sp_status_id_input_type sp_status_id_memory sp_status_id_not_implemented
-  sp_status_id_port_closed sp_status_id_port_position sp_status_id_port_type
-  sp_status_id_undefined
+  sp_status_id_input_type sp_status_id_memory sp_status_id_invalid_argument
+  sp_status_id_not_implemented sp_status_id_port_closed sp_status_id_port_position
+  sp_status_id_port_type sp_status_id_undefined
 ```
 
 # other language bindings

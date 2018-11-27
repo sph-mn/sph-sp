@@ -17,7 +17,7 @@ usage:
   while (memreg_index) { \
     /* free all currently registered pointers */ \
     memreg_index = (memreg_index - 1); \
-    free((*(memreg_register + memreg_index))); \
+    free((memreg_register[memreg_index])); \
   }
 /* the *_named variant of memreg supports multiple concurrent registers identified by name
 usage:
@@ -35,5 +35,5 @@ usage:
 #define memreg_free_named(register_id) \
   while (memreg_index##_##register_id) { \
     memreg_index##_##register_id = (memreg_index##_##register_id - 1); \
-    free((*(memreg_register##_##register_id + memreg_index##_##register_id))); \
+    free((memreg_register##_##register_id[memreg_index##_##register_id])); \
   }

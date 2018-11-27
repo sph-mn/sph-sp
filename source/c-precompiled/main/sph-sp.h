@@ -91,8 +91,6 @@ typedef struct {
 /** sample count to bit octets count */
 #define sp_octets_to_samples(a) (a / sizeof(sp_sample_t))
 #define sp_samples_to_octets(a) (a * sizeof(sp_sample_t))
-#define duration_to_sample_count(seconds, sample_rate) (seconds * sample_rate)
-#define sample_count_to_duration(sample_count, sample_rate) (sample_count / sample_rate)
 /** sp-float-t integer -> sp-float-t
     radians-per-second samples-per-second -> cutoff-value */
 #define sp_windowed_sinc_ir_cutoff(freq, sample_rate) ((2 * M_PI * freq) / sample_rate)

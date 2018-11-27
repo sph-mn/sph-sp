@@ -30,8 +30,6 @@
     "sample count to bit octets count"
     (/ a (sizeof sp-sample-t)))
   (sp-samples->octets a) (* a (sizeof sp-sample-t))
-  (duration->sample-count seconds sample-rate) (* seconds sample-rate)
-  (sample-count->duration sample-count sample-rate) (/ sample-count sample-rate)
   (sp-windowed-sinc-ir-cutoff freq sample-rate)
   (begin
     "sp-float-t integer -> sp-float-t
