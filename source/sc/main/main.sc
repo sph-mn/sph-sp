@@ -68,6 +68,7 @@
   (compound-statement (set (array-get (array-get a channel) a-size) (array-get b b-size))))
 
 (define (sp-status-description a) (uint8-t* status-t)
+  "get a string description for a status id in a status-t"
   (declare b char*)
   (cond
     ( (not (strcmp sp-status-group-sp a.group))
@@ -89,6 +90,7 @@
   (return b))
 
 (define (sp-status-name a) (uint8-t* status-t)
+  "get a single word identifier for a status id in a status-t"
   (declare b char*)
   (cond
     ( (not (strcmp sp-status-group-alsa a.group))
@@ -145,7 +147,7 @@
 
 (define (sp-fftr input input-len output) (status-t sp-sample-t* sp-sample-count-t sp-sample-t*)
   "real-numbers -> [[real, imaginary] ...]:complex-numbers
-  write to output real and imaginary part alternatingly
+  write to output the real and imaginary part alternatingly.
   output-len will be set to the count of complex numbers, (+ 1 (/ input-len 2)).
   output is allocated and owned by the caller"
   sp-status-declare
@@ -340,8 +342,9 @@
   (void
     sp-sample-t*
     sp-sample-count-t sp-sample-t* sp-sample-count-t sp-sample-count-t sp-sample-t* sp-sample-t*)
-  "discrete linear convolution for segments of a continuous stream. maps segments (a, a-len) to result-samples
+  "discrete linear convolution for sample arrays, possibly of a continuous stream. maps segments (a, a-len) to result-samples
   using (b, b-len) as the impulse response. b-len must be greater than zero.
+  all heap memory is owned and allocated by the caller.
   result-samples length is a-len.
   result-carryover is previous carryover or an empty array.
   result-carryover length must at least b-len - 1.
@@ -349,8 +352,7 @@
   result-carryover will contain values after index a-len - 1 that will not be carried over to the next call.
   carryover-len should be zero for the first call or its content should be zeros.
   carryover-len for subsequent calls should be b-len - 1 or if b-len changed b-len - 1  from the previous call.
-  all heap memory is owned and allocated by the caller.
-  if b-len is one there is no carryover"
+  if b-len is one then there is no carryover"
   (declare
     size sp-sample-count-t
     a-index sp-sample-count-t

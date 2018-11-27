@@ -1,7 +1,6 @@
-/* implementation of a hq windowed sinc filter with a blackman window (common truncated version) for continuous streams.
-  variable sample-rate, cutoff radian frequency and transition band width per call.
-  sp-windowed-sinc-state-t is used to store the impulse response, the parameters that where used to create it, and
-  data that has to be carried over between calls */
+/* implementation of a windowed sinc low-pass and high-pass filter for continuous streams of sample arrays.
+  sample-rate, radian cutoff frequency and transition band width is variable per call.
+  build with the information on https://tomroelandts.com/articles/how-to-create-a-simple-low-pass-filter */
 sp_float_t sp_window_blackman(sp_float_t a, sp_sample_count_t width) { return (((0.42 - (0.5 * cos(((2 * M_PI * a) / (width - 1))))) + (0.08 * cos(((4 * M_PI * a) / (width - 1)))))); };
 /** approximate impulse response length for a transition factor and
   ensure that the length is odd */
@@ -55,7 +54,9 @@ void sp_windowed_sinc_state_free(sp_windowed_sinc_state_t* state) {
 };
 /** create or update a previously created state object. impulse response array properties are calculated
   with ir-f from cutoff and transition.
-  eventually frees state.ir */
+  eventually frees state.ir
+  the state object is used to store the impulse response, the parameters that where used to create it and
+  overlapping data that has to be carried over between calls */
 status_t sp_windowed_sinc_state_set(sp_sample_count_t sample_rate, sp_float_t cutoff, sp_float_t transition, sp_windowed_sinc_ir_f_t ir_f, sp_windowed_sinc_state_t** result_state) {
   status_declare;
   sp_sample_t* carryover;
@@ -122,7 +123,9 @@ status_t sp_windowed_sinc(sp_sample_t* source, sp_sample_count_t source_len, sp_
   status_declare;
   sp_sample_count_t carryover_len;
   carryover_len = (*result_state ? ((*result_state)->ir_len - 1) : 0);
+  /* create/update the impulse response kernel */
   status_require((sp_windowed_sinc_state_set(sample_rate, cutoff, transition, (is_high_pass ? sp_windowed_sinc_hp_ir : sp_windowed_sinc_ir), result_state)));
+  /* convolve */
   sp_convolve(source, source_len, ((*result_state)->ir), ((*result_state)->ir_len), carryover_len, ((*result_state)->carryover), result_samples);
 exit:
   return (status);

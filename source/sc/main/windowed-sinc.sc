@@ -1,8 +1,7 @@
 (sc-comment
-  "implementation of a hq windowed sinc filter with a blackman window (common truncated version) for continuous streams.
-  variable sample-rate, cutoff radian frequency and transition band width per call.
-  sp-windowed-sinc-state-t is used to store the impulse response, the parameters that where used to create it, and
-  data that has to be carried over between calls")
+  "implementation of a windowed sinc low-pass and high-pass filter for continuous streams of sample arrays.
+  sample-rate, radian cutoff frequency and transition band width is variable per call.
+  build with the information on https://tomroelandts.com/articles/how-to-create-a-simple-low-pass-filter")
 
 (define (sp-window-blackman a width) (sp-float-t sp-float-t sp-sample-count-t)
   (return
@@ -65,7 +64,9 @@
     sp-sample-count-t sp-float-t sp-float-t sp-windowed-sinc-ir-f-t sp-windowed-sinc-state-t**)
   "create or update a previously created state object. impulse response array properties are calculated
   with ir-f from cutoff and transition.
-  eventually frees state.ir"
+  eventually frees state.ir
+  the state object is used to store the impulse response, the parameters that where used to create it and
+  overlapping data that has to be carried over between calls"
   status-declare
   (declare
     carryover sp-sample-t*
@@ -141,7 +142,7 @@
   (set carryover-len
     (if* *result-state (- (: *result-state ir-len) 1)
       0))
-  ; create/update the impulse response kernel
+  (sc-comment "create/update the impulse response kernel")
   (status-require
     (sp-windowed-sinc-state-set
       sample-rate
@@ -150,7 +151,7 @@
       (if* is-high-pass sp-windowed-sinc-hp-ir
         sp-windowed-sinc-ir)
       result-state))
-  ; convolve
+  (sc-comment "convolve")
   (sp-convolve
     source
     source-len
