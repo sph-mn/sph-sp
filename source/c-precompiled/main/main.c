@@ -60,6 +60,7 @@
   }
 define_sp_interleave(sp_interleave, sp_sample_t, ({ b[b_size] = (a[channel])[a_size]; }));
 define_sp_interleave(sp_deinterleave, sp_sample_t, ({ (a[channel])[a_size] = b[b_size]; }));
+/** get a string description for a status id in a status-t */
 uint8_t* sp_status_description(status_t a) {
   char* b;
   if (!strcmp(sp_status_group_sp, (a.group))) {
@@ -91,6 +92,7 @@ uint8_t* sp_status_description(status_t a) {
   };
   return (b);
 };
+/** get a single word identifier for a status id in a status-t */
 uint8_t* sp_status_name(status_t a) {
   char* b;
   if (!strcmp(sp_status_group_alsa, (a.group))) {
@@ -151,7 +153,7 @@ sp_sample_t sp_sin_lq(sp_sample_t a) {
 /** the normalised sinc function */
 sp_float_t sp_sinc(sp_float_t a) { return (((0 == a) ? 1 : (sin((M_PI * a)) / (M_PI * a)))); };
 /** real-numbers -> [[real, imaginary] ...]:complex-numbers
-  write to output real and imaginary part alternatingly
+  write to output the real and imaginary part alternatingly.
   output-len will be set to the count of complex numbers, (+ 1 (/ input-len 2)).
   output is allocated and owned by the caller */
 status_t sp_fftr(sp_sample_t* input, sp_sample_count_t input_len, sp_sample_t* output) {
@@ -333,8 +335,9 @@ void sp_convolve_one(sp_sample_t* a, sp_sample_count_t a_len, sp_sample_t* b, sp
     a_index = (1 + a_index);
   };
 };
-/** discrete linear convolution for segments of a continuous stream. maps segments (a, a-len) to result-samples
+/** discrete linear convolution for sample arrays, possibly of a continuous stream. maps segments (a, a-len) to result-samples
   using (b, b-len) as the impulse response. b-len must be greater than zero.
+  all heap memory is owned and allocated by the caller.
   result-samples length is a-len.
   result-carryover is previous carryover or an empty array.
   result-carryover length must at least b-len - 1.
@@ -342,8 +345,7 @@ void sp_convolve_one(sp_sample_t* a, sp_sample_count_t a_len, sp_sample_t* b, sp
   result-carryover will contain values after index a-len - 1 that will not be carried over to the next call.
   carryover-len should be zero for the first call or its content should be zeros.
   carryover-len for subsequent calls should be b-len - 1 or if b-len changed b-len - 1  from the previous call.
-  all heap memory is owned and allocated by the caller.
-  if b-len is one there is no carryover */
+  if b-len is one then there is no carryover */
 void sp_convolve(sp_sample_t* a, sp_sample_count_t a_len, sp_sample_t* b, sp_sample_count_t b_len, sp_sample_count_t carryover_len, sp_sample_t* result_carryover, sp_sample_t* result_samples) {
   sp_sample_count_t size;
   sp_sample_count_t a_index;
