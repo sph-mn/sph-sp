@@ -385,6 +385,107 @@
           (array-get result-carryover c-index)
           (+ (array-get result-carryover c-index) (* (array-get a a-index) (array-get b b-index))))))))
 
+(define (sp-convolution-filter-state-free state) (void sp-convolution-filter-state-t*)
+  (free state:ir)
+  (free state:carryover)
+  (free state:ir-f-arguments)
+  (free state))
+
+(define (sp-convolution-filter-state-set ir-f ir-f-arguments ir-f-arguments-len out-state)
+  (status-t sp-convolution-filter-ir-f-t void* uint8-t sp-convolution-filter-state-t**)
+  "create or update a previously created state object. impulse response array properties are calculated
+  with ir-f using ir-f-arguments.
+  eventually frees state.ir
+  the state object is used to store the impulse response, the parameters that where used to create it and
+  overlapping data that has to be carried over between calls.
+  ir-f-arguments can be stack allocated and will be copied to state if changed"
+  status-declare
+  (declare
+    carryover sp-sample-t*
+    ir sp-sample-t*
+    ir-len sp-sample-count-t
+    state sp-convolution-filter-state-t*)
+  (memreg-init 2)
+  (sc-comment
+    "create state if not exists. re-use if exists and return early if ir needs not be updated")
+  (if *out-state
+    (begin
+      (sc-comment "existing")
+      (set state *out-state)
+      (if
+        (and
+          (= state:ir-f ir-f) (= 0 (memcmp state:ir-f-arguments ir-f-arguments ir-f-arguments-len)))
+        (begin
+          (sc-comment "unchanged")
+          (return status))
+        (begin
+          (sc-comment "changed")
+          (if state:ir (free state:ir)))))
+    (begin
+      (sc-comment "new")
+      (status-require (sph-helper-malloc (sizeof sp-convolution-filter-state-t) &state))
+      (status-require
+        (sph-helper-malloc (sizeof sp-convolution-filter-state-t) &state:ir-f-arguments))
+      (memreg-add state)
+      (memreg-add ir-f-arguments)
+      (set
+        state:carryover-alloc-len 0
+        state:carryover-len 0
+        state:carryover 0
+        state:ir 0
+        state:ir-f ir-f)))
+  (memcpy state:ir-f-arguments ir-f-arguments ir-f-arguments-len)
+  (status-require (ir-f ir-f-arguments &ir &ir-len))
+  (sc-comment
+    "eventually extend carryover array. the array is never shrunk."
+    "carryover-len is at least ir-len - 1." "carryover-alloc-len is the length of the whole array")
+  (if state:carryover
+    (if (> ir-len state:carryover-alloc-len)
+      (begin
+        (set carryover state:carryover)
+        (status-require (sph-helper-realloc (* (- ir-len 1) (sizeof sp-sample-t)) &carryover))
+        (set state:carryover-alloc-len (- ir-len 1)))
+      (set carryover state:carryover))
+    (begin
+      (status-require (sph-helper-calloc (* (- ir-len 1) (sizeof sp-sample-t)) &carryover))
+      (set state:carryover-alloc-len (- ir-len 1))))
+  (set
+    state:carryover carryover
+    state:ir ir
+    state:ir-len ir-len
+    state:ir-f-arguments ir-f-arguments
+    *out-state state)
+  (label exit
+    (if status-is-failure memreg-free)
+    (return status)))
+
+(define
+  (sp-convolution-filter in in-len ir-f ir-f-arguments ir-f-arguments-len out-state out-samples)
+  (status-t
+    sp-sample-t*
+    sp-sample-count-t
+    sp-convolution-filter-ir-f-t void* uint8-t sp-convolution-filter-state-t** sp-sample-t*)
+  "convolute samples in, which can be a segment of a continuous stream, with an impulse response
+  kernel created by ir-f applied with ir-f-arguments.
+  ir-f is only used when ir-f-arguments changed.
+  values that need to be carried over with calls are saved in out-state.
+  * out-state: if zero then state will be allocated. owned by caller.
+  * out-samples: owned by the caller. length must be at least in-len"
+  status-declare
+  (declare carryover-len sp-sample-count-t)
+  (set carryover-len
+    (if* *out-state (- (: *out-state ir-len) 1)
+      0))
+  (sc-comment "create/update the impulse response kernel")
+  (status-require
+    (sp-convolution-filter-state-set ir-f ir-f-arguments ir-f-arguments-len out-state))
+  (sc-comment "convolve")
+  (sp-convolve
+    in
+    in-len (: *out-state ir) (: *out-state ir-len) carryover-len (: *out-state carryover) out-samples)
+  (label exit
+    (return status)))
+
 (define-sp-sine sp-sine sin)
 (define-sp-sine sp-sine-lq sp-sin-lq)
 (pre-include "../main/windowed-sinc.c" "../main/io.c")

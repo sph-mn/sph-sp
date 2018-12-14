@@ -375,6 +375,95 @@ first process values that dont lead to carryover */
     };
   };
 };
+void sp_convolution_filter_state_free(sp_convolution_filter_state_t* state) {
+  free((state->ir));
+  free((state->carryover));
+  free((state->ir_f_arguments));
+  free(state);
+};
+/** create or update a previously created state object. impulse response array properties are calculated
+  with ir-f using ir-f-arguments.
+  eventually frees state.ir
+  the state object is used to store the impulse response, the parameters that where used to create it and
+  overlapping data that has to be carried over between calls.
+  ir-f-arguments can be stack allocated and will be copied to state if changed */
+status_t sp_convolution_filter_state_set(sp_convolution_filter_ir_f_t ir_f, void* ir_f_arguments, uint8_t ir_f_arguments_len, sp_convolution_filter_state_t** out_state) {
+  status_declare;
+  sp_sample_t* carryover;
+  sp_sample_t* ir;
+  sp_sample_count_t ir_len;
+  sp_convolution_filter_state_t* state;
+  memreg_init(2);
+  /* create state if not exists. re-use if exists and return early if ir needs not be updated */
+  if (*out_state) {
+    /* existing */
+    state = *out_state;
+    if ((state->ir_f == ir_f) && (0 == memcmp((state->ir_f_arguments), ir_f_arguments, ir_f_arguments_len))) {
+      /* unchanged */
+      return (status);
+    } else {
+      /* changed */
+      if (state->ir) {
+        free((state->ir));
+      };
+    };
+  } else {
+    /* new */
+    status_require((sph_helper_malloc((sizeof(sp_convolution_filter_state_t)), (&state))));
+    status_require((sph_helper_malloc((sizeof(sp_convolution_filter_state_t)), (&(state->ir_f_arguments)))));
+    memreg_add(state);
+    memreg_add(ir_f_arguments);
+    state->carryover_alloc_len = 0;
+    state->carryover_len = 0;
+    state->carryover = 0;
+    state->ir = 0;
+    state->ir_f = ir_f;
+  };
+  memcpy((state->ir_f_arguments), ir_f_arguments, ir_f_arguments_len);
+  status_require((ir_f(ir_f_arguments, (&ir), (&ir_len))));
+  /* eventually extend carryover array. the array is never shrunk.
+carryover-len is at least ir-len - 1.
+carryover-alloc-len is the length of the whole array */
+  if (state->carryover) {
+    if (ir_len > state->carryover_alloc_len) {
+      carryover = state->carryover;
+      status_require((sph_helper_realloc(((ir_len - 1) * sizeof(sp_sample_t)), (&carryover))));
+      state->carryover_alloc_len = (ir_len - 1);
+    } else {
+      carryover = state->carryover;
+    };
+  } else {
+    status_require((sph_helper_calloc(((ir_len - 1) * sizeof(sp_sample_t)), (&carryover))));
+    state->carryover_alloc_len = (ir_len - 1);
+  };
+  state->carryover = carryover;
+  state->ir = ir;
+  state->ir_len = ir_len;
+  state->ir_f_arguments = ir_f_arguments;
+  *out_state = state;
+exit:
+  if (status_is_failure) {
+    memreg_free;
+  };
+  return (status);
+};
+/** convolute samples in, which can be a segment of a continuous stream, with an impulse response
+  kernel created by ir-f applied with ir-f-arguments.
+  ir-f is only used when ir-f-arguments changed.
+  values that need to be carried over with calls are saved in out-state.
+  * out-state: if zero then state will be allocated. owned by caller.
+  * out-samples: owned by the caller. length must be at least in-len */
+status_t sp_convolution_filter(sp_sample_t* in, sp_sample_count_t in_len, sp_convolution_filter_ir_f_t ir_f, void* ir_f_arguments, uint8_t ir_f_arguments_len, sp_convolution_filter_state_t** out_state, sp_sample_t* out_samples) {
+  status_declare;
+  sp_sample_count_t carryover_len;
+  carryover_len = (*out_state ? ((*out_state)->ir_len - 1) : 0);
+  /* create/update the impulse response kernel */
+  status_require((sp_convolution_filter_state_set(ir_f, ir_f_arguments, ir_f_arguments_len, out_state)));
+  /* convolve */
+  sp_convolve(in, in_len, ((*out_state)->ir), ((*out_state)->ir_len), carryover_len, ((*out_state)->carryover), out_samples);
+exit:
+  return (status);
+};
 define_sp_sine(sp_sine, sin);
 define_sp_sine(sp_sine_lq, sp_sin_lq);
 #include "../main/windowed-sinc.c"

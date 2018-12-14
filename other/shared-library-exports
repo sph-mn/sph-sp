@@ -5,6 +5,9 @@ exports {
     sp_channel_data_free;
     sp_convolve;
     sp_convolve_one;
+    sp_convolution_filter;
+    sp_convolution_filter_state_set;
+    sp_convolution_filter_state_free;
     sp_fftr;
     sp_fftri;
     sp_file_open;
@@ -24,11 +27,12 @@ exports {
     sp_status_description;
     sp_status_name;
     sp_window_blackman;
-    sp_windowed_sinc;
-    sp_windowed_sinc_hp_ir;
-    sp_windowed_sinc_ir;
-    sp_windowed_sinc_ir_length;
-    sp_windowed_sinc_state_set;
-    sp_windowed_sinc_state_free;
+    sp_windowed_sinc_lp_hp;
+    sp_windowed_sinc_bp_br;
+    sp_windowed_sinc_bp_br_ir;
+    sp_windowed_sinc_lp_hp_ir;
+    sp_windowed_sinc_bp_br_ir_f;
+    sp_windowed_sinc_lp_hp_ir_f;
+    sp_windowed_sinc_lp_hp_ir_length;
   local: *;
 };

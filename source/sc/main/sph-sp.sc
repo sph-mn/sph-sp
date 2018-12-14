@@ -103,20 +103,18 @@
       (sample-rate sp-sample-rate-t)
       (channel-count sp-channel-count-t)
       (data void*)))
-  sp-windowed-sinc-ir-f-t
-  (type (function-pointer status-t sp-float-t sp-float-t sp-sample-count-t* sp-sample-t**))
-  sp-windowed-sinc-state-t
+  sp-convolution-filter-ir-f-t
+  (type (function-pointer status-t void* sp-sample-t** sp-sample-count-t*))
+  sp-convolution-filter-state-t
   (type
     (struct
       (carryover sp-sample-t*)
       (carryover-len sp-sample-count-t)
       (carryover-alloc-len sp-sample-count-t)
-      (cutoff sp-float-t)
       (ir sp-sample-t*)
-      (ir-f sp-windowed-sinc-ir-f-t)
-      (ir-len sp-sample-count-t)
-      (sample-rate sp-sample-rate-t)
-      (transition sp-float-t)))
+      (ir-f sp-convolution-filter-ir-f-t)
+      (ir-f-arguments void*)
+      (ir-len sp-sample-count-t)))
   (sp-port-read port sample-count result-channel-data result-sample-count)
   (status-t sp-port-t* sp-sample-count-t sp-sample-t** sp-sample-count-t*)
   (sp-port-write port channel-data sample-count result-sample-count)
@@ -134,21 +132,34 @@
   (void sp-sample-count-t sp-float-t sp-float-t sp-float-t sp-float-t sp-sample-t*)
   (sp-sine-lq len sample-duration freq phase amp result-samples)
   (void sp-sample-count-t sp-float-t sp-float-t sp-float-t sp-float-t sp-sample-t*) (sp-sinc a)
-  (sp-float-t sp-float-t) (sp-windowed-sinc-ir-length transition)
+  (sp-float-t sp-float-t) (sp-windowed-sinc-lp-hp-ir-length transition)
   (sp-sample-count-t sp-float-t) (sp-windowed-sinc-ir cutoff transition result-len result-ir)
   (status-t sp-float-t sp-float-t sp-sample-count-t* sp-sample-t**)
-  (sp-windowed-sinc-hp-ir cutoff transition result-len result-ir)
-  (status-t sp-float-t sp-float-t sp-sample-count-t* sp-sample-t**)
-  (sp-windowed-sinc-state-free state) (void sp-windowed-sinc-state-t*)
-  (sp-windowed-sinc-state-set sample-rate cutoff transition ir-f result-state)
-  (status-t
-    sp-sample-count-t sp-float-t sp-float-t sp-windowed-sinc-ir-f-t sp-windowed-sinc-state-t**)
-  (sp-windowed-sinc
-    source source-len sample-rate cutoff transition is-high-pass result-state result-samples)
+  (sp-convolution-filter-state-free state) (void sp-convolution-filter-state-t*)
+  (sp-convolution-filter-state-set ir-f ir-f-arguments ir-f-arguments-len out-state)
+  (status-t sp-convolution-filter-ir-f-t void* uint8-t sp-convolution-filter-state-t**)
+  (sp-convolution-filter in in-len ir-f ir-f-arguments ir-f-arguments-len out-state out-samples)
   (status-t
     sp-sample-t*
     sp-sample-count-t
-    sp-sample-rate-t sp-float-t sp-float-t boolean sp-windowed-sinc-state-t** sp-sample-t*)
+    sp-convolution-filter-ir-f-t void* uint8-t sp-convolution-filter-state-t** sp-sample-t*)
+  (sp-windowed-sinc-lp-hp-ir cutoff transition is-high-pass out-ir out-len)
+  (status-t sp-float-t sp-float-t boolean sp-sample-t** sp-sample-count-t*)
+  (sp-windowed-sinc-bp-br-ir cutoff-l cutoff-h transition is-reject out-ir out-len)
+  (status-t sp-float-t sp-float-t sp-float-t boolean sp-sample-t** sp-sample-count-t*)
+  (sp-windowed-sinc-lp-hp-ir-f arguments out-ir out-len)
+  (status-t void* sp-sample-t** sp-sample-count-t*)
+  (sp-windowed-sinc-bp-br-ir-f arguments out-ir out-len)
+  (status-t void* sp-sample-t** sp-sample-count-t*)
+  (sp-windowed-sinc-lp-hp in in-len cutoff transition is-high-pass out-state out-samples)
+  (status-t
+    sp-sample-t*
+    sp-sample-count-t sp-float-t sp-float-t boolean sp-convolution-filter-state-t** sp-sample-t*)
+  (sp-windowed-sinc-bp-br in in-len cutoff-l cutoff-h transition is-reject out-state out-samples)
+  (status-t
+    sp-sample-t*
+    sp-sample-count-t
+    sp-float-t sp-float-t sp-float-t boolean sp-convolution-filter-state-t** sp-sample-t*)
   (sp-window-blackman a width) (sp-float-t sp-float-t sp-sample-count-t)
   (sp-spectral-inversion-ir a a-len) (void sp-sample-t* sp-sample-count-t)
   (sp-spectral-reversal-ir a a-len) (void sp-sample-t* sp-sample-count-t)
@@ -167,4 +178,6 @@
   (void
     sp-sample-t*
     sp-sample-count-t sp-sample-t* sp-sample-count-t sp-sample-count-t sp-sample-t* sp-sample-t*)
-  (sp-channel-data-free a channel-count) (void sp-sample-t** sp-channel-count-t))
+  (sp-channel-data-free a channel-count) (void sp-sample-t** sp-channel-count-t)
+  (sp-windowed-sinc-lp-hp-ir cutoff transition is-high-pass out-ir out-len)
+  (status-t sp-float-t sp-float-t boolean sp-sample-t** sp-sample-count-t*))
