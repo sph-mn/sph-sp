@@ -169,18 +169,23 @@
     cutoff sp-float-t
     ir sp-sample-t*
     ir-len sp-sample-count-t
-    state sp-windowed-sinc-state-t*
+    state sp-convolution-filter-state-t*
     source (array sp-sample-t 10 3 4 5 6 7 8 9 0 1 2)
     result (array sp-sample-t 10 0 0 0 0 0 0 0 0 0 0))
   (set
     state 0
     cutoff 0.1
     transition 0.08)
-  (status-require (sp-windowed-sinc-ir cutoff transition &ir-len &ir))
+  (sc-comment "ir functions")
+  (status-require (sp-windowed-sinc-lp-hp-ir cutoff transition #f &ir &ir-len))
   (test-helper-assert "ir" (sp-sample-nearly-equal 0.0952 (array-get ir 28) error-margin))
-  (status-require (sp-windowed-sinc source 10 10000 100 800 0 &state result))
-  (status-require (sp-windowed-sinc source 10 10000 100 800 0 &state result))
-  (sp-windowed-sinc-state-free state)
+  (status-require (sp-windowed-sinc-lp-hp-ir cutoff transition #t &ir &ir-len))
+  (status-require (sp-windowed-sinc-bp-br-ir 0.1 0.4 0.08 #f &ir &ir-len))
+  (status-require (sp-windowed-sinc-bp-br-ir cutoff cutoff transition #t &ir &ir-len))
+  (sc-comment "filter functions")
+  (status-require (sp-windowed-sinc-lp-hp source 10 0.1 0.08 #f &state result))
+  (status-require (sp-windowed-sinc-bp-br source 10 0.1 0.4 0.08 #t &state result))
+  (sp-convolution-filter-state-free state)
   (label exit
     (return status)))
 

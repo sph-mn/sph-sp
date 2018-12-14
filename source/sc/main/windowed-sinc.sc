@@ -33,7 +33,8 @@
     len (sp-windowed-sinc-lp-hp-ir-length transition)
     center-index (/ (- len 1.0) 2.0))
   (status-require (sph-helper-malloc (* len (sizeof sp-sample-t)) &ir))
-  (sc-comment "nan can be set here if the freq and transition values are invalid")
+  (sc-comment
+    "set the windowed sinc" "nan can be set here if the freq and transition values are invalid")
   (for ((set i 0) (< i len) (set i (+ 1 i)))
     (set (array-get ir i) (* (sp-window-blackman i len) (sp-sinc (* 2 cutoff (- i center-index))))))
   (sc-comment "scale")
@@ -58,18 +59,23 @@
     lp-ir sp-sample-t*
     lp-len sp-sample-count-t)
   (sc-comment "assumes that lp and hp ir length will be equal")
-  (status-require (sp-windowed-sinc-lp-hp-ir cutoff-l transition #f &lp-ir &lp-len))
-  (status-require (sp-windowed-sinc-lp-hp-ir cutoff-h transition #t &hp-ir &hp-len))
   (if is-reject
     (begin
+      (status-require (sp-windowed-sinc-lp-hp-ir cutoff-l transition #f &lp-ir &lp-len))
+      (status-require (sp-windowed-sinc-lp-hp-ir cutoff-h transition #t &hp-ir &hp-len))
+      (sc-comment "sum lp and hp ir samples")
       (for ((set hp-index 0) (< hp-index hp-len) (set hp-index (+ 1 hp-index)))
         (set (array-get lp-ir hp-index) (+ (array-get lp-ir hp-index) (array-get hp-ir hp-index))))
       (set
         *out-len lp-len
         *out-ir lp-ir))
     (begin
+      (sc-comment "meaning of cutoff high/low switched")
+      (status-require (sp-windowed-sinc-lp-hp-ir cutoff-h transition #f &lp-ir &lp-len))
+      (status-require (sp-windowed-sinc-lp-hp-ir cutoff-l transition #t &hp-ir &hp-len))
+      (sc-comment "convolve lp and hp ir samples")
       (set *out-len (- (+ lp-len hp-len) 1))
-      (status-require (sph-helper-malloc (* *out-len (* (sizeof sp-sample-t))) out-ir))
+      (status-require (sph-helper-malloc (* *out-len (sizeof sp-sample-t)) out-ir))
       (sp-convolve-one lp-ir lp-len hp-ir hp-len *out-ir)))
   (label exit
     (return status)))
@@ -119,11 +125,13 @@
   (declare
     a (array uint8-t ((+ (sizeof boolean) (* 2 (sizeof sp-float-t)))))
     a-len uint8-t)
+  (sc-comment "set arguments array for ir-f")
   (set
     a-len (+ (sizeof boolean) (* 2 (sizeof sp-float-t)))
     (pointer-get (convert-type a sp-float-t*)) cutoff
     (pointer-get (+ 1 (convert-type a sp-float-t*))) transition
     (pointer-get (convert-type (+ 2 (convert-type a sp-float-t*)) boolean*)) is-high-pass)
+  (sc-comment "apply filter")
   (status-require
     (sp-convolution-filter in in-len sp-windowed-sinc-lp-hp-ir-f a a-len out-state out-samples))
   (label exit
@@ -135,17 +143,19 @@
     sp-sample-t*
     sp-sample-count-t
     sp-float-t sp-float-t sp-float-t boolean sp-convolution-filter-state-t** sp-sample-t*)
-  "like sp-windowed-sinc-lp-hp but for a windowed sinc band-pass or band-reject filter"
+  "like sp-windowed-sinc-lp-hp but for a band-pass or band-reject filter"
   status-declare
   (declare
     a (array uint8-t ((+ (sizeof boolean) (* 3 (sizeof sp-float-t)))))
     a-len uint8-t)
+  (sc-comment "set arguments array for ir-f")
   (set
     a-len (+ (sizeof boolean) (* 3 (sizeof sp-float-t)))
     (pointer-get (convert-type a sp-float-t*)) cutoff-l
     (pointer-get (+ 1 (convert-type a sp-float-t*))) cutoff-h
     (pointer-get (+ 2 (convert-type a sp-float-t*))) transition
     (pointer-get (convert-type (+ 3 (convert-type a sp-float-t*)) boolean*)) is-reject)
+  (sc-comment "apply filter")
   (status-require
     (sp-convolution-filter in in-len sp-windowed-sinc-bp-br-ir-f a a-len out-state out-samples))
   (label exit

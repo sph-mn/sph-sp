@@ -20,8 +20,6 @@ exports {
     sp_port_write;
     sp_sin_lq;
     sp_sinc;
-    sp_sine;
-    sp_sine_lq;
     sp_spectral_inversion_ir;
     sp_spectral_reversal_ir;
     sp_status_description;

@@ -157,17 +157,22 @@ status_t test_windowed_sinc() {
   sp_float_t cutoff;
   sp_sample_t* ir;
   sp_sample_count_t ir_len;
-  sp_windowed_sinc_state_t* state;
+  sp_convolution_filter_state_t* state;
   sp_sample_t source[10] = { 3, 4, 5, 6, 7, 8, 9, 0, 1, 2 };
   sp_sample_t result[10] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
   state = 0;
   cutoff = 0.1;
   transition = 0.08;
-  status_require((sp_windowed_sinc_ir(cutoff, transition, (&ir_len), (&ir))));
+  /* ir functions */
+  status_require((sp_windowed_sinc_lp_hp_ir(cutoff, transition, 0, (&ir), (&ir_len))));
   test_helper_assert("ir", (sp_sample_nearly_equal((0.0952), (ir[28]), error_margin)));
-  status_require((sp_windowed_sinc(source, 10, 10000, 100, 800, 0, (&state), result)));
-  status_require((sp_windowed_sinc(source, 10, 10000, 100, 800, 0, (&state), result)));
-  sp_windowed_sinc_state_free(state);
+  status_require((sp_windowed_sinc_lp_hp_ir(cutoff, transition, 1, (&ir), (&ir_len))));
+  status_require((sp_windowed_sinc_bp_br_ir((0.1), (0.4), (0.08), 0, (&ir), (&ir_len))));
+  status_require((sp_windowed_sinc_bp_br_ir(cutoff, cutoff, transition, 1, (&ir), (&ir_len))));
+  /* filter functions */
+  status_require((sp_windowed_sinc_lp_hp(source, 10, (0.1), (0.08), 0, (&state), result)));
+  status_require((sp_windowed_sinc_bp_br(source, 10, (0.1), (0.4), (0.08), 1, (&state), result)));
+  sp_convolution_filter_state_free(state);
 exit:
   return (status);
 };

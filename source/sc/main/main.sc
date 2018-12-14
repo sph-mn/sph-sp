@@ -19,23 +19,6 @@
   (begin
     (set status.id expression)
     (if status-is-failure (status-set-group-goto sp-status-group-alsa)))
-  (define-sp-sine id sin)
-  (begin
-    "write samples for a sine wave into result-samples.
-    sample-duration: seconds
-    freq: radian frequency
-    phase: phase offset
-    amp: amplitude. 0..1
-    used to define sp-sine, sp-sine-lq and similar"
-    ; assumes that sin() returns sp-sample-t
-    (define (id len sample-duration freq phase amp result-samples)
-      (void sp-sample-count-t sp-float-t sp-float-t sp-float-t sp-float-t sp-sample-t*)
-      (define index sp-sample-count-t 0)
-      (while (<= index len)
-        (set
-          (array-get result-samples index) (* amp (sin (* freq phase sample-duration)))
-          phase (+ 1 phase)
-          index (+ 1 index)))))
   (define-sp-interleave name type body)
   (begin
     "define a deinterleave, interleave or similar routine.
@@ -129,8 +112,8 @@
     (if status-is-failure memreg-free)
     (return status)))
 
-(define (sp-sin-lq a) (sp-sample-t sp-sample-t)
-  "lower precision version of sin() that could be faster"
+(define (sp-sin-lq a) (sp-sample-t sp-float-t)
+  "lower precision version of sin() that should be faster"
   (declare
     b sp-sample-t
     c sp-sample-t)
@@ -386,6 +369,7 @@
           (+ (array-get result-carryover c-index) (* (array-get a a-index) (array-get b b-index))))))))
 
 (define (sp-convolution-filter-state-free state) (void sp-convolution-filter-state-t*)
+  (if (not state) return)
   (free state:ir)
   (free state:carryover)
   (free state:ir-f-arguments)
@@ -393,12 +377,12 @@
 
 (define (sp-convolution-filter-state-set ir-f ir-f-arguments ir-f-arguments-len out-state)
   (status-t sp-convolution-filter-ir-f-t void* uint8-t sp-convolution-filter-state-t**)
-  "create or update a previously created state object. impulse response array properties are calculated
-  with ir-f using ir-f-arguments.
-  eventually frees state.ir
+  "create or update a previously created state object.
+  impulse response array properties are calculated with ir-f using ir-f-arguments.
+  eventually frees state.ir.
   the state object is used to store the impulse response, the parameters that where used to create it and
   overlapping data that has to be carried over between calls.
-  ir-f-arguments can be stack allocated and will be copied to state if changed"
+  ir-f-arguments can be stack allocated and will be copied to state on change"
   status-declare
   (declare
     carryover sp-sample-t*
@@ -427,7 +411,7 @@
       (status-require
         (sph-helper-malloc (sizeof sp-convolution-filter-state-t) &state:ir-f-arguments))
       (memreg-add state)
-      (memreg-add ir-f-arguments)
+      (memreg-add state:ir-f-arguments)
       (set
         state:carryover-alloc-len 0
         state:carryover-len 0
@@ -453,7 +437,6 @@
     state:carryover carryover
     state:ir ir
     state:ir-len ir-len
-    state:ir-f-arguments ir-f-arguments
     *out-state state)
   (label exit
     (if status-is-failure memreg-free)
@@ -465,10 +448,10 @@
     sp-sample-t*
     sp-sample-count-t
     sp-convolution-filter-ir-f-t void* uint8-t sp-convolution-filter-state-t** sp-sample-t*)
-  "convolute samples in, which can be a segment of a continuous stream, with an impulse response
-  kernel created by ir-f applied with ir-f-arguments.
+  "convolute samples \"in\", which can be a segment of a continuous stream, with an impulse response
+  kernel created by ir-f with ir-f-arguments.
   ir-f is only used when ir-f-arguments changed.
-  values that need to be carried over with calls are saved in out-state.
+  values that need to be carried over with calls are kept in out-state.
   * out-state: if zero then state will be allocated. owned by caller.
   * out-samples: owned by the caller. length must be at least in-len"
   status-declare
@@ -486,6 +469,4 @@
   (label exit
     (return status)))
 
-(define-sp-sine sp-sine sin)
-(define-sp-sine sp-sine-lq sp-sin-lq)
 (pre-include "../main/windowed-sinc.c" "../main/io.c")

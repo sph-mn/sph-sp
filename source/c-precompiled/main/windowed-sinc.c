@@ -26,7 +26,8 @@ status_t sp_windowed_sinc_lp_hp_ir(sp_float_t cutoff, sp_float_t transition, boo
   len = sp_windowed_sinc_lp_hp_ir_length(transition);
   center_index = ((len - 1.0) / 2.0);
   status_require((sph_helper_malloc((len * sizeof(sp_sample_t)), (&ir))));
-  /* nan can be set here if the freq and transition values are invalid */
+  /* set the windowed sinc
+nan can be set here if the freq and transition values are invalid */
   for (i = 0; (i < len); i = (1 + i)) {
     ir[i] = (sp_window_blackman(i, len) * sp_sinc((2 * cutoff * (i - center_index))));
   };
@@ -52,17 +53,22 @@ status_t sp_windowed_sinc_bp_br_ir(sp_float_t cutoff_l, sp_float_t cutoff_h, sp_
   sp_sample_t* lp_ir;
   sp_sample_count_t lp_len;
   /* assumes that lp and hp ir length will be equal */
-  status_require((sp_windowed_sinc_lp_hp_ir(cutoff_l, transition, 0, (&lp_ir), (&lp_len))));
-  status_require((sp_windowed_sinc_lp_hp_ir(cutoff_h, transition, 1, (&hp_ir), (&hp_len))));
   if (is_reject) {
+    status_require((sp_windowed_sinc_lp_hp_ir(cutoff_l, transition, 0, (&lp_ir), (&lp_len))));
+    status_require((sp_windowed_sinc_lp_hp_ir(cutoff_h, transition, 1, (&hp_ir), (&hp_len))));
+    /* sum lp and hp ir samples */
     for (hp_index = 0; (hp_index < hp_len); hp_index = (1 + hp_index)) {
       lp_ir[hp_index] = (lp_ir[hp_index] + hp_ir[hp_index]);
     };
     *out_len = lp_len;
     *out_ir = lp_ir;
   } else {
+    /* meaning of cutoff high/low switched */
+    status_require((sp_windowed_sinc_lp_hp_ir(cutoff_h, transition, 0, (&lp_ir), (&lp_len))));
+    status_require((sp_windowed_sinc_lp_hp_ir(cutoff_l, transition, 1, (&hp_ir), (&hp_len))));
+    /* convolve lp and hp ir samples */
     *out_len = ((lp_len + hp_len) - 1);
-    status_require((sph_helper_malloc((*out_len * (sizeof(sp_sample_t))), out_ir)));
+    status_require((sph_helper_malloc((*out_len * sizeof(sp_sample_t)), out_ir)));
     sp_convolve_one(lp_ir, lp_len, hp_ir, hp_len, (*out_ir));
   };
 exit:
@@ -103,24 +109,28 @@ status_t sp_windowed_sinc_lp_hp(sp_sample_t* in, sp_sample_count_t in_len, sp_fl
   status_declare;
   uint8_t a[(sizeof(boolean) + (2 * sizeof(sp_float_t)))];
   uint8_t a_len;
+  /* set arguments array for ir-f */
   a_len = (sizeof(boolean) + (2 * sizeof(sp_float_t)));
   *((sp_float_t*)(a)) = cutoff;
   *(1 + ((sp_float_t*)(a))) = transition;
   *((boolean*)((2 + ((sp_float_t*)(a))))) = is_high_pass;
+  /* apply filter */
   status_require((sp_convolution_filter(in, in_len, sp_windowed_sinc_lp_hp_ir_f, a, a_len, out_state, out_samples)));
 exit:
   return (status);
 };
-/** like sp-windowed-sinc-lp-hp but for a windowed sinc band-pass or band-reject filter */
+/** like sp-windowed-sinc-lp-hp but for a band-pass or band-reject filter */
 status_t sp_windowed_sinc_bp_br(sp_sample_t* in, sp_sample_count_t in_len, sp_float_t cutoff_l, sp_float_t cutoff_h, sp_float_t transition, boolean is_reject, sp_convolution_filter_state_t** out_state, sp_sample_t* out_samples) {
   status_declare;
   uint8_t a[(sizeof(boolean) + (3 * sizeof(sp_float_t)))];
   uint8_t a_len;
+  /* set arguments array for ir-f */
   a_len = (sizeof(boolean) + (3 * sizeof(sp_float_t)));
   *((sp_float_t*)(a)) = cutoff_l;
   *(1 + ((sp_float_t*)(a))) = cutoff_h;
   *(2 + ((sp_float_t*)(a))) = transition;
   *((boolean*)((3 + ((sp_float_t*)(a))))) = is_reject;
+  /* apply filter */
   status_require((sp_convolution_filter(in, in_len, sp_windowed_sinc_bp_br_ir_f, a, a_len, out_state, out_samples)));
 exit:
   return (status);
