@@ -166,11 +166,13 @@ status_t test_windowed_sinc() {
   /* ir functions */
   status_require((sp_windowed_sinc_lp_hp_ir(cutoff, transition, 0, (&ir), (&ir_len))));
   test_helper_assert("ir", (sp_sample_nearly_equal((0.0952), (ir[28]), error_margin)));
-  status_require((sp_windowed_sinc_lp_hp_ir(cutoff, transition, 1, (&ir), (&ir_len))));
   status_require((sp_windowed_sinc_bp_br_ir((0.1), (0.4), (0.08), 0, (&ir), (&ir_len))));
+  status_require((sp_windowed_sinc_lp_hp_ir(cutoff, transition, 1, (&ir), (&ir_len))));
   status_require((sp_windowed_sinc_bp_br_ir(cutoff, cutoff, transition, 1, (&ir), (&ir_len))));
   /* filter functions */
   status_require((sp_windowed_sinc_lp_hp(source, 10, (0.1), (0.08), 0, (&state), result)));
+  status_require((sp_windowed_sinc_lp_hp(source, 10, (0.1), (0.08), 1, (&state), result)));
+  status_require((sp_windowed_sinc_bp_br(source, 10, (0.1), (0.4), (0.08), 0, (&state), result)));
   status_require((sp_windowed_sinc_bp_br(source, 10, (0.1), (0.4), (0.08), 1, (&state), result)));
   sp_convolution_filter_state_free(state);
 exit:

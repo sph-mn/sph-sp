@@ -128,7 +128,7 @@ exit:
   return (status);
 };
 /** lower precision version of sin() that should be faster */
-sp_sample_t sp_sin_lq(sp_sample_t a) {
+sp_sample_t sp_sin_lq(sp_float_t a) {
   sp_sample_t b;
   sp_sample_t c;
   b = (4 / M_PI);

@@ -7,6 +7,7 @@ c=source/c-precompiled
 root="$PWD"
 warnings="-Wunused-label -Wunused-value -Wunused-variable"
 gcc_options="$warnings -Wfatal-errors -O$optimisation"
+gcc_options_test="-Wfatal-errors -O$optimisation"
 
 compile_sph_sp() {
   target="$target_dir/libsph-sp.so"
@@ -17,7 +18,7 @@ compile_sph_sp() {
 
 compile_test_sph_sp() {
   export LIBRARY_PATH="$root/temp"
-  gcc "$c/test/main.c" -o temp/test-libsph-sp -lsph-sp -lm $gcc_options
+  gcc "$c/test/main.c" -o temp/test-libsph-sp -lsph-sp -lm $gcc_options_test
 }
 
 mkdir -p "$target_dir" &&

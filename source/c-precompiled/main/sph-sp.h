@@ -174,7 +174,7 @@ status_t sp_port_close(sp_port_t* a);
 status_t sp_alloc_channel_array(sp_channel_count_t channel_count, sp_sample_count_t sample_count, sp_sample_t*** result_array);
 uint8_t* sp_status_description(status_t a);
 uint8_t* sp_status_name(status_t a);
-sp_sample_t sp_sin_lq(sp_sample_t a);
+sp_sample_t sp_sin_lq(sp_float_t a);
 sp_float_t sp_sinc(sp_float_t a);
 sp_sample_count_t sp_windowed_sinc_lp_hp_ir_length(sp_float_t transition);
 status_t sp_windowed_sinc_ir(sp_float_t cutoff, sp_float_t transition, sp_sample_count_t* result_len, sp_sample_t** result_ir);
