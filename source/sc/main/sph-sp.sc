@@ -143,8 +143,8 @@
     sp-convolution-filter-ir-f-t void* uint8-t sp-convolution-filter-state-t** sp-sample-t*)
   (sp-windowed-sinc-lp-hp-ir cutoff transition is-high-pass out-ir out-len)
   (status-t sp-float-t sp-float-t boolean sp-sample-t** sp-sample-count-t*)
-  (sp-windowed-sinc-bp-br-ir cutoff-l cutoff-h transition is-reject out-ir out-len)
-  (status-t sp-float-t sp-float-t sp-float-t boolean sp-sample-t** sp-sample-count-t*)
+  (sp-windowed-sinc-bp-br-ir cutoff-l cutoff-h transition-l transition-h is-reject out-ir out-len)
+  (status-t sp-float-t sp-float-t sp-float-t sp-float-t boolean sp-sample-t** sp-sample-count-t*)
   (sp-windowed-sinc-lp-hp-ir-f arguments out-ir out-len)
   (status-t void* sp-sample-t** sp-sample-count-t*)
   (sp-windowed-sinc-bp-br-ir-f arguments out-ir out-len)
@@ -153,11 +153,12 @@
   (status-t
     sp-sample-t*
     sp-sample-count-t sp-float-t sp-float-t boolean sp-convolution-filter-state-t** sp-sample-t*)
-  (sp-windowed-sinc-bp-br in in-len cutoff-l cutoff-h transition is-reject out-state out-samples)
+  (sp-windowed-sinc-bp-br
+    in in-len cutoff-l cutoff-h transition-l transition-h is-reject out-state out-samples)
   (status-t
     sp-sample-t*
     sp-sample-count-t
-    sp-float-t sp-float-t sp-float-t boolean sp-convolution-filter-state-t** sp-sample-t*)
+    sp-float-t sp-float-t sp-float-t sp-float-t boolean sp-convolution-filter-state-t** sp-sample-t*)
   (sp-window-blackman a width) (sp-float-t sp-float-t sp-sample-count-t)
   (sp-spectral-inversion-ir a a-len) (void sp-sample-t* sp-sample-count-t)
   (sp-spectral-reversal-ir a a-len) (void sp-sample-t* sp-sample-count-t)

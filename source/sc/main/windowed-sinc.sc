@@ -48,8 +48,9 @@
   (label exit
     (return status)))
 
-(define (sp-windowed-sinc-bp-br-ir cutoff-l cutoff-h transition is-reject out-ir out-len)
-  (status-t sp-float-t sp-float-t sp-float-t boolean sp-sample-t** sp-sample-count-t*)
+(define
+  (sp-windowed-sinc-bp-br-ir cutoff-l cutoff-h transition-l transition-h is-reject out-ir out-len)
+  (status-t sp-float-t sp-float-t sp-float-t sp-float-t boolean sp-sample-t** sp-sample-count-t*)
   "like sp-windowed-sinc-ir-lp but for a band-pass or band-reject filter"
   status-declare
   (declare
@@ -61,8 +62,8 @@
   (sc-comment "assumes that lp and hp ir length will be equal")
   (if is-reject
     (begin
-      (status-require (sp-windowed-sinc-lp-hp-ir cutoff-l transition #f &lp-ir &lp-len))
-      (status-require (sp-windowed-sinc-lp-hp-ir cutoff-h transition #t &hp-ir &hp-len))
+      (status-require (sp-windowed-sinc-lp-hp-ir cutoff-l transition-l #f &lp-ir &lp-len))
+      (status-require (sp-windowed-sinc-lp-hp-ir cutoff-h transition-h #t &hp-ir &hp-len))
       (sc-comment "sum lp and hp ir samples")
       (for ((set hp-index 0) (< hp-index hp-len) (set hp-index (+ 1 hp-index)))
         (set (array-get lp-ir hp-index) (+ (array-get lp-ir hp-index) (array-get hp-ir hp-index))))
@@ -70,9 +71,9 @@
         *out-len lp-len
         *out-ir lp-ir))
     (begin
-      (sc-comment "meaning of cutoff high/low switched")
-      (status-require (sp-windowed-sinc-lp-hp-ir cutoff-h transition #f &lp-ir &lp-len))
-      (status-require (sp-windowed-sinc-lp-hp-ir cutoff-l transition #t &hp-ir &hp-len))
+      (sc-comment "meaning of cutoff high/low is switched")
+      (status-require (sp-windowed-sinc-lp-hp-ir cutoff-h transition-h #f &lp-ir &lp-len))
+      (status-require (sp-windowed-sinc-lp-hp-ir cutoff-l transition-l #t &hp-ir &hp-len))
       (sc-comment "convolve lp and hp ir samples")
       (set *out-len (- (+ lp-len hp-len) 1))
       (status-require (sph-helper-malloc (* *out-len (sizeof sp-sample-t)) out-ir))
@@ -101,14 +102,17 @@
   (declare
     cutoff-l sp-float-t
     cutoff-h sp-float-t
-    transition sp-float-t
+    transition-l sp-float-t
+    transition-h sp-float-t
     is-reject boolean)
   (set
     cutoff-l (pointer-get (convert-type arguments sp-float-t*))
     cutoff-h (pointer-get (+ 1 (convert-type arguments sp-float-t*)))
-    transition (pointer-get (+ 2 (convert-type arguments sp-float-t*)))
-    is-reject (pointer-get (convert-type (+ 3 (convert-type arguments sp-float-t*)) boolean*)))
-  (return (sp-windowed-sinc-bp-br-ir cutoff-l cutoff-h transition is-reject out-ir out-len)))
+    transition-l (pointer-get (+ 2 (convert-type arguments sp-float-t*)))
+    transition-h (pointer-get (+ 3 (convert-type arguments sp-float-t*)))
+    is-reject (pointer-get (convert-type (+ 4 (convert-type arguments sp-float-t*)) boolean*)))
+  (return
+    (sp-windowed-sinc-bp-br-ir cutoff-l cutoff-h transition-l transition-h is-reject out-ir out-len)))
 
 (define (sp-windowed-sinc-lp-hp in in-len cutoff transition is-high-pass out-state out-samples)
   (status-t
@@ -138,11 +142,12 @@
     (return status)))
 
 (define
-  (sp-windowed-sinc-bp-br in in-len cutoff-l cutoff-h transition is-reject out-state out-samples)
+  (sp-windowed-sinc-bp-br
+    in in-len cutoff-l cutoff-h transition-l transition-h is-reject out-state out-samples)
   (status-t
     sp-sample-t*
     sp-sample-count-t
-    sp-float-t sp-float-t sp-float-t boolean sp-convolution-filter-state-t** sp-sample-t*)
+    sp-float-t sp-float-t sp-float-t sp-float-t boolean sp-convolution-filter-state-t** sp-sample-t*)
   "like sp-windowed-sinc-lp-hp but for a band-pass or band-reject filter"
   status-declare
   (declare
@@ -150,11 +155,12 @@
     a-len uint8-t)
   (sc-comment "set arguments array for ir-f")
   (set
-    a-len (+ (sizeof boolean) (* 3 (sizeof sp-float-t)))
+    a-len (+ (sizeof boolean) (* 4 (sizeof sp-float-t)))
     (pointer-get (convert-type a sp-float-t*)) cutoff-l
     (pointer-get (+ 1 (convert-type a sp-float-t*))) cutoff-h
-    (pointer-get (+ 2 (convert-type a sp-float-t*))) transition
-    (pointer-get (convert-type (+ 3 (convert-type a sp-float-t*)) boolean*)) is-reject)
+    (pointer-get (+ 2 (convert-type a sp-float-t*))) transition-l
+    (pointer-get (+ 3 (convert-type a sp-float-t*))) transition-h
+    (pointer-get (convert-type (+ 4 (convert-type a sp-float-t*)) boolean*)) is-reject)
   (sc-comment "apply filter")
   (status-require
     (sp-convolution-filter in in-len sp-windowed-sinc-bp-br-ir-f a a-len out-state out-samples))
