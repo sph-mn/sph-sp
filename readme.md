@@ -213,5 +213,6 @@ sp_status_id_file_channel_mismatch sp_status_id_file_encoding sp_status_id_file_
 * [steve smith's dspguide](http://www.dspguide.com/) for information about dsp theory
 
 # other interesting projects
+* [yodel](https://github.com/rclement/yodel)
 * [soundpipe](https://github.com/PaulBatchelor/Soundpipe)
 * [ciglet](https://github.com/Sleepwalking/ciglet)
