@@ -209,7 +209,7 @@ sp_status_id_file_channel_mismatch sp_status_id_file_encoding sp_status_id_file_
 
 # thanks to
 * [tom roelandts](https://tomroelandts.com/) on whose information the windowed sinc filters are based on
-* [mborg] for an fft implementation that i am able to figure out how to use
+* [mborg](https://github.com/mborgerding/kissfft) for an fft implementation that i am able to figure out how to use
 * [steve smith's dspguide](http://www.dspguide.com/) for information about dsp theory
 
 # other interesting projects
