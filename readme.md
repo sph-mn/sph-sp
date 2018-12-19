@@ -108,8 +108,8 @@ sp_spectral_reversal_ir :: sp_sample_t*:a sp_sample_count_t:a_len -> void
 sp_status_description :: status_t:a -> uint8_t*
 sp_status_name :: status_t:a -> uint8_t*
 sp_window_blackman :: sp_float_t:a sp_sample_count_t:width -> sp_float_t
-sp_windowed_sinc_bp_br :: sp_sample_t*:in sp_sample_count_t:in_len sp_float_t:cutoff_l sp_float_t:cutoff_h sp_float_t:transition boolean:is_reject sp_convolution_filter_state_t**:out_state sp_sample_t*:out_samples -> status_t
-sp_windowed_sinc_bp_br_ir :: sp_float_t:cutoff_l sp_float_t:cutoff_h sp_float_t:transition boolean:is_reject sp_sample_t**:out_ir sp_sample_count_t*:out_len -> status_t
+sp_windowed_sinc_bp_br :: sp_sample_t*:in sp_sample_count_t:in_len sp_float_t:cutoff_l sp_float_t:cutoff_h sp_float_t:transition_l sp_float_t:transition_h boolean:is_reject sp_convolution_filter_state_t**:out_state sp_sample_t*:out_samples -> status_t
+sp_windowed_sinc_bp_br_ir :: sp_float_t:cutoff_l sp_float_t:cutoff_h sp_float_t:transition_l sp_float_t:transition_h boolean:is_reject sp_sample_t**:out_ir sp_sample_count_t*:out_len -> status_t
 sp_windowed_sinc_bp_br_ir_f :: void*:arguments sp_sample_t**:out_ir sp_sample_count_t*:out_len -> status_t
 sp_windowed_sinc_ir :: sp_float_t:cutoff sp_float_t:transition sp_sample_count_t*:result_len sp_sample_t**:result_ir -> status_t
 sp_windowed_sinc_lp_hp :: sp_sample_t*:in sp_sample_count_t:in_len sp_float_t:cutoff sp_float_t:transition boolean:is_high_pass sp_convolution_filter_state_t**:out_state sp_sample_t*:out_samples -> status_t
