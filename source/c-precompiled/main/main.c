@@ -304,7 +304,7 @@ void sp_spectral_reversal_ir(sp_sample_t* a, sp_sample_count_t a_len) {
   };
 };
 /** discrete linear convolution.
-  result-samples length must be at least a-len + b-len - 1.
+  result-samples must be all zeros, its length must be at least a-len + b-len - 1.
   result-samples is owned and allocated by the caller */
 void sp_convolve_one(sp_sample_t* a, sp_sample_count_t a_len, sp_sample_t* b, sp_sample_count_t b_len, sp_sample_t* result_samples) {
   sp_sample_count_t a_index;
@@ -391,9 +391,6 @@ status_t sp_convolution_filter_state_set(sp_convolution_filter_ir_f_t ir_f, void
       return (status);
     } else {
       /* changed */
-      if (state->ir) {
-        free((state->ir));
-      };
     };
   } else {
     /* new */

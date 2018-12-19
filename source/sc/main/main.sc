@@ -301,7 +301,7 @@
 (define (sp-convolve-one a a-len b b-len result-samples)
   (void sp-sample-t* sp-sample-count-t sp-sample-t* sp-sample-count-t sp-sample-t*)
   "discrete linear convolution.
-  result-samples length must be at least a-len + b-len - 1.
+  result-samples must be all zeros, its length must be at least a-len + b-len - 1.
   result-samples is owned and allocated by the caller"
   (declare
     a-index sp-sample-count-t
@@ -404,7 +404,8 @@
           (return status))
         (begin
           (sc-comment "changed")
-          (if state:ir (free state:ir)))))
+          ;(if state:ir (free state:ir))
+          )))
     (begin
       (sc-comment "new")
       (status-require (sph-helper-malloc (sizeof sp-convolution-filter-state-t) &state))

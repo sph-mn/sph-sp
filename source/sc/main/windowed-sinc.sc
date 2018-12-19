@@ -11,10 +11,10 @@
 (define (sp-windowed-sinc-lp-hp-ir-length transition) (sp-sample-count-t sp-float-t)
   "approximate impulse response length for a transition factor and
   ensure that the length is odd"
-  (declare result sp-sample-count-t)
-  (set result (ceil (/ 4 transition)))
-  (if (not (modulo result 2)) (set result (+ 1 result)))
-  (return result))
+  (declare a sp-sample-count-t)
+  (set a (ceil (/ 4 transition)))
+  (if (not (modulo a 2)) (set a (+ 1 a)))
+  (return a))
 
 (define (sp-windowed-sinc-lp-hp-ir cutoff transition is-high-pass out-ir out-len)
   (status-t sp-float-t sp-float-t boolean sp-sample-t** sp-sample-count-t*)
@@ -54,29 +54,44 @@
   "like sp-windowed-sinc-ir-lp but for a band-pass or band-reject filter"
   status-declare
   (declare
-    hp-index sp-sample-count-t
     hp-ir sp-sample-t*
     hp-len sp-sample-count-t
     lp-ir sp-sample-t*
-    lp-len sp-sample-count-t)
-  (sc-comment "assumes that lp and hp ir length will be equal")
+    lp-len sp-sample-count-t
+    i sp-sample-count-t
+    start-i sp-sample-count-t
+    end-i sp-sample-count-t
+    out sp-sample-t*
+    over sp-sample-t*)
   (if is-reject
     (begin
       (status-require (sp-windowed-sinc-lp-hp-ir cutoff-l transition-l #f &lp-ir &lp-len))
       (status-require (sp-windowed-sinc-lp-hp-ir cutoff-h transition-h #t &hp-ir &hp-len))
+      (sc-comment "prepare to add the shorter ir to the longer one centered")
+      (if (> lp-len hp-len)
+        (set
+          start-i (- (/ (- lp-len 1) 2) (/ (- hp-len 1) 2))
+          end-i (+ hp-len start-i)
+          out lp-ir
+          over hp-ir
+          *out-len lp-len)
+        (set
+          start-i (- (/ (- hp-len 1) 2) (/ (- lp-len 1) 2))
+          end-i (+ lp-len start-i)
+          out hp-ir
+          over lp-ir
+          *out-len hp-len))
       (sc-comment "sum lp and hp ir samples")
-      (for ((set hp-index 0) (< hp-index hp-len) (set hp-index (+ 1 hp-index)))
-        (set (array-get lp-ir hp-index) (+ (array-get lp-ir hp-index) (array-get hp-ir hp-index))))
-      (set
-        *out-len lp-len
-        *out-ir lp-ir))
+      (for ((set i start-i) (<= i end-i) (set i (+ 1 i)))
+        (set (array-get out i) (+ (array-get over (- i start-i)) (array-get out i))))
+      (set *out-ir out))
     (begin
       (sc-comment "meaning of cutoff high/low is switched")
       (status-require (sp-windowed-sinc-lp-hp-ir cutoff-h transition-h #f &lp-ir &lp-len))
       (status-require (sp-windowed-sinc-lp-hp-ir cutoff-l transition-l #t &hp-ir &hp-len))
       (sc-comment "convolve lp and hp ir samples")
       (set *out-len (- (+ lp-len hp-len) 1))
-      (status-require (sph-helper-malloc (* *out-len (sizeof sp-sample-t)) out-ir))
+      (status-require (sph-helper-calloc (* *out-len (sizeof sp-sample-t)) out-ir))
       (sp-convolve-one lp-ir lp-len hp-ir hp-len *out-ir)))
   (label exit
     (return status)))

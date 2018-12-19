@@ -5,12 +5,12 @@ sp_float_t sp_window_blackman(sp_float_t a, sp_sample_count_t width) { return ((
 /** approximate impulse response length for a transition factor and
   ensure that the length is odd */
 sp_sample_count_t sp_windowed_sinc_lp_hp_ir_length(sp_float_t transition) {
-  sp_sample_count_t result;
-  result = ceil((4 / transition));
-  if (!(result % 2)) {
-    result = (1 + result);
+  sp_sample_count_t a;
+  a = ceil((4 / transition));
+  if (!(a % 2)) {
+    a = (1 + a);
   };
-  return (result);
+  return (a);
 };
 /** create an impulse response kernel for a windowed sinc low-pass or high-pass filter.
   uses a truncated blackman window.
@@ -47,28 +47,44 @@ exit:
 /** like sp-windowed-sinc-ir-lp but for a band-pass or band-reject filter */
 status_t sp_windowed_sinc_bp_br_ir(sp_float_t cutoff_l, sp_float_t cutoff_h, sp_float_t transition_l, sp_float_t transition_h, boolean is_reject, sp_sample_t** out_ir, sp_sample_count_t* out_len) {
   status_declare;
-  sp_sample_count_t hp_index;
   sp_sample_t* hp_ir;
   sp_sample_count_t hp_len;
   sp_sample_t* lp_ir;
   sp_sample_count_t lp_len;
-  /* assumes that lp and hp ir length will be equal */
+  sp_sample_count_t i;
+  sp_sample_count_t start_i;
+  sp_sample_count_t end_i;
+  sp_sample_t* out;
+  sp_sample_t* over;
   if (is_reject) {
     status_require((sp_windowed_sinc_lp_hp_ir(cutoff_l, transition_l, 0, (&lp_ir), (&lp_len))));
     status_require((sp_windowed_sinc_lp_hp_ir(cutoff_h, transition_h, 1, (&hp_ir), (&hp_len))));
-    /* sum lp and hp ir samples */
-    for (hp_index = 0; (hp_index < hp_len); hp_index = (1 + hp_index)) {
-      lp_ir[hp_index] = (lp_ir[hp_index] + hp_ir[hp_index]);
+    /* prepare to add the shorter ir to the longer one centered */
+    if (lp_len > hp_len) {
+      start_i = (((lp_len - 1) / 2) - ((hp_len - 1) / 2));
+      end_i = (hp_len + start_i);
+      out = lp_ir;
+      over = hp_ir;
+      *out_len = lp_len;
+    } else {
+      start_i = (((hp_len - 1) / 2) - ((lp_len - 1) / 2));
+      end_i = (lp_len + start_i);
+      out = hp_ir;
+      over = lp_ir;
+      *out_len = hp_len;
     };
-    *out_len = lp_len;
-    *out_ir = lp_ir;
+    /* sum lp and hp ir samples */
+    for (i = start_i; (i <= end_i); i = (1 + i)) {
+      out[i] = (over[(i - start_i)] + out[i]);
+    };
+    *out_ir = out;
   } else {
     /* meaning of cutoff high/low is switched */
     status_require((sp_windowed_sinc_lp_hp_ir(cutoff_h, transition_h, 0, (&lp_ir), (&lp_len))));
     status_require((sp_windowed_sinc_lp_hp_ir(cutoff_l, transition_l, 1, (&hp_ir), (&hp_len))));
     /* convolve lp and hp ir samples */
     *out_len = ((lp_len + hp_len) - 1);
-    status_require((sph_helper_malloc((*out_len * sizeof(sp_sample_t)), out_ir)));
+    status_require((sph_helper_calloc((*out_len * sizeof(sp_sample_t)), out_ir)));
     sp_convolve_one(lp_ir, lp_len, hp_ir, hp_len, (*out_ir));
   };
 exit:
