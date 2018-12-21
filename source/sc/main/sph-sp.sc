@@ -179,4 +179,6 @@
     sp-sample-count-t sp-sample-t* sp-sample-count-t sp-sample-count-t sp-sample-t* sp-sample-t*)
   (sp-channel-data-free a channel-count) (void sp-sample-t** sp-channel-count-t)
   (sp-windowed-sinc-lp-hp-ir cutoff transition is-high-pass out-ir out-len)
-  (status-t sp-float-t sp-float-t boolean sp-sample-t** sp-sample-count-t*))
+  (status-t sp-float-t sp-float-t boolean sp-sample-t** sp-sample-count-t*)
+  (sp-null-ir out-ir out-len) (status-t sp-sample-t** sp-sample-count-t*)
+  (sp-passthrough-ir out-ir out-len) (status-t sp-sample-t** sp-sample-count-t*))

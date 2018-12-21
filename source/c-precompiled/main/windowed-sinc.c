@@ -12,10 +12,22 @@ sp_sample_count_t sp_windowed_sinc_lp_hp_ir_length(sp_float_t transition) {
   };
   return (a);
 };
+status_t sp_null_ir(sp_sample_t** out_ir, sp_sample_count_t* out_len) {
+  *out_len = 1;
+  return ((sph_helper_calloc((sizeof(sp_sample_t)), out_ir)));
+};
+status_t sp_passthrough_ir(sp_sample_t** out_ir, sp_sample_count_t* out_len) {
+  status_declare;
+  status_require((sph_helper_malloc((sizeof(sp_sample_t)), out_ir)));
+  **out_ir = 1;
+  *out_len = 1;
+exit:
+  return (status);
+};
 /** create an impulse response kernel for a windowed sinc low-pass or high-pass filter.
   uses a truncated blackman window.
   allocates out-ir, sets out-len.
-  cutoff and transition are as fraction 0..1 of the sampling rate */
+  cutoff and transition are as fraction 0..0.5 of the sampling rate */
 status_t sp_windowed_sinc_lp_hp_ir(sp_float_t cutoff, sp_float_t transition, boolean is_high_pass, sp_sample_t** out_ir, sp_sample_count_t* out_len) {
   status_declare;
   sp_float_t center_index;
@@ -31,7 +43,7 @@ nan can be set here if the freq and transition values are invalid */
   for (i = 0; (i < len); i = (1 + i)) {
     ir[i] = (sp_window_blackman(i, len) * sp_sinc((2 * cutoff * (i - center_index))));
   };
-  /* scale */
+  /* scale gain */
   sum = sp_sample_sum(ir, len);
   for (i = 0; (i < len); i = (1 + i)) {
     ir[i] = (ir[i] / sum);
@@ -44,7 +56,8 @@ nan can be set here if the freq and transition values are invalid */
 exit:
   return (status);
 };
-/** like sp-windowed-sinc-ir-lp but for a band-pass or band-reject filter */
+/** like sp-windowed-sinc-ir-lp but for a band-pass or band-reject filter.
+  optimisation: if one cutoff is at or above maximum then create only either low-pass or high-pass */
 status_t sp_windowed_sinc_bp_br_ir(sp_float_t cutoff_l, sp_float_t cutoff_h, sp_float_t transition_l, sp_float_t transition_h, boolean is_reject, sp_sample_t** out_ir, sp_sample_count_t* out_len) {
   status_declare;
   sp_sample_t* hp_ir;
@@ -57,9 +70,20 @@ status_t sp_windowed_sinc_bp_br_ir(sp_float_t cutoff_l, sp_float_t cutoff_h, sp_
   sp_sample_t* out;
   sp_sample_t* over;
   if (is_reject) {
+    if (0.0 <= cutoff_l) {
+      if (0.5 >= cutoff_h) {
+        return ((sp_null_ir(out_ir, out_len)));
+      } else {
+        return ((sp_windowed_sinc_lp_hp_ir(cutoff_h, transition_h, 1, out_ir, out_len)));
+      };
+    } else {
+      if (0.5 >= cutoff_h) {
+        return ((sp_windowed_sinc_lp_hp_ir(cutoff_l, transition_l, 0, out_ir, out_len)));
+      };
+    };
     status_require((sp_windowed_sinc_lp_hp_ir(cutoff_l, transition_l, 0, (&lp_ir), (&lp_len))));
     status_require((sp_windowed_sinc_lp_hp_ir(cutoff_h, transition_h, 1, (&hp_ir), (&hp_len))));
-    /* prepare to add the shorter ir to the longer one centered */
+    /* prepare to add the shorter ir to the longer one center-aligned */
     if (lp_len > hp_len) {
       start_i = (((lp_len - 1) / 2) - ((hp_len - 1) / 2));
       end_i = (hp_len + start_i);
@@ -79,9 +103,20 @@ status_t sp_windowed_sinc_bp_br_ir(sp_float_t cutoff_l, sp_float_t cutoff_h, sp_
     };
     *out_ir = out;
   } else {
-    /* meaning of cutoff high/low is switched */
-    status_require((sp_windowed_sinc_lp_hp_ir(cutoff_h, transition_h, 0, (&lp_ir), (&lp_len))));
+    /* meaning of cutoff high/low is switched. */
+    if (0.0 <= cutoff_l) {
+      if (0.5 >= cutoff_h) {
+        return ((sp_passthrough_ir(out_ir, out_len)));
+      } else {
+        return ((sp_windowed_sinc_lp_hp_ir(cutoff_h, transition_h, 0, out_ir, out_len)));
+      };
+    } else {
+      if (0.5 >= cutoff_h) {
+        return ((sp_windowed_sinc_lp_hp_ir(cutoff_l, transition_l, 1, out_ir, out_len)));
+      };
+    };
     status_require((sp_windowed_sinc_lp_hp_ir(cutoff_l, transition_l, 1, (&hp_ir), (&hp_len))));
+    status_require((sp_windowed_sinc_lp_hp_ir(cutoff_h, transition_h, 0, (&lp_ir), (&lp_len))));
     /* convolve lp and hp ir samples */
     *out_len = ((lp_len + hp_len) - 1);
     status_require((sph_helper_calloc((*out_len * sizeof(sp_sample_t)), out_ir)));
@@ -118,7 +153,7 @@ status_t sp_windowed_sinc_bp_br_ir_f(void* arguments, sp_sample_t** out_ir, sp_s
 };
 /** a windowed sinc low-pass or high-pass filter for segments of continuous streams with
   variable sample-rate, frequency, transition and impulse response type per call.
-  * cutoff: as a fraction of the sample rate, 0..1
+  * cutoff: as a fraction of the sample rate, 0..0.5
   * transition: like cutoff
   * is-high-pass: if true then it will reduce low frequencies
   * out-state: if zero then state will be allocated.

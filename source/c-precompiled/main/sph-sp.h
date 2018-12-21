@@ -197,3 +197,5 @@ void sp_convolve_one(sp_sample_t* a, sp_sample_count_t a_len, sp_sample_t* b, sp
 void sp_convolve(sp_sample_t* a, sp_sample_count_t a_len, sp_sample_t* b, sp_sample_count_t b_len, sp_sample_count_t result_carryover_len, sp_sample_t* result_carryover, sp_sample_t* result_samples);
 void sp_channel_data_free(sp_sample_t** a, sp_channel_count_t channel_count);
 status_t sp_windowed_sinc_lp_hp_ir(sp_float_t cutoff, sp_float_t transition, boolean is_high_pass, sp_sample_t** out_ir, sp_sample_count_t* out_len);
+status_t sp_null_ir(sp_sample_t** out_ir, sp_sample_count_t* out_len);
+status_t sp_passthrough_ir(sp_sample_t** out_ir, sp_sample_count_t* out_len);

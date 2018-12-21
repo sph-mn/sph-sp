@@ -16,12 +16,25 @@
   (if (not (modulo a 2)) (set a (+ 1 a)))
   (return a))
 
+(define (sp-null-ir out-ir out-len) (status-t sp-sample-t** sp-sample-count-t*)
+  (set *out-len 1)
+  (return (sph-helper-calloc (sizeof sp-sample-t) out-ir)))
+
+(define (sp-passthrough-ir out-ir out-len) (status-t sp-sample-t** sp-sample-count-t*)
+  status-declare
+  (status-require (sph-helper-malloc (sizeof sp-sample-t) out-ir))
+  (set
+    **out-ir 1
+    *out-len 1)
+  (label exit
+    (return status)))
+
 (define (sp-windowed-sinc-lp-hp-ir cutoff transition is-high-pass out-ir out-len)
   (status-t sp-float-t sp-float-t boolean sp-sample-t** sp-sample-count-t*)
   "create an impulse response kernel for a windowed sinc low-pass or high-pass filter.
   uses a truncated blackman window.
   allocates out-ir, sets out-len.
-  cutoff and transition are as fraction 0..1 of the sampling rate"
+  cutoff and transition are as fraction 0..0.5 of the sampling rate"
   status-declare
   (declare
     center-index sp-float-t
@@ -37,7 +50,7 @@
     "set the windowed sinc" "nan can be set here if the freq and transition values are invalid")
   (for ((set i 0) (< i len) (set i (+ 1 i)))
     (set (array-get ir i) (* (sp-window-blackman i len) (sp-sinc (* 2 cutoff (- i center-index))))))
-  (sc-comment "scale")
+  (sc-comment "scale gain")
   (set sum (sp-sample-sum ir len))
   (for ((set i 0) (< i len) (set i (+ 1 i)))
     (set (array-get ir i) (/ (array-get ir i) sum)))
@@ -51,7 +64,8 @@
 (define
   (sp-windowed-sinc-bp-br-ir cutoff-l cutoff-h transition-l transition-h is-reject out-ir out-len)
   (status-t sp-float-t sp-float-t sp-float-t sp-float-t boolean sp-sample-t** sp-sample-count-t*)
-  "like sp-windowed-sinc-ir-lp but for a band-pass or band-reject filter"
+  "like sp-windowed-sinc-ir-lp but for a band-pass or band-reject filter.
+  optimisation: if one cutoff is at or above maximum then create only either low-pass or high-pass"
   status-declare
   (declare
     hp-ir sp-sample-t*
@@ -65,9 +79,14 @@
     over sp-sample-t*)
   (if is-reject
     (begin
+      (if (<= 0.0 cutoff-l)
+        (if (>= 0.5 cutoff-h) (return (sp-null-ir out-ir out-len))
+          (return (sp-windowed-sinc-lp-hp-ir cutoff-h transition-h #t out-ir out-len)))
+        (if (>= 0.5 cutoff-h)
+          (return (sp-windowed-sinc-lp-hp-ir cutoff-l transition-l #f out-ir out-len))))
       (status-require (sp-windowed-sinc-lp-hp-ir cutoff-l transition-l #f &lp-ir &lp-len))
       (status-require (sp-windowed-sinc-lp-hp-ir cutoff-h transition-h #t &hp-ir &hp-len))
-      (sc-comment "prepare to add the shorter ir to the longer one centered")
+      (sc-comment "prepare to add the shorter ir to the longer one center-aligned")
       (if (> lp-len hp-len)
         (set
           start-i (- (/ (- lp-len 1) 2) (/ (- hp-len 1) 2))
@@ -86,9 +105,14 @@
         (set (array-get out i) (+ (array-get over (- i start-i)) (array-get out i))))
       (set *out-ir out))
     (begin
-      (sc-comment "meaning of cutoff high/low is switched")
-      (status-require (sp-windowed-sinc-lp-hp-ir cutoff-h transition-h #f &lp-ir &lp-len))
+      (sc-comment "meaning of cutoff high/low is switched.")
+      (if (<= 0.0 cutoff-l)
+        (if (>= 0.5 cutoff-h) (return (sp-passthrough-ir out-ir out-len))
+          (return (sp-windowed-sinc-lp-hp-ir cutoff-h transition-h #f out-ir out-len)))
+        (if (>= 0.5 cutoff-h)
+          (return (sp-windowed-sinc-lp-hp-ir cutoff-l transition-l #t out-ir out-len))))
       (status-require (sp-windowed-sinc-lp-hp-ir cutoff-l transition-l #t &hp-ir &hp-len))
+      (status-require (sp-windowed-sinc-lp-hp-ir cutoff-h transition-h #f &lp-ir &lp-len))
       (sc-comment "convolve lp and hp ir samples")
       (set *out-len (- (+ lp-len hp-len) 1))
       (status-require (sph-helper-calloc (* *out-len (sizeof sp-sample-t)) out-ir))
@@ -135,7 +159,7 @@
     sp-sample-count-t sp-float-t sp-float-t boolean sp-convolution-filter-state-t** sp-sample-t*)
   "a windowed sinc low-pass or high-pass filter for segments of continuous streams with
   variable sample-rate, frequency, transition and impulse response type per call.
-  * cutoff: as a fraction of the sample rate, 0..1
+  * cutoff: as a fraction of the sample rate, 0..0.5
   * transition: like cutoff
   * is-high-pass: if true then it will reduce low frequencies
   * out-state: if zero then state will be allocated.
