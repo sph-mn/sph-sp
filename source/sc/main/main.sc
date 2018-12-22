@@ -212,7 +212,7 @@
   (set
     width (+ 1 (* 2 radius))
     window 0)
-  (sc-comment "not all required samples in source array")
+  (sc-comment "check if all required samples are in source array")
   (if (not (and (>= start radius) (<= (+ start radius 1) source-len)))
     (begin
       (status-require (sph-helper-malloc (* width (sizeof sp-sample-t)) &window))
@@ -268,6 +268,7 @@
           (set
             (array-get window window-index) 0
             window-index (+ 1 window-index)))
+        (sc-comment "set current value to the window average")
         (set *result-samples (/ (sp-sample-sum window width) width))))
     (set
       result-samples (+ 1 result-samples)

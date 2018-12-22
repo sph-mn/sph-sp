@@ -70,14 +70,14 @@ status_t sp_windowed_sinc_bp_br_ir(sp_float_t cutoff_l, sp_float_t cutoff_h, sp_
   sp_sample_t* out;
   sp_sample_t* over;
   if (is_reject) {
-    if (0.0 <= cutoff_l) {
-      if (0.5 >= cutoff_h) {
+    if (0.0 >= cutoff_l) {
+      if (0.5 <= cutoff_h) {
         return ((sp_null_ir(out_ir, out_len)));
       } else {
         return ((sp_windowed_sinc_lp_hp_ir(cutoff_h, transition_h, 1, out_ir, out_len)));
       };
     } else {
-      if (0.5 >= cutoff_h) {
+      if (0.5 <= cutoff_h) {
         return ((sp_windowed_sinc_lp_hp_ir(cutoff_l, transition_l, 0, out_ir, out_len)));
       };
     };
@@ -104,14 +104,14 @@ status_t sp_windowed_sinc_bp_br_ir(sp_float_t cutoff_l, sp_float_t cutoff_h, sp_
     *out_ir = out;
   } else {
     /* meaning of cutoff high/low is switched. */
-    if (0.0 <= cutoff_l) {
-      if (0.5 >= cutoff_h) {
+    if (0.0 >= cutoff_l) {
+      if (0.5 <= cutoff_h) {
         return ((sp_passthrough_ir(out_ir, out_len)));
       } else {
         return ((sp_windowed_sinc_lp_hp_ir(cutoff_h, transition_h, 0, out_ir, out_len)));
       };
     } else {
-      if (0.5 >= cutoff_h) {
+      if (0.5 <= cutoff_h) {
         return ((sp_windowed_sinc_lp_hp_ir(cutoff_l, transition_l, 1, out_ir, out_len)));
       };
     };

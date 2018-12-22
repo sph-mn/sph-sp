@@ -79,10 +79,10 @@
     over sp-sample-t*)
   (if is-reject
     (begin
-      (if (<= 0.0 cutoff-l)
-        (if (>= 0.5 cutoff-h) (return (sp-null-ir out-ir out-len))
+      (if (>= 0.0 cutoff-l)
+        (if (<= 0.5 cutoff-h) (return (sp-null-ir out-ir out-len))
           (return (sp-windowed-sinc-lp-hp-ir cutoff-h transition-h #t out-ir out-len)))
-        (if (>= 0.5 cutoff-h)
+        (if (<= 0.5 cutoff-h)
           (return (sp-windowed-sinc-lp-hp-ir cutoff-l transition-l #f out-ir out-len))))
       (status-require (sp-windowed-sinc-lp-hp-ir cutoff-l transition-l #f &lp-ir &lp-len))
       (status-require (sp-windowed-sinc-lp-hp-ir cutoff-h transition-h #t &hp-ir &hp-len))
@@ -106,10 +106,10 @@
       (set *out-ir out))
     (begin
       (sc-comment "meaning of cutoff high/low is switched.")
-      (if (<= 0.0 cutoff-l)
-        (if (>= 0.5 cutoff-h) (return (sp-passthrough-ir out-ir out-len))
+      (if (>= 0.0 cutoff-l)
+        (if (<= 0.5 cutoff-h) (return (sp-passthrough-ir out-ir out-len))
           (return (sp-windowed-sinc-lp-hp-ir cutoff-h transition-h #f out-ir out-len)))
-        (if (>= 0.5 cutoff-h)
+        (if (<= 0.5 cutoff-h)
           (return (sp-windowed-sinc-lp-hp-ir cutoff-l transition-l #t out-ir out-len))))
       (status-require (sp-windowed-sinc-lp-hp-ir cutoff-l transition-l #t &hp-ir &hp-len))
       (status-require (sp-windowed-sinc-lp-hp-ir cutoff-h transition-h #f &lp-ir &lp-len))
