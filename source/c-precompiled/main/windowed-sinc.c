@@ -65,8 +65,8 @@ status_t sp_windowed_sinc_bp_br_ir(sp_float_t cutoff_l, sp_float_t cutoff_h, sp_
   sp_sample_t* lp_ir;
   sp_sample_count_t lp_len;
   sp_sample_count_t i;
-  sp_sample_count_t start_i;
-  sp_sample_count_t end_i;
+  sp_sample_count_t start;
+  sp_sample_count_t end;
   sp_sample_t* out;
   sp_sample_t* over;
   if (is_reject) {
@@ -85,22 +85,23 @@ status_t sp_windowed_sinc_bp_br_ir(sp_float_t cutoff_l, sp_float_t cutoff_h, sp_
     status_require((sp_windowed_sinc_lp_hp_ir(cutoff_h, transition_h, 1, (&hp_ir), (&hp_len))));
     /* prepare to add the shorter ir to the longer one center-aligned */
     if (lp_len > hp_len) {
-      start_i = (((lp_len - 1) / 2) - ((hp_len - 1) / 2));
-      end_i = (hp_len + start_i);
+      start = (((lp_len - 1) / 2) - ((hp_len - 1) / 2));
+      end = (hp_len + start);
       out = lp_ir;
       over = hp_ir;
       *out_len = lp_len;
     } else {
-      start_i = (((hp_len - 1) / 2) - ((lp_len - 1) / 2));
-      end_i = (lp_len + start_i);
+      start = (((hp_len - 1) / 2) - ((lp_len - 1) / 2));
+      end = (lp_len + start);
       out = hp_ir;
       over = lp_ir;
       *out_len = hp_len;
     };
     /* sum lp and hp ir samples */
-    for (i = start_i; (i <= end_i); i = (1 + i)) {
-      out[i] = (over[(i - start_i)] + out[i]);
+    for (i = start; (i < end); i = (1 + i)) {
+      out[i] = (over[(i - start)] + out[i]);
     };
+    free(over);
     *out_ir = out;
   } else {
     /* meaning of cutoff high/low is switched. */

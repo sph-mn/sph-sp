@@ -73,8 +73,8 @@
     lp-ir sp-sample-t*
     lp-len sp-sample-count-t
     i sp-sample-count-t
-    start-i sp-sample-count-t
-    end-i sp-sample-count-t
+    start sp-sample-count-t
+    end sp-sample-count-t
     out sp-sample-t*
     over sp-sample-t*)
   (if is-reject
@@ -89,20 +89,21 @@
       (sc-comment "prepare to add the shorter ir to the longer one center-aligned")
       (if (> lp-len hp-len)
         (set
-          start-i (- (/ (- lp-len 1) 2) (/ (- hp-len 1) 2))
-          end-i (+ hp-len start-i)
+          start (- (/ (- lp-len 1) 2) (/ (- hp-len 1) 2))
+          end (+ hp-len start)
           out lp-ir
           over hp-ir
           *out-len lp-len)
         (set
-          start-i (- (/ (- hp-len 1) 2) (/ (- lp-len 1) 2))
-          end-i (+ lp-len start-i)
+          start (- (/ (- hp-len 1) 2) (/ (- lp-len 1) 2))
+          end (+ lp-len start)
           out hp-ir
           over lp-ir
           *out-len hp-len))
       (sc-comment "sum lp and hp ir samples")
-      (for ((set i start-i) (<= i end-i) (set i (+ 1 i)))
-        (set (array-get out i) (+ (array-get over (- i start-i)) (array-get out i))))
+      (for ((set i start) (< i end) (set i (+ 1 i)))
+        (set (array-get out i) (+ (array-get over (- i start)) (array-get out i))))
+      (free over)
       (set *out-ir out))
     (begin
       (sc-comment "meaning of cutoff high/low is switched.")

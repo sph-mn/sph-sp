@@ -405,8 +405,7 @@
           (return status))
         (begin
           (sc-comment "changed")
-          ;(if state:ir (free state:ir))
-          )))
+          (if state:ir (free state:ir)))))
     (begin
       (sc-comment "new")
       (status-require (sph-helper-malloc (sizeof sp-convolution-filter-state-t) &state))
@@ -418,7 +417,6 @@
         state:carryover-alloc-len 0
         state:carryover-len 0
         state:carryover 0
-        state:ir 0
         state:ir-f ir-f)))
   (memcpy state:ir-f-arguments ir-f-arguments ir-f-arguments-len)
   (status-require (ir-f ir-f-arguments &ir &ir-len))

@@ -215,7 +215,7 @@ status_t sp_moving_average(sp_sample_t* source, sp_sample_count_t source_len, sp
   };
   width = (1 + (2 * radius));
   window = 0;
-  /* not all required samples in source array */
+  /* check if all required samples are in source array */
   if (!((start >= radius) && ((start + radius + 1) <= source_len))) {
     status_require((sph_helper_malloc((width * sizeof(sp_sample_t)), (&window))));
     memreg_add(window);
@@ -273,6 +273,7 @@ status_t sp_moving_average(sp_sample_t* source, sp_sample_count_t source_len, sp
         window[window_index] = 0;
         window_index = (1 + window_index);
       };
+      /* set current value to the window average */
       *result_samples = (sp_sample_sum(window, width) / width);
     };
     result_samples = (1 + result_samples);
@@ -391,6 +392,9 @@ status_t sp_convolution_filter_state_set(sp_convolution_filter_ir_f_t ir_f, void
       return (status);
     } else {
       /* changed */
+      if (state->ir) {
+        free((state->ir));
+      };
     };
   } else {
     /* new */
@@ -401,7 +405,6 @@ status_t sp_convolution_filter_state_set(sp_convolution_filter_ir_f_t ir_f, void
     state->carryover_alloc_len = 0;
     state->carryover_len = 0;
     state->carryover = 0;
-    state->ir = 0;
     state->ir_f = ir_f;
   };
   memcpy((state->ir_f_arguments), ir_f_arguments, ir_f_arguments_len);
