@@ -6,7 +6,6 @@ c code and shared library for a sound input/output port object and example imple
 * compile-time customisable sample and file format
 * unlimited number of channels and sample rate
 * processing of non-interleaved sample arrays with one array per channel
-* tries to avoid floating point errors
 * processors for continuous data streams
   * windowed sinc low-pass, high-pass, band-pass and band-reject filters
   * moving average filter
