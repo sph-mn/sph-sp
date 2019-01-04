@@ -131,7 +131,8 @@
 (define (sp-fftr input input-len output) (status-t sp-sample-t* sp-sample-count-t sp-sample-t*)
   "real-numbers -> [[real, imaginary] ...]:complex-numbers
   write to output the real and imaginary part alternatingly.
-  output-len will be set to the count of complex numbers, (+ 1 (/ input-len 2)).
+  input-len should be even otherwise the last input sample is ignored.
+  output-len see sp-fftr-output-len.
   output is allocated and owned by the caller"
   sp-status-declare
   (declare
@@ -140,14 +141,20 @@
     out-len sp-sample-count-t
     i sp-sample-count-t)
   (memreg-init 2)
+  (sc-comment
+    "ensure that the length is even, otherwise kissfft error \"Real FFT optimization must be even.\""
+    "reduce because ")
+  (if (modulo input-len 2) (set input-len (- input-len 1)))
   (set cfg (kiss-fftr-alloc input-len #f 0 0))
   (if (not cfg) (status-set-both-goto sp-status-group-sp sp-status-id-memory))
   (memreg-add cfg)
-  ; out must be input-len or it segfaults but only the first half of the result will be non-zero
+  (sc-comment
+    "convert from kiss-fft-cpx to array with alternated real and imaginary part."
+    "out must be input-len or it segfaults but only the first half of the result will be non-zero")
   (status-require (sph-helper-calloc (* input-len (sizeof kiss-fft-cpx)) &out))
   (memreg-add out)
   (kiss-fftr cfg input out)
-  (set out-len (sp-fftr-output-len input-len))
+  (set out-len (/ (sp-fftr-output-len input-len) 2))
   (for ((set i 0) (< i out-len) (set i (+ 1 i)))
     (set
       (array-get output (* 2 i)) (struct-get (array-get out i) r)
@@ -158,7 +165,9 @@
 
 (define (sp-fftri input input-len output) (status-t sp-sample-t* sp-sample-count-t sp-sample-t*)
   "[[real, imaginary], ...]:complex-numbers -> real-numbers
-  input-length > 0"
+  input-length > 0
+  output-length see sp-fftri-output-len.
+  output is allocated and owned by the caller"
   sp-status-declare
   (declare
     cfg kiss-fftr-cfg
@@ -168,7 +177,8 @@
   (set cfg (kiss-fftr-alloc input-len #t 0 0))
   (if (not cfg) (status-set-id-goto sp-status-id-memory))
   (memreg-add cfg)
-  (status-require (sph-helper-malloc (* input-len (sizeof kiss-fft-cpx)) &in))
+  (sc-comment "convert input to kiss-fft-cpx")
+  (status-require (sph-helper-calloc (* input-len (sizeof kiss-fft-cpx)) &in))
   (memreg-add in)
   (for ((set i 0) (< i input-len) (set i (+ 1 i)))
     (set

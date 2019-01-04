@@ -95,8 +95,11 @@ typedef struct {
     radians-per-second samples-per-second -> cutoff-value */
 #define sp_windowed_sinc_ir_cutoff(freq, sample_rate) ((2 * M_PI * freq) / sample_rate)
 #define sp_windowed_sinc_ir_transition sp_windowed_sinc_ir_cutoff
-#define sp_fftr_output_len(input_len) (1 + (input_len / 2))
-#define sp_fftri_output_len(input_len) (2 * (input_len - 1))
+/** count of sp-sample-t. times two because complex numbers are two elements */
+#define sp_fftr_output_len(input_len) (2 * (1 + (input_len / 2)))
+/** input is complex numbers of two elements, output is only real part samples.
+    output element count is double the input count minus one element */
+#define sp_fftri_output_len(input_len) (input_len - 2)
 #if (sp_sample_format_f64 == sp_sample_format)
 #define sp_sample_t double
 #define sp_sample_sum f64_sum

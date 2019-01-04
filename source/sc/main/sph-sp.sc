@@ -36,8 +36,15 @@
     radians-per-second samples-per-second -> cutoff-value"
     (/ (* 2 M_PI freq) sample-rate))
   sp-windowed-sinc-ir-transition sp-windowed-sinc-ir-cutoff
-  (sp-fftr-output-len input-len) (+ 1 (/ input-len 2))
-  (sp-fftri-output-len input-len) (* 2 (- input-len 1)))
+  (sp-fftr-output-len input-len)
+  (begin
+    "count of sp-sample-t. times two because complex numbers are two elements"
+    (* 2 (+ 1 (/ input-len 2))))
+  (sp-fftri-output-len input-len)
+  (begin
+    "input is complex numbers of two elements, output is only real part samples.
+    output element count is double the input count minus one element"
+    (- input-len 2)))
 
 (pre-cond
   ( (= sp-sample-format-f64 sp-sample-format)

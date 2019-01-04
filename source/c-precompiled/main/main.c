@@ -139,7 +139,8 @@ sp_sample_t sp_sin_lq(sp_float_t a) {
 sp_float_t sp_sinc(sp_float_t a) { return (((0 == a) ? 1 : (sin((M_PI * a)) / (M_PI * a)))); };
 /** real-numbers -> [[real, imaginary] ...]:complex-numbers
   write to output the real and imaginary part alternatingly.
-  output-len will be set to the count of complex numbers, (+ 1 (/ input-len 2)).
+  input-len should be even otherwise the last input sample is ignored.
+  output-len see sp-fftr-output-len.
   output is allocated and owned by the caller */
 status_t sp_fftr(sp_sample_t* input, sp_sample_count_t input_len, sp_sample_t* output) {
   sp_status_declare;
@@ -148,15 +149,22 @@ status_t sp_fftr(sp_sample_t* input, sp_sample_count_t input_len, sp_sample_t* o
   sp_sample_count_t out_len;
   sp_sample_count_t i;
   memreg_init(2);
+  /* ensure that the length is even, otherwise kissfft error "Real FFT optimization must be even."
+reduce because  */
+  if (input_len % 2) {
+    input_len = (input_len - 1);
+  };
   cfg = kiss_fftr_alloc(input_len, 0, 0, 0);
   if (!cfg) {
     status_set_both_goto(sp_status_group_sp, sp_status_id_memory);
   };
   memreg_add(cfg);
+  /* convert from kiss-fft-cpx to array with alternated real and imaginary part.
+out must be input-len or it segfaults but only the first half of the result will be non-zero */
   status_require((sph_helper_calloc((input_len * sizeof(kiss_fft_cpx)), (&out))));
   memreg_add(out);
   kiss_fftr(cfg, input, out);
-  out_len = sp_fftr_output_len(input_len);
+  out_len = (sp_fftr_output_len(input_len) / 2);
   for (i = 0; (i < out_len); i = (1 + i)) {
     output[(2 * i)] = (out[i]).r;
     output[(1 + (2 * i))] = (out[i]).i;
@@ -166,7 +174,9 @@ exit:
   return (status);
 };
 /** [[real, imaginary], ...]:complex-numbers -> real-numbers
-  input-length > 0 */
+  input-length > 0
+  output-length see sp-fftri-output-len.
+  output is allocated and owned by the caller */
 status_t sp_fftri(sp_sample_t* input, sp_sample_count_t input_len, sp_sample_t* output) {
   sp_status_declare;
   kiss_fftr_cfg cfg;
@@ -178,7 +188,8 @@ status_t sp_fftri(sp_sample_t* input, sp_sample_count_t input_len, sp_sample_t* 
     status_set_id_goto(sp_status_id_memory);
   };
   memreg_add(cfg);
-  status_require((sph_helper_malloc((input_len * sizeof(kiss_fft_cpx)), (&in))));
+  /* convert input to kiss-fft-cpx */
+  status_require((sph_helper_calloc((input_len * sizeof(kiss_fft_cpx)), (&in))));
   memreg_add(in);
   for (i = 0; (i < input_len); i = (1 + i)) {
     (in[i]).r = input[(2 * i)];
