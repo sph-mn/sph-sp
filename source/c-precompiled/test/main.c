@@ -264,7 +264,7 @@ status_t test_fftr() {
   b_len = sp_fftr_output_len(a_len);
   a_again_len = sp_fftri_output_len(b_len);
   status_require((sp_fftr(a, a_len, b)));
-  test_helper_assert("result length", (4 == b_len));
+  test_helper_assert("result length", (8 == b_len));
   test_helper_assert("result first bin", (1 < b[0]));
   test_helper_assert("result second bin", (-0.5 > b[2]));
   test_helper_assert("result third bin", (0 < b[4]));

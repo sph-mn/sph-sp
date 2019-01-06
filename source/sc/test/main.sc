@@ -290,7 +290,7 @@
     b-len (sp-fftr-output-len a-len)
     a-again-len (sp-fftri-output-len b-len))
   (status-require (sp-fftr a a-len b))
-  (test-helper-assert "result length" (= 4 b-len))
+  (test-helper-assert "result length" (= 8 b-len))
   (test-helper-assert "result first bin" (< 1 (array-get b 0)))
   (test-helper-assert "result second bin" (> -0.5 (array-get b 2)))
   (test-helper-assert "result third bin" (< 0 (array-get b 4)))
