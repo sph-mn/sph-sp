@@ -450,7 +450,7 @@ exit:
   ir-f is only used when ir-f-arguments changed.
   values that need to be carried over with calls are kept in out-state.
   * out-state: if zero then state will be allocated. owned by caller.
-  * out-samples: owned by the caller. length must be at least in-len */
+  * out-samples: owned by the caller. length must be at least in-len and the number of output samples will be in-len */
 status_t sp_convolution_filter(sp_sample_t* in, sp_sample_count_t in_len, sp_convolution_filter_ir_f_t ir_f, void* ir_f_arguments, uint8_t ir_f_arguments_len, sp_convolution_filter_state_t** out_state, sp_sample_t* out_samples) {
   status_declare;
   sp_sample_count_t carryover_len;

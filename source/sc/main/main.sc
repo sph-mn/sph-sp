@@ -463,7 +463,7 @@
   ir-f is only used when ir-f-arguments changed.
   values that need to be carried over with calls are kept in out-state.
   * out-state: if zero then state will be allocated. owned by caller.
-  * out-samples: owned by the caller. length must be at least in-len"
+  * out-samples: owned by the caller. length must be at least in-len and the number of output samples will be in-len"
   status-declare
   (declare carryover-len sp-sample-count-t)
   (set carryover-len
