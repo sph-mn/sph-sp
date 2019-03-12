@@ -1,0 +1,14 @@
+#!/bin/sh
+
+# usage: ./exe/install [path-prefix]
+
+prefix="$1"
+lib_name="libsph-sp.so"
+lib_source="$PWD/temp/$lib_name"
+header_source="$PWD/source/c-precompiled/main/sph-sp.h"
+lib_target="$prefix/usr/lib"
+header_target="$prefix/usr/include"
+
+cp -rst "$lib_target" "$lib_source" &&
+cp -rst "$header_target" "$header_source" &&
+chmod 644 "$lib_source" "$header_source"
