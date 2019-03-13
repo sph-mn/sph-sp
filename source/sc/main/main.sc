@@ -50,6 +50,14 @@
   sp-sample-t
   (compound-statement (set (array-get (array-get a channel) a-size) (array-get b b-size))))
 
+(define (debug-display-sample-array a len) (void sp-sample-t* sp-sample-count-t)
+  "display a sample array in one line"
+  (declare i sp-sample-count-t)
+  (printf "%.17g" (array-get a 0))
+  (for ((set i 1) (< i len) (set i (+ 1 i)))
+    (printf " %.17g" (array-get a i)))
+  (printf "\n"))
+
 (define (sp-status-description a) (uint8-t* status-t)
   "get a string description for a status id in a status-t"
   (declare b char*)
@@ -346,22 +354,28 @@
   result-carryover will contain values after index a-len - 1 that will not be carried over to the next call.
   carryover-len should be zero for the first call or its content should be zeros.
   carryover-len for subsequent calls should be b-len - 1 or if b-len changed b-len - 1  from the previous call.
-  if b-len is one then there is no carryover"
+  if b-len is one then there is no carryover.
+  if a-len is smaller than b-len then, with the current implementation, additional performance costs ensue from shifting the carryover array each call"
   (declare
     size sp-sample-count-t
     a-index sp-sample-count-t
     b-index sp-sample-count-t
     c-index sp-sample-count-t)
-  (memset result-samples 0 (* a-len (sizeof sp-sample-t)))
   (if carryover-len
-    (memcpy
-      result-samples
-      result-carryover
-      (*
-        (if* (< a-len carryover-len) a-len
-          carryover-len)
-        (sizeof sp-sample-t))))
-  (memset result-carryover 0 (* (- b-len 1) (sizeof sp-sample-t)))
+    (if (<= carryover-len a-len)
+      (begin
+        (sc-comment "copy all entries to result and reset")
+        (memcpy result-samples result-carryover (* carryover-len (sizeof sp-sample-t)))
+        (memset result-carryover 0 (* carryover-len (sizeof sp-sample-t)))
+        (memset (+ carryover-len result-samples) 0 (* (- a-len carryover-len) (sizeof sp-sample-t))))
+      (begin
+        (sc-comment "copy as many entries as fit into result and shift remaining to the left")
+        (memcpy result-samples result-carryover (* a-len (sizeof sp-sample-t)))
+        (memmove
+          result-carryover
+          (+ a-len result-carryover) (* (- carryover-len a-len) (sizeof sp-sample-t)))
+        (memset (+ (- carryover-len a-len) result-samples) 0 (* a-len (sizeof sp-sample-t)))))
+    (memset result-samples 0 (* a-len (sizeof sp-sample-t))))
   (sc-comment "result values." "first process values that dont lead to carryover")
   (set size
     (if* (< a-len b-len) 0
@@ -397,6 +411,7 @@
   status-declare
   (declare
     carryover sp-sample-t*
+    carryover-alloc-len sp-sample-count-t
     ir sp-sample-t*
     ir-len sp-sample-count-t
     state sp-convolution-filter-state-t*)
@@ -419,8 +434,7 @@
     (begin
       (sc-comment "new")
       (status-require (sph-helper-malloc (sizeof sp-convolution-filter-state-t) &state))
-      (status-require
-        (sph-helper-malloc (sizeof sp-convolution-filter-state-t) &state:ir-f-arguments))
+      (status-require (sph-helper-malloc ir-f-arguments-len &state:ir-f-arguments))
       (memreg-add state)
       (memreg-add state:ir-f-arguments)
       (set
@@ -432,17 +446,26 @@
   (status-require (ir-f ir-f-arguments &ir &ir-len))
   (sc-comment
     "eventually extend carryover array. the array is never shrunk."
-    "carryover-len is at least ir-len - 1." "carryover-alloc-len is the length of the whole array")
+    "carryover-len is at least ir-len - 1."
+    "carryover-alloc-len is the length of the whole array."
+    "new and extended areas must be set to zero")
+  (set carryover-alloc-len (- ir-len 1))
   (if state:carryover
-    (if (> ir-len state:carryover-alloc-len)
-      (begin
-        (set carryover state:carryover)
-        (status-require (sph-helper-realloc (* (- ir-len 1) (sizeof sp-sample-t)) &carryover))
-        (set state:carryover-alloc-len (- ir-len 1)))
-      (set carryover state:carryover))
     (begin
-      (status-require (sph-helper-calloc (* (- ir-len 1) (sizeof sp-sample-t)) &carryover))
-      (set state:carryover-alloc-len (- ir-len 1))))
+      (set carryover state:carryover)
+      (if (> ir-len state:ir-len)
+        (begin
+          (if (> carryover-alloc-len state:carryover-alloc-len)
+            (begin
+              (status-require
+                (sph-helper-realloc (* carryover-alloc-len (sizeof sp-sample-t)) &carryover))
+              (set state:carryover-alloc-len carryover-alloc-len)))
+          (sc-comment "in any case reset the extension area")
+          (memset
+            (+ (- state:ir-len 1) carryover) 0 (* (- ir-len state:ir-len) (sizeof sp-sample-t))))))
+    (begin
+      (status-require (sph-helper-calloc (* carryover-alloc-len (sizeof sp-sample-t)) &carryover))
+      (set state:carryover-alloc-len carryover-alloc-len)))
   (set
     state:carryover carryover
     state:ir ir
@@ -462,7 +485,7 @@
   kernel created by ir-f with ir-f-arguments.
   ir-f is only used when ir-f-arguments changed.
   values that need to be carried over with calls are kept in out-state.
-  * out-state: if zero then state will be allocated. owned by caller.
+  * out-state: if zero then state will be allocated. owned by caller. the state can currently not be reused with varying ir-f-argument sizes.
   * out-samples: owned by the caller. length must be at least in-len and the number of output samples will be in-len"
   status-declare
   (declare carryover-len sp-sample-count-t)

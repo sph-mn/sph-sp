@@ -171,8 +171,14 @@ status_t test_windowed_sinc() {
   status_require((sp_windowed_sinc_bp_br_ir(cutoff, cutoff, transition, transition, 1, (&ir), (&ir_len))));
   /* filter functions */
   status_require((sp_windowed_sinc_lp_hp(source, 10, (0.1), (0.08), 0, (&state), result)));
+  sp_convolution_filter_state_free(state);
+  state = 0;
   status_require((sp_windowed_sinc_lp_hp(source, 10, (0.1), (0.08), 1, (&state), result)));
+  sp_convolution_filter_state_free(state);
+  state = 0;
   status_require((sp_windowed_sinc_bp_br(source, 10, (0.1), (0.4), (0.08), (0.08), 0, (&state), result)));
+  sp_convolution_filter_state_free(state);
+  state = 0;
   status_require((sp_windowed_sinc_bp_br(source, 10, (0.1), (0.4), (0.08), (0.08), 1, (&state), result)));
   sp_convolution_filter_state_free(state);
 exit:
@@ -265,10 +271,10 @@ status_t test_fftr() {
   a_again_len = sp_fftri_output_len(b_len);
   status_require((sp_fftr(a, a_len, b)));
   test_helper_assert("result length", (8 == b_len));
-  test_helper_assert("result first bin", (1 < b[0]));
-  test_helper_assert("result second bin", (-0.5 > b[2]));
-  test_helper_assert("result third bin", (0 < b[4]));
-  test_helper_assert("result fourth bin", (0 > b[6]));
+  test_helper_assert("result first bin", (0 < b[1]));
+  test_helper_assert("result second bin", (0 < b[2]));
+  test_helper_assert("result fourth bin", (0 == b[4]));
+  test_helper_assert("result sixth bin", (0 == b[6]));
   status_require((sp_fftri(b, b_len, a_again)));
   test_helper_assert("result 2 length", (a_len == a_again_len));
 exit:

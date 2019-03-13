@@ -45,6 +45,15 @@
   }
 define_sp_interleave(sp_interleave, sp_sample_t, ({ b[b_size] = (a[channel])[a_size]; }));
 define_sp_interleave(sp_deinterleave, sp_sample_t, ({ (a[channel])[a_size] = b[b_size]; }));
+/** display a sample array in one line */
+void debug_display_sample_array(sp_sample_t* a, sp_sample_count_t len) {
+  sp_sample_count_t i;
+  printf(("%.17g"), (a[0]));
+  for (i = 1; (i < len); i = (1 + i)) {
+    printf((" %.17g"), (a[i]));
+  };
+  printf("\n");
+};
 /** get a string description for a status id in a status-t */
 uint8_t* sp_status_description(status_t a) {
   char* b;
@@ -342,17 +351,28 @@ void sp_convolve_one(sp_sample_t* a, sp_sample_count_t a_len, sp_sample_t* b, sp
   result-carryover will contain values after index a-len - 1 that will not be carried over to the next call.
   carryover-len should be zero for the first call or its content should be zeros.
   carryover-len for subsequent calls should be b-len - 1 or if b-len changed b-len - 1  from the previous call.
-  if b-len is one then there is no carryover */
+  if b-len is one then there is no carryover.
+  if a-len is smaller than b-len then, with the current implementation, additional performance costs ensue from shifting the carryover array each call */
 void sp_convolve(sp_sample_t* a, sp_sample_count_t a_len, sp_sample_t* b, sp_sample_count_t b_len, sp_sample_count_t carryover_len, sp_sample_t* result_carryover, sp_sample_t* result_samples) {
   sp_sample_count_t size;
   sp_sample_count_t a_index;
   sp_sample_count_t b_index;
   sp_sample_count_t c_index;
-  memset(result_samples, 0, (a_len * sizeof(sp_sample_t)));
   if (carryover_len) {
-    memcpy(result_samples, result_carryover, (((a_len < carryover_len) ? a_len : carryover_len) * sizeof(sp_sample_t)));
+    if (carryover_len <= a_len) {
+      /* copy all entries to result and reset */
+      memcpy(result_samples, result_carryover, (carryover_len * sizeof(sp_sample_t)));
+      memset(result_carryover, 0, (carryover_len * sizeof(sp_sample_t)));
+      memset((carryover_len + result_samples), 0, ((a_len - carryover_len) * sizeof(sp_sample_t)));
+    } else {
+      /* copy as many entries as fit into result and shift remaining to the left */
+      memcpy(result_samples, result_carryover, (a_len * sizeof(sp_sample_t)));
+      memmove(result_carryover, (a_len + result_carryover), ((carryover_len - a_len) * sizeof(sp_sample_t)));
+      memset(((carryover_len - a_len) + result_samples), 0, (a_len * sizeof(sp_sample_t)));
+    };
+  } else {
+    memset(result_samples, 0, (a_len * sizeof(sp_sample_t)));
   };
-  memset(result_carryover, 0, ((b_len - 1) * sizeof(sp_sample_t)));
   /* result values.
 first process values that dont lead to carryover */
   size = ((a_len < b_len) ? 0 : (a_len - (b_len - 1)));
@@ -390,6 +410,7 @@ void sp_convolution_filter_state_free(sp_convolution_filter_state_t* state) {
 status_t sp_convolution_filter_state_set(sp_convolution_filter_ir_f_t ir_f, void* ir_f_arguments, uint8_t ir_f_arguments_len, sp_convolution_filter_state_t** out_state) {
   status_declare;
   sp_sample_t* carryover;
+  sp_sample_count_t carryover_alloc_len;
   sp_sample_t* ir;
   sp_sample_count_t ir_len;
   sp_convolution_filter_state_t* state;
@@ -410,7 +431,7 @@ status_t sp_convolution_filter_state_set(sp_convolution_filter_ir_f_t ir_f, void
   } else {
     /* new */
     status_require((sph_helper_malloc((sizeof(sp_convolution_filter_state_t)), (&state))));
-    status_require((sph_helper_malloc((sizeof(sp_convolution_filter_state_t)), (&(state->ir_f_arguments)))));
+    status_require((sph_helper_malloc(ir_f_arguments_len, (&(state->ir_f_arguments)))));
     memreg_add(state);
     memreg_add((state->ir_f_arguments));
     state->carryover_alloc_len = 0;
@@ -422,18 +443,22 @@ status_t sp_convolution_filter_state_set(sp_convolution_filter_ir_f_t ir_f, void
   status_require((ir_f(ir_f_arguments, (&ir), (&ir_len))));
   /* eventually extend carryover array. the array is never shrunk.
 carryover-len is at least ir-len - 1.
-carryover-alloc-len is the length of the whole array */
+carryover-alloc-len is the length of the whole array.
+new and extended areas must be set to zero */
+  carryover_alloc_len = (ir_len - 1);
   if (state->carryover) {
-    if (ir_len > state->carryover_alloc_len) {
-      carryover = state->carryover;
-      status_require((sph_helper_realloc(((ir_len - 1) * sizeof(sp_sample_t)), (&carryover))));
-      state->carryover_alloc_len = (ir_len - 1);
-    } else {
-      carryover = state->carryover;
+    carryover = state->carryover;
+    if (ir_len > state->ir_len) {
+      if (carryover_alloc_len > state->carryover_alloc_len) {
+        status_require((sph_helper_realloc((carryover_alloc_len * sizeof(sp_sample_t)), (&carryover))));
+        state->carryover_alloc_len = carryover_alloc_len;
+      };
+      /* in any case reset the extension area */
+      memset(((state->ir_len - 1) + carryover), 0, ((ir_len - state->ir_len) * sizeof(sp_sample_t)));
     };
   } else {
-    status_require((sph_helper_calloc(((ir_len - 1) * sizeof(sp_sample_t)), (&carryover))));
-    state->carryover_alloc_len = (ir_len - 1);
+    status_require((sph_helper_calloc((carryover_alloc_len * sizeof(sp_sample_t)), (&carryover))));
+    state->carryover_alloc_len = carryover_alloc_len;
   };
   state->carryover = carryover;
   state->ir = ir;
@@ -449,7 +474,7 @@ exit:
   kernel created by ir-f with ir-f-arguments.
   ir-f is only used when ir-f-arguments changed.
   values that need to be carried over with calls are kept in out-state.
-  * out-state: if zero then state will be allocated. owned by caller.
+  * out-state: if zero then state will be allocated. owned by caller. the state can currently not be reused with varying ir-f-argument sizes.
   * out-samples: owned by the caller. length must be at least in-len and the number of output samples will be in-len */
 status_t sp_convolution_filter(sp_sample_t* in, sp_sample_count_t in_len, sp_convolution_filter_ir_f_t ir_f, void* ir_f_arguments, uint8_t ir_f_arguments_len, sp_convolution_filter_state_t** out_state, sp_sample_t* out_samples) {
   status_declare;
