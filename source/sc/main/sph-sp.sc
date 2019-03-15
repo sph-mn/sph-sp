@@ -105,10 +105,10 @@
   (sp-window-blackman a width) (sp-float-t sp-float-t sp-sample-count-t)
   (sp-spectral-inversion-ir a a-len) (void sp-sample-t* sp-sample-count-t)
   (sp-spectral-reversal-ir a a-len) (void sp-sample-t* sp-sample-count-t)
-  (sp-fft input-len input-real input-imag output-real output-imag)
-  (status-t sp-sample-count-t sp-sample-t* sp-sample-t* sp-sample-t* sp-sample-t*)
-  (sp-ffti input-len input-real input-imag output-real output-imag)
-  (status-t sp-sample-count-t sp-sample-t* sp-sample-t* sp-sample-t* sp-sample-t*)
+  (sp-fft input-len input/output-real input/output-imag)
+  (status-t sp-sample-count-t sp-sample-t* sp-sample-t*)
+  (sp-ffti input-len input/output-real input/output-imag)
+  (status-t sp-sample-count-t sp-sample-t* sp-sample-t*)
   (sp-moving-average source source-len prev prev-len next next-len radius start end result-samples)
   (status-t
     sp-sample-t*

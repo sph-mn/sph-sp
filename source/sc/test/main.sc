@@ -287,14 +287,10 @@
   (declare
     a-real (array sp-sample-t 6 -0.6 0.1 0.4 0.8 0 0)
     a-imag (array sp-sample-t 6 0 0 0 0 0 0)
-    a-len sp-sample-count-t
-    b-real (array sp-sample-t 6 0 0 0 0 0 0)
-    b-imag (array sp-sample-t 6 0 0 0 0 0 0)
-    c-real (array sp-sample-t 6 0 0 0 0 0 0)
-    c-imag (array sp-sample-t 6 0 0 0 0 0 0))
+    a-len sp-sample-count-t)
   (set a-len 6)
-  (status-require (sp-fft a-len a-real a-imag b-real b-imag))
-  (status-require (sp-ffti a-len b-real b-imag c-real c-imag))
+  (status-require (sp-fft a-len a-real a-imag))
+  (status-require (sp-ffti a-len a-real a-imag))
   (label exit
     (return status)))
 

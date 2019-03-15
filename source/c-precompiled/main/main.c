@@ -135,11 +135,9 @@ sp_sample_t sp_sin_lq(sp_float_t a) {
 /** the normalised sinc function */
 sp_float_t sp_sinc(sp_float_t a) { return (((0 == a) ? 1 : (sin((M_PI * a)) / (M_PI * a)))); };
 /** all arrays should be input-len and are managed by the caller */
-status_t sp_fft(sp_sample_count_t input_len, sp_sample_t* input_real, sp_sample_t* input_imag, sp_sample_t* output_real, sp_sample_t* output_imag) {
+status_t sp_fft(sp_sample_count_t input_len, sp_sample_t* input_or_output_real, sp_sample_t* input_or_output_imag) {
   sp_status_declare;
-  memcpy(output_real, input_real, input_len);
-  memcpy(output_imag, input_imag, input_len);
-  status_id_require((!Fft_transform(output_real, output_imag, input_len)));
+  status_id_require((!Fft_transform(input_or_output_real, input_or_output_imag, input_len)));
 exit:
   return (status);
 };
@@ -147,11 +145,9 @@ exit:
   input-length > 0
   output-length = input-length
   output is allocated and owned by the caller */
-status_t sp_ffti(sp_sample_count_t input_len, sp_sample_t* input_real, sp_sample_t* input_imag, sp_sample_t* output_real, sp_sample_t* output_imag) {
+status_t sp_ffti(sp_sample_count_t input_len, sp_sample_t* input_or_output_real, sp_sample_t* input_or_output_imag) {
   sp_status_declare;
-  memcpy(output_real, input_real, input_len);
-  memcpy(output_imag, input_imag, input_len);
-  status_id_require((!(1 == Fft_inverseTransform(output_real, output_imag, input_len))));
+  status_id_require((!(1 == Fft_inverseTransform(input_or_output_real, input_or_output_imag, input_len))));
 exit:
   return (status);
 };

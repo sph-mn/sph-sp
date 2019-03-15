@@ -263,13 +263,9 @@ status_t test_fft() {
   sp_sample_t a_real[6] = { -0.6, 0.1, 0.4, 0.8, 0, 0 };
   sp_sample_t a_imag[6] = { 0, 0, 0, 0, 0, 0 };
   sp_sample_count_t a_len;
-  sp_sample_t b_real[6] = { 0, 0, 0, 0, 0, 0 };
-  sp_sample_t b_imag[6] = { 0, 0, 0, 0, 0, 0 };
-  sp_sample_t c_real[6] = { 0, 0, 0, 0, 0, 0 };
-  sp_sample_t c_imag[6] = { 0, 0, 0, 0, 0, 0 };
   a_len = 6;
-  status_require((sp_fft(a_len, a_real, a_imag, b_real, b_imag)));
-  status_require((sp_ffti(a_len, b_real, b_imag, c_real, c_imag)));
+  status_require((sp_fft(a_len, a_real, a_imag)));
+  status_require((sp_ffti(a_len, a_real, a_imag)));
 exit:
   return (status);
 };

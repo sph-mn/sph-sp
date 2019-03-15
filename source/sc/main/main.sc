@@ -129,26 +129,23 @@
     (if* (= 0 a) 1
       (/ (sin (* M_PI a)) (* M_PI a)))))
 
-(define (sp-fft input-len input-real input-imag output-real output-imag)
-  (status-t sp-sample-count-t sp-sample-t* sp-sample-t* sp-sample-t* sp-sample-t*)
+(define (sp-fft input-len input/output-real input/output-imag)
+  (status-t sp-sample-count-t sp-sample-t* sp-sample-t*)
   "all arrays should be input-len and are managed by the caller"
   sp-status-declare
-  (memcpy output-real input-real input-len)
-  (memcpy output-imag input-imag input-len)
-  (status-id-require (not (Fft_transform output-real output-imag input-len)))
+  (status-id-require (not (Fft_transform input/output-real input/output-imag input-len)))
   (label exit
     (return status)))
 
-(define (sp-ffti input-len input-real input-imag output-real output-imag)
-  (status-t sp-sample-count-t sp-sample-t* sp-sample-t* sp-sample-t* sp-sample-t*)
+(define (sp-ffti input-len input/output-real input/output-imag)
+  (status-t sp-sample-count-t sp-sample-t* sp-sample-t*)
   "[[real, imaginary], ...]:complex-numbers -> real-numbers
   input-length > 0
   output-length = input-length
   output is allocated and owned by the caller"
   sp-status-declare
-  (memcpy output-real input-real input-len)
-  (memcpy output-imag input-imag input-len)
-  (status-id-require (not (= 1 (Fft_inverseTransform output-real output-imag input-len))))
+  (status-id-require
+    (not (= 1 (Fft_inverseTransform input/output-real input/output-imag input-len))))
   (label exit
     (return status)))
 
