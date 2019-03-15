@@ -361,11 +361,14 @@ status_t sp_convolution_filter_state_set(sp_convolution_filter_ir_f_t ir_f, void
   if (*out_state) {
     /* existing */
     state = *out_state;
-    if ((state->ir_f == ir_f) && (0 == memcmp((state->ir_f_arguments), ir_f_arguments, ir_f_arguments_len))) {
+    if ((state->ir_f == ir_f) && (ir_f_arguments_len == state->ir_f_arguments_len) && (0 == memcmp((state->ir_f_arguments), ir_f_arguments, ir_f_arguments_len))) {
       /* unchanged */
       return (status);
     } else {
       /* changed */
+      if (ir_f_arguments_len > state->ir_f_arguments_len) {
+        status_require((sph_helper_realloc(ir_f_arguments_len, (&(state->ir_f_arguments)))));
+      };
       if (state->ir) {
         free((state->ir));
       };

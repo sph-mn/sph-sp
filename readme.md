@@ -6,7 +6,7 @@ c code and shared library for sound file input/output and example implementation
 * 64 bit float sample format by default, other formats possible for many processors
 * unlimited channel count and sample rate
 * processing of non-interleaved sample arrays with one array per channel
-* processors for continuous data streams
+* processors that can be used on blocks of continuous data streams
   * windowed sinc low-pass, high-pass, band-pass and band-reject filters
   * moving average filter
   * convolution

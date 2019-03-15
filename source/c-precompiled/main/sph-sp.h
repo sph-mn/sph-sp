@@ -113,6 +113,7 @@ typedef struct {
   sp_sample_t* ir;
   sp_convolution_filter_ir_f_t ir_f;
   void* ir_f_arguments;
+  uint8_t ir_f_arguments_len;
   sp_sample_count_t ir_len;
 } sp_convolution_filter_state_t;
 status_t sp_file_read(sp_file_t* file, sp_sample_count_t sample_count, sp_sample_t** result_channel_data, sp_sample_count_t* result_sample_count);

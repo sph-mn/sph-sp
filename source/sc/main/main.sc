@@ -376,12 +376,16 @@
       (set state *out-state)
       (if
         (and
-          (= state:ir-f ir-f) (= 0 (memcmp state:ir-f-arguments ir-f-arguments ir-f-arguments-len)))
+          (= state:ir-f ir-f)
+          (= ir-f-arguments-len state:ir-f-arguments-len)
+          (= 0 (memcmp state:ir-f-arguments ir-f-arguments ir-f-arguments-len)))
         (begin
           (sc-comment "unchanged")
           (return status))
         (begin
           (sc-comment "changed")
+          (if (> ir-f-arguments-len state:ir-f-arguments-len)
+            (status-require (sph-helper-realloc ir-f-arguments-len &state:ir-f-arguments)))
           (if state:ir (free state:ir)))))
     (begin
       (sc-comment "new")

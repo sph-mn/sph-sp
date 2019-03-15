@@ -59,6 +59,7 @@
       (ir sp-sample-t*)
       (ir-f sp-convolution-filter-ir-f-t)
       (ir-f-arguments void*)
+      (ir-f-arguments-len uint8-t)
       (ir-len sp-sample-count-t)))
   (sp-file-read file sample-count result-channel-data result-sample-count)
   (status-t sp-file-t* sp-sample-count-t sp-sample-t** sp-sample-count-t*)
