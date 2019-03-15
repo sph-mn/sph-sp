@@ -1,13 +1,11 @@
 #include <stdio.h>
 #include <fcntl.h>
-#include <alsa/asoundlib.h>
 #include <sndfile.h>
 #include "../main/sph-sp.h"
 #include "../foreign/sph/float.c"
 #include "../foreign/sph/helper.c"
 #include "../foreign/sph/memreg.c"
-#include "./kiss_fft.h"
-#include "./tools/kiss_fftr.h"
+#include <foreign/nayuki-fft/fft.c>
 #define sp_status_declare status_declare_group(sp_status_group_sp)
 #define sp_libc_status_require_id(id) \
   if (id < 0) { \
@@ -19,11 +17,6 @@
     status_set_group_goto(sp_status_group_libc); \
   } else { \
     status_reset; \
-  }
-#define sp_alsa_status_require(expression) \
-  status.id = expression; \
-  if (status_is_failure) { \
-    status_set_group_goto(sp_status_group_alsa); \
   }
 /** define a deinterleave, interleave or similar routine.
     a: source
@@ -70,13 +63,9 @@ uint8_t* sp_status_description(status_t a) {
       b = "file channel count or sample rate is different from what was requested";
     } else if (sp_status_id_file_incomplete == a.id) {
       b = "incomplete write";
-    } else if (sp_status_id_port_type == a.id) {
-      b = "incompatible port type";
     } else {
       b = "";
     };
-  } else if (!strcmp(sp_status_group_alsa, (a.group))) {
-    b = ((char*)(snd_strerror((a.id))));
   } else if (!strcmp(sp_status_group_sndfile, (a.group))) {
     b = ((char*)(sf_error_number((a.id))));
   } else if (!strcmp(sp_status_group_sph, (a.group))) {
@@ -89,7 +78,7 @@ uint8_t* sp_status_description(status_t a) {
 /** get a single word identifier for a status id in a status-t */
 uint8_t* sp_status_name(status_t a) {
   char* b;
-  if (!strcmp(sp_status_group_alsa, (a.group))) {
+  if (0 == strcmp(sp_status_group_sp, (a.group))) {
     if (sp_status_id_input_type == a.id) {
       b = "input-type";
     } else if (sp_status_id_not_implemented == a.id) {
@@ -99,13 +88,12 @@ uint8_t* sp_status_name(status_t a) {
     } else {
       b = "unknown";
     };
-  } else if (!strcmp(sp_status_group_alsa, (a.group))) {
-    b = "alsa";
-  } else if (!strcmp(sp_status_group_sndfile, (a.group))) {
+  } else if (0 == strcmp(sp_status_group_sndfile, (a.group))) {
     b = "sndfile";
   } else {
     b = "unknown";
   };
+  return (b);
 };
 void sp_channel_data_free(sp_sample_t** a, sp_channel_count_t channel_count) {
   while (channel_count) {
@@ -146,67 +134,25 @@ sp_sample_t sp_sin_lq(sp_float_t a) {
 };
 /** the normalised sinc function */
 sp_float_t sp_sinc(sp_float_t a) { return (((0 == a) ? 1 : (sin((M_PI * a)) / (M_PI * a)))); };
-/** real-numbers -> [[real, imaginary] ...]:complex-numbers
-  write to output the real and imaginary part alternatingly.
-  input-len should be even otherwise the last input sample is ignored.
-  output-len see sp-fftr-output-len.
-  output is allocated and owned by the caller */
-status_t sp_fftr(sp_sample_t* input, sp_sample_count_t input_len, sp_sample_t* output) {
+/** all arrays should be input-len and are managed by the caller */
+status_t sp_fft(sp_sample_count_t input_len, sp_sample_t* input_real, sp_sample_t* input_imag, sp_sample_t* output_real, sp_sample_t* output_imag) {
   sp_status_declare;
-  kiss_fftr_cfg cfg;
-  kiss_fft_cpx* out;
-  sp_sample_count_t out_len;
-  sp_sample_count_t i;
-  memreg_init(2);
-  /* ensure that the length is even, otherwise kissfft error "Real FFT optimization must be even."
-reduce because  */
-  if (input_len % 2) {
-    input_len = (input_len - 1);
-  };
-  cfg = kiss_fftr_alloc(input_len, 0, 0, 0);
-  if (!cfg) {
-    status_set_both_goto(sp_status_group_sp, sp_status_id_memory);
-  };
-  memreg_add(cfg);
-  /* convert from kiss-fft-cpx to array with alternated real and imaginary part.
-out must be input-len or it segfaults but only the first half of the result will be non-zero */
-  status_require((sph_helper_calloc((input_len * sizeof(kiss_fft_cpx)), (&out))));
-  memreg_add(out);
-  kiss_fftr(cfg, input, out);
-  out_len = (sp_fftr_output_len(input_len) / 2);
-  for (i = 0; (i < out_len); i = (1 + i)) {
-    output[(2 * i)] = (out[i]).r;
-    output[(1 + (2 * i))] = (out[i]).i;
-  };
+  memcpy(output_real, input_real, input_len);
+  memcpy(output_imag, input_imag, input_len);
+  status_id_require((!Fft_transform(output_real, output_imag, input_len)));
 exit:
-  memreg_free;
   return (status);
 };
 /** [[real, imaginary], ...]:complex-numbers -> real-numbers
   input-length > 0
-  output-length see sp-fftri-output-len.
+  output-length = input-length
   output is allocated and owned by the caller */
-status_t sp_fftri(sp_sample_t* input, sp_sample_count_t input_len, sp_sample_t* output) {
+status_t sp_ffti(sp_sample_count_t input_len, sp_sample_t* input_real, sp_sample_t* input_imag, sp_sample_t* output_real, sp_sample_t* output_imag) {
   sp_status_declare;
-  kiss_fftr_cfg cfg;
-  kiss_fft_cpx* in;
-  sp_sample_count_t i;
-  memreg_init(2);
-  cfg = kiss_fftr_alloc(input_len, 1, 0, 0);
-  if (!cfg) {
-    status_set_id_goto(sp_status_id_memory);
-  };
-  memreg_add(cfg);
-  /* convert input to kiss-fft-cpx */
-  status_require((sph_helper_calloc((input_len * sizeof(kiss_fft_cpx)), (&in))));
-  memreg_add(in);
-  for (i = 0; (i < input_len); i = (1 + i)) {
-    (in[i]).r = input[(2 * i)];
-    (in[i]).i = input[(1 + (2 * i))];
-  };
-  kiss_fftri(cfg, in, output);
+  memcpy(output_real, input_real, input_len);
+  memcpy(output_imag, input_imag, input_len);
+  status_id_require((!(1 == Fft_inverseTransform(output_real, output_imag, input_len))));
 exit:
-  memreg_free;
   return (status);
 };
 /** apply a centered moving average filter to source at index start to end inclusively and write to result.

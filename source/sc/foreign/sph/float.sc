@@ -1,4 +1,3 @@
-(sc-comment "depends on sph/types.c")
 (pre-include "float.h" "math.h")
 
 (pre-define (define-float-sum prefix type)
@@ -36,15 +35,15 @@
       (set index (+ 1 index)))
     (return #t)))
 
-(define (f64-nearly-equal a b margin) (uint8-t f64 f64 f64)
+(define (f64-nearly-equal a b margin) (uint8-t double double double)
   "approximate float comparison. margin is a factor and is low for low accepted differences"
   (return (< (fabs (- a b)) margin)))
 
-(define (f32-nearly-equal a b margin) (uint8-t f32 f32 f32)
+(define (f32-nearly-equal a b margin) (uint8-t float float float)
   "approximate float comparison. margin is a factor and is low for low accepted differences"
   (return (< (fabs (- a b)) margin)))
 
-(define-float-array-nearly-equal f32 f32)
-(define-float-array-nearly-equal f64 f64)
-(define-float-sum f32 f32)
-(define-float-sum f64 f64)
+(define-float-array-nearly-equal f32 float)
+(define-float-array-nearly-equal f64 double)
+(define-float-sum f32 float)
+(define-float-sum f64 double)

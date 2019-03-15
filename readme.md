@@ -1,22 +1,21 @@
 # sph-sp
-c code and shared library for a sound input/output port object and example implementations of some sound processors
+c code and shared library for sound file input/output and example implementations of sound processors
 
 # features
-* generic port object for alsa and file io with many supported file [formats](http://www.mega-nerd.com/libsndfile/)
-* compile-time customisable sample and file format
-* unlimited number of channels and sample rate
+* file input/output with many supported file [formats](http://www.mega-nerd.com/libsndfile/)
+* 64 bit float sample format by default, other formats possible for many processors
+* unlimited channel count and sample rate
 * processing of non-interleaved sample arrays with one array per channel
 * processors for continuous data streams
   * windowed sinc low-pass, high-pass, band-pass and band-reject filters
   * moving average filter
   * convolution
-* real fast fourier transform (fft) and real inverse fast fourier transform (ifft)
+* fast fourier transform (fft) and inverse fast fourier transform (ifft)
 
 # dependencies
 * run-time
   * libc
   * libsndfile
-  * alsa
   * linux or compatible
 * quick build
   * gcc and shell for the provided compile script
@@ -38,33 +37,21 @@ installed files
 * /usr/include/sph-sp.h
 * /usr/lib/libsph-sp.so
 
-# configuration options
-the file `source/c-precompiled/config.c` can be edited before compilation to set the following options
+# compile-time configuration options
+the file `source/sph-sp.h` can be edited before compilation to set the following options.
+the options can also be set before inclusion of sph-sp.h, but the shared library used must have been compiled with the same configuration.
 
 | name | default | description |
 | --- | --- | --- |
-|sp-channel-count-t|uint32-t||
-|sp-default-alsa-enable-soft-resample|1||
-|sp-default-alsa-latency|128||
-|sp-default-channel-count|1||
-|sp-default-sample-rate|16000||
-|sp-file-format|(SF-FORMAT-WAV \| SF-FORMAT-FLOAT)|soundfile file format. a combination of file and sample format soundfile constants, for example (SF-FORMAT-AU \| SF-FORMAT-DOUBLE). resampling is done automatically as necessary|
-|sp-float-t|double||
-|sp-sample-count-t|size-t||
-|sp-sample-format|sp-sample-format-f32|sample format used for internal processing. see below for possible values|
-|sp-sample-rate-t|uint32-t||
-
-## possible values for sp-sample-format
-sp-sample-format is the datatype used internally for sample values and is independent of the file format.
-integer formats are only supported for use with ports because most other routines expect floats
-
-| name | description |
-| --- | --- |
-|sp-sample-format-f64|64 bit floating point|
-|sp-sample-format-f32|32 bit floating point|
-|sp-sample-format-int32|32 bit signed integer|
-|sp-sample-format-int16|16 bit signed integer|
-|sp-sample-format-int8|8 bit signed integer|
+|sp-channel-count-t|uint8-t|data type for numbers of channels|
+|sp-file-format|(SF-FORMAT-WAV \| SF-FORMAT-DOUBLE)|soundfile file format. a combination of file and sample format soundfile constants, for example (SF-FORMAT-AU \| SF-FORMAT-DOUBLE). resampling is done automatically as necessary|
+|sp-float-t|double|data type for floating point values other than samples|
+|sp-sample-count-t|size-t|data type for numbers of samples|
+|sp-sample-rate-t|uint32-t|data type for sample rates|
+|sp-sample-sum|f64-sum|function (sp-sample-t* size-t -> sp-sample-t) that sums samples, by default with kahan error compensation|
+|sp-sample-t|double|sample format|
+|sp-sf-read|sf-readf-double|libsndfile file reader function to use|
+|sp-sf-write|sf-writef-double|libsndfile file writer function to use|
 
 # c usage
 ```
@@ -84,22 +71,23 @@ status.id zero is success
 ## routines
 ```
 sp_alloc_channel_array :: sp_channel_count_t:channel_count sp_sample_count_t:sample_count sp_sample_t***:result_array -> status_t
-sp_alsa_open :: uint8_t*:device_name int:mode sp_channel_count_t:channel_count sp_sample_rate_t:sample_rate int32_t:latency sp_port_t*:result_port -> status_t
 sp_channel_data_free :: sp_sample_t**:a sp_channel_count_t:channel_count -> void
 sp_convolution_filter :: sp_sample_t*:in sp_sample_count_t:in_len sp_convolution_filter_ir_f_t:ir_f void*:ir_f_arguments uint8_t:ir_f_arguments_len sp_convolution_filter_state_t**:out_state sp_sample_t*:out_samples -> status_t
 sp_convolution_filter_state_free :: sp_convolution_filter_state_t*:state -> void
 sp_convolution_filter_state_set :: sp_convolution_filter_ir_f_t:ir_f void*:ir_f_arguments uint8_t:ir_f_arguments_len sp_convolution_filter_state_t**:out_state -> status_t
 sp_convolve :: sp_sample_t*:a sp_sample_count_t:a_len sp_sample_t*:b sp_sample_count_t:b_len sp_sample_count_t:result_carryover_len sp_sample_t*:result_carryover sp_sample_t*:result_samples -> void
 sp_convolve_one :: sp_sample_t*:a sp_sample_count_t:a_len sp_sample_t*:b sp_sample_count_t:b_len sp_sample_t*:result_samples -> void
-sp_fftr :: sp_sample_t*:input sp_sample_count_t:input_len sp_sample_t*:output -> status_t
-sp_fftri :: sp_sample_t*:input sp_sample_count_t:input_len sp_sample_t*:output -> status_t
-sp_file_open :: uint8_t*:path int:mode sp_channel_count_t:channel_count sp_sample_rate_t:sample_rate sp_port_t*:result_port -> status_t
+sp_fft :: sp_sample_count_t:input_len sp_sample_t*:input_real sp_sample_t*:input_imag sp_sample_t*:output_real sp_sample_t*:output_imag -> status_t
+sp_ffti :: sp_sample_count_t:input_len sp_sample_t*:input_real sp_sample_t*:input_imag sp_sample_t*:output_real sp_sample_t*:output_imag -> status_t
+sp_file_close :: sp_file_t*:a -> status_t
+sp_file_open :: uint8_t*:path int:mode sp_channel_count_t:channel_count sp_sample_rate_t:sample_rate sp_file_t*:result_file -> status_t
+sp_file_position :: sp_file_t*:file sp_sample_count_t*:result_position -> status_t
+sp_file_position_set :: sp_file_t*:file size_t:sample_offset -> status_t
+sp_file_read :: sp_file_t*:file sp_sample_count_t:sample_count sp_sample_t**:result_channel_data sp_sample_count_t*:result_sample_count -> status_t
+sp_file_write :: sp_file_t*:file sp_sample_t**:channel_data sp_sample_count_t:sample_count sp_sample_count_t*:result_sample_count -> status_t
 sp_moving_average :: sp_sample_t*:source sp_sample_count_t:source_len sp_sample_t*:prev sp_sample_count_t:prev_len sp_sample_t*:next sp_sample_count_t:next_len sp_sample_count_t:radius sp_sample_count_t:start sp_sample_count_t:end sp_sample_t*:result_samples -> status_t
-sp_port_close :: sp_port_t*:a -> status_t
-sp_port_position :: sp_port_t*:port sp_sample_count_t*:result_position -> status_t
-sp_port_position_set :: sp_port_t*:port size_t:sample_offset -> status_t
-sp_port_read :: sp_port_t*:port sp_sample_count_t:sample_count sp_sample_t**:result_channel_data sp_sample_count_t*:result_sample_count -> status_t
-sp_port_write :: sp_port_t*:port sp_sample_t**:channel_data sp_sample_count_t:sample_count sp_sample_count_t*:result_sample_count -> status_t
+sp_null_ir :: sp_sample_t**:out_ir sp_sample_count_t*:out_len -> status_t
+sp_passthrough_ir :: sp_sample_t**:out_ir sp_sample_count_t*:out_len -> status_t
 sp_sin_lq :: sp_float_t:a -> sp_sample_t
 sp_sinc :: sp_float_t:a -> sp_float_t
 sp_spectral_inversion_ir :: sp_sample_t*:a sp_sample_count_t:a_len -> void
@@ -120,37 +108,21 @@ sp_windowed_sinc_lp_hp_ir_length :: sp_float_t:transition -> sp_sample_count_t
 
 ## macros
 ```
-boolean
-debug_log(format, ...)
-debug_trace(n)
-f32
-f64
-sp_fftr_output_len(input_len)
-sp_fftri_output_len(input_len)
+sp_file_bit_closed
+sp_file_bit_input
+sp_file_bit_output
+sp_file_bit_position
+sp_file_mode_read
+sp_file_mode_read_write
+sp_file_mode_write
 sp_octets_to_samples(a)
-sp_port_bit_closed
-sp_port_bit_input
-sp_port_bit_output
-sp_port_bit_position
-sp_port_mode_read
-sp_port_mode_read_write
-sp_port_mode_write
-sp_port_type_alsa
-sp_port_type_file
-sp_sample_format_f32
-sp_sample_format_f64
-sp_sample_format_int16
-sp_sample_format_int32
-sp_sample_format_int8
 sp_samples_to_octets(a)
-sp_status_group_alsa
 sp_status_group_libc
 sp_status_group_sndfile
 sp_status_group_sp
 sp_status_group_sph
 sp_windowed_sinc_ir_cutoff(freq, sample_rate)
 sp_windowed_sinc_ir_transition
-sph_status
 status_declare
 status_declare_group(group)
 status_goto
@@ -179,8 +151,7 @@ sp_convolution_filter_state_t: struct
   ir_f: sp_convolution_filter_ir_f_t
   ir_f_arguments: void*
   ir_len: sp_sample_count_t
-sp_port_t: struct
-  type: uint8_t
+sp_file_t: struct
   flags: uint8_t
   sample_rate: sp_sample_rate_t
   channel_count: sp_channel_count_t
@@ -195,20 +166,21 @@ status_t: struct
 sp_status_id_file_channel_mismatch sp_status_id_file_encoding sp_status_id_file_header
   sp_status_id_file_incompatible sp_status_id_file_incomplete sp_status_id_eof
   sp_status_id_input_type sp_status_id_memory sp_status_id_invalid_argument
-  sp_status_id_not_implemented sp_status_id_port_closed sp_status_id_port_position
-  sp_status_id_port_type sp_status_id_undefined
+  sp_status_id_not_implemented sp_status_id_file_closed sp_status_id_file_position
+  sp_status_id_file_type sp_status_id_undefined
 ```
 
 # other language bindings
 * scheme: [sph-sp-guile](https://github.com/sph-mn/sph-sp-guile)
 
 # license
-* files under `source/c/foreign/kissfft`: bsd 3-clause
+* files under `source/c/foreign/nayuki-fft`: mit license
 * rest: lgpl3+
 
 # thanks to
 * [tom roelandts](https://tomroelandts.com/) on whose information the windowed sinc filters are based on
-* [mborg](https://github.com/mborgerding/kissfft) for an fft implementation that i am able to figure out how to use
+* [mborg](https://github.com/mborgerding/kissfft) for the first fft implementation that was used
+* [nayuki](https://www.nayuki.io/page/free-small-fft-in-multiple-languages) for a concise fft implementation that is currently used
 * [steve smith's dspguide](http://www.dspguide.com/) for information about dsp theory
 
 # other interesting projects

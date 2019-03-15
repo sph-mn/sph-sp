@@ -24,17 +24,10 @@
   (if status-is-success (printf "--\ntests finished successfully.\n")
     (printf "\ntests failed. %d %s\n" status.id (sp-status-description status))))
 
-(define (debug-log-samples a len) (void sp-sample-t* size-t)
-  (declare
-    column-width size-t
-    column-end size-t
-    index size-t)
-  (set
-    column-width 8
-    index 0)
-  (while (< index len)
-    (set column-end (+ index column-width))
-    (while (and (< index len) (< index column-end))
-      (printf "%f " (array-get a index))
-      (set index (+ 1 index)))
-    (printf "\n")))
+(define (debug-display-sample-array a len) (void sp-sample-t* sp-sample-count-t)
+  "display a sample array in one line"
+  (declare i sp-sample-count-t)
+  (printf "%.17g" (array-get a 0))
+  (for ((set i 1) (< i len) (set i (+ 1 i)))
+    (printf " %.17g" (array-get a i)))
+  (printf "\n"))

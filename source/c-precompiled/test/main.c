@@ -184,14 +184,14 @@ status_t test_windowed_sinc() {
 exit:
   return (status);
 };
-status_t test_port() {
+status_t test_file() {
   status_declare;
   sp_sample_count_t channel;
   sp_channel_count_t channel_count;
   sp_sample_t** channel_data;
   sp_sample_t** channel_data_2;
   sp_sample_count_t len;
-  sp_port_t port;
+  sp_file_t file;
   sp_sample_count_t position;
   sp_sample_count_t sample_count;
   sp_sample_count_t result_sample_count;
@@ -220,14 +220,14 @@ status_t test_port() {
   };
   goto exit;
   /* test create */
-  status_require((sp_file_open(test_file_path, sp_port_mode_read_write, channel_count, sample_rate, (&port))));
+  status_require((sp_file_open(test_file_path, sp_file_mode_read_write, channel_count, sample_rate, (&file))));
   printf("  create\n");
-  status_require((sp_port_position((&port), (&position))));
-  status_require((sp_port_write((&port), channel_data, sample_count, (&result_sample_count))));
-  status_require((sp_port_position((&port), (&position))));
-  test_helper_assert("sp-port-position file after write", (sample_count == position));
-  status_require((sp_port_position_set((&port), 0)));
-  status_require((sp_port_read((&port), sample_count, channel_data_2, (&result_sample_count))));
+  status_require((sp_file_position((&file), (&position))));
+  status_require((sp_file_write((&file), channel_data, sample_count, (&result_sample_count))));
+  status_require((sp_file_position((&file), (&position))));
+  test_helper_assert("sp-file-position file after write", (sample_count == position));
+  status_require((sp_file_position_set((&file), 0)));
+  status_require((sp_file_read((&file), sample_count, channel_data_2, (&result_sample_count))));
   /* compare read result with output data */
   len = channel_count;
   unequal = 0;
@@ -235,15 +235,15 @@ status_t test_port() {
     len = (len - 1);
     unequal = !sp_sample_array_nearly_equal((channel_data[len]), sample_count, (channel_data_2[len]), sample_count, error_margin);
   };
-  test_helper_assert("sp-port-read new file result", !unequal);
-  status_require((sp_port_close((&port))));
+  test_helper_assert("sp-file-read new file result", !unequal);
+  status_require((sp_file_close((&file))));
   printf("  write\n");
   /* test open */
-  status_require((sp_file_open(test_file_path, sp_port_mode_read_write, 2, 8000, (&port))));
-  status_require((sp_port_position((&port), (&position))));
-  test_helper_assert("sp-port-position existing file", (sample_count == position));
-  status_require((sp_port_position_set((&port), 0)));
-  sp_port_read((&port), sample_count, channel_data_2, (&result_sample_count));
+  status_require((sp_file_open(test_file_path, sp_file_mode_read_write, 2, 8000, (&file))));
+  status_require((sp_file_position((&file), (&position))));
+  test_helper_assert("sp-file-position existing file", (sample_count == position));
+  status_require((sp_file_position_set((&file), 0)));
+  sp_file_read((&file), sample_count, channel_data_2, (&result_sample_count));
   /* compare read result with output data */
   unequal = 0;
   len = channel_count;
@@ -251,47 +251,36 @@ status_t test_port() {
     len = (len - 1);
     unequal = !sp_sample_array_nearly_equal((channel_data[len]), sample_count, (channel_data_2[len]), sample_count, error_margin);
   };
-  test_helper_assert("sp-port-read existing result", !unequal);
-  status_require((sp_port_close((&port))));
+  test_helper_assert("sp-file-read existing result", !unequal);
+  status_require((sp_file_close((&file))));
   printf("  open\n");
 exit:
   memreg_free;
   return (status);
 };
-status_t test_fftr() {
+status_t test_fft() {
   status_declare;
-  sp_sample_t a[6] = { 0, 0.1, 0.4, 0.8, 0, 0 };
+  sp_sample_t a_real[6] = { -0.6, 0.1, 0.4, 0.8, 0, 0 };
+  sp_sample_t a_imag[6] = { 0, 0, 0, 0, 0, 0 };
   sp_sample_count_t a_len;
-  sp_sample_t a_again[6] = { 0, 0, 0, 0, 0, 0 };
-  sp_sample_count_t a_again_len;
-  sp_sample_count_t b_len;
-  sp_sample_t b[8] = { 0, 0, 0, 0, 0, 0, 0, 0 };
+  sp_sample_t b_real[6] = { 0, 0, 0, 0, 0, 0 };
+  sp_sample_t b_imag[6] = { 0, 0, 0, 0, 0, 0 };
+  sp_sample_t c_real[6] = { 0, 0, 0, 0, 0, 0 };
+  sp_sample_t c_imag[6] = { 0, 0, 0, 0, 0, 0 };
   a_len = 6;
-  b_len = sp_fftr_output_len(a_len);
-  a_again_len = sp_fftri_output_len(b_len);
-  status_require((sp_fftr(a, a_len, b)));
-  test_helper_assert("result length", (8 == b_len));
-  test_helper_assert("result first bin", (0 < b[1]));
-  test_helper_assert("result second bin", (0 < b[2]));
-  test_helper_assert("result fourth bin", (0 == b[4]));
-  test_helper_assert("result sixth bin", (0 == b[6]));
-  status_require((sp_fftri(b, b_len, a_again)));
-  test_helper_assert("result 2 length", (a_len == a_again_len));
+  status_require((sp_fft(a_len, a_real, a_imag, b_real, b_imag)));
+  status_require((sp_ffti(a_len, b_real, b_imag, c_real, c_imag)));
 exit:
   return (status);
 };
 int main() {
   status_declare;
-  if (!((sp_sample_format_f64 == sp_sample_format) || (sp_sample_format_f32 == sp_sample_format))) {
-    printf("error: the tests only support f64 or f32 sample type");
-    exit(1);
-  };
-  test_helper_test_one(test_fftr);
+  test_helper_test_one(test_fft);
   test_helper_test_one(test_spectral_inversion_ir);
   test_helper_test_one(test_base);
   test_helper_test_one(test_spectral_reversal_ir);
   test_helper_test_one(test_convolve);
-  test_helper_test_one(test_port);
+  test_helper_test_one(test_file);
   test_helper_test_one(test_moving_average);
   test_helper_test_one(test_windowed_sinc);
 exit:

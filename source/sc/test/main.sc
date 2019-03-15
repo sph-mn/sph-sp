@@ -197,7 +197,7 @@
   (label exit
     (return status)))
 
-(define (test-port) status-t
+(define (test-file) status-t
   status-declare
   (declare
     channel sp-sample-count-t
@@ -205,7 +205,7 @@
     channel-data sp-sample-t**
     channel-data-2 sp-sample-t**
     len sp-sample-count-t
-    port sp-port-t
+    file sp-file-t
     position sp-sample-count-t
     sample-count sp-sample-count-t
     result-sample-count sp-sample-count-t
@@ -234,14 +234,14 @@
   (goto exit)
   (sc-comment "test create")
   (status-require
-    (sp-file-open test-file-path sp-port-mode-read-write channel-count sample-rate &port))
+    (sp-file-open test-file-path sp-file-mode-read-write channel-count sample-rate &file))
   (printf "  create\n")
-  (status-require (sp-port-position &port &position))
-  (status-require (sp-port-write &port channel-data sample-count &result-sample-count))
-  (status-require (sp-port-position &port &position))
-  (test-helper-assert "sp-port-position file after write" (= sample-count position))
-  (status-require (sp-port-position-set &port 0))
-  (status-require (sp-port-read &port sample-count channel-data-2 &result-sample-count))
+  (status-require (sp-file-position &file &position))
+  (status-require (sp-file-write &file channel-data sample-count &result-sample-count))
+  (status-require (sp-file-position &file &position))
+  (test-helper-assert "sp-file-position file after write" (= sample-count position))
+  (status-require (sp-file-position-set &file 0))
+  (status-require (sp-file-read &file sample-count channel-data-2 &result-sample-count))
   (sc-comment "compare read result with output data")
   (set
     len channel-count
@@ -254,15 +254,15 @@
         (sp-sample-array-nearly-equal
           (array-get channel-data len)
           sample-count (array-get channel-data-2 len) sample-count error-margin))))
-  (test-helper-assert "sp-port-read new file result" (not unequal))
-  (status-require (sp-port-close &port))
+  (test-helper-assert "sp-file-read new file result" (not unequal))
+  (status-require (sp-file-close &file))
   (printf "  write\n")
   (sc-comment "test open")
-  (status-require (sp-file-open test-file-path sp-port-mode-read-write 2 8000 &port))
-  (status-require (sp-port-position &port &position))
-  (test-helper-assert "sp-port-position existing file" (= sample-count position))
-  (status-require (sp-port-position-set &port 0))
-  (sp-port-read &port sample-count channel-data-2 &result-sample-count)
+  (status-require (sp-file-open test-file-path sp-file-mode-read-write 2 8000 &file))
+  (status-require (sp-file-position &file &position))
+  (test-helper-assert "sp-file-position existing file" (= sample-count position))
+  (status-require (sp-file-position-set &file 0))
+  (sp-file-read &file sample-count channel-data-2 &result-sample-count)
   (sc-comment "compare read result with output data")
   (set
     unequal 0
@@ -275,50 +275,37 @@
         (sp-sample-array-nearly-equal
           (array-get channel-data len)
           sample-count (array-get channel-data-2 len) sample-count error-margin))))
-  (test-helper-assert "sp-port-read existing result" (not unequal))
-  (status-require (sp-port-close &port))
+  (test-helper-assert "sp-file-read existing result" (not unequal))
+  (status-require (sp-file-close &file))
   (printf "  open\n")
   (label exit
     memreg-free
     (return status)))
 
-(define (test-fftr) status-t
+(define (test-fft) status-t
   status-declare
   (declare
-    a (array sp-sample-t 6 0 0.1 0.4 0.8 0 0)
+    a-real (array sp-sample-t 6 -0.6 0.1 0.4 0.8 0 0)
+    a-imag (array sp-sample-t 6 0 0 0 0 0 0)
     a-len sp-sample-count-t
-    a-again (array sp-sample-t 6 0 0 0 0 0 0)
-    a-again-len sp-sample-count-t
-    b-len sp-sample-count-t
-    b (array sp-sample-t 8 0 0 0 0 0 0 0 0))
-  (set
-    a-len 6
-    b-len (sp-fftr-output-len a-len)
-    a-again-len (sp-fftri-output-len b-len))
-  (status-require (sp-fftr a a-len b))
-  (test-helper-assert "result length" (= 8 b-len))
-  (test-helper-assert "result first bin" (< 0 (array-get b 1)))
-  (test-helper-assert "result second bin" (< 0 (array-get b 2)))
-  (test-helper-assert "result fourth bin" (= 0 (array-get b 4)))
-  (test-helper-assert "result sixth bin" (= 0 (array-get b 6)))
-  (status-require (sp-fftri b b-len a-again))
-  (test-helper-assert "result 2 length" (= a-len a-again-len))
+    b-real (array sp-sample-t 6 0 0 0 0 0 0)
+    b-imag (array sp-sample-t 6 0 0 0 0 0 0)
+    c-real (array sp-sample-t 6 0 0 0 0 0 0)
+    c-imag (array sp-sample-t 6 0 0 0 0 0 0))
+  (set a-len 6)
+  (status-require (sp-fft a-len a-real a-imag b-real b-imag))
+  (status-require (sp-ffti a-len b-real b-imag c-real c-imag))
   (label exit
     (return status)))
 
 (define (main) int
   status-declare
-  (if
-    (not (or (= sp-sample-format-f64 sp-sample-format) (= sp-sample-format-f32 sp-sample-format)))
-    (begin
-      (printf "error: the tests only support f64 or f32 sample type")
-      (exit 1)))
-  (test-helper-test-one test-fftr)
+  (test-helper-test-one test-fft)
   (test-helper-test-one test-spectral-inversion-ir)
   (test-helper-test-one test-base)
   (test-helper-test-one test-spectral-reversal-ir)
   (test-helper-test-one test-convolve)
-  (test-helper-test-one test-port)
+  (test-helper-test-one test-file)
   (test-helper-test-one test-moving-average)
   (test-helper-test-one test-windowed-sinc)
   (label exit

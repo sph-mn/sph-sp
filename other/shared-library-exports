@@ -1,27 +1,26 @@
 exports {
   global:
     sp_alloc_channel_array;
-    sp_alsa_open;
     sp_channel_data_free;
     sp_convolution_filter;
     sp_convolution_filter_state_free;
     sp_convolution_filter_state_set;
     sp_convolve;
     sp_convolve_one;
-    sp_fftr;
-    sp_fftri;
+    sp_fft;
+    sp_ffti;
+    sp_file_close;
     sp_file_open;
+    sp_file_position;
+    sp_file_position_set;
+    sp_file_read;
+    sp_file_write;
     sp_init_guile;
     sp_moving_average;
     sp_null_ir;
     sp_passthrough_ir;
-    sp_port_close;
-    sp_port_position;
-    sp_port_position_set;
-    sp_port_read;
-    sp_port_write;
-    sp_sin_lq;
     sp_sinc;
+    sp_sin_lq;
     sp_spectral_inversion_ir;
     sp_spectral_reversal_ir;
     sp_status_description;

@@ -1,11 +1,10 @@
 (pre-include
   "stdio.h"
   "fcntl.h"
-  "alsa/asoundlib.h"
   "sndfile.h"
   "../main/sph-sp.h"
   "../foreign/sph/float.c"
-  "../foreign/sph/helper.c" "../foreign/sph/memreg.c" "./kiss_fft.h" "./tools/kiss_fftr.h")
+  "../foreign/sph/helper.c" "../foreign/sph/memreg.c" "foreign/nayuki-fft/fft.c")
 
 (pre-define
   sp-status-declare (status-declare-group sp-status-group-sp)
@@ -15,10 +14,6 @@
     (set status.id expression)
     (if (< status.id 0) (status-set-group-goto sp-status-group-libc)
       status-reset))
-  (sp-alsa-status-require expression)
-  (begin
-    (set status.id expression)
-    (if status-is-failure (status-set-group-goto sp-status-group-alsa)))
   (define-sp-interleave name type body)
   (begin
     "define a deinterleave, interleave or similar routine.
@@ -71,9 +66,7 @@
         (sp-status-id-file-incompatible
           (set b "file channel count or sample rate is different from what was requested"))
         (sp-status-id-file-incomplete (set b "incomplete write"))
-        (sp-status-id-port-type (set b "incompatible port type"))
         (else (set b ""))))
-    ((not (strcmp sp-status-group-alsa a.group)) (set b (convert-type (snd-strerror a.id) char*)))
     ( (not (strcmp sp-status-group-sndfile a.group))
       (set b (convert-type (sf-error-number a.id) char*)))
     ((not (strcmp sp-status-group-sph a.group)) (set b (sph-helper-status-description a)))
@@ -84,14 +77,14 @@
   "get a single word identifier for a status id in a status-t"
   (declare b char*)
   (cond
-    ( (not (strcmp sp-status-group-alsa a.group))
+    ( (= 0 (strcmp sp-status-group-sp a.group))
       (case = a.id
         (sp-status-id-input-type (set b "input-type"))
         (sp-status-id-not-implemented (set b "not-implemented"))
         (sp-status-id-memory (set b "memory"))
         (else (set b "unknown"))))
-    ((not (strcmp sp-status-group-alsa a.group)) (set b "alsa"))
-    ((not (strcmp sp-status-group-sndfile a.group)) (set b "sndfile")) (else (set b "unknown"))))
+    ((= 0 (strcmp sp-status-group-sndfile a.group)) (set b "sndfile")) (else (set b "unknown")))
+  (return b))
 
 (define (sp-channel-data-free a channel-count) (void sp-sample-t** sp-channel-count-t)
   (while channel-count
@@ -136,65 +129,27 @@
     (if* (= 0 a) 1
       (/ (sin (* M_PI a)) (* M_PI a)))))
 
-(define (sp-fftr input input-len output) (status-t sp-sample-t* sp-sample-count-t sp-sample-t*)
-  "real-numbers -> [[real, imaginary] ...]:complex-numbers
-  write to output the real and imaginary part alternatingly.
-  input-len should be even otherwise the last input sample is ignored.
-  output-len see sp-fftr-output-len.
-  output is allocated and owned by the caller"
+(define (sp-fft input-len input-real input-imag output-real output-imag)
+  (status-t sp-sample-count-t sp-sample-t* sp-sample-t* sp-sample-t* sp-sample-t*)
+  "all arrays should be input-len and are managed by the caller"
   sp-status-declare
-  (declare
-    cfg kiss-fftr-cfg
-    out kiss-fft-cpx*
-    out-len sp-sample-count-t
-    i sp-sample-count-t)
-  (memreg-init 2)
-  (sc-comment
-    "ensure that the length is even, otherwise kissfft error \"Real FFT optimization must be even.\""
-    "reduce because ")
-  (if (modulo input-len 2) (set input-len (- input-len 1)))
-  (set cfg (kiss-fftr-alloc input-len #f 0 0))
-  (if (not cfg) (status-set-both-goto sp-status-group-sp sp-status-id-memory))
-  (memreg-add cfg)
-  (sc-comment
-    "convert from kiss-fft-cpx to array with alternated real and imaginary part."
-    "out must be input-len or it segfaults but only the first half of the result will be non-zero")
-  (status-require (sph-helper-calloc (* input-len (sizeof kiss-fft-cpx)) &out))
-  (memreg-add out)
-  (kiss-fftr cfg input out)
-  (set out-len (/ (sp-fftr-output-len input-len) 2))
-  (for ((set i 0) (< i out-len) (set i (+ 1 i)))
-    (set
-      (array-get output (* 2 i)) (struct-get (array-get out i) r)
-      (array-get output (+ 1 (* 2 i))) (struct-get (array-get out i) i)))
+  (memcpy output-real input-real input-len)
+  (memcpy output-imag input-imag input-len)
+  (status-id-require (not (Fft_transform output-real output-imag input-len)))
   (label exit
-    memreg-free
     (return status)))
 
-(define (sp-fftri input input-len output) (status-t sp-sample-t* sp-sample-count-t sp-sample-t*)
+(define (sp-ffti input-len input-real input-imag output-real output-imag)
+  (status-t sp-sample-count-t sp-sample-t* sp-sample-t* sp-sample-t* sp-sample-t*)
   "[[real, imaginary], ...]:complex-numbers -> real-numbers
   input-length > 0
-  output-length see sp-fftri-output-len.
+  output-length = input-length
   output is allocated and owned by the caller"
   sp-status-declare
-  (declare
-    cfg kiss-fftr-cfg
-    in kiss-fft-cpx*
-    i sp-sample-count-t)
-  (memreg-init 2)
-  (set cfg (kiss-fftr-alloc input-len #t 0 0))
-  (if (not cfg) (status-set-id-goto sp-status-id-memory))
-  (memreg-add cfg)
-  (sc-comment "convert input to kiss-fft-cpx")
-  (status-require (sph-helper-calloc (* input-len (sizeof kiss-fft-cpx)) &in))
-  (memreg-add in)
-  (for ((set i 0) (< i input-len) (set i (+ 1 i)))
-    (set
-      (struct-get (array-get in i) r) (array-get input (* 2 i))
-      (struct-get (array-get in i) i) (array-get input (+ 1 (* 2 i)))))
-  (kiss-fftri cfg in output)
+  (memcpy output-real input-real input-len)
+  (memcpy output-imag input-imag input-len)
+  (status-id-require (not (= 1 (Fft_inverseTransform output-real output-imag input-len))))
   (label exit
-    memreg-free
     (return status)))
 
 (define

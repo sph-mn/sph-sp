@@ -24,18 +24,12 @@
   } else { \
     printf(("\ntests failed. %d %s\n"), (status.id), (sp_status_description(status))); \
   }
-void debug_log_samples(sp_sample_t* a, size_t len) {
-  size_t column_width;
-  size_t column_end;
-  size_t index;
-  column_width = 8;
-  index = 0;
-  while ((index < len)) {
-    column_end = (index + column_width);
-    while (((index < len) && (index < column_end))) {
-      printf("%f ", (a[index]));
-      index = (1 + index);
-    };
-    printf("\n");
+/** display a sample array in one line */
+void debug_display_sample_array(sp_sample_t* a, sp_sample_count_t len) {
+  sp_sample_count_t i;
+  printf(("%.17g"), (a[0]));
+  for (i = 1; (i < len); i = (1 + i)) {
+    printf((" %.17g"), (a[i]));
   };
+  printf("\n");
 };

@@ -1,30 +1,20 @@
 (pre-include "byteswap.h" "math.h" "inttypes.h")
 (sc-include "../foreign/sph" "../foreign/sph/status")
-(pre-if-not-defined sp-sample-format (sc-include "config"))
+(pre-if-not-defined sp-config-is-set (sc-include "config"))
 
 (pre-define
-  f32 float
-  f64 double
   boolean uint8-t
-  sp-port-type-alsa 0
-  sp-port-type-file 1
-  sp-port-bit-input 1
-  sp-port-bit-output 2
-  sp-port-bit-position 4
-  sp-port-bit-closed 8
-  sp-port-mode-read 1
-  sp-port-mode-write 2
-  sp-port-mode-read-write 3
-  sp-sample-format-f64 1
-  sp-sample-format-f32 2
-  sp-sample-format-int32 3
-  sp-sample-format-int16 4
-  sp-sample-format-int8 5
+  sp-file-bit-input 1
+  sp-file-bit-output 2
+  sp-file-bit-position 4
+  sp-file-bit-closed 8
+  sp-file-mode-read 1
+  sp-file-mode-write 2
+  sp-file-mode-read-write 3
   sp-status-group-libc "libc"
   sp-status-group-sndfile "sndfile"
   sp-status-group-sp "sp"
   sp-status-group-sph "sph"
-  sp-status-group-alsa "alsa"
   (sp-octets->samples a)
   (begin
     "sample count to bit octets count"
@@ -35,58 +25,7 @@
     "sp-float-t integer -> sp-float-t
     radians-per-second samples-per-second -> cutoff-value"
     (/ (* 2 M_PI freq) sample-rate))
-  sp-windowed-sinc-ir-transition sp-windowed-sinc-ir-cutoff
-  (sp-fftr-output-len input-len)
-  (begin
-    "count of sp-sample-t. times two because complex numbers are two elements"
-    (* 2 (+ 1 (/ input-len 2))))
-  (sp-fftri-output-len input-len)
-  (begin
-    "input is complex numbers of two elements, output is only real part samples.
-    output element count is double the input count minus one element"
-    (- input-len 2)))
-
-(pre-cond
-  ( (= sp-sample-format-f64 sp-sample-format)
-    (pre-define
-      sp-sample-t double
-      sp-sample-sum f64-sum
-      sp-alsa-snd-pcm-format SND_PCM_FORMAT_FLOAT64
-      sp-sf-write sf-writef-double
-      sp-sf-read sf-readf-double
-      kiss-fft-scalar sp-sample-t))
-  ( (= sp-sample-format-f32 sp-sample-format)
-    (pre-define
-      sp-sample-t float
-      sp-sample-sum f32-sum
-      sp-alsa-snd-pcm-format SND_PCM_FORMAT_FLOAT
-      sp-sf-write sf-writef-float
-      sp-sf-read sf-readf-float
-      kiss-fft-scalar sp-sample-t))
-  ( (= sp-sample-format-int32 sp-sample-format)
-    (pre-define
-      sp-sample-t int32-t
-      (sp-sample-sum a b) (+ a b)
-      sp-alsa-snd-pcm-format SND_PCM_FORMAT_S32
-      sp-sf-write sf-writef-int
-      sp-sf-read sf-readf-int
-      FIXED_POINT 32))
-  ( (= sp-sample-format-int16 sp-sample-format)
-    (pre-define
-      sp-sample-t int16-t
-      (sp-sample-sum a b) (+ a b)
-      sp-alsa-snd-pcm-format SND_PCM_FORMAT_S16
-      sp-sf-write sf-writef-short
-      sp-sf-read sf-readf-short
-      FIXED_POINT 16))
-  ( (= sp-sample-format-int8 sp-sample-format)
-    (pre-define
-      sp-sample-t int8-t
-      (sp-sample-sum a b) (+ a b)
-      sp-alsa-snd-pcm-format SND_PCM_FORMAT_S8
-      sp-sf-write sf-writef-short
-      sp-sf-read sf-readf-short
-      FIXED_POINT 8)))
+  sp-windowed-sinc-ir-transition sp-windowed-sinc-ir-cutoff)
 
 (enum
   (sp-status-id-file-channel-mismatch
@@ -99,13 +38,12 @@
     sp-status-id-memory
     sp-status-id-invalid-argument
     sp-status-id-not-implemented
-    sp-status-id-port-closed sp-status-id-port-position sp-status-id-port-type sp-status-id-undefined))
+    sp-status-id-file-closed sp-status-id-file-position sp-status-id-file-type sp-status-id-undefined))
 
 (declare
-  sp-port-t
+  sp-file-t
   (type
     (struct
-      (type uint8-t)
       (flags uint8-t)
       (sample-rate sp-sample-rate-t)
       (channel-count sp-channel-count-t)
@@ -122,17 +60,15 @@
       (ir-f sp-convolution-filter-ir-f-t)
       (ir-f-arguments void*)
       (ir-len sp-sample-count-t)))
-  (sp-port-read port sample-count result-channel-data result-sample-count)
-  (status-t sp-port-t* sp-sample-count-t sp-sample-t** sp-sample-count-t*)
-  (sp-port-write port channel-data sample-count result-sample-count)
-  (status-t sp-port-t* sp-sample-t** sp-sample-count-t sp-sample-count-t*)
-  (sp-port-position port result-position) (status-t sp-port-t* sp-sample-count-t*)
-  (sp-port-position-set port sample-offset) (status-t sp-port-t* size-t)
-  (sp-file-open path mode channel-count sample-rate result-port)
-  (status-t uint8-t* int sp-channel-count-t sp-sample-rate-t sp-port-t*)
-  (sp-alsa-open device-name mode channel-count sample-rate latency result-port)
-  (status-t uint8-t* int sp-channel-count-t sp-sample-rate-t int32-t sp-port-t*) (sp-port-close a)
-  (status-t sp-port-t*) (sp-alloc-channel-array channel-count sample-count result-array)
+  (sp-file-read file sample-count result-channel-data result-sample-count)
+  (status-t sp-file-t* sp-sample-count-t sp-sample-t** sp-sample-count-t*)
+  (sp-file-write file channel-data sample-count result-sample-count)
+  (status-t sp-file-t* sp-sample-t** sp-sample-count-t sp-sample-count-t*)
+  (sp-file-position file result-position) (status-t sp-file-t* sp-sample-count-t*)
+  (sp-file-position-set file sample-offset) (status-t sp-file-t* size-t)
+  (sp-file-open path mode channel-count sample-rate result-file)
+  (status-t uint8-t* int sp-channel-count-t sp-sample-rate-t sp-file-t*) (sp-file-close a)
+  (status-t sp-file-t*) (sp-alloc-channel-array channel-count sample-count result-array)
   (status-t sp-channel-count-t sp-sample-count-t sp-sample-t***) (sp-status-description a)
   (uint8-t* status-t) (sp-status-name a)
   (uint8-t* status-t) (sp-sin-lq a)
@@ -169,8 +105,10 @@
   (sp-window-blackman a width) (sp-float-t sp-float-t sp-sample-count-t)
   (sp-spectral-inversion-ir a a-len) (void sp-sample-t* sp-sample-count-t)
   (sp-spectral-reversal-ir a a-len) (void sp-sample-t* sp-sample-count-t)
-  (sp-fftr input input-len output) (status-t sp-sample-t* sp-sample-count-t sp-sample-t*)
-  (sp-fftri input input-len output) (status-t sp-sample-t* sp-sample-count-t sp-sample-t*)
+  (sp-fft input-len input-real input-imag output-real output-imag)
+  (status-t sp-sample-count-t sp-sample-t* sp-sample-t* sp-sample-t* sp-sample-t*)
+  (sp-ffti input-len input-real input-imag output-real output-imag)
+  (status-t sp-sample-count-t sp-sample-t* sp-sample-t* sp-sample-t* sp-sample-t*)
   (sp-moving-average source source-len prev prev-len next next-len radius start end result-samples)
   (status-t
     sp-sample-t*
