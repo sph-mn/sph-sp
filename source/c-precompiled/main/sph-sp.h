@@ -1,6 +1,37 @@
 #include <byteswap.h>
 #include <math.h>
 #include <inttypes.h>
+#ifndef sp_config_is_set
+#define sp_channel_count_t uint8_t
+#define sp_file_format (SF_FORMAT_WAV | SF_FORMAT_DOUBLE)
+#define sp_float_t double
+#define sp_sample_count_t size_t
+#define sp_sample_rate_t uint32_t
+#define sp_sample_sum f64_sum
+#define sp_sample_t double
+#define sp_sf_read sf_readf_double
+#define sp_sf_write sf_writef_double
+#define sp_config_is_set 1
+#endif
+#define boolean uint8_t
+#define sp_file_bit_input 1
+#define sp_file_bit_output 2
+#define sp_file_bit_position 4
+#define sp_file_bit_closed 8
+#define sp_file_mode_read 1
+#define sp_file_mode_write 2
+#define sp_file_mode_read_write 3
+#define sp_status_group_libc "libc"
+#define sp_status_group_sndfile "sndfile"
+#define sp_status_group_sp "sp"
+#define sp_status_group_sph "sph"
+/** sample count to bit octets count */
+#define sp_octets_to_samples(a) (a / sizeof(sp_sample_t))
+#define sp_samples_to_octets(a) (a * sizeof(sp_sample_t))
+/** sp-float-t integer -> sp-float-t
+    radians-per-second samples-per-second -> cutoff-value */
+#define sp_windowed_sinc_ir_cutoff(freq, sample_rate) ((2 * M_PI * freq) / sample_rate)
+#define sp_windowed_sinc_ir_transition sp_windowed_sinc_ir_cutoff
 #include <stdio.h>
 /** writes values with current routine name and line info to standard output.
     example: (debug-log "%d" 1)
@@ -54,37 +85,6 @@ typedef struct {
   status_id_t id;
   uint8_t* group;
 } status_t;
-#ifndef sp_config_is_set
-#define sp_channel_count_t uint8_t
-#define sp_file_format (SF_FORMAT_WAV | SF_FORMAT_DOUBLE)
-#define sp_float_t double
-#define sp_sample_count_t size_t
-#define sp_sample_rate_t uint32_t
-#define sp_sample_sum f64_sum
-#define sp_sample_t double
-#define sp_sf_read sf_readf_double
-#define sp_sf_write sf_writef_double
-#define sp_config_is_set 1
-#endif
-#define boolean uint8_t
-#define sp_file_bit_input 1
-#define sp_file_bit_output 2
-#define sp_file_bit_position 4
-#define sp_file_bit_closed 8
-#define sp_file_mode_read 1
-#define sp_file_mode_write 2
-#define sp_file_mode_read_write 3
-#define sp_status_group_libc "libc"
-#define sp_status_group_sndfile "sndfile"
-#define sp_status_group_sp "sp"
-#define sp_status_group_sph "sph"
-/** sample count to bit octets count */
-#define sp_octets_to_samples(a) (a / sizeof(sp_sample_t))
-#define sp_samples_to_octets(a) (a * sizeof(sp_sample_t))
-/** sp-float-t integer -> sp-float-t
-    radians-per-second samples-per-second -> cutoff-value */
-#define sp_windowed_sinc_ir_cutoff(freq, sample_rate) ((2 * M_PI * freq) / sample_rate)
-#define sp_windowed_sinc_ir_transition sp_windowed_sinc_ir_cutoff
 enum { sp_status_id_file_channel_mismatch,
   sp_status_id_file_encoding,
   sp_status_id_file_header,

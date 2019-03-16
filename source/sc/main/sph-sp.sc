@@ -1,6 +1,18 @@
 (pre-include "byteswap.h" "math.h" "inttypes.h")
-(sc-include "../foreign/sph" "../foreign/sph/status")
-(pre-if-not-defined sp-config-is-set (sc-include "config"))
+
+(pre-if-not-defined
+  sp-config-is-set
+  (pre-define
+    sp-channel-count-t uint8-t
+    sp-file-format (bit-or SF-FORMAT-WAV SF_FORMAT_DOUBLE)
+    sp-float-t double
+    sp-sample-count-t size-t
+    sp-sample-rate-t uint32-t
+    sp-sample-sum f64-sum
+    sp-sample-t double
+    sp-sf-read sf-readf-double
+    sp-sf-write sf-writef-double
+    sp-config-is-set #t))
 
 (pre-define
   boolean uint8-t
@@ -26,6 +38,8 @@
     radians-per-second samples-per-second -> cutoff-value"
     (/ (* 2 M_PI freq) sample-rate))
   sp-windowed-sinc-ir-transition sp-windowed-sinc-ir-cutoff)
+
+(sc-include "../foreign/sph" "../foreign/sph/status")
 
 (enum
   (sp-status-id-file-channel-mismatch

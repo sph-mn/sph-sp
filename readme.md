@@ -5,12 +5,12 @@ c code and shared library for sound file input/output and example implementation
 * file input/output with many supported file [formats](http://www.mega-nerd.com/libsndfile/)
 * 64 bit float sample format by default, other formats possible for many processors
 * unlimited channel count and sample rate
-* processing of non-interleaved sample arrays with one array per channel
 * processors that can be used on blocks of continuous data streams
   * windowed sinc low-pass, high-pass, band-pass and band-reject filters
   * moving average filter
   * convolution
 * fast fourier transform (fft) and inverse fast fourier transform (ifft)
+* processing of non-interleaved sample arrays with one array per channel
 
 # dependencies
 * run-time
@@ -38,8 +38,8 @@ installed files
 * /usr/lib/libsph-sp.so
 
 # compile-time configuration options
-the file `source/sph-sp.h` can be edited before compilation to set the following options.
-the options can also be set before inclusion of sph-sp.h, but the shared library used must have been compiled with the same configuration.
+the file `source/c-precompiled/main/sph-sp.h` can be edited before compilation to set the following options.
+the options can also be set before inclusion of sph-sp.h, but the shared library used must have been compiled with the same configuration
 
 | name | default | description |
 | --- | --- | --- |
@@ -150,6 +150,7 @@ sp_convolution_filter_state_t: struct
   ir: sp_sample_t*
   ir_f: sp_convolution_filter_ir_f_t
   ir_f_arguments: void*
+  ir_f_arguments_len: uint8_t
   ir_len: sp_sample_count_t
 sp_file_t: struct
   flags: uint8_t
