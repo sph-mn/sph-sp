@@ -307,10 +307,11 @@ void sp_convolve(sp_sample_t* a, sp_sample_count_t a_len, sp_sample_t* b, sp_sam
       memset(result_carryover, 0, (carryover_len * sizeof(sp_sample_t)));
       memset((carryover_len + result_samples), 0, ((a_len - carryover_len) * sizeof(sp_sample_t)));
     } else {
-      /* copy as many entries as fit into result and shift remaining to the left */
+      /* carryover is larger. set result-samples to all carryover entries that fit.
+shift remaining carryover to the left */
       memcpy(result_samples, result_carryover, (a_len * sizeof(sp_sample_t)));
       memmove(result_carryover, (a_len + result_carryover), ((carryover_len - a_len) * sizeof(sp_sample_t)));
-      memset(((carryover_len - a_len) + result_samples), 0, (a_len * sizeof(sp_sample_t)));
+      memset(((carryover_len - a_len) + result_carryover), 0, (a_len * sizeof(sp_sample_t)));
     };
   } else {
     memset(result_samples, 0, (a_len * sizeof(sp_sample_t)));
@@ -383,6 +384,7 @@ status_t sp_convolution_filter_state_set(sp_convolution_filter_ir_f_t ir_f, void
     state->carryover_len = 0;
     state->carryover = 0;
     state->ir_f = ir_f;
+    state->ir_f_arguments_len = ir_f_arguments_len;
   };
   memcpy((state->ir_f_arguments), ir_f_arguments, ir_f_arguments_len);
   status_require((ir_f(ir_f_arguments, (&ir), (&ir_len))));

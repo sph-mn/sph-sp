@@ -4,7 +4,7 @@
   sp-config-is-set
   (pre-define
     sp-channel-count-t uint8-t
-    sp-file-format (bit-or SF-FORMAT-WAV SF_FORMAT_DOUBLE)
+    sp-file-format (bit-or SF-FORMAT-AU SF-FORMAT-DOUBLE)
     sp-float-t double
     sp-sample-count-t size-t
     sp-sample-rate-t uint32-t

@@ -321,12 +321,14 @@
         (memset result-carryover 0 (* carryover-len (sizeof sp-sample-t)))
         (memset (+ carryover-len result-samples) 0 (* (- a-len carryover-len) (sizeof sp-sample-t))))
       (begin
-        (sc-comment "copy as many entries as fit into result and shift remaining to the left")
+        (sc-comment
+          "carryover is larger. set result-samples to all carryover entries that fit."
+          "shift remaining carryover to the left")
         (memcpy result-samples result-carryover (* a-len (sizeof sp-sample-t)))
         (memmove
           result-carryover
           (+ a-len result-carryover) (* (- carryover-len a-len) (sizeof sp-sample-t)))
-        (memset (+ (- carryover-len a-len) result-samples) 0 (* a-len (sizeof sp-sample-t)))))
+        (memset (+ (- carryover-len a-len) result-carryover) 0 (* a-len (sizeof sp-sample-t)))))
     (memset result-samples 0 (* a-len (sizeof sp-sample-t))))
   (sc-comment "result values." "first process values that dont lead to carryover")
   (set size
@@ -397,7 +399,8 @@
         state:carryover-alloc-len 0
         state:carryover-len 0
         state:carryover 0
-        state:ir-f ir-f)))
+        state:ir-f ir-f
+        state:ir-f-arguments-len ir-f-arguments-len)))
   (memcpy state:ir-f-arguments ir-f-arguments ir-f-arguments-len)
   (status-require (ir-f ir-f-arguments &ir &ir-len))
   (sc-comment
