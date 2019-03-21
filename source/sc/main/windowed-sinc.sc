@@ -50,7 +50,7 @@
     "set the windowed sinc" "nan can be set here if the freq and transition values are invalid")
   (for ((set i 0) (< i len) (set i (+ 1 i)))
     (set (array-get ir i) (* (sp-window-blackman i len) (sp-sinc (* 2 cutoff (- i center-index))))))
-  (sc-comment "scale gain")
+  (sc-comment "scale to get unity gain")
   (set sum (sp-sample-sum ir len))
   (for ((set i 0) (< i len) (set i (+ 1 i)))
     (set (array-get ir i) (/ (array-get ir i) sum)))
