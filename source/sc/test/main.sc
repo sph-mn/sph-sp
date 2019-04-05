@@ -132,19 +132,36 @@
     in-window sp-sample-t*
     in-window-end sp-sample-t*)
   (set
-    prev-end (+ prev 3)
-    next-end (+ next 3)
-    in-end (+ in 5)
+    prev-end (+ prev 2)
+    next-end (+ next 2)
+    in-end (+ in 4)
     in-window (+ in 1)
-    in-window-end (+ in 4)
-    radius 2)
+    in-window-end (+ in 3)
+    radius 3)
   (status-require
     (sp-moving-average in in-end in-window in-window-end prev prev-end next next-end radius out))
-  (sc-comment "only index 1 to 4 inclusively is processed")
-  (test-helper-assert "moving-average" (sp-sample-nearly-equal 5.4 (array-get out 0) error-margin))
-  (test-helper-assert "moving-average" (sp-sample-nearly-equal 4.8 (array-get out 1) error-margin))
-  (test-helper-assert "moving-average" (sp-sample-nearly-equal 7.2 (array-get out 2) error-margin))
-  (test-helper-assert "moving-average" (sp-sample-nearly-equal 9.6 (array-get out 3) error-margin))
+  (sc-comment "first run with prev and next and only index 1 to 3 inclusively processed")
+  ;(debug-display-sample-array out 3)
+  (test-helper-assert
+    "moving-average 1.1" (sp-sample-nearly-equal 6.142857142857143 (array-get out 0) error-margin))
+  (test-helper-assert
+    "moving-average 1.2" (sp-sample-nearly-equal 6.571428571428571 (array-get out 1) error-margin))
+  (test-helper-assert
+    "moving-average 1.2" (sp-sample-nearly-equal 7 (array-get out 2) error-margin))
+  (sc-comment "second run. result number series will be symmetric")
+  (array-set out 0 0 1 0 2 0 3 0 4 0)
+  (array-set in 0 2 1 2 2 2 3 2 4 2)
+  (status-require (sp-moving-average in in-end in in-end 0 0 0 0 1 out))
+  (test-helper-assert
+    "moving-average 2.1" (sp-sample-nearly-equal 1.3 (array-get out 0) error-margin))
+  (test-helper-assert
+    "moving-average 2.2" (sp-sample-nearly-equal 2 (array-get out 1) error-margin))
+  (test-helper-assert
+    "moving-average 2.3" (sp-sample-nearly-equal 2 (array-get out 2) error-margin))
+  (test-helper-assert
+    "moving-average 2.4" (sp-sample-nearly-equal 2 (array-get out 3) error-margin))
+  (test-helper-assert
+    "moving-average 2.5" (sp-sample-nearly-equal 1.3 (array-get out 4) error-margin))
   (label exit
     (return status)))
 

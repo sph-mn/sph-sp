@@ -170,19 +170,12 @@
    * prev and next can be null pointers if not available
    * zero is used for unavailable values
    * rounding errors are kept low by using modified kahan neumaier summation"
-  ;(printf "current center: %f\n" (pointer-get in-window))
-  ;(printf "in: ")
-  ;(debug-display-sample-array in-left (- in-right in-left))
-  ;(printf "prev: ")
-  ;(debug-display-sample-array outside outside-count)
-  ;(printf "next: ")
-  ;(debug-display-sample-array outside outside-count)
   status-declare
   (declare
     in-left sp-sample-t*
     in-right sp-sample-t*
     outside sp-sample-t*
-    sums (array sp-sample-t (2))
+    sums (array sp-sample-t (3))
     outside-count sp-sample-count-t
     in-missing sp-sample-count-t
     width sp-sample-count-t)
@@ -192,21 +185,32 @@
       (array-get sums 0) 0
       (array-get sums 1) 0
       (array-get sums 2) 0
-      in-left (max in (- in-window radius 1))
-      in-right (min in-end (+ in-window radius 1))
-      (array-get sums 1) (sp-sample-sum in-left (- in-right in-left)))
+      in-left (max in (- in-window radius))
+      in-right (min in-end (+ in-window radius))
+      (array-get sums 1) (sp-sample-sum in-left (+ 1 (- in-right in-left))))
+    ;(printf "current center: %f\n" (pointer-get in-window))
+    ;(printf "in: ")
+    ;(debug-display-sample-array in-left (+ 1 (- in-right in-left)))
     (if (and (< (- in-window in-left) radius) prev)
-      (set
-        in-missing (- radius (- in-window in-left))
-        outside (max prev (- prev-end in-missing))
-        outside-count (- prev-end outside)
-        (array-get sums 0) (sp-sample-sum outside outside-count)))
-    (if (and (< (- in-right in-window) (+ 1 radius)) next)
-      (set
-        in-missing (- (+ 1 radius) (- in-right in-window))
-        outside next
-        outside-count (min (- next-end next) in-missing)
-        (array-get sums 2) (sp-sample-sum outside outside-count)))
+      (begin
+        (set
+          in-missing (- radius (- in-window in-left))
+          outside (max prev (- prev-end in-missing))
+          outside-count (- prev-end outside)
+          (array-get sums 0) (sp-sample-sum outside outside-count))
+        ;(printf "prev: ")
+        ;(debug-display-sample-array outside outside-count)
+        ))
+    (if (and (< (- in-right in-window) radius) next)
+      (begin
+        (set
+          in-missing (- radius (- in-right in-window))
+          outside next
+          outside-count (min (- next-end next) in-missing)
+          (array-get sums 2) (sp-sample-sum outside outside-count))
+        ;(printf "next: ")
+        ;(debug-display-sample-array outside outside-count)
+        ))
     (set
       (pointer-get out) (/ (sp-sample-sum sums 3) width)
       out (+ 1 out)

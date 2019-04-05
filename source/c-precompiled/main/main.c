@@ -164,7 +164,7 @@ status_t sp_moving_average(sp_sample_t* in, sp_sample_t* in_end, sp_sample_t* in
   sp_sample_t* in_left;
   sp_sample_t* in_right;
   sp_sample_t* outside;
-  sp_sample_t sums[2];
+  sp_sample_t sums[3];
   sp_sample_count_t outside_count;
   sp_sample_count_t in_missing;
   sp_sample_count_t width;
@@ -173,17 +173,17 @@ status_t sp_moving_average(sp_sample_t* in, sp_sample_t* in_end, sp_sample_t* in
     sums[0] = 0;
     sums[1] = 0;
     sums[2] = 0;
-    in_left = max(in, (in_window - radius - 1));
-    in_right = min(in_end, (in_window + radius + 1));
-    sums[1] = sp_sample_sum(in_left, (in_right - in_left));
+    in_left = max(in, (in_window - radius));
+    in_right = min(in_end, (in_window + radius));
+    sums[1] = sp_sample_sum(in_left, (1 + (in_right - in_left)));
     if (((in_window - in_left) < radius) && prev) {
       in_missing = (radius - (in_window - in_left));
       outside = max(prev, (prev_end - in_missing));
       outside_count = (prev_end - outside);
       sums[0] = sp_sample_sum(outside, outside_count);
     };
-    if (((in_right - in_window) < (1 + radius)) && next) {
-      in_missing = ((1 + radius) - (in_right - in_window));
+    if (((in_right - in_window) < radius) && next) {
+      in_missing = (radius - (in_right - in_window));
       outside = next;
       outside_count = min((next_end - next), in_missing);
       sums[2] = sp_sample_sum(outside, outside_count);

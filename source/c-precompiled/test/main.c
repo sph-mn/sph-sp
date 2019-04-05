@@ -113,18 +113,34 @@ status_t test_moving_average() {
   sp_sample_t* next_end;
   sp_sample_t* in_window;
   sp_sample_t* in_window_end;
-  prev_end = (prev + 3);
-  next_end = (next + 3);
-  in_end = (in + 5);
+  prev_end = (prev + 2);
+  next_end = (next + 2);
+  in_end = (in + 4);
   in_window = (in + 1);
-  in_window_end = (in + 4);
-  radius = 2;
+  in_window_end = (in + 3);
+  radius = 3;
   status_require((sp_moving_average(in, in_end, in_window, in_window_end, prev, prev_end, next, next_end, radius, out)));
-  /* only index 1 to 4 inclusively is processed */
-  test_helper_assert("moving-average", (sp_sample_nearly_equal((5.4), (out[0]), error_margin)));
-  test_helper_assert("moving-average", (sp_sample_nearly_equal((4.8), (out[1]), error_margin)));
-  test_helper_assert("moving-average", (sp_sample_nearly_equal((7.2), (out[2]), error_margin)));
-  test_helper_assert("moving-average", (sp_sample_nearly_equal((9.6), (out[3]), error_margin)));
+  /* first run with prev and next and only index 1 to 3 inclusively processed */
+  test_helper_assert(("moving-average 1.1"), (sp_sample_nearly_equal((6.142857142857143), (out[0]), error_margin)));
+  test_helper_assert(("moving-average 1.2"), (sp_sample_nearly_equal((6.571428571428571), (out[1]), error_margin)));
+  test_helper_assert(("moving-average 1.2"), (sp_sample_nearly_equal(7, (out[2]), error_margin)));
+  /* second run. result number series will be symmetric */
+  out[0] = 0;
+  out[1] = 0;
+  out[2] = 0;
+  out[3] = 0;
+  out[4] = 0;
+  in[0] = 2;
+  in[1] = 2;
+  in[2] = 2;
+  in[3] = 2;
+  in[4] = 2;
+  status_require((sp_moving_average(in, in_end, in, in_end, 0, 0, 0, 0, 1, out)));
+  test_helper_assert(("moving-average 2.1"), (sp_sample_nearly_equal((1.3), (out[0]), error_margin)));
+  test_helper_assert(("moving-average 2.2"), (sp_sample_nearly_equal(2, (out[1]), error_margin)));
+  test_helper_assert(("moving-average 2.3"), (sp_sample_nearly_equal(2, (out[2]), error_margin)));
+  test_helper_assert(("moving-average 2.4"), (sp_sample_nearly_equal(2, (out[3]), error_margin)));
+  test_helper_assert(("moving-average 2.5"), (sp_sample_nearly_equal((1.3), (out[4]), error_margin)));
 exit:
   return (status);
 };
