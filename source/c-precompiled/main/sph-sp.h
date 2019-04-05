@@ -143,7 +143,7 @@ void sp_spectral_inversion_ir(sp_sample_t* a, sp_sample_count_t a_len);
 void sp_spectral_reversal_ir(sp_sample_t* a, sp_sample_count_t a_len);
 status_t sp_fft(sp_sample_count_t input_len, sp_sample_t* input_or_output_real, sp_sample_t* input_or_output_imag);
 status_t sp_ffti(sp_sample_count_t input_len, sp_sample_t* input_or_output_real, sp_sample_t* input_or_output_imag);
-status_t sp_moving_average(sp_sample_t* source, sp_sample_count_t source_len, sp_sample_t* prev, sp_sample_count_t prev_len, sp_sample_t* next, sp_sample_count_t next_len, sp_sample_count_t radius, sp_sample_count_t start, sp_sample_count_t end, sp_sample_t* result_samples);
+status_t sp_moving_average(sp_sample_t* in, sp_sample_t* in_end, sp_sample_t* in_window, sp_sample_t* in_window_end, sp_sample_t* prev, sp_sample_t* prev_end, sp_sample_t* next, sp_sample_t* next_end, sp_sample_count_t radius, sp_sample_t* out);
 void sp_convolve_one(sp_sample_t* a, sp_sample_count_t a_len, sp_sample_t* b, sp_sample_count_t b_len, sp_sample_t* result_samples);
 void sp_convolve(sp_sample_t* a, sp_sample_count_t a_len, sp_sample_t* b, sp_sample_count_t b_len, sp_sample_count_t result_carryover_len, sp_sample_t* result_carryover, sp_sample_t* result_samples);
 void sp_channel_data_free(sp_sample_t** a, sp_channel_count_t channel_count);

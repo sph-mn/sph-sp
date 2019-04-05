@@ -151,98 +151,47 @@ status_t sp_ffti(sp_sample_count_t input_len, sp_sample_t* input_or_output_real,
 exit:
   return (status);
 };
-/** apply a centered moving average filter to source at index start to end inclusively and write to result.
-  removes higher frequencies with little distortion in the time domain.
-  result-samples is owned and allocated by the caller.
-   * only the result portion corresponding to the subvector from start to end is written to result
-   * prev and next are unprocessed segments and can be null pointers,
-     for example at the beginning and end of a stream
-   * since the result value for a sample is calculated using samples left and right of it,
-     a previous and following part of a stream is eventually needed to reference values
-     outside the source segment to create an accurate continuous result.
-     zero is used for unavailable values outside the source segment
-   * available values outside the start/end range are still considered when needed to calculate averages
-   * rounding errors are kept low by using modified kahan neumaier summation and not using a
-     recursive implementation. both properties which make it much slower than many other implementations */
-status_t sp_moving_average(sp_sample_t* source, sp_sample_count_t source_len, sp_sample_t* prev, sp_sample_count_t prev_len, sp_sample_t* next, sp_sample_count_t next_len, sp_sample_count_t radius, sp_sample_count_t start, sp_sample_count_t end, sp_sample_t* result_samples) {
+#define max(a, b) ((a > b) ? a : b)
+#define min(a, b) ((a < b) ? a : b)
+/** apply a centered moving average filter to samples between in-window and in-window-end inclusively and write to out.
+   removes high frequencies with little distortion in the time domain but with a long transition.
+   all memory is managed by the caller.
+   * prev and next can be null pointers if not available
+   * zero is used for unavailable values
+   * rounding errors are kept low by using modified kahan neumaier summation */
+status_t sp_moving_average(sp_sample_t* in, sp_sample_t* in_end, sp_sample_t* in_window, sp_sample_t* in_window_end, sp_sample_t* prev, sp_sample_t* prev_end, sp_sample_t* next, sp_sample_t* next_end, sp_sample_count_t radius, sp_sample_t* out) {
   status_declare;
-  memreg_init(1);
-  sp_sample_count_t left;
-  sp_sample_count_t right;
+  sp_sample_t* in_left;
+  sp_sample_t* in_right;
+  sp_sample_t* outside;
+  sp_sample_t sums[2];
+  sp_sample_count_t outside_count;
+  sp_sample_count_t in_missing;
   sp_sample_count_t width;
-  sp_sample_t* window;
-  sp_sample_count_t window_index;
-  if (!source_len) {
-    goto exit;
-  };
-  width = (1 + (2 * radius));
-  window = 0;
-  /* check if all required samples are in source array */
-  if (!((start >= radius) && ((start + radius + 1) <= source_len))) {
-    status_require((sph_helper_malloc((width * sizeof(sp_sample_t)), (&window))));
-    memreg_add(window);
-  };
-  while ((start <= end)) {
-    if ((start >= radius) && ((start + radius + 1) <= source_len)) {
-      *result_samples = (sp_sample_sum(((source + start) - radius), width) / width);
-    } else {
-      window_index = 0;
-      /* get samples from previous segment */
-      if (start < radius) {
-        right = (radius - start);
-        if (prev) {
-          left = ((right > prev_len) ? 0 : (prev_len - right));
-          while ((left < prev_len)) {
-            window[window_index] = prev[left];
-            window_index = (1 + window_index);
-            left = (1 + left);
-          };
-        };
-        while ((window_index < right)) {
-          window[window_index] = 0;
-          window_index = (1 + window_index);
-        };
-        left = 0;
-      } else {
-        left = (start - radius);
-      };
-      /* get samples from source segment */
-      right = (start + radius);
-      if (right >= source_len) {
-        right = (source_len - 1);
-      };
-      while ((left <= right)) {
-        window[window_index] = source[left];
-        window_index = (1 + window_index);
-        left = (1 + left);
-      };
-      /* get samples from next segment */
-      right = (start + radius);
-      if ((right >= source_len) && next) {
-        left = 0;
-        right = (right - source_len);
-        if (right >= next_len) {
-          right = (next_len - 1);
-        };
-        while ((left <= right)) {
-          window[window_index] = next[left];
-          window_index = (1 + window_index);
-          left = (1 + left);
-        };
-      };
-      /* fill unset values in window with zero */
-      while ((window_index < width)) {
-        window[window_index] = 0;
-        window_index = (1 + window_index);
-      };
-      /* set current value to the window average */
-      *result_samples = (sp_sample_sum(window, width) / width);
+  width = (1 + radius + radius);
+  while ((in_window <= in_window_end)) {
+    sums[0] = 0;
+    sums[1] = 0;
+    sums[2] = 0;
+    in_left = max(in, (in_window - radius - 1));
+    in_right = min(in_end, (in_window + radius + 1));
+    sums[1] = sp_sample_sum(in_left, (in_right - in_left));
+    if (((in_window - in_left) < radius) && prev) {
+      in_missing = (radius - (in_window - in_left));
+      outside = max(prev, (prev_end - in_missing));
+      outside_count = (prev_end - outside);
+      sums[0] = sp_sample_sum(outside, outside_count);
     };
-    result_samples = (1 + result_samples);
-    start = (1 + start);
+    if (((in_right - in_window) < (1 + radius)) && next) {
+      in_missing = ((1 + radius) - (in_right - in_window));
+      outside = next;
+      outside_count = min((next_end - next), in_missing);
+      sums[2] = sp_sample_sum(outside, outside_count);
+    };
+    *out = (sp_sample_sum(sums, 3) / width);
+    out = (1 + out);
+    in_window = (1 + in_window);
   };
-exit:
-  memreg_free;
   return (status);
 };
 /** modify an impulse response kernel for spectral inversion.

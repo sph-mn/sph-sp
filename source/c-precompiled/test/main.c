@@ -103,52 +103,29 @@ exit:
 };
 status_t test_moving_average() {
   status_declare;
-  sp_sample_count_t source_len;
-  sp_sample_count_t result_len;
-  sp_sample_count_t prev_len;
-  sp_sample_count_t next_len;
   sp_sample_count_t radius;
-  sp_sample_t* result;
-  sp_sample_t* source;
-  sp_sample_t* prev;
-  sp_sample_t* next;
-  memreg_init(4);
-  source_len = 8;
-  result_len = source_len;
-  prev_len = 4;
-  next_len = prev_len;
-  radius = 4;
-  /* allocate memory */
-  status_require((sph_helper_calloc((result_len * sizeof(sp_sample_t)), (&result))));
-  memreg_add(result);
-  status_require((sph_helper_calloc((source_len * sizeof(sp_sample_t)), (&source))));
-  memreg_add(source);
-  status_require((sph_helper_calloc((prev_len * sizeof(sp_sample_t)), (&prev))));
-  memreg_add(prev);
-  status_require((sph_helper_calloc((next_len * sizeof(sp_sample_t)), (&next))));
-  memreg_add(next);
-  /* set values */
-  source[0] = 1;
-  source[1] = 4;
-  source[2] = 8;
-  source[3] = 12;
-  source[4] = 3;
-  source[5] = 32;
-  source[6] = 2;
-  prev[0] = 3;
-  prev[1] = 2;
-  prev[2] = 1;
-  prev[3] = -12;
-  next[0] = 83;
-  next[1] = 12;
-  next[2] = -32;
-  next[3] = 2;
-  /* with prev and next */
-  status_require((sp_moving_average(source, source_len, prev, prev_len, next, next_len, 0, (source_len - 1), radius, result)));
-  /* without prev and next */
-  status_require((sp_moving_average(source, source_len, 0, 0, 0, 0, 0, (source_len - 1), (1 + (source_len / 2)), result)));
+  sp_sample_t out[5] = { 0, 0, 0, 0, 0 };
+  sp_sample_t in[5] = { 1, 3, 5, 7, 8 };
+  sp_sample_t prev[5] = { 9, 10, 11 };
+  sp_sample_t next[5] = { 12, 13, 14 };
+  sp_sample_t* in_end;
+  sp_sample_t* prev_end;
+  sp_sample_t* next_end;
+  sp_sample_t* in_window;
+  sp_sample_t* in_window_end;
+  prev_end = (prev + 3);
+  next_end = (next + 3);
+  in_end = (in + 5);
+  in_window = (in + 1);
+  in_window_end = (in + 4);
+  radius = 2;
+  status_require((sp_moving_average(in, in_end, in_window, in_window_end, prev, prev_end, next, next_end, radius, out)));
+  /* only index 1 to 4 inclusively is processed */
+  test_helper_assert("moving-average", (sp_sample_nearly_equal((5.4), (out[0]), error_margin)));
+  test_helper_assert("moving-average", (sp_sample_nearly_equal((4.8), (out[1]), error_margin)));
+  test_helper_assert("moving-average", (sp_sample_nearly_equal((7.2), (out[2]), error_margin)));
+  test_helper_assert("moving-average", (sp_sample_nearly_equal((9.6), (out[3]), error_margin)));
 exit:
-  memreg_free;
   return (status);
 };
 status_t test_windowed_sinc() {
@@ -271,13 +248,13 @@ exit:
 };
 int main() {
   status_declare;
+  test_helper_test_one(test_moving_average);
   test_helper_test_one(test_fft);
   test_helper_test_one(test_spectral_inversion_ir);
   test_helper_test_one(test_base);
   test_helper_test_one(test_spectral_reversal_ir);
   test_helper_test_one(test_convolve);
   test_helper_test_one(test_file);
-  test_helper_test_one(test_moving_average);
   test_helper_test_one(test_windowed_sinc);
 exit:
   test_helper_display_summary();

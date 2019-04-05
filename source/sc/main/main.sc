@@ -149,103 +149,69 @@
   (label exit
     (return status)))
 
+(pre-define
+  (max a b)
+  (if* (> a b) a
+    b)
+  (min a b)
+  (if* (< a b) a
+    b))
+
 (define
-  (sp-moving-average source source-len prev prev-len next next-len radius start end result-samples)
+  (sp-moving-average in in-end in-window in-window-end prev prev-end next next-end radius out)
   (status-t
     sp-sample-t*
-    sp-sample-count-t
     sp-sample-t*
-    sp-sample-count-t
-    sp-sample-t* sp-sample-count-t sp-sample-count-t sp-sample-count-t sp-sample-count-t sp-sample-t*)
-  "apply a centered moving average filter to source at index start to end inclusively and write to result.
-  removes higher frequencies with little distortion in the time domain.
-  result-samples is owned and allocated by the caller.
-   * only the result portion corresponding to the subvector from start to end is written to result
-   * prev and next are unprocessed segments and can be null pointers,
-     for example at the beginning and end of a stream
-   * since the result value for a sample is calculated using samples left and right of it,
-     a previous and following part of a stream is eventually needed to reference values
-     outside the source segment to create an accurate continuous result.
-     zero is used for unavailable values outside the source segment
-   * available values outside the start/end range are still considered when needed to calculate averages
-   * rounding errors are kept low by using modified kahan neumaier summation and not using a
-     recursive implementation. both properties which make it much slower than many other implementations"
+    sp-sample-t*
+    sp-sample-t* sp-sample-t* sp-sample-t* sp-sample-t* sp-sample-t* sp-sample-count-t sp-sample-t*)
+  "apply a centered moving average filter to samples between in-window and in-window-end inclusively and write to out.
+   removes high frequencies with little distortion in the time domain but with a long transition.
+   all memory is managed by the caller.
+   * prev and next can be null pointers if not available
+   * zero is used for unavailable values
+   * rounding errors are kept low by using modified kahan neumaier summation"
+  ;(printf "current center: %f\n" (pointer-get in-window))
+  ;(printf "in: ")
+  ;(debug-display-sample-array in-left (- in-right in-left))
+  ;(printf "prev: ")
+  ;(debug-display-sample-array outside outside-count)
+  ;(printf "next: ")
+  ;(debug-display-sample-array outside outside-count)
   status-declare
-  (memreg-init 1)
   (declare
-    left sp-sample-count-t
-    right sp-sample-count-t
-    width sp-sample-count-t
-    window sp-sample-t*
-    window-index sp-sample-count-t)
-  (if (not source-len) (goto exit))
-  (set
-    width (+ 1 (* 2 radius))
-    window 0)
-  (sc-comment "check if all required samples are in source array")
-  (if (not (and (>= start radius) (<= (+ start radius 1) source-len)))
-    (begin
-      (status-require (sph-helper-malloc (* width (sizeof sp-sample-t)) &window))
-      (memreg-add window)))
-  (while (<= start end)
-    (if (and (>= start radius) (<= (+ start radius 1) source-len))
-      (set *result-samples (/ (sp-sample-sum (- (+ source start) radius) width) width))
-      (begin
-        (set window-index 0)
-        (sc-comment "get samples from previous segment")
-        (if (< start radius)
-          (begin
-            (set right (- radius start))
-            (if prev
-              (begin
-                (set left
-                  (if* (> right prev-len) 0
-                    (- prev-len right)))
-                (while (< left prev-len)
-                  (set
-                    (array-get window window-index) (array-get prev left)
-                    window-index (+ 1 window-index)
-                    left (+ 1 left)))))
-            (while (< window-index right)
-              (set
-                (array-get window window-index) 0
-                window-index (+ 1 window-index)))
-            (set left 0))
-          (set left (- start radius)))
-        (sc-comment "get samples from source segment")
-        (set right (+ start radius))
-        (if (>= right source-len) (set right (- source-len 1)))
-        (while (<= left right)
-          (set
-            (array-get window window-index) (array-get source left)
-            window-index (+ 1 window-index)
-            left (+ 1 left)))
-        (sc-comment "get samples from next segment")
-        (set right (+ start radius))
-        (if (and (>= right source-len) next)
-          (begin
-            (set
-              left 0
-              right (- right source-len))
-            (if (>= right next-len) (set right (- next-len 1)))
-            (while (<= left right)
-              (set
-                (array-get window window-index) (array-get next left)
-                window-index (+ 1 window-index)
-                left (+ 1 left)))))
-        (sc-comment "fill unset values in window with zero")
-        (while (< window-index width)
-          (set
-            (array-get window window-index) 0
-            window-index (+ 1 window-index)))
-        (sc-comment "set current value to the window average")
-        (set *result-samples (/ (sp-sample-sum window width) width))))
+    in-left sp-sample-t*
+    in-right sp-sample-t*
+    outside sp-sample-t*
+    sums (array sp-sample-t (2))
+    outside-count sp-sample-count-t
+    in-missing sp-sample-count-t
+    width sp-sample-count-t)
+  (set width (+ 1 radius radius))
+  (while (<= in-window in-window-end)
     (set
-      result-samples (+ 1 result-samples)
-      start (+ 1 start)))
-  (label exit
-    memreg-free
-    (return status)))
+      (array-get sums 0) 0
+      (array-get sums 1) 0
+      (array-get sums 2) 0
+      in-left (max in (- in-window radius 1))
+      in-right (min in-end (+ in-window radius 1))
+      (array-get sums 1) (sp-sample-sum in-left (- in-right in-left)))
+    (if (and (< (- in-window in-left) radius) prev)
+      (set
+        in-missing (- radius (- in-window in-left))
+        outside (max prev (- prev-end in-missing))
+        outside-count (- prev-end outside)
+        (array-get sums 0) (sp-sample-sum outside outside-count)))
+    (if (and (< (- in-right in-window) (+ 1 radius)) next)
+      (set
+        in-missing (- (+ 1 radius) (- in-right in-window))
+        outside next
+        outside-count (min (- next-end next) in-missing)
+        (array-get sums 2) (sp-sample-sum outside outside-count)))
+    (set
+      (pointer-get out) (/ (sp-sample-sum sums 3) width)
+      out (+ 1 out)
+      in-window (+ 1 in-window)))
+  (return status))
 
 (define (sp-spectral-inversion-ir a a-len) (void sp-sample-t* sp-sample-count-t)
   "modify an impulse response kernel for spectral inversion.

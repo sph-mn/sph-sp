@@ -121,45 +121,31 @@
 (define (test-moving-average) status-t
   status-declare
   (declare
-    source-len sp-sample-count-t
-    result-len sp-sample-count-t
-    prev-len sp-sample-count-t
-    next-len sp-sample-count-t
     radius sp-sample-count-t
-    result sp-sample-t*
-    source sp-sample-t*
-    prev sp-sample-t*
-    next sp-sample-t*)
-  (memreg-init 4)
+    out (array sp-sample-t (5) 0 0 0 0 0)
+    in (array sp-sample-t (5) 1 3 5 7 8)
+    prev (array sp-sample-t (5) 9 10 11)
+    next (array sp-sample-t (5) 12 13 14)
+    in-end sp-sample-t*
+    prev-end sp-sample-t*
+    next-end sp-sample-t*
+    in-window sp-sample-t*
+    in-window-end sp-sample-t*)
   (set
-    source-len 8
-    result-len source-len
-    prev-len 4
-    next-len prev-len
-    radius 4)
-  (sc-comment "allocate memory")
-  (status-require (sph-helper-calloc (* result-len (sizeof sp-sample-t)) &result))
-  (memreg-add result)
-  (status-require (sph-helper-calloc (* source-len (sizeof sp-sample-t)) &source))
-  (memreg-add source)
-  (status-require (sph-helper-calloc (* prev-len (sizeof sp-sample-t)) &prev))
-  (memreg-add prev)
-  (status-require (sph-helper-calloc (* next-len (sizeof sp-sample-t)) &next))
-  (memreg-add next)
-  (sc-comment "set values")
-  (array-set source 0 1 1 4 2 8 3 12 4 3 5 32 6 2)
-  (array-set prev 0 3 1 2 2 1 3 -12)
-  (array-set next 0 83 1 12 2 -32 3 2)
-  (sc-comment "with prev and next")
+    prev-end (+ prev 3)
+    next-end (+ next 3)
+    in-end (+ in 5)
+    in-window (+ in 1)
+    in-window-end (+ in 4)
+    radius 2)
   (status-require
-    (sp-moving-average
-      source source-len prev prev-len next next-len 0 (- source-len 1) radius result))
-  (sc-comment "without prev and next")
-  (status-require
-    (sp-moving-average source source-len 0 0 0 0 0 (- source-len 1) (+ 1 (/ source-len 2)) result))
-  ; todo: actually check results
+    (sp-moving-average in in-end in-window in-window-end prev prev-end next next-end radius out))
+  (sc-comment "only index 1 to 4 inclusively is processed")
+  (test-helper-assert "moving-average" (sp-sample-nearly-equal 5.4 (array-get out 0) error-margin))
+  (test-helper-assert "moving-average" (sp-sample-nearly-equal 4.8 (array-get out 1) error-margin))
+  (test-helper-assert "moving-average" (sp-sample-nearly-equal 7.2 (array-get out 2) error-margin))
+  (test-helper-assert "moving-average" (sp-sample-nearly-equal 9.6 (array-get out 3) error-margin))
   (label exit
-    memreg-free
     (return status)))
 
 (define (test-windowed-sinc) status-t
@@ -296,13 +282,13 @@
 
 (define (main) int
   status-declare
+  (test-helper-test-one test-moving-average)
   (test-helper-test-one test-fft)
   (test-helper-test-one test-spectral-inversion-ir)
   (test-helper-test-one test-base)
   (test-helper-test-one test-spectral-reversal-ir)
   (test-helper-test-one test-convolve)
   (test-helper-test-one test-file)
-  (test-helper-test-one test-moving-average)
   (test-helper-test-one test-windowed-sinc)
   (label exit
     (test-helper-display-summary)

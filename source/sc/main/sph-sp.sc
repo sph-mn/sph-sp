@@ -124,13 +124,12 @@
   (status-t sp-sample-count-t sp-sample-t* sp-sample-t*)
   (sp-ffti input-len input/output-real input/output-imag)
   (status-t sp-sample-count-t sp-sample-t* sp-sample-t*)
-  (sp-moving-average source source-len prev prev-len next next-len radius start end result-samples)
+  (sp-moving-average in in-end in-window in-window-end prev prev-end next next-end radius out)
   (status-t
     sp-sample-t*
-    sp-sample-count-t
     sp-sample-t*
-    sp-sample-count-t
-    sp-sample-t* sp-sample-count-t sp-sample-count-t sp-sample-count-t sp-sample-count-t sp-sample-t*)
+    sp-sample-t*
+    sp-sample-t* sp-sample-t* sp-sample-t* sp-sample-t* sp-sample-t* sp-sample-count-t sp-sample-t*)
   (sp-convolve-one a a-len b b-len result-samples)
   (void sp-sample-t* sp-sample-count-t sp-sample-t* sp-sample-count-t sp-sample-t*)
   (sp-convolve a a-len b b-len result-carryover-len result-carryover result-samples)
