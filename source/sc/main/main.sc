@@ -277,7 +277,8 @@
   carryover-len should be zero for the first call or its content should be zeros.
   carryover-len for subsequent calls should be b-len - 1 or if b-len changed b-len - 1  from the previous call.
   if b-len is one then there is no carryover.
-  if a-len is smaller than b-len then, with the current implementation, additional performance costs ensue from shifting the carryover array each call"
+  if a-len is smaller than b-len then, with the current implementation, additional performance costs ensue from shifting the carryover array each call.
+  carryover is the extension of result-samples for generated values that dont fit"
   (declare
     size sp-sample-count-t
     a-index sp-sample-count-t
@@ -414,7 +415,7 @@
   kernel created by ir-f with ir-f-arguments.
   ir-f is only used when ir-f-arguments changed.
   values that need to be carried over with calls are kept in out-state.
-  * out-state: if zero then state will be allocated. owned by caller. the state can currently not be reused with varying ir-f-argument sizes.
+  * out-state: if zero then state will be allocated. owned by caller
   * out-samples: owned by the caller. length must be at least in-len and the number of output samples will be in-len"
   status-declare
   (declare carryover-len sp-sample-count-t)
