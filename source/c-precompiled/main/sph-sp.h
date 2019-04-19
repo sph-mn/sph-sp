@@ -5,7 +5,7 @@
 #define sp_channel_count_t uint8_t
 #define sp_file_format (SF_FORMAT_WAV | SF_FORMAT_FLOAT)
 #define sp_float_t double
-#define sp_sample_count_t size_t
+#define sp_sample_count_t uint32_t
 #define sp_sample_rate_t uint32_t
 #define sp_sample_sum f64_sum
 #define sp_sample_t double
@@ -28,10 +28,10 @@
 /** sample count to bit octets count */
 #define sp_octets_to_samples(a) (a / sizeof(sp_sample_t))
 #define sp_samples_to_octets(a) (a * sizeof(sp_sample_t))
-/** sp-float-t integer -> sp-float-t
-    radians-per-second samples-per-second -> cutoff-value */
-#define sp_windowed_sinc_ir_cutoff(freq, sample_rate) ((2 * M_PI * freq) / sample_rate)
-#define sp_windowed_sinc_ir_transition sp_windowed_sinc_ir_cutoff
+#define sp_sine_48(t) sp_sine_48_table[t]
+#define sp_fm_synth_count_t uint8_t
+#define sp_fm_synth_sine sp_sine_48
+#define sp_cheap_round_positive(a) ((sp_sample_count_t)((0.5 + a)))
 #include <stdio.h>
 /** writes values with current routine name and line info to standard output.
     example: (debug-log "%d" 1)
@@ -116,13 +116,19 @@ typedef struct {
   uint8_t ir_f_arguments_len;
   sp_sample_count_t ir_len;
 } sp_convolution_filter_state_t;
-status_t sp_file_read(sp_file_t* file, sp_sample_count_t sample_count, sp_sample_t** result_channel_data, sp_sample_count_t* result_sample_count);
-status_t sp_file_write(sp_file_t* file, sp_sample_t** channel_data, sp_sample_count_t sample_count, sp_sample_count_t* result_sample_count);
+typedef struct {
+  sp_fm_synth_count_t modifies;
+  sp_sample_t** amplitude;
+  sp_sample_count_t** wavelength;
+  sp_sample_count_t* phase_offset;
+} sp_fm_synth_operator_t;
+status_t sp_file_read(sp_file_t* file, sp_sample_count_t sample_count, sp_sample_t** result_block, sp_sample_count_t* result_sample_count);
+status_t sp_file_write(sp_file_t* file, sp_sample_t** block, sp_sample_count_t sample_count, sp_sample_count_t* result_sample_count);
 status_t sp_file_position(sp_file_t* file, sp_sample_count_t* result_position);
-status_t sp_file_position_set(sp_file_t* file, size_t sample_offset);
+status_t sp_file_position_set(sp_file_t* file, sp_sample_count_t sample_offset);
 status_t sp_file_open(uint8_t* path, int mode, sp_channel_count_t channel_count, sp_sample_rate_t sample_rate, sp_file_t* result_file);
 status_t sp_file_close(sp_file_t* a);
-status_t sp_alloc_channel_array(sp_channel_count_t channel_count, sp_sample_count_t sample_count, sp_sample_t*** result_array);
+status_t sp_block_alloc(sp_channel_count_t channel_count, sp_sample_count_t sample_count, sp_sample_t*** result);
 uint8_t* sp_status_description(status_t a);
 uint8_t* sp_status_name(status_t a);
 sp_sample_t sp_sin_lq(sp_float_t a);
@@ -141,12 +147,18 @@ status_t sp_windowed_sinc_bp_br(sp_sample_t* in, sp_sample_count_t in_len, sp_fl
 sp_float_t sp_window_blackman(sp_float_t a, sp_sample_count_t width);
 void sp_spectral_inversion_ir(sp_sample_t* a, sp_sample_count_t a_len);
 void sp_spectral_reversal_ir(sp_sample_t* a, sp_sample_count_t a_len);
-status_t sp_fft(sp_sample_count_t input_len, sp_sample_t* input_or_output_real, sp_sample_t* input_or_output_imag);
-status_t sp_ffti(sp_sample_count_t input_len, sp_sample_t* input_or_output_real, sp_sample_t* input_or_output_imag);
+status_t sp_fft(sp_sample_count_t input_len, double* input_or_output_real, double* input_or_output_imag);
+status_t sp_ffti(sp_sample_count_t input_len, double* input_or_output_real, double* input_or_output_imag);
 status_t sp_moving_average(sp_sample_t* in, sp_sample_t* in_end, sp_sample_t* in_window, sp_sample_t* in_window_end, sp_sample_t* prev, sp_sample_t* prev_end, sp_sample_t* next, sp_sample_t* next_end, sp_sample_count_t radius, sp_sample_t* out);
 void sp_convolve_one(sp_sample_t* a, sp_sample_count_t a_len, sp_sample_t* b, sp_sample_count_t b_len, sp_sample_t* result_samples);
 void sp_convolve(sp_sample_t* a, sp_sample_count_t a_len, sp_sample_t* b, sp_sample_count_t b_len, sp_sample_count_t result_carryover_len, sp_sample_t* result_carryover, sp_sample_t* result_samples);
-void sp_channel_data_free(sp_sample_t** a, sp_channel_count_t channel_count);
+void sp_block_free(sp_sample_t** a, sp_channel_count_t channel_count);
 status_t sp_windowed_sinc_lp_hp_ir(sp_float_t cutoff, sp_float_t transition, boolean is_high_pass, sp_sample_t** out_ir, sp_sample_count_t* out_len);
 status_t sp_null_ir(sp_sample_t** out_ir, sp_sample_count_t* out_len);
 status_t sp_passthrough_ir(sp_sample_t** out_ir, sp_sample_count_t* out_len);
+status_t sp_sine_table_new(sp_sample_t** out, sp_sample_count_t size);
+sp_sample_t* sp_sine_48_table;
+status_t sp_initialise();
+sp_sample_count_t sp_cheap_phase_48(sp_sample_count_t current, sp_sample_count_t change);
+sp_sample_count_t sp_cheap_phase_48_float(sp_sample_count_t current, double change);
+status_t sp_fm_synth(sp_sample_t** out, sp_sample_count_t channels, sp_sample_count_t start, sp_sample_count_t duration, sp_fm_synth_count_t config_len, sp_fm_synth_operator_t* config, sp_sample_count_t** state);

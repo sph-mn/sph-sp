@@ -6,12 +6,24 @@
     sp-channel-count-t uint8-t
     sp-file-format (bit-or SF-FORMAT-WAV SF-FORMAT-FLOAT)
     sp-float-t double
-    sp-sample-count-t size-t
+    sp-sample-count-t uint32-t
     sp-sample-rate-t uint32-t
     sp-sample-sum f64-sum
     sp-sample-t double
     sp-sf-read sf-readf-double
     sp-sf-write sf-writef-double
+    sp-config-is-set #t)
+  ; f32
+  #;(pre-define
+    sp-channel-count-t uint8-t
+    sp-file-format (bit-or SF-FORMAT-WAV SF-FORMAT-FLOAT)
+    sp-float-t float
+    sp-sample-count-t size-t
+    sp-sample-rate-t uint32-t
+    sp-sample-sum f32-sum
+    sp-sample-t float
+    sp-sf-read sf-readf-float
+    sp-sf-write sf-writef-float
     sp-config-is-set #t))
 
 (pre-define
@@ -32,12 +44,10 @@
     "sample count to bit octets count"
     (/ a (sizeof sp-sample-t)))
   (sp-samples->octets a) (* a (sizeof sp-sample-t))
-  (sp-windowed-sinc-ir-cutoff freq sample-rate)
-  (begin
-    "sp-float-t integer -> sp-float-t
-    radians-per-second samples-per-second -> cutoff-value"
-    (/ (* 2 M_PI freq) sample-rate))
-  sp-windowed-sinc-ir-transition sp-windowed-sinc-ir-cutoff)
+  (sp-sine-48 t) (array-get sp-sine-48-table t)
+  sp-fm-synth-count-t uint8-t
+  sp-fm-synth-sine sp-sine-48
+  (sp-cheap-round-positive a) (convert-type (+ 0.5 a) sp-sample-count-t))
 
 (sc-include "../foreign/sph" "../foreign/sph/status")
 
@@ -75,15 +85,22 @@
       (ir-f-arguments void*)
       (ir-f-arguments-len uint8-t)
       (ir-len sp-sample-count-t)))
-  (sp-file-read file sample-count result-channel-data result-sample-count)
+  sp-fm-synth-operator-t
+  (type
+    (struct
+      (modifies sp-fm-synth-count-t)
+      (amplitude sp-sample-t**)
+      (wavelength sp-sample-count-t**)
+      (phase-offset sp-sample-count-t*)))
+  (sp-file-read file sample-count result-block result-sample-count)
   (status-t sp-file-t* sp-sample-count-t sp-sample-t** sp-sample-count-t*)
-  (sp-file-write file channel-data sample-count result-sample-count)
+  (sp-file-write file block sample-count result-sample-count)
   (status-t sp-file-t* sp-sample-t** sp-sample-count-t sp-sample-count-t*)
   (sp-file-position file result-position) (status-t sp-file-t* sp-sample-count-t*)
-  (sp-file-position-set file sample-offset) (status-t sp-file-t* size-t)
+  (sp-file-position-set file sample-offset) (status-t sp-file-t* sp-sample-count-t)
   (sp-file-open path mode channel-count sample-rate result-file)
   (status-t uint8-t* int sp-channel-count-t sp-sample-rate-t sp-file-t*) (sp-file-close a)
-  (status-t sp-file-t*) (sp-alloc-channel-array channel-count sample-count result-array)
+  (status-t sp-file-t*) (sp-block-alloc channel-count sample-count result)
   (status-t sp-channel-count-t sp-sample-count-t sp-sample-t***) (sp-status-description a)
   (uint8-t* status-t) (sp-status-name a)
   (uint8-t* status-t) (sp-sin-lq a)
@@ -120,10 +137,9 @@
   (sp-window-blackman a width) (sp-float-t sp-float-t sp-sample-count-t)
   (sp-spectral-inversion-ir a a-len) (void sp-sample-t* sp-sample-count-t)
   (sp-spectral-reversal-ir a a-len) (void sp-sample-t* sp-sample-count-t)
-  (sp-fft input-len input/output-real input/output-imag)
-  (status-t sp-sample-count-t sp-sample-t* sp-sample-t*)
+  (sp-fft input-len input/output-real input/output-imag) (status-t sp-sample-count-t double* double*)
   (sp-ffti input-len input/output-real input/output-imag)
-  (status-t sp-sample-count-t sp-sample-t* sp-sample-t*)
+  (status-t sp-sample-count-t double* double*)
   (sp-moving-average in in-end in-window in-window-end prev prev-end next next-end radius out)
   (status-t
     sp-sample-t*
@@ -136,8 +152,19 @@
   (void
     sp-sample-t*
     sp-sample-count-t sp-sample-t* sp-sample-count-t sp-sample-count-t sp-sample-t* sp-sample-t*)
-  (sp-channel-data-free a channel-count) (void sp-sample-t** sp-channel-count-t)
+  (sp-block-free a channel-count) (void sp-sample-t** sp-channel-count-t)
   (sp-windowed-sinc-lp-hp-ir cutoff transition is-high-pass out-ir out-len)
   (status-t sp-float-t sp-float-t boolean sp-sample-t** sp-sample-count-t*)
   (sp-null-ir out-ir out-len) (status-t sp-sample-t** sp-sample-count-t*)
-  (sp-passthrough-ir out-ir out-len) (status-t sp-sample-t** sp-sample-count-t*))
+  (sp-passthrough-ir out-ir out-len) (status-t sp-sample-t** sp-sample-count-t*)
+  (sp-sine-table-new out size) (status-t sp-sample-t** sp-sample-count-t)
+  sp-sine-48-table sp-sample-t*
+  (sp-initialise) status-t
+  (sp-cheap-phase-48 current change) (sp-sample-count-t sp-sample-count-t sp-sample-count-t)
+  (sp-cheap-phase-48-float current change) (sp-sample-count-t sp-sample-count-t double)
+  (sp-fm-synth out channels start duration config-len config state)
+  (status-t
+    sp-sample-t**
+    sp-sample-count-t
+    sp-sample-count-t
+    sp-sample-count-t sp-fm-synth-count-t sp-fm-synth-operator-t* sp-sample-count-t**))

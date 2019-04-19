@@ -86,29 +86,28 @@
     ((= 0 (strcmp sp-status-group-sndfile a.group)) (set b "sndfile")) (else (set b "unknown")))
   (return b))
 
-(define (sp-channel-data-free a channel-count) (void sp-sample-t** sp-channel-count-t)
+(define (sp-block-free a channel-count) (void sp-sample-t** sp-channel-count-t)
   (while channel-count
     (set channel-count (- channel-count 1))
     (free (array-get a channel-count)))
   (free a))
 
-(define (sp-alloc-channel-array channel-count sample-count result-array)
+(define (sp-block-alloc channel-count sample-count result)
   (status-t sp-channel-count-t sp-sample-count-t sp-sample-t***)
-  "return a newly allocated array for channels with data arrays for each channel.
-  returns zero if memory could not be allocated"
+  "return a newly allocated array for channels with data arrays for each channel"
   status-declare
   (memreg-init (+ channel-count 1))
   (declare
     channel sp-sample-t*
-    result sp-sample-t**)
-  (status-require (sph-helper-malloc (* channel-count (sizeof sp-sample-t*)) &result))
-  (memreg-add result)
+    a sp-sample-t**)
+  (status-require (sph-helper-malloc (* channel-count (sizeof sp-sample-t*)) &a))
+  (memreg-add a)
   (while channel-count
     (set channel-count (- channel-count 1))
     (status-require (sph-helper-calloc (* sample-count (sizeof sp-sample-t)) &channel))
     (memreg-add channel)
-    (set (array-get result channel-count) channel))
-  (set *result-array result)
+    (set (array-get a channel-count) channel))
+  (set *result a)
   (label exit
     (if status-is-failure memreg-free)
     (return status)))
@@ -130,7 +129,7 @@
       (/ (sin (* M_PI a)) (* M_PI a)))))
 
 (define (sp-fft input-len input/output-real input/output-imag)
-  (status-t sp-sample-count-t sp-sample-t* sp-sample-t*)
+  (status-t sp-sample-count-t double* double*)
   "all arrays should be input-len and are managed by the caller"
   sp-status-declare
   (status-id-require (not (Fft_transform input/output-real input/output-imag input-len)))
@@ -138,7 +137,7 @@
     (return status)))
 
 (define (sp-ffti input-len input/output-real input/output-imag)
-  (status-t sp-sample-count-t sp-sample-t* sp-sample-t*)
+  (status-t sp-sample-count-t double* double*)
   "[[real, imaginary], ...]:complex-numbers -> real-numbers
   input-length > 0
   output-length = input-length
@@ -430,6 +429,120 @@
     in
     in-len (: *out-state ir) (: *out-state ir-len) carryover-len (: *out-state carryover) out-samples)
   (label exit
+    (return status)))
+
+(define (sp-sine-table-new out size) (status-t sp-sample-t** sp-sample-count-t)
+  status-declare
+  (declare
+    i sp-sample-count-t
+    out-array sp-sample-t*)
+  (status-require (sph-helper-malloc (* size (sizeof sp-sample-t*)) &out-array))
+  (for ((set i 0) (< i size) (set i (+ 1 i)))
+    (set (array-get out-array i) (sin (* i (/ M_PI (/ size 2))))))
+  (set *out out-array)
+  (label exit
+    (return status)))
+
+(define (sp-initialise) status-t (return (sp-sine-table-new &sp-sine-48-table 48000)))
+
+(define (sp-cheap-phase-48 current change) (sp-sample-count-t sp-sample-count-t sp-sample-count-t)
+  (declare result sp-sample-count-t)
+  (set result (+ current change))
+  (return
+    (if* (<= 48000 result) (modulo result 48000)
+      result)))
+
+(define (sp-cheap-phase-48-float current change) (sp-sample-count-t sp-sample-count-t double)
+  (return
+    (sp-cheap-phase-48 current
+      (if* (> 1.0 change) 1
+        (sp-cheap-round-positive change)))))
+
+(define (sp-fm-synth out channels start duration config-len config state)
+  (status-t
+    sp-sample-t**
+    sp-sample-count-t
+    sp-sample-count-t
+    sp-sample-count-t sp-fm-synth-count-t sp-fm-synth-operator-t* sp-sample-count-t**)
+  "modifiers must come after carriers in config.
+  config-len must not change between calls with the same state.
+  sp-initialise must have been called once before.
+   modulators can be modulated themselves in chains.
+  features: changing amplitude and wavelength per operator per channel, phase offset per operator and channel"
+  status-declare
+  (declare
+    carrier sp-sample-t**
+    channel-i sp-sample-count-t
+    i sp-sample-count-t
+    modulation-index sp-sample-t***
+    modulation sp-sample-t**
+    op-i sp-fm-synth-count-t
+    op sp-fm-synth-operator-t
+    phases sp-sample-count-t*
+    phs sp-sample-count-t
+    wvl sp-sample-count-t)
+  (sc-comment "modulation-index + modulation channels + channel array")
+  (memreg-init (+ 1 (* (- config-len 1) (+ 1 channels))))
+  (sc-comment
+    "create new state which contains the initial phase offsets per channel."
+    "((phase-offset:channel ...):operator ...)")
+  (if (not *state)
+    (begin
+      (status-require (sph-helper-calloc (* channels config-len (sizeof sp-sample-count-t)) state))
+      (set phases *state)
+      (for ((set i 0) (< i config-len) (set i (+ 1 i)))
+        (for ((set channel-i 0) (< channel-i channels) (set channel-i (+ 1 channel-i)))
+          (set (array-get phases (+ channel-i (* channels i)))
+            (array-get (struct-get (array-get config i) phase-offset) channel-i))))))
+  (set
+    op-i config-len
+    phases *state)
+  (sc-comment "the modulation-index contains modulator output")
+  (status-require (sph-helper-calloc (* config-len (sizeof sp-sample-t**)) &modulation-index))
+  (memreg-add modulation-index)
+  (while op-i
+    (set
+      op-i (- op-i 1)
+      op (array-get config op-i))
+    (set modulation (array-get modulation-index op-i))
+    (if op.modifies
+      (begin
+        (sc-comment "allocate block for modulator output")
+        (status-require (sph-helper-malloc (* channels (sizeof sp-sample-t*)) &carrier))
+        (memreg-add carrier)
+        (for ((set channel-i 0) (< channel-i channels) (set channel-i (+ 1 channel-i)))
+          (status-require
+            (sph-helper-calloc
+              (* duration (sizeof sp-sample-t)) (address-of (array-get carrier channel-i))))
+          (memreg-add (array-get carrier channel-i)))
+        (sc-comment "generate samples")
+        (for ((set channel-i 0) (< channel-i channels) (set channel-i (+ 1 channel-i)))
+          (set phs (array-get phases (+ channel-i (* channels op-i))))
+          (for ((set i 0) (< i duration) (set i (+ 1 i)))
+            (set
+              (array-get carrier channel-i i) (+ (array-get carrier channel-i i) (sp-sine-48 phs))
+              wvl (array-get op.wavelength channel-i (+ start i))
+              wvl
+              (if* modulation (+ wvl (* wvl (array-get modulation channel-i i)))
+                wvl)
+              phs (sp-cheap-phase-48-float phs (/ 24000 wvl)))
+            (printf "%lu\n" phs))
+          (set (array-get phases (+ channel-i (* channels op-i))) phs))
+        (set (array-get modulation-index (- op.modifies 1)) carrier))
+      (for ((set channel-i 0) (< channel-i channels) (set channel-i (+ 1 channel-i)))
+        (set phs (array-get phases (+ channel-i (* channels op-i))))
+        (for ((set i 0) (< i duration) (set i (+ 1 i)))
+          (set
+            wvl (array-get op.wavelength channel-i (+ start i))
+            wvl
+            (if* modulation (+ wvl (* wvl (array-get modulation channel-i i)))
+              wvl)
+            phs (sp-cheap-phase-48-float phs (/ 24000 wvl))
+            (array-get out channel-i i) (+ (array-get out channel-i i) (sp-sine-48 phs))))
+        (set (array-get phases (+ channel-i (* channels op-i))) phs))))
+  (set *state phases)
+  (label exit
+    memreg-free
     (return status)))
 
 (pre-include "../main/windowed-sinc.c" "../main/io.c")

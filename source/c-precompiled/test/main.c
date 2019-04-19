@@ -181,8 +181,8 @@ status_t test_file() {
   status_declare;
   sp_sample_count_t channel;
   sp_channel_count_t channel_count;
-  sp_sample_t** channel_data;
-  sp_sample_t** channel_data_2;
+  sp_sample_t** block;
+  sp_sample_t** block_2;
   sp_sample_count_t len;
   sp_file_t file;
   sp_sample_count_t position;
@@ -199,16 +199,16 @@ status_t test_file() {
   sample_count = 5;
   position = 0;
   channel = channel_count;
-  status_require((sp_alloc_channel_array(channel_count, sample_count, (&channel_data))));
-  memreg_add(channel_data);
-  status_require((sp_alloc_channel_array(channel_count, sample_count, (&channel_data_2))));
-  memreg_add(channel_data_2);
+  status_require((sp_block_alloc(channel_count, sample_count, (&block))));
+  memreg_add(block);
+  status_require((sp_block_alloc(channel_count, sample_count, (&block_2))));
+  memreg_add(block_2);
   while (channel) {
     channel = (channel - 1);
     len = sample_count;
     while (len) {
       len = (len - 1);
-      (channel_data[channel])[len] = len;
+      (block[channel])[len] = len;
     };
   };
   goto exit;
@@ -216,17 +216,17 @@ status_t test_file() {
   status_require((sp_file_open(test_file_path, sp_file_mode_read_write, channel_count, sample_rate, (&file))));
   printf("  create\n");
   status_require((sp_file_position((&file), (&position))));
-  status_require((sp_file_write((&file), channel_data, sample_count, (&result_sample_count))));
+  status_require((sp_file_write((&file), block, sample_count, (&result_sample_count))));
   status_require((sp_file_position((&file), (&position))));
   test_helper_assert("sp-file-position file after write", (sample_count == position));
   status_require((sp_file_position_set((&file), 0)));
-  status_require((sp_file_read((&file), sample_count, channel_data_2, (&result_sample_count))));
+  status_require((sp_file_read((&file), sample_count, block_2, (&result_sample_count))));
   /* compare read result with output data */
   len = channel_count;
   unequal = 0;
   while ((len && !unequal)) {
     len = (len - 1);
-    unequal = !sp_sample_array_nearly_equal((channel_data[len]), sample_count, (channel_data_2[len]), sample_count, error_margin);
+    unequal = !sp_sample_array_nearly_equal((block[len]), sample_count, (block_2[len]), sample_count, error_margin);
   };
   test_helper_assert("sp-file-read new file result", !unequal);
   status_require((sp_file_close((&file))));
@@ -236,13 +236,13 @@ status_t test_file() {
   status_require((sp_file_position((&file), (&position))));
   test_helper_assert("sp-file-position existing file", (sample_count == position));
   status_require((sp_file_position_set((&file), 0)));
-  sp_file_read((&file), sample_count, channel_data_2, (&result_sample_count));
+  sp_file_read((&file), sample_count, block_2, (&result_sample_count));
   /* compare read result with output data */
   unequal = 0;
   len = channel_count;
   while ((len && !unequal)) {
     len = (len - 1);
-    unequal = !sp_sample_array_nearly_equal((channel_data[len]), sample_count, (channel_data_2[len]), sample_count, error_margin);
+    unequal = !sp_sample_array_nearly_equal((block[len]), sample_count, (block_2[len]), sample_count, error_margin);
   };
   test_helper_assert("sp-file-read existing result", !unequal);
   status_require((sp_file_close((&file))));
@@ -262,16 +262,52 @@ status_t test_fft() {
 exit:
   return (status);
 };
+status_t test_fm_synth() {
+  status_declare;
+  sp_sample_count_t* state;
+  sp_sample_t** out;
+  sp_channel_count_t channels;
+  sp_sample_count_t duration;
+  sp_fm_synth_operator_t op_1;
+  sp_fm_synth_operator_t op_2;
+  sp_fm_synth_operator_t op_3;
+  sp_fm_synth_operator_t config[3];
+  sp_sample_count_t phs[2] = { 1, 2 };
+  sp_sample_count_t channel_wvl[4] = { 2, 2, 2, 2 };
+  sp_sample_t channel_amp[4] = { 0.1, 0.2, 0.3, 0.4 };
+  sp_sample_count_t* wvl[2] = { 0, 0 };
+  sp_sample_t* amp[2] = { 0, 0 };
+  state = 0;
+  duration = 4;
+  channels = 2;
+  wvl[0] = channel_wvl;
+  wvl[1] = channel_wvl;
+  amp[0] = channel_amp;
+  amp[1] = channel_amp;
+  op_1.amplitude = amp;
+  op_1.wavelength = wvl;
+  op_1.phase_offset = phs;
+  op_1.modifies = 0;
+  op_2.amplitude = amp;
+  op_2.wavelength = wvl;
+  op_2.phase_offset = phs;
+  op_2.modifies = 1;
+  op_3.amplitude = amp;
+  op_3.wavelength = wvl;
+  op_3.phase_offset = phs;
+  op_3.modifies = 0;
+  config[0] = op_1;
+  config[1] = op_2;
+  config[2] = op_3;
+  status_require((sp_block_alloc(channels, duration, (&out))));
+  status_require((sp_fm_synth(out, 2, 0, 4, 3, config, (&state))));
+exit:
+  return (status);
+};
 int main() {
   status_declare;
-  test_helper_test_one(test_moving_average);
-  test_helper_test_one(test_fft);
-  test_helper_test_one(test_spectral_inversion_ir);
-  test_helper_test_one(test_base);
-  test_helper_test_one(test_spectral_reversal_ir);
-  test_helper_test_one(test_convolve);
-  test_helper_test_one(test_file);
-  test_helper_test_one(test_windowed_sinc);
+  sp_initialise();
+  test_helper_test_one(test_fm_synth);
 exit:
   test_helper_display_summary();
   return ((status.id));
