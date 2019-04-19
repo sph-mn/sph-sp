@@ -11,6 +11,10 @@
 #define sp_sample_t double
 #define sp_sf_read sf_readf_double
 #define sp_sf_write sf_writef_double
+#define sp_fm_synth_count_t uint8_t
+#define sp_fm_synth_sine sp_sine_48
+#define sp_fm_synth_channel_limit 16
+#define sp_fm_synth_operator_limit 64
 #define sp_config_is_set 1
 #endif
 #define boolean uint8_t
@@ -29,8 +33,6 @@
 #define sp_octets_to_samples(a) (a / sizeof(sp_sample_t))
 #define sp_samples_to_octets(a) (a * sizeof(sp_sample_t))
 #define sp_sine_48(t) sp_sine_48_table[t]
-#define sp_fm_synth_count_t uint8_t
-#define sp_fm_synth_sine sp_sine_48
 #define sp_cheap_round_positive(a) ((sp_sample_count_t)((0.5 + a)))
 #include <stdio.h>
 /** writes values with current routine name and line info to standard output.
@@ -118,9 +120,9 @@ typedef struct {
 } sp_convolution_filter_state_t;
 typedef struct {
   sp_fm_synth_count_t modifies;
-  sp_sample_t** amplitude;
-  sp_sample_count_t** wavelength;
-  sp_sample_count_t* phase_offset;
+  sp_sample_t* amplitude[sp_fm_synth_channel_limit];
+  sp_sample_count_t* wavelength[sp_fm_synth_channel_limit];
+  sp_sample_count_t phase_offset[sp_fm_synth_channel_limit];
 } sp_fm_synth_operator_t;
 status_t sp_file_read(sp_file_t* file, sp_sample_count_t sample_count, sp_sample_t** result_block, sp_sample_count_t* result_sample_count);
 status_t sp_file_write(sp_file_t* file, sp_sample_t** block, sp_sample_count_t sample_count, sp_sample_count_t* result_sample_count);

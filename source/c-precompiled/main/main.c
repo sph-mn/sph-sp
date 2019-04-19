@@ -406,26 +406,28 @@ sp_sample_count_t sp_cheap_phase_48_float(sp_sample_count_t current, double chan
   config-len must not change between calls with the same state.
   sp-initialise must have been called once before.
    modulators can be modulated themselves in chains.
-  features: changing amplitude and wavelength per operator per channel, phase offset per operator and channel */
+  features: changing amplitude and wavelength per operator per channel, phase offset per operator and channel.
+  state is allocated if zero and owned by caller */
 status_t sp_fm_synth(sp_sample_t** out, sp_sample_count_t channels, sp_sample_count_t start, sp_sample_count_t duration, sp_fm_synth_count_t config_len, sp_fm_synth_operator_t* config, sp_sample_count_t** state) {
   status_declare;
-  sp_sample_t** carrier;
+  sp_sample_t amp;
+  sp_sample_t* carrier;
   sp_sample_count_t channel_i;
   sp_sample_count_t i;
-  sp_sample_t*** modulation_index;
+  sp_sample_t modulated_wvl;
+  sp_sample_t* modulation_index[sp_fm_synth_operator_limit][sp_fm_synth_channel_limit];
   sp_sample_t** modulation;
   sp_fm_synth_count_t op_i;
   sp_fm_synth_operator_t op;
   sp_sample_count_t* phases;
   sp_sample_count_t phs;
   sp_sample_count_t wvl;
-  /* modulation-index + modulation channels + channel array */
-  memreg_init((1 + ((config_len - 1) * (1 + channels))));
+  /* modulation blocks (channel array + data. at least one is carrier and writes only to output) */
+  memreg_init(((config_len - 1) * (1 + channels)));
   /* create new state which contains the initial phase offsets per channel.
 ((phase-offset:channel ...):operator ...) */
   if (!*state) {
-    status_require((sph_helper_calloc((channels * config_len * sizeof(sp_sample_count_t)), state)));
-    phases = *state;
+    status_require((sph_helper_calloc((channels * config_len * sizeof(sp_sample_count_t)), (&phases))));
     for (i = 0; (i < config_len); i = (1 + i)) {
       for (channel_i = 0; (channel_i < channels); channel_i = (1 + channel_i)) {
         phases[(channel_i + (channels * i))] = ((config[i]).phase_offset)[channel_i];
@@ -433,48 +435,50 @@ status_t sp_fm_synth(sp_sample_t** out, sp_sample_count_t channels, sp_sample_co
     };
   };
   op_i = config_len;
-  phases = *state;
   /* the modulation-index contains modulator output */
-  status_require((sph_helper_calloc((config_len * sizeof(sp_sample_t**)), (&modulation_index))));
-  memreg_add(modulation_index);
   while (op_i) {
     op_i = (op_i - 1);
     op = config[op_i];
     modulation = modulation_index[op_i];
+    printf("op-i %lu\n", op_i);
     if (op.modifies) {
+      printf("modifies\n", op_i);
       /* allocate block for modulator output */
       status_require((sph_helper_malloc((channels * sizeof(sp_sample_t*)), (&carrier))));
       memreg_add(carrier);
       for (channel_i = 0; (channel_i < channels); channel_i = (1 + channel_i)) {
-        status_require((sph_helper_calloc((duration * sizeof(sp_sample_t)), (&(carrier[channel_i])))));
-        memreg_add((carrier[channel_i]));
       };
       /* generate samples */
       for (channel_i = 0; (channel_i < channels); channel_i = (1 + channel_i)) {
+        status_require((sph_helper_calloc((duration * sizeof(sp_sample_t)), (&carrier))));
+        memreg_add(carrier);
         phs = phases[(channel_i + (channels * op_i))];
         for (i = 0; (i < duration); i = (1 + i)) {
+          amp = (op.amplitude)[channel_i][(start + i)];
+          carrier[i] = (carrier[i] + (amp * sp_sine_48(phs)));
           wvl = (op.wavelength)[channel_i][(start + i)];
-          wvl = (modulation ? (wvl + (wvl * modulation[channel_i][i])) : wvl);
-          carrier[channel_i][i] = (carrier[channel_i][i] + sp_sine_48(phs));
-          phs = sp_cheap_phase_48_float(phs, (24000 / wvl));
-          printf("%lu\n", phs);
+          modulated_wvl = (modulation ? (wvl + (wvl * modulation[channel_i][i])) : wvl);
+          phs = sp_cheap_phase_48_float(phs, (24000 / modulated_wvl));
         };
         phases[(channel_i + (channels * op_i))] = phs;
+        modulation_index[(op.modifies - 1)][channel_i] = carrier;
       };
-      modulation_index[(op.modifies - 1)] = carrier;
     } else {
       for (channel_i = 0; (channel_i < channels); channel_i = (1 + channel_i)) {
+        printf("not modifies\n", op_i);
         phs = phases[(channel_i + (channels * op_i))];
         for (i = 0; (i < duration); i = (1 + i)) {
+          amp = (op.amplitude)[channel_i][(start + i)];
           wvl = (op.wavelength)[channel_i][(start + i)];
-          wvl = (modulation ? (wvl + (wvl * modulation[channel_i][i])) : wvl);
-          phs = sp_cheap_phase_48_float(phs, (24000 / wvl));
-          out[channel_i][i] = (out[channel_i][i] + sp_sine_48(phs));
+          modulated_wvl = (modulation ? (wvl + (wvl * modulation[channel_i][i])) : wvl);
+          phs = sp_cheap_phase_48_float(phs, (24000 / modulated_wvl));
+          out[channel_i][i] = (out[channel_i][i] + (amp * sp_sine_48(phs)));
         };
         phases[(channel_i + (channels * op_i))] = phs;
       };
     };
   };
+  printf("after op processing\n", op_i);
   *state = phases;
 exit:
   memreg_free;

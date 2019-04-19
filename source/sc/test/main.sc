@@ -302,41 +302,40 @@
     out sp-sample-t**
     channels sp-channel-count-t
     duration sp-sample-count-t
-    op-1 sp-fm-synth-operator-t
-    op-2 sp-fm-synth-operator-t
-    op-3 sp-fm-synth-operator-t
+    op1 sp-fm-synth-operator-t
+    op2 sp-fm-synth-operator-t
+    op3 sp-fm-synth-operator-t
     config (array sp-fm-synth-operator-t 3)
-    phs (array sp-sample-count-t 2 1 2)
-    channel-wvl (array sp-sample-count-t 4 2 2 2 2)
-    channel-amp (array sp-sample-t 4 0.1 0.2 0.3 0.4)
-    wvl (array sp-sample-count-t* 2 0 0)
-    amp (array sp-sample-t* 2 0 0))
+    wvl (array sp-sample-count-t 4 2 2 2 2)
+    amp (array sp-sample-t 4 0.1 0.2 0.3 0.4))
   (set
     state 0
     duration 4
     channels 2
-    (array-get wvl 0) channel-wvl
-    (array-get wvl 1) channel-wvl
-    (array-get amp 0) channel-amp
-    (array-get amp 1) channel-amp
-    op-1.amplitude amp
-    op-1.wavelength wvl
-    op-1.phase-offset phs
-    op-1.modifies 0
-    op-2.amplitude amp
-    op-2.wavelength wvl
-    op-2.phase-offset phs
-    op-2.modifies 1
-    op-3.amplitude amp
-    op-3.wavelength wvl
-    op-3.phase-offset phs
-    op-3.modifies 0
-    (array-get config 0) op-1
-    (array-get config 1) op-2
-    (array-get config 2) op-3)
+    (array-get op1.amplitude 0) amp
+    (array-get op1.amplitude 1) amp
+    (array-get op1.wavelength 0) wvl
+    (array-get op1.wavelength 1) wvl
+    (array-get op1.phase-offset 0) 1
+    (array-get op1.phase-offset 2) 2
+    (array-get op2.amplitude 0) amp
+    (array-get op2.amplitude 1) amp
+    (array-get op2.wavelength 0) wvl
+    (array-get op2.wavelength 1) wvl
+    (array-get op2.phase-offset 0) 1
+    (array-get op2.phase-offset 2) 2
+    (array-get op3.amplitude 0) amp
+    (array-get op3.amplitude 1) amp
+    (array-get op3.wavelength 0) wvl
+    (array-get op3.wavelength 1) wvl
+    (array-get op3.phase-offset 0) 1
+    (array-get op3.phase-offset 2) 2
+    (array-get config 0) op1
+    (array-get config 1) op2
+    (array-get config 2) op3)
   (status-require (sp-block-alloc channels duration &out))
   (status-require (sp-fm-synth out 2 0 4 3 config &state))
-  ;(status-require (sp-fm-synth out 2 0 4 2 config &state))
+  (status-require (sp-fm-synth out 2 0 4 2 config &state))
   (label exit
     (return status)))
 

@@ -12,6 +12,10 @@
     sp-sample-t double
     sp-sf-read sf-readf-double
     sp-sf-write sf-writef-double
+    sp-fm-synth-count-t uint8-t
+    sp-fm-synth-sine sp-sine-48
+    sp-fm-synth-channel-limit 16
+    sp-fm-synth-operator-limit 64
     sp-config-is-set #t)
   ; f32
   #;(pre-define
@@ -45,8 +49,6 @@
     (/ a (sizeof sp-sample-t)))
   (sp-samples->octets a) (* a (sizeof sp-sample-t))
   (sp-sine-48 t) (array-get sp-sine-48-table t)
-  sp-fm-synth-count-t uint8-t
-  sp-fm-synth-sine sp-sine-48
   (sp-cheap-round-positive a) (convert-type (+ 0.5 a) sp-sample-count-t))
 
 (sc-include "../foreign/sph" "../foreign/sph/status")
@@ -89,9 +91,9 @@
   (type
     (struct
       (modifies sp-fm-synth-count-t)
-      (amplitude sp-sample-t**)
-      (wavelength sp-sample-count-t**)
-      (phase-offset sp-sample-count-t*)))
+      (amplitude (array sp-sample-t* sp-fm-synth-channel-limit))
+      (wavelength (array sp-sample-count-t* sp-fm-synth-channel-limit))
+      (phase-offset (array sp-sample-count-t sp-fm-synth-channel-limit))))
   (sp-file-read file sample-count result-block result-sample-count)
   (status-t sp-file-t* sp-sample-count-t sp-sample-t** sp-sample-count-t*)
   (sp-file-write file block sample-count result-sample-count)
