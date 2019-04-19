@@ -458,7 +458,7 @@
       (if* (> 1.0 change) 1
         (sp-cheap-round-positive change)))))
 
-(define (sp-fm-synth out channels start duration config-len config state)
+(define (sp-fm-synth out channel-count start duration config-len config state)
   (status-t
     sp-sample-t**
     sp-sample-count-t
@@ -478,7 +478,7 @@
     i sp-sample-count-t
     modulated-wvl sp-sample-t
     modulation-index (array sp-sample-t* (sp-fm-synth-operator-limit sp-fm-synth-channel-limit))
-    modulation sp-sample-t**
+    modulation sp-sample-t*
     op-i sp-fm-synth-count-t
     op sp-fm-synth-operator-t
     phases sp-sample-count-t*
@@ -486,64 +486,60 @@
     wvl sp-sample-count-t)
   (sc-comment
     "modulation blocks (channel array + data. at least one is carrier and writes only to output)")
-  (memreg-init (* (- config-len 1) (+ 1 channels)))
+  (memreg-init (* (- config-len 1) channel-count))
+  (memset modulation-index 0 (sizeof modulation-index))
   (sc-comment
     "create new state which contains the initial phase offsets per channel."
     "((phase-offset:channel ...):operator ...)")
   (if (not *state)
     (begin
       (status-require
-        (sph-helper-calloc (* channels config-len (sizeof sp-sample-count-t)) &phases))
+        (sph-helper-calloc (* channel-count config-len (sizeof sp-sample-count-t)) &phases))
       (for ((set i 0) (< i config-len) (set i (+ 1 i)))
-        (for ((set channel-i 0) (< channel-i channels) (set channel-i (+ 1 channel-i)))
-          (set (array-get phases (+ channel-i (* channels i)))
+        (for ((set channel-i 0) (< channel-i channel-count) (set channel-i (+ 1 channel-i)))
+          (set (array-get phases (+ channel-i (* channel-count i)))
             (array-get (struct-get (array-get config i) phase-offset) channel-i))))))
   (set op-i config-len)
   (sc-comment "the modulation-index contains modulator output")
   (while op-i
     (set
       op-i (- op-i 1)
-      op (array-get config op-i)
-      modulation (array-get modulation-index op-i))
-    (printf "op-i %lu\n" op-i)
+      op (array-get config op-i))
     (if op.modifies
       (begin
-        (printf "modifies\n" op-i)
-        (sc-comment "allocate block for modulator output")
-        (status-require (sph-helper-malloc (* channels (sizeof sp-sample-t*)) &carrier))
-        (memreg-add carrier)
-        (for ((set channel-i 0) (< channel-i channels) (set channel-i (+ 1 channel-i))))
-        (sc-comment "generate samples")
-        (for ((set channel-i 0) (< channel-i channels) (set channel-i (+ 1 channel-i)))
+        (sc-comment "generate modulator output")
+        (for ((set channel-i 0) (< channel-i channel-count) (set channel-i (+ 1 channel-i)))
           (status-require (sph-helper-calloc (* duration (sizeof sp-sample-t)) &carrier))
           (memreg-add carrier)
-          (set phs (array-get phases (+ channel-i (* channels op-i))))
+          (set
+            phs (array-get phases (+ channel-i (* channel-count op-i)))
+            modulation (array-get modulation-index op-i channel-i))
           (for ((set i 0) (< i duration) (set i (+ 1 i)))
             (set
               amp (array-get op.amplitude channel-i (+ start i))
               (array-get carrier i) (+ (array-get carrier i) (* amp (sp-sine-48 phs)))
               wvl (array-get op.wavelength channel-i (+ start i))
               modulated-wvl
-              (if* modulation (+ wvl (* wvl (array-get modulation channel-i i)))
+              (if* modulation (+ wvl (* wvl (array-get modulation i)))
                 wvl)
               phs (sp-cheap-phase-48-float phs (/ 24000 modulated-wvl))))
           (set
-            (array-get phases (+ channel-i (* channels op-i))) phs
+            (array-get phases (+ channel-i (* channel-count op-i))) phs
             (array-get modulation-index (- op.modifies 1) channel-i) carrier)))
-      (for ((set channel-i 0) (< channel-i channels) (set channel-i (+ 1 channel-i)))
-        (printf "not modifies\n" op-i)
-        (set phs (array-get phases (+ channel-i (* channels op-i))))
+      (for ((set channel-i 0) (< channel-i channel-count) (set channel-i (+ 1 channel-i)))
+        (set
+          phs (array-get phases (+ channel-i (* channel-count op-i)))
+          modulation (array-get modulation-index op-i channel-i))
         (for ((set i 0) (< i duration) (set i (+ 1 i)))
           (set
             amp (array-get op.amplitude channel-i (+ start i))
             wvl (array-get op.wavelength channel-i (+ start i))
             modulated-wvl
-            (if* modulation (+ wvl (* wvl (array-get modulation channel-i i)))
+            (if* modulation (+ wvl (* wvl (array-get modulation i)))
               wvl)
             phs (sp-cheap-phase-48-float phs (/ 24000 modulated-wvl))
             (array-get out channel-i i) (+ (array-get out channel-i i) (* amp (sp-sine-48 phs)))))
-        (set (array-get phases (+ channel-i (* channels op-i))) phs))))
-  (printf "after op processing\n" op-i)
+        (set (array-get phases (+ channel-i (* channel-count op-i))) phs))))
   (set *state phases)
   (label exit
     memreg-free
