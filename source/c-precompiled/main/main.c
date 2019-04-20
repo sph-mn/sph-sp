@@ -383,6 +383,7 @@ status_t sp_convolution_filter(sp_sample_t* in, sp_sample_count_t in_len, sp_con
 exit:
   return (status);
 };
+/** writes a sine wave of size into out. can be used as a lookup table */
 status_t sp_sine_table_new(sp_sample_t** out, sp_sample_count_t size) {
   status_declare;
   sp_sample_count_t i;
@@ -395,19 +396,32 @@ status_t sp_sine_table_new(sp_sample_t** out, sp_sample_count_t size) {
 exit:
   return (status);
 };
+/** fills the sine wave lookup table */
 status_t sp_initialise() { return ((sp_sine_table_new((&sp_sine_96_table), 96000))); };
+/** accumulate an integer phase and reset it after cycles.
+  float value phases would be harder to reset */
 sp_sample_count_t sp_cheap_phase_96(sp_sample_count_t current, sp_sample_count_t change) {
   sp_sample_count_t result;
   result = (current + change);
   return (((96000 <= result) ? (result % 96000) : result));
 };
-sp_sample_count_t sp_cheap_phase_96_float(sp_sample_count_t current, double change) { return ((sp_cheap_phase_96(current, ((1.0 > change) ? 1 : sp_cheap_round_positive(change))))); };
-/** modifiers must come after carriers in config.
-  config-len must not change between calls with the same state.
-  sp-initialise must have been called once before.
-   modulators can be modulated themselves in chains.
-  features: changing amplitude and wavelength per operator per channel, phase offset per operator and channel.
-  state is allocated if zero and owned by caller */
+/** accumulate an integer phase with change given as a float value.
+  change must be a positive value and is rounded */
+sp_sample_count_t sp_cheap_phase_96_float(sp_sample_count_t current, double change) { return ((sp_cheap_phase_96(current, ((1.0 > change) ? 1 : sp_cheap_floor_positive(change))))); };
+/** create sines that can modulate the frequency of others and sum into output.
+  amplitude and wavelength can be controlled by arrays separately for each operator and channel.
+  modulators can be modulated themselves in chains. state is allocated if zero and owned by the caller.
+  modulator amplitude is relative to carrier wavelength.
+  # requirements
+  * modulators must come after carriers in config
+  * config-len must not change between calls with the same state
+  * all amplitude/wavelength arrays must be of sufficient size and available for all channels
+  * sp-initialise must have been called once before using sp-fm-synth
+  # algorithm
+  * read config from the end to the start
+  * write modulator output to temporary buffers that are indexed by modified operator id
+  * apply modulator output from the buffers and sum to output for final carriers
+  * each operator has integer phases that are reset in cycles and kept in state between calls */
 status_t sp_fm_synth(sp_sample_t** out, sp_sample_count_t channel_count, sp_sample_count_t start, sp_sample_count_t duration, sp_fm_synth_count_t config_len, sp_fm_synth_operator_t* config, sp_sample_count_t** state) {
   status_declare;
   sp_sample_t amp;
@@ -425,8 +439,8 @@ status_t sp_fm_synth(sp_sample_t** out, sp_sample_count_t channel_count, sp_samp
   /* modulation blocks (channel array + data. at least one is carrier and writes only to output) */
   memreg_init(((config_len - 1) * channel_count));
   memset(modulation_index, 0, (sizeof(modulation_index)));
-  /* create new state which contains the initial phase offsets per channel.
-((phase-offset:channel ...):operator ...) */
+  /* ensure a state object that contains the initial phase offsets per operator and channel
+    as a flat array */
   if (*state) {
     phases = *state;
   } else {
@@ -438,12 +452,10 @@ status_t sp_fm_synth(sp_sample_t** out, sp_sample_count_t channel_count, sp_samp
     };
   };
   op_i = config_len;
-  /* the modulation-index contains modulator output */
   while (op_i) {
     op_i = (op_i - 1);
     op = config[op_i];
     if (op.modifies) {
-      /* generate modulator output */
       for (channel_i = 0; (channel_i < channel_count); channel_i = (1 + channel_i)) {
         status_require((sph_helper_calloc((duration * sizeof(sp_sample_t)), (&carrier))));
         memreg_add(carrier);
@@ -454,7 +466,7 @@ status_t sp_fm_synth(sp_sample_t** out, sp_sample_count_t channel_count, sp_samp
           carrier[i] = (carrier[i] + (amp * sp_sine_96(phs)));
           wvl = (op.wavelength)[channel_i][(start + i)];
           modulated_wvl = (modulation ? (wvl + (wvl * modulation[i])) : wvl);
-          phs = sp_cheap_phase_96_float(phs, (24000 / modulated_wvl));
+          phs = sp_cheap_phase_96_float(phs, (48000 / modulated_wvl));
         };
         phases[(channel_i + (channel_count * op_i))] = phs;
         modulation_index[(op.modifies - 1)][channel_i] = carrier;
@@ -467,7 +479,7 @@ status_t sp_fm_synth(sp_sample_t** out, sp_sample_count_t channel_count, sp_samp
           amp = (op.amplitude)[channel_i][(start + i)];
           wvl = (op.wavelength)[channel_i][(start + i)];
           modulated_wvl = (modulation ? (wvl + (wvl * modulation[i])) : wvl);
-          phs = sp_cheap_phase_96_float(phs, (24000 / modulated_wvl));
+          phs = sp_cheap_phase_96_float(phs, (48000 / modulated_wvl));
           out[channel_i][i] = (out[channel_i][i] + (amp * sp_sine_96(phs)));
         };
         phases[(channel_i + (channel_count * op_i))] = phs;
@@ -479,5 +491,47 @@ exit:
   memreg_free;
   return (status);
 };
+/** samples real real pair [integer integer integer] -> state
+    define a routine for a fast filter that supports multiple filter types in one.
+    state must hold two elements and is allocated and owned by the caller.
+    cutoff is as a fraction of the sample rate between 0 and 0.5.
+    uses the state-variable filter described here:
+    * http://www.cytomic.com/technical-papers
+    * http://www.earlevel.com/main/2016/02/21/filters-for-synths-starting-out/ */
+#define define_sp_state_variable_filter(suffix, transfer) \
+  void sp_state_variable_filter_##suffix(sp_sample_t* out, sp_sample_t* in, sp_float_t in_count, sp_float_t cutoff, sp_sample_count_t q_factor, sp_sample_t* state) { \
+    sp_sample_t a1; \
+    sp_sample_t a2; \
+    sp_sample_t g; \
+    sp_sample_t ic1eq; \
+    sp_sample_t ic2eq; \
+    sp_sample_count_t i; \
+    sp_sample_t k; \
+    sp_sample_t v0; \
+    sp_sample_t v1; \
+    sp_sample_t v2; \
+    ic1eq = state[0]; \
+    ic2eq = state[1]; \
+    g = tan((M_PI * cutoff)); \
+    k = (2 - (2 * q_factor)); \
+    a1 = (1 / (1 + (g * (g + k)))); \
+    a2 = (g * a1); \
+    for (i = 0; (i < in_count); i = (1 + i)) { \
+      v0 = in[i]; \
+      v1 = ((a1 * ic1eq) + (a2 * (v0 - ic2eq))); \
+      v2 = (ic2eq + (g * v1)); \
+      ic1eq = ((2 * v1) - ic1eq); \
+      ic2eq = ((2 * v2) - ic2eq); \
+      out[i] = transfer; \
+    }; \
+    state[0] = ic1eq; \
+    state[1] = ic2eq; \
+  }
+define_sp_state_variable_filter(lp, v2);
+define_sp_state_variable_filter(hp, (v0 - (k * v1) - v2));
+define_sp_state_variable_filter(bp, v1);
+define_sp_state_variable_filter(br, (v0 - (k * v1)));
+define_sp_state_variable_filter(peak, (((2 * v2) - v0) + (k * v1)));
+define_sp_state_variable_filter(all, (v0 - (2 * k * v1)));
 #include "../main/windowed-sinc.c"
 #include "../main/io.c"

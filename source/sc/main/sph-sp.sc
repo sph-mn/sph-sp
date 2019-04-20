@@ -48,8 +48,12 @@
     "sample count to bit octets count"
     (/ a (sizeof sp-sample-t)))
   (sp-samples->octets a) (* a (sizeof sp-sample-t))
-  (sp-sine-96 t) (array-get sp-sine-96-table t)
-  (sp-cheap-round-positive a) (convert-type (+ 0.5 a) sp-sample-count-t))
+  (sp-sine-96 t)
+  (begin
+    "t must be between 0 and 95999"
+    (array-get sp-sine-96-table t))
+  (sp-cheap-round-positive a) (convert-type (+ 0.5 a) sp-sample-count-t)
+  (sp-cheap-floor-positive a) (convert-type a sp-sample-count-t))
 
 (sc-include "../foreign/sph" "../foreign/sph/status")
 
@@ -169,4 +173,16 @@
     sp-sample-t**
     sp-sample-count-t
     sp-sample-count-t
-    sp-sample-count-t sp-fm-synth-count-t sp-fm-synth-operator-t* sp-sample-count-t**))
+    sp-sample-count-t sp-fm-synth-count-t sp-fm-synth-operator-t* sp-sample-count-t**)
+  (sp-state-variable-filter-lp out in in-count cutoff q-factor state)
+  (void sp-sample-t* sp-sample-t* sp-float-t sp-float-t sp-sample-count-t sp-sample-t*)
+  (sp-state-variable-filter-hp out in in-count cutoff q-factor state)
+  (void sp-sample-t* sp-sample-t* sp-float-t sp-float-t sp-sample-count-t sp-sample-t*)
+  (sp-state-variable-filter-bp out in in-count cutoff q-factor state)
+  (void sp-sample-t* sp-sample-t* sp-float-t sp-float-t sp-sample-count-t sp-sample-t*)
+  (sp-state-variable-filter-br out in in-count cutoff q-factor state)
+  (void sp-sample-t* sp-sample-t* sp-float-t sp-float-t sp-sample-count-t sp-sample-t*)
+  (sp-state-variable-filter-peak out in in-count cutoff q-factor state)
+  (void sp-sample-t* sp-sample-t* sp-float-t sp-float-t sp-sample-count-t sp-sample-t*)
+  (sp-state-variable-filter-all out in in-count cutoff q-factor state)
+  (void sp-sample-t* sp-sample-t* sp-float-t sp-float-t sp-sample-count-t sp-sample-t*))

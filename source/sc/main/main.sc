@@ -432,6 +432,7 @@
     (return status)))
 
 (define (sp-sine-table-new out size) (status-t sp-sample-t** sp-sample-count-t)
+  "writes a sine wave of size into out. can be used as a lookup table"
   status-declare
   (declare
     i sp-sample-count-t
@@ -443,9 +444,13 @@
   (label exit
     (return status)))
 
-(define (sp-initialise) status-t (return (sp-sine-table-new &sp-sine-96-table 96000)))
+(define (sp-initialise) status-t
+  "fills the sine wave lookup table"
+  (return (sp-sine-table-new &sp-sine-96-table 96000)))
 
 (define (sp-cheap-phase-96 current change) (sp-sample-count-t sp-sample-count-t sp-sample-count-t)
+  "accumulate an integer phase and reset it after cycles.
+  float value phases would be harder to reset"
   (declare result sp-sample-count-t)
   (set result (+ current change))
   (return
@@ -453,10 +458,12 @@
       result)))
 
 (define (sp-cheap-phase-96-float current change) (sp-sample-count-t sp-sample-count-t double)
+  "accumulate an integer phase with change given as a float value.
+  change must be a positive value and is rounded"
   (return
     (sp-cheap-phase-96 current
       (if* (> 1.0 change) 1
-        (sp-cheap-round-positive change)))))
+        (sp-cheap-floor-positive change)))))
 
 (define (sp-fm-synth out channel-count start duration config-len config state)
   (status-t
@@ -464,12 +471,20 @@
     sp-sample-count-t
     sp-sample-count-t
     sp-sample-count-t sp-fm-synth-count-t sp-fm-synth-operator-t* sp-sample-count-t**)
-  "modifiers must come after carriers in config.
-  config-len must not change between calls with the same state.
-  sp-initialise must have been called once before.
-   modulators can be modulated themselves in chains.
-  features: changing amplitude and wavelength per operator per channel, phase offset per operator and channel.
-  state is allocated if zero and owned by caller"
+  "create sines that can modulate the frequency of others and sum into output.
+  amplitude and wavelength can be controlled by arrays separately for each operator and channel.
+  modulators can be modulated themselves in chains. state is allocated if zero and owned by the caller.
+  modulator amplitude is relative to carrier wavelength.
+  # requirements
+  * modulators must come after carriers in config
+  * config-len must not change between calls with the same state
+  * all amplitude/wavelength arrays must be of sufficient size and available for all channels
+  * sp-initialise must have been called once before using sp-fm-synth
+  # algorithm
+  * read config from the end to the start
+  * write modulator output to temporary buffers that are indexed by modified operator id
+  * apply modulator output from the buffers and sum to output for final carriers
+  * each operator has integer phases that are reset in cycles and kept in state between calls"
   status-declare
   (declare
     amp sp-sample-t
@@ -489,8 +504,8 @@
   (memreg-init (* (- config-len 1) channel-count))
   (memset modulation-index 0 (sizeof modulation-index))
   (sc-comment
-    "create new state which contains the initial phase offsets per channel."
-    "((phase-offset:channel ...):operator ...)")
+    "ensure a state object that contains the initial phase offsets per operator and channel
+    as a flat array")
   (if *state (set phases *state)
     (begin
       (status-require
@@ -500,32 +515,29 @@
           (set (array-get phases (+ channel-i (* channel-count i)))
             (array-get (struct-get (array-get config i) phase-offset) channel-i))))))
   (set op-i config-len)
-  (sc-comment "the modulation-index contains modulator output")
   (while op-i
     (set
       op-i (- op-i 1)
       op (array-get config op-i))
     (if op.modifies
-      (begin
-        (sc-comment "generate modulator output")
-        (for ((set channel-i 0) (< channel-i channel-count) (set channel-i (+ 1 channel-i)))
-          (status-require (sph-helper-calloc (* duration (sizeof sp-sample-t)) &carrier))
-          (memreg-add carrier)
+      (for ((set channel-i 0) (< channel-i channel-count) (set channel-i (+ 1 channel-i)))
+        (status-require (sph-helper-calloc (* duration (sizeof sp-sample-t)) &carrier))
+        (memreg-add carrier)
+        (set
+          phs (array-get phases (+ channel-i (* channel-count op-i)))
+          modulation (array-get modulation-index op-i channel-i))
+        (for ((set i 0) (< i duration) (set i (+ 1 i)))
           (set
-            phs (array-get phases (+ channel-i (* channel-count op-i)))
-            modulation (array-get modulation-index op-i channel-i))
-          (for ((set i 0) (< i duration) (set i (+ 1 i)))
-            (set
-              amp (array-get op.amplitude channel-i (+ start i))
-              (array-get carrier i) (+ (array-get carrier i) (* amp (sp-sine-96 phs)))
-              wvl (array-get op.wavelength channel-i (+ start i))
-              modulated-wvl
-              (if* modulation (+ wvl (* wvl (array-get modulation i)))
-                wvl)
-              phs (sp-cheap-phase-96-float phs (/ 24000 modulated-wvl))))
-          (set
-            (array-get phases (+ channel-i (* channel-count op-i))) phs
-            (array-get modulation-index (- op.modifies 1) channel-i) carrier)))
+            amp (array-get op.amplitude channel-i (+ start i))
+            (array-get carrier i) (+ (array-get carrier i) (* amp (sp-sine-96 phs)))
+            wvl (array-get op.wavelength channel-i (+ start i))
+            modulated-wvl
+            (if* modulation (+ wvl (* wvl (array-get modulation i)))
+              wvl)
+            phs (sp-cheap-phase-96-float phs (/ 48000 modulated-wvl))))
+        (set
+          (array-get phases (+ channel-i (* channel-count op-i))) phs
+          (array-get modulation-index (- op.modifies 1) channel-i) carrier))
       (for ((set channel-i 0) (< channel-i channel-count) (set channel-i (+ 1 channel-i)))
         (set
           phs (array-get phases (+ channel-i (* channel-count op-i)))
@@ -537,7 +549,7 @@
             modulated-wvl
             (if* modulation (+ wvl (* wvl (array-get modulation i)))
               wvl)
-            phs (sp-cheap-phase-96-float phs (/ 24000 modulated-wvl))
+            phs (sp-cheap-phase-96-float phs (/ 48000 modulated-wvl))
             (array-get out channel-i i) (+ (array-get out channel-i i) (* amp (sp-sine-96 phs)))))
         (set (array-get phases (+ channel-i (* channel-count op-i))) phs))))
   (set *state phases)
@@ -545,4 +557,51 @@
     memreg-free
     (return status)))
 
+(pre-define (define-sp-state-variable-filter suffix transfer)
+  (begin
+    "samples real real pair [integer integer integer] -> state
+    define a routine for a fast filter that supports multiple filter types in one.
+    state must hold two elements and is allocated and owned by the caller.
+    cutoff is as a fraction of the sample rate between 0 and 0.5.
+    uses the state-variable filter described here:
+    * http://www.cytomic.com/technical-papers
+    * http://www.earlevel.com/main/2016/02/21/filters-for-synths-starting-out/"
+    (define ((pre-concat sp-state-variable-filter_ suffix) out in in-count cutoff q-factor state)
+      (void sp-sample-t* sp-sample-t* sp-float-t sp-float-t sp-sample-count-t sp-sample-t*)
+      (declare
+        a1 sp-sample-t
+        a2 sp-sample-t
+        g sp-sample-t
+        ic1eq sp-sample-t
+        ic2eq sp-sample-t
+        i sp-sample-count-t
+        k sp-sample-t
+        v0 sp-sample-t
+        v1 sp-sample-t
+        v2 sp-sample-t)
+      (set
+        ic1eq (array-get state 0)
+        ic2eq (array-get state 1)
+        g (tan (* M_PI cutoff))
+        k (- 2 (* 2 q-factor))
+        a1 (/ 1 (+ 1 (* g (+ g k))))
+        a2 (* g a1))
+      (for ((set i 0) (< i in-count) (set i (+ 1 i)))
+        (set
+          v0 (array-get in i)
+          v1 (+ (* a1 ic1eq) (* a2 (- v0 ic2eq)))
+          v2 (+ ic2eq (* g v1))
+          ic1eq (- (* 2 v1) ic1eq)
+          ic2eq (- (* 2 v2) ic2eq)
+          (array-get out i) transfer))
+      (set
+        (array-get state 0) ic1eq
+        (array-get state 1) ic2eq))))
+
+(define-sp-state-variable-filter lp v2)
+(define-sp-state-variable-filter hp (- v0 (* k v1) v2))
+(define-sp-state-variable-filter bp v1)
+(define-sp-state-variable-filter br (- v0 (* k v1)))
+(define-sp-state-variable-filter peak (+ (- (* 2 v2) v0) (* k v1)))
+(define-sp-state-variable-filter all (- v0 (* 2 k v1)))
 (pre-include "../main/windowed-sinc.c" "../main/io.c")

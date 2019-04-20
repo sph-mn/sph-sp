@@ -28,6 +28,12 @@ exports {
     sp_sin_lq;
     sp_spectral_inversion_ir;
     sp_spectral_reversal_ir;
+    sp_state_variable_filter_all;
+    sp_state_variable_filter_bp;
+    sp_state_variable_filter_br;
+    sp_state_variable_filter_hp;
+    sp_state_variable_filter_lp;
+    sp_state_variable_filter_peak;
     sp_status_description;
     sp_status_name;
     sp_window_blackman;

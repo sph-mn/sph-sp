@@ -32,8 +32,10 @@
 /** sample count to bit octets count */
 #define sp_octets_to_samples(a) (a / sizeof(sp_sample_t))
 #define sp_samples_to_octets(a) (a * sizeof(sp_sample_t))
+/** t must be between 0 and 95999 */
 #define sp_sine_96(t) sp_sine_96_table[t]
 #define sp_cheap_round_positive(a) ((sp_sample_count_t)((0.5 + a)))
+#define sp_cheap_floor_positive(a) ((sp_sample_count_t)(a))
 #include <stdio.h>
 /** writes values with current routine name and line info to standard output.
     example: (debug-log "%d" 1)
@@ -164,3 +166,9 @@ status_t sp_initialise();
 sp_sample_count_t sp_cheap_phase_96(sp_sample_count_t current, sp_sample_count_t change);
 sp_sample_count_t sp_cheap_phase_96_float(sp_sample_count_t current, double change);
 status_t sp_fm_synth(sp_sample_t** out, sp_sample_count_t channels, sp_sample_count_t start, sp_sample_count_t duration, sp_fm_synth_count_t config_len, sp_fm_synth_operator_t* config, sp_sample_count_t** state);
+void sp_state_variable_filter_lp(sp_sample_t* out, sp_sample_t* in, sp_float_t in_count, sp_float_t cutoff, sp_sample_count_t q_factor, sp_sample_t* state);
+void sp_state_variable_filter_hp(sp_sample_t* out, sp_sample_t* in, sp_float_t in_count, sp_float_t cutoff, sp_sample_count_t q_factor, sp_sample_t* state);
+void sp_state_variable_filter_bp(sp_sample_t* out, sp_sample_t* in, sp_float_t in_count, sp_float_t cutoff, sp_sample_count_t q_factor, sp_sample_t* state);
+void sp_state_variable_filter_br(sp_sample_t* out, sp_sample_t* in, sp_float_t in_count, sp_float_t cutoff, sp_sample_count_t q_factor, sp_sample_t* state);
+void sp_state_variable_filter_peak(sp_sample_t* out, sp_sample_t* in, sp_float_t in_count, sp_float_t cutoff, sp_sample_count_t q_factor, sp_sample_t* state);
+void sp_state_variable_filter_all(sp_sample_t* out, sp_sample_t* in, sp_float_t in_count, sp_float_t cutoff, sp_sample_count_t q_factor, sp_sample_t* state);
