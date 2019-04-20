@@ -265,7 +265,9 @@ exit:
 status_t test_fm_synth() {
   status_declare;
   sp_sample_count_t* state;
-  sp_sample_t** out;
+  sp_sample_count_t config_len;
+  sp_sample_t** out1;
+  sp_sample_t** out2;
   sp_channel_count_t channels;
   sp_sample_count_t duration;
   sp_fm_synth_operator_t op1;
@@ -277,6 +279,10 @@ status_t test_fm_synth() {
   state = 0;
   duration = 4;
   channels = 2;
+  config_len = 3;
+  op1.modifies = 0;
+  op2.modifies = 1;
+  op3.modifies = 0;
   (op1.amplitude)[0] = amp;
   (op1.amplitude)[1] = amp;
   (op1.wavelength)[0] = wvl;
@@ -298,9 +304,10 @@ status_t test_fm_synth() {
   config[0] = op1;
   config[1] = op2;
   config[2] = op3;
-  status_require((sp_block_alloc(channels, duration, (&out))));
-  status_require((sp_fm_synth(out, 2, 0, 4, 3, config, (&state))));
-  status_require((sp_fm_synth(out, 2, 0, 4, 2, config, (&state))));
+  status_require((sp_block_alloc(channels, duration, (&out1))));
+  status_require((sp_block_alloc(channels, duration, (&out2))));
+  status_require((sp_fm_synth(out1, channels, 0, duration, config_len, config, (&state))));
+  status_require((sp_fm_synth(out2, channels, 0, duration, config_len, config, (&state))));
 exit:
   return (status);
 };
@@ -308,6 +315,14 @@ int main() {
   status_declare;
   sp_initialise();
   test_helper_test_one(test_fm_synth);
+  test_helper_test_one(test_moving_average);
+  test_helper_test_one(test_fft);
+  test_helper_test_one(test_spectral_inversion_ir);
+  test_helper_test_one(test_base);
+  test_helper_test_one(test_spectral_reversal_ir);
+  test_helper_test_one(test_convolve);
+  test_helper_test_one(test_file);
+  test_helper_test_one(test_windowed_sinc);
 exit:
   test_helper_display_summary();
   return ((status.id));

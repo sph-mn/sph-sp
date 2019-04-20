@@ -2,8 +2,8 @@ exports {
   global:
     sp_block_alloc;
     sp_block_free;
-    sp_cheap_phase_48;
-    sp_cheap_phase_48_float;
+    sp_cheap_phase_96;
+    sp_cheap_phase_96_float;
     sp_convolution_filter;
     sp_convolution_filter_state_free;
     sp_convolution_filter_state_set;
@@ -23,7 +23,7 @@ exports {
     sp_null_ir;
     sp_passthrough_ir;
     sp_sinc;
-    sp_sine_48_table;
+    sp_sine_96_table;
     sp_sine_table_new;
     sp_sin_lq;
     sp_spectral_inversion_ir;

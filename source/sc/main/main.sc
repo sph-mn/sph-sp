@@ -443,18 +443,18 @@
   (label exit
     (return status)))
 
-(define (sp-initialise) status-t (return (sp-sine-table-new &sp-sine-48-table 48000)))
+(define (sp-initialise) status-t (return (sp-sine-table-new &sp-sine-96-table 96000)))
 
-(define (sp-cheap-phase-48 current change) (sp-sample-count-t sp-sample-count-t sp-sample-count-t)
+(define (sp-cheap-phase-96 current change) (sp-sample-count-t sp-sample-count-t sp-sample-count-t)
   (declare result sp-sample-count-t)
   (set result (+ current change))
   (return
-    (if* (<= 48000 result) (modulo result 48000)
+    (if* (<= 96000 result) (modulo result 96000)
       result)))
 
-(define (sp-cheap-phase-48-float current change) (sp-sample-count-t sp-sample-count-t double)
+(define (sp-cheap-phase-96-float current change) (sp-sample-count-t sp-sample-count-t double)
   (return
-    (sp-cheap-phase-48 current
+    (sp-cheap-phase-96 current
       (if* (> 1.0 change) 1
         (sp-cheap-round-positive change)))))
 
@@ -491,7 +491,7 @@
   (sc-comment
     "create new state which contains the initial phase offsets per channel."
     "((phase-offset:channel ...):operator ...)")
-  (if (not *state)
+  (if *state (set phases *state)
     (begin
       (status-require
         (sph-helper-calloc (* channel-count config-len (sizeof sp-sample-count-t)) &phases))
@@ -517,12 +517,12 @@
           (for ((set i 0) (< i duration) (set i (+ 1 i)))
             (set
               amp (array-get op.amplitude channel-i (+ start i))
-              (array-get carrier i) (+ (array-get carrier i) (* amp (sp-sine-48 phs)))
+              (array-get carrier i) (+ (array-get carrier i) (* amp (sp-sine-96 phs)))
               wvl (array-get op.wavelength channel-i (+ start i))
               modulated-wvl
               (if* modulation (+ wvl (* wvl (array-get modulation i)))
                 wvl)
-              phs (sp-cheap-phase-48-float phs (/ 24000 modulated-wvl))))
+              phs (sp-cheap-phase-96-float phs (/ 24000 modulated-wvl))))
           (set
             (array-get phases (+ channel-i (* channel-count op-i))) phs
             (array-get modulation-index (- op.modifies 1) channel-i) carrier)))
@@ -537,8 +537,8 @@
             modulated-wvl
             (if* modulation (+ wvl (* wvl (array-get modulation i)))
               wvl)
-            phs (sp-cheap-phase-48-float phs (/ 24000 modulated-wvl))
-            (array-get out channel-i i) (+ (array-get out channel-i i) (* amp (sp-sine-48 phs)))))
+            phs (sp-cheap-phase-96-float phs (/ 24000 modulated-wvl))
+            (array-get out channel-i i) (+ (array-get out channel-i i) (* amp (sp-sine-96 phs)))))
         (set (array-get phases (+ channel-i (* channel-count op-i))) phs))))
   (set *state phases)
   (label exit

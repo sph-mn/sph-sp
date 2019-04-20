@@ -299,7 +299,9 @@
   status-declare
   (declare
     state sp-sample-count-t*
-    out sp-sample-t**
+    config-len sp-sample-count-t
+    out1 sp-sample-t**
+    out2 sp-sample-t**
     channels sp-channel-count-t
     duration sp-sample-count-t
     op1 sp-fm-synth-operator-t
@@ -312,6 +314,10 @@
     state 0
     duration 4
     channels 2
+    config-len 3
+    op1.modifies 0
+    op2.modifies 1
+    op3.modifies 0
     (array-get op1.amplitude 0) amp
     (array-get op1.amplitude 1) amp
     (array-get op1.wavelength 0) wvl
@@ -333,9 +339,10 @@
     (array-get config 0) op1
     (array-get config 1) op2
     (array-get config 2) op3)
-  (status-require (sp-block-alloc channels duration &out))
-  (status-require (sp-fm-synth out 2 0 4 3 config &state))
-  (status-require (sp-fm-synth out 2 0 4 2 config &state))
+  (status-require (sp-block-alloc channels duration &out1))
+  (status-require (sp-block-alloc channels duration &out2))
+  (status-require (sp-fm-synth out1 channels 0 duration config-len config &state))
+  (status-require (sp-fm-synth out2 channels 0 duration config-len config &state))
   (label exit
     (return status)))
 
@@ -343,14 +350,14 @@
   status-declare
   (sp-initialise)
   (test-helper-test-one test-fm-synth)
-  ;(test-helper-test-one test-moving-average)
-  ;(test-helper-test-one test-fft)
-  ;(test-helper-test-one test-spectral-inversion-ir)
-  ;(test-helper-test-one test-base)
-  ;(test-helper-test-one test-spectral-reversal-ir)
-  ;(test-helper-test-one test-convolve)
-  ;(test-helper-test-one test-file)
-  ;(test-helper-test-one test-windowed-sinc)
+  (test-helper-test-one test-moving-average)
+  (test-helper-test-one test-fft)
+  (test-helper-test-one test-spectral-inversion-ir)
+  (test-helper-test-one test-base)
+  (test-helper-test-one test-spectral-reversal-ir)
+  (test-helper-test-one test-convolve)
+  (test-helper-test-one test-file)
+  (test-helper-test-one test-windowed-sinc)
   (label exit
     (test-helper-display-summary)
     (return status.id)))

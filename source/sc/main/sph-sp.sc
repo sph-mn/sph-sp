@@ -13,7 +13,7 @@
     sp-sf-read sf-readf-double
     sp-sf-write sf-writef-double
     sp-fm-synth-count-t uint8-t
-    sp-fm-synth-sine sp-sine-48
+    sp-fm-synth-sine sp-sine-96
     sp-fm-synth-channel-limit 16
     sp-fm-synth-operator-limit 64
     sp-config-is-set #t)
@@ -48,7 +48,7 @@
     "sample count to bit octets count"
     (/ a (sizeof sp-sample-t)))
   (sp-samples->octets a) (* a (sizeof sp-sample-t))
-  (sp-sine-48 t) (array-get sp-sine-48-table t)
+  (sp-sine-96 t) (array-get sp-sine-96-table t)
   (sp-cheap-round-positive a) (convert-type (+ 0.5 a) sp-sample-count-t))
 
 (sc-include "../foreign/sph" "../foreign/sph/status")
@@ -160,10 +160,10 @@
   (sp-null-ir out-ir out-len) (status-t sp-sample-t** sp-sample-count-t*)
   (sp-passthrough-ir out-ir out-len) (status-t sp-sample-t** sp-sample-count-t*)
   (sp-sine-table-new out size) (status-t sp-sample-t** sp-sample-count-t)
-  sp-sine-48-table sp-sample-t*
+  sp-sine-96-table sp-sample-t*
   (sp-initialise) status-t
-  (sp-cheap-phase-48 current change) (sp-sample-count-t sp-sample-count-t sp-sample-count-t)
-  (sp-cheap-phase-48-float current change) (sp-sample-count-t sp-sample-count-t double)
+  (sp-cheap-phase-96 current change) (sp-sample-count-t sp-sample-count-t sp-sample-count-t)
+  (sp-cheap-phase-96-float current change) (sp-sample-count-t sp-sample-count-t double)
   (sp-fm-synth out channels start duration config-len config state)
   (status-t
     sp-sample-t**

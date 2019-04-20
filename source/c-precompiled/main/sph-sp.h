@@ -12,7 +12,7 @@
 #define sp_sf_read sf_readf_double
 #define sp_sf_write sf_writef_double
 #define sp_fm_synth_count_t uint8_t
-#define sp_fm_synth_sine sp_sine_48
+#define sp_fm_synth_sine sp_sine_96
 #define sp_fm_synth_channel_limit 16
 #define sp_fm_synth_operator_limit 64
 #define sp_config_is_set 1
@@ -32,7 +32,7 @@
 /** sample count to bit octets count */
 #define sp_octets_to_samples(a) (a / sizeof(sp_sample_t))
 #define sp_samples_to_octets(a) (a * sizeof(sp_sample_t))
-#define sp_sine_48(t) sp_sine_48_table[t]
+#define sp_sine_96(t) sp_sine_96_table[t]
 #define sp_cheap_round_positive(a) ((sp_sample_count_t)((0.5 + a)))
 #include <stdio.h>
 /** writes values with current routine name and line info to standard output.
@@ -159,8 +159,8 @@ status_t sp_windowed_sinc_lp_hp_ir(sp_float_t cutoff, sp_float_t transition, boo
 status_t sp_null_ir(sp_sample_t** out_ir, sp_sample_count_t* out_len);
 status_t sp_passthrough_ir(sp_sample_t** out_ir, sp_sample_count_t* out_len);
 status_t sp_sine_table_new(sp_sample_t** out, sp_sample_count_t size);
-sp_sample_t* sp_sine_48_table;
+sp_sample_t* sp_sine_96_table;
 status_t sp_initialise();
-sp_sample_count_t sp_cheap_phase_48(sp_sample_count_t current, sp_sample_count_t change);
-sp_sample_count_t sp_cheap_phase_48_float(sp_sample_count_t current, double change);
+sp_sample_count_t sp_cheap_phase_96(sp_sample_count_t current, sp_sample_count_t change);
+sp_sample_count_t sp_cheap_phase_96_float(sp_sample_count_t current, double change);
 status_t sp_fm_synth(sp_sample_t** out, sp_sample_count_t channels, sp_sample_count_t start, sp_sample_count_t duration, sp_fm_synth_count_t config_len, sp_fm_synth_operator_t* config, sp_sample_count_t** state);
