@@ -237,8 +237,6 @@ void sp_convolve_one(sp_sample_t* a, sp_sample_count_t a_len, sp_sample_t* b, sp
   result-samples length is a-len.
   result-carryover is previous carryover or an empty array.
   result-carryover length must at least b-len - 1.
-  continuous processing does not work correctly if result-samples is smaller than b-len - 1, in this case
-  result-carryover will contain values after index a-len - 1 that will not be carried over to the next call.
   carryover-len should be zero for the first call or its content should be zeros.
   carryover-len for subsequent calls should be b-len - 1 or if b-len changed b-len - 1  from the previous call.
   if b-len is one then there is no carryover.
@@ -499,7 +497,7 @@ exit:
     * http://www.cytomic.com/technical-papers
     * http://www.earlevel.com/main/2016/02/21/filters-for-synths-starting-out/ */
 #define define_sp_state_variable_filter(suffix, transfer) \
-  void sp_state_variable_filter_##suffix(sp_sample_t* out, sp_sample_t* in, sp_float_t in_count, sp_float_t cutoff, sp_float_t q_factor, sp_sample_t* state) { \
+  void sp_state_variable_filter_##suffix(sp_sample_t* out, sp_sample_t* in, sp_float_t in_count, sp_float_t cutoff, sp_sample_count_t q_factor, sp_sample_t* state) { \
     sp_sample_t a1; \
     sp_sample_t a2; \
     sp_sample_t g; \
