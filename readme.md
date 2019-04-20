@@ -70,28 +70,39 @@ status.id zero is success
 # api
 ## routines
 ```
-sp_alloc_channel_array :: sp_channel_count_t:channel_count sp_sample_count_t:sample_count sp_sample_t***:result_array -> status_t
-sp_channel_data_free :: sp_sample_t**:a sp_channel_count_t:channel_count -> void
+sp_block_alloc :: sp_channel_count_t:channel_count sp_sample_count_t:sample_count sp_sample_t***:result -> status_t
+sp_block_free :: sp_sample_t**:a sp_channel_count_t:channel_count -> void
+sp_cheap_phase_96 :: sp_sample_count_t:current sp_sample_count_t:change -> sp_sample_count_t
+sp_cheap_phase_96_float :: sp_sample_count_t:current double:change -> sp_sample_count_t
 sp_convolution_filter :: sp_sample_t*:in sp_sample_count_t:in_len sp_convolution_filter_ir_f_t:ir_f void*:ir_f_arguments uint8_t:ir_f_arguments_len sp_convolution_filter_state_t**:out_state sp_sample_t*:out_samples -> status_t
 sp_convolution_filter_state_free :: sp_convolution_filter_state_t*:state -> void
 sp_convolution_filter_state_set :: sp_convolution_filter_ir_f_t:ir_f void*:ir_f_arguments uint8_t:ir_f_arguments_len sp_convolution_filter_state_t**:out_state -> status_t
 sp_convolve :: sp_sample_t*:a sp_sample_count_t:a_len sp_sample_t*:b sp_sample_count_t:b_len sp_sample_count_t:result_carryover_len sp_sample_t*:result_carryover sp_sample_t*:result_samples -> void
 sp_convolve_one :: sp_sample_t*:a sp_sample_count_t:a_len sp_sample_t*:b sp_sample_count_t:b_len sp_sample_t*:result_samples -> void
-sp_fft :: sp_sample_count_t:input_len sp_sample_t*:input_real sp_sample_t*:input_imag sp_sample_t*:output_real sp_sample_t*:output_imag -> status_t
-sp_ffti :: sp_sample_count_t:input_len sp_sample_t*:input_real sp_sample_t*:input_imag sp_sample_t*:output_real sp_sample_t*:output_imag -> status_t
+sp_fft :: sp_sample_count_t:input_len double*:input_or_output_real double*:input_or_output_imag -> status_t
+sp_ffti :: sp_sample_count_t:input_len double*:input_or_output_real double*:input_or_output_imag -> status_t
 sp_file_close :: sp_file_t*:a -> status_t
 sp_file_open :: uint8_t*:path int:mode sp_channel_count_t:channel_count sp_sample_rate_t:sample_rate sp_file_t*:result_file -> status_t
 sp_file_position :: sp_file_t*:file sp_sample_count_t*:result_position -> status_t
-sp_file_position_set :: sp_file_t*:file size_t:sample_offset -> status_t
-sp_file_read :: sp_file_t*:file sp_sample_count_t:sample_count sp_sample_t**:result_channel_data sp_sample_count_t*:result_sample_count -> status_t
-sp_file_write :: sp_file_t*:file sp_sample_t**:channel_data sp_sample_count_t:sample_count sp_sample_count_t*:result_sample_count -> status_t
-sp_moving_average :: sp_sample_t*:source sp_sample_count_t:source_len sp_sample_t*:prev sp_sample_count_t:prev_len sp_sample_t*:next sp_sample_count_t:next_len sp_sample_count_t:radius sp_sample_count_t:start sp_sample_count_t:end sp_sample_t*:result_samples -> status_t
+sp_file_position_set :: sp_file_t*:file sp_sample_count_t:sample_offset -> status_t
+sp_file_read :: sp_file_t*:file sp_sample_count_t:sample_count sp_sample_t**:result_block sp_sample_count_t*:result_sample_count -> status_t
+sp_file_write :: sp_file_t*:file sp_sample_t**:block sp_sample_count_t:sample_count sp_sample_count_t*:result_sample_count -> status_t
+sp_fm_synth :: sp_sample_t**:out sp_sample_count_t:channels sp_sample_count_t:start sp_sample_count_t:duration sp_fm_synth_count_t:config_len sp_fm_synth_operator_t*:config sp_sample_count_t**:state -> status_t
+sp_initialise :: -> status_t
+sp_moving_average :: sp_sample_t*:in sp_sample_t*:in_end sp_sample_t*:in_window sp_sample_t*:in_window_end sp_sample_t*:prev sp_sample_t*:prev_end sp_sample_t*:next sp_sample_t*:next_end sp_sample_count_t:radius sp_sample_t*:out -> status_t
 sp_null_ir :: sp_sample_t**:out_ir sp_sample_count_t*:out_len -> status_t
 sp_passthrough_ir :: sp_sample_t**:out_ir sp_sample_count_t*:out_len -> status_t
 sp_sin_lq :: sp_float_t:a -> sp_sample_t
 sp_sinc :: sp_float_t:a -> sp_float_t
+sp_sine_table_new :: sp_sample_t**:out sp_sample_count_t:size -> status_t
 sp_spectral_inversion_ir :: sp_sample_t*:a sp_sample_count_t:a_len -> void
 sp_spectral_reversal_ir :: sp_sample_t*:a sp_sample_count_t:a_len -> void
+sp_state_variable_filter_all :: sp_sample_t*:out sp_sample_t*:in sp_float_t:in_count sp_float_t:cutoff sp_sample_count_t:q_factor sp_sample_t*:state -> void
+sp_state_variable_filter_bp :: sp_sample_t*:out sp_sample_t*:in sp_float_t:in_count sp_float_t:cutoff sp_sample_count_t:q_factor sp_sample_t*:state -> void
+sp_state_variable_filter_br :: sp_sample_t*:out sp_sample_t*:in sp_float_t:in_count sp_float_t:cutoff sp_sample_count_t:q_factor sp_sample_t*:state -> void
+sp_state_variable_filter_hp :: sp_sample_t*:out sp_sample_t*:in sp_float_t:in_count sp_float_t:cutoff sp_sample_count_t:q_factor sp_sample_t*:state -> void
+sp_state_variable_filter_lp :: sp_sample_t*:out sp_sample_t*:in sp_float_t:in_count sp_float_t:cutoff sp_sample_count_t:q_factor sp_sample_t*:state -> void
+sp_state_variable_filter_peak :: sp_sample_t*:out sp_sample_t*:in sp_float_t:in_count sp_float_t:cutoff sp_sample_count_t:q_factor sp_sample_t*:state -> void
 sp_status_description :: status_t:a -> uint8_t*
 sp_status_name :: status_t:a -> uint8_t*
 sp_window_blackman :: sp_float_t:a sp_sample_count_t:width -> sp_float_t
@@ -108,6 +119,11 @@ sp_windowed_sinc_lp_hp_ir_length :: sp_float_t:transition -> sp_sample_count_t
 
 ## macros
 ```
+boolean
+debug_log(format, ...)
+debug_trace(n)
+sp_cheap_floor_positive(a)
+sp_cheap_round_positive(a)
 sp_file_bit_closed
 sp_file_bit_input
 sp_file_bit_output
@@ -117,12 +133,12 @@ sp_file_mode_read_write
 sp_file_mode_write
 sp_octets_to_samples(a)
 sp_samples_to_octets(a)
+sp_sine_96(t)
 sp_status_group_libc
 sp_status_group_sndfile
 sp_status_group_sp
 sp_status_group_sph
-sp_windowed_sinc_ir_cutoff(freq, sample_rate)
-sp_windowed_sinc_ir_transition
+sph_status
 status_declare
 status_declare_group(group)
 status_goto
@@ -137,6 +153,11 @@ status_set_both(group_id, status_id)
 status_set_both_goto(group_id, status_id)
 status_set_group_goto(group_id)
 status_set_id_goto(status_id)
+```
+
+## variables
+```
+sp_sample_t* sp_sine_96_table
 ```
 
 ## types
@@ -157,6 +178,11 @@ sp_file_t: struct
   sample_rate: sp_sample_rate_t
   channel_count: sp_channel_count_t
   data: void*
+sp_fm_synth_operator_t: struct
+  modifies: sp_fm_synth_count_t
+  amplitude: array sp_sample_t* sp_fm_synth_channel_limit
+  wavelength: array sp_sample_count_t* sp_fm_synth_channel_limit
+  phase_offset: array sp_sample_count_t sp_fm_synth_channel_limit
 status_t: struct
   id: status_id_t
   group: uint8_t*

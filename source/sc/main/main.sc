@@ -271,8 +271,6 @@
   result-samples length is a-len.
   result-carryover is previous carryover or an empty array.
   result-carryover length must at least b-len - 1.
-  continuous processing does not work correctly if result-samples is smaller than b-len - 1, in this case
-  result-carryover will contain values after index a-len - 1 that will not be carried over to the next call.
   carryover-len should be zero for the first call or its content should be zeros.
   carryover-len for subsequent calls should be b-len - 1 or if b-len changed b-len - 1  from the previous call.
   if b-len is one then there is no carryover.

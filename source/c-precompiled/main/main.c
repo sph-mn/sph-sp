@@ -499,7 +499,7 @@ exit:
     * http://www.cytomic.com/technical-papers
     * http://www.earlevel.com/main/2016/02/21/filters-for-synths-starting-out/ */
 #define define_sp_state_variable_filter(suffix, transfer) \
-  void sp_state_variable_filter_##suffix(sp_sample_t* out, sp_sample_t* in, sp_float_t in_count, sp_float_t cutoff, sp_sample_count_t q_factor, sp_sample_t* state) { \
+  void sp_state_variable_filter_##suffix(sp_sample_t* out, sp_sample_t* in, sp_float_t in_count, sp_float_t cutoff, sp_float_t q_factor, sp_sample_t* state) { \
     sp_sample_t a1; \
     sp_sample_t a2; \
     sp_sample_t g; \
