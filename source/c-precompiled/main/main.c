@@ -497,8 +497,11 @@ status_t sp_fm_synth(sp_sample_t** out, sp_sample_count_t channel_count, sp_samp
     op = config[op_i];
     if (op.modifies) {
       for (channel_i = 0; (channel_i < channel_count); channel_i = (1 + channel_i)) {
-        status_require((sph_helper_calloc((duration * sizeof(sp_sample_t)), (&carrier))));
-        memreg_add(carrier);
+        carrier = modulation_index[(op.modifies - 1)][channel_i];
+        if (!carrier) {
+          status_require((sph_helper_calloc((duration * sizeof(sp_sample_t)), (&carrier))));
+          memreg_add(carrier);
+        };
         phs = phases[(channel_i + (channel_count * op_i))];
         modulation = modulation_index[op_i][channel_i];
         for (i = 0; (i < duration); i = (1 + i)) {

@@ -564,8 +564,11 @@
       op (array-get config op-i))
     (if op.modifies
       (for ((set channel-i 0) (< channel-i channel-count) (set channel-i (+ 1 channel-i)))
-        (status-require (sph-helper-calloc (* duration (sizeof sp-sample-t)) &carrier))
-        (memreg-add carrier)
+        (set carrier (array-get modulation-index (- op.modifies 1) channel-i))
+        (if (not carrier)
+          (begin
+            (status-require (sph-helper-calloc (* duration (sizeof sp-sample-t)) &carrier))
+            (memreg-add carrier)))
         (set
           phs (array-get phases (+ channel-i (* channel-count op-i)))
           modulation (array-get modulation-index op-i channel-i))
