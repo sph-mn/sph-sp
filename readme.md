@@ -70,6 +70,7 @@ status.id zero is success
 # api
 ## routines
 ```
+sp_asynth :: sp_sample_t**:out sp_sample_count_t:channel_count sp_sample_count_t:start sp_sample_count_t:duration sp_asynth_count_t:config_len sp_asynth_partial_t*:config sp_sample_count_t**:state -> status_t
 sp_block_alloc :: sp_channel_count_t:channel_count sp_sample_count_t:sample_count sp_sample_t***:result -> status_t
 sp_block_free :: sp_sample_t**:a sp_channel_count_t:channel_count -> void
 sp_cheap_phase_96 :: sp_sample_count_t:current sp_sample_count_t:change -> sp_sample_count_t
@@ -122,6 +123,7 @@ sp_windowed_sinc_lp_hp_ir_length :: sp_float_t:transition -> sp_sample_count_t
 boolean
 debug_log(format, ...)
 debug_trace(n)
+sp_cheap_ceiling_positive(a)
 sp_cheap_floor_positive(a)
 sp_cheap_round_positive(a)
 sp_file_bit_closed
@@ -164,6 +166,12 @@ sp_sample_t* sp_sine_96_table
 ```
 status_id_t: int32_t
 sp_convolution_filter_ir_f_t: void* sp_sample_t** sp_sample_count_t* -> status_t
+sp_asynth_partial_t: struct
+  start: sp_sample_count_t
+  end: sp_sample_count_t
+  amplitude: array sp_sample_t* sp_asynth_channel_limit
+  wavelength: array sp_sample_count_t* sp_asynth_channel_limit
+  phase_offset: array sp_sample_count_t sp_asynth_channel_limit
 sp_convolution_filter_state_t: struct
   carryover: sp_sample_t*
   carryover_len: sp_sample_count_t
