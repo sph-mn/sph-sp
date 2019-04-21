@@ -164,7 +164,7 @@
     sp-sample-t*
     sp-sample-t* sp-sample-t* sp-sample-t* sp-sample-t* sp-sample-t* sp-sample-count-t sp-sample-t*)
   "apply a centered moving average filter to samples between in-window and in-window-end inclusively and write to out.
-   removes high frequencies with little distortion in the time domain but with a long transition.
+   removes high frequencies and smoothes data with little distortion in the time domain but the frequency response has large ripples.
    all memory is managed by the caller.
    * prev and next can be null pointers if not available
    * zero is used for unavailable values
@@ -429,6 +429,54 @@
   (label exit
     (return status)))
 
+(pre-define (define-sp-state-variable-filter suffix transfer)
+  (begin
+    "samples real real pair [integer integer integer] -> state
+    define a routine for a fast filter that supports multiple filter types in one.
+    state must hold two elements and is allocated and owned by the caller.
+    cutoff is as a fraction of the sample rate between 0 and 0.5.
+    uses the state-variable filter described here:
+    * http://www.cytomic.com/technical-papers
+    * http://www.earlevel.com/main/2016/02/21/filters-for-synths-starting-out/"
+    (define ((pre-concat sp-state-variable-filter_ suffix) out in in-count cutoff q-factor state)
+      (void sp-sample-t* sp-sample-t* sp-float-t sp-float-t sp-sample-count-t sp-sample-t*)
+      (declare
+        a1 sp-sample-t
+        a2 sp-sample-t
+        g sp-sample-t
+        ic1eq sp-sample-t
+        ic2eq sp-sample-t
+        i sp-sample-count-t
+        k sp-sample-t
+        v0 sp-sample-t
+        v1 sp-sample-t
+        v2 sp-sample-t)
+      (set
+        ic1eq (array-get state 0)
+        ic2eq (array-get state 1)
+        g (tan (* M_PI cutoff))
+        k (- 2 (* 2 q-factor))
+        a1 (/ 1 (+ 1 (* g (+ g k))))
+        a2 (* g a1))
+      (for ((set i 0) (< i in-count) (set i (+ 1 i)))
+        (set
+          v0 (array-get in i)
+          v1 (+ (* a1 ic1eq) (* a2 (- v0 ic2eq)))
+          v2 (+ ic2eq (* g v1))
+          ic1eq (- (* 2 v1) ic1eq)
+          ic2eq (- (* 2 v2) ic2eq)
+          (array-get out i) transfer))
+      (set
+        (array-get state 0) ic1eq
+        (array-get state 1) ic2eq))))
+
+(define-sp-state-variable-filter lp v2)
+(define-sp-state-variable-filter hp (- v0 (* k v1) v2))
+(define-sp-state-variable-filter bp v1)
+(define-sp-state-variable-filter br (- v0 (* k v1)))
+(define-sp-state-variable-filter peak (+ (- (* 2 v2) v0) (* k v1)))
+(define-sp-state-variable-filter all (- v0 (* 2 k v1)))
+
 (define (sp-sine-table-new out size) (status-t sp-sample-t** sp-sample-count-t)
   "writes a sine wave of size into out. can be used as a lookup table"
   status-declare
@@ -457,11 +505,8 @@
 
 (define (sp-cheap-phase-96-float current change) (sp-sample-count-t sp-sample-count-t double)
   "accumulate an integer phase with change given as a float value.
-  change must be a positive value and is rounded"
-  (return
-    (sp-cheap-phase-96 current
-      (if* (> 1.0 change) 1
-        (sp-cheap-floor-positive change)))))
+  change must be a positive value and is rounded to the next larger integer"
+  (return (sp-cheap-phase-96 current (sp-cheap-ceiling-positive change))))
 
 (define (sp-fm-synth out channel-count start duration config-len config state)
   (status-t
@@ -555,51 +600,60 @@
     memreg-free
     (return status)))
 
-(pre-define (define-sp-state-variable-filter suffix transfer)
-  (begin
-    "samples real real pair [integer integer integer] -> state
-    define a routine for a fast filter that supports multiple filter types in one.
-    state must hold two elements and is allocated and owned by the caller.
-    cutoff is as a fraction of the sample rate between 0 and 0.5.
-    uses the state-variable filter described here:
-    * http://www.cytomic.com/technical-papers
-    * http://www.earlevel.com/main/2016/02/21/filters-for-synths-starting-out/"
-    (define ((pre-concat sp-state-variable-filter_ suffix) out in in-count cutoff q-factor state)
-      (void sp-sample-t* sp-sample-t* sp-float-t sp-float-t sp-sample-count-t sp-sample-t*)
-      (declare
-        a1 sp-sample-t
-        a2 sp-sample-t
-        g sp-sample-t
-        ic1eq sp-sample-t
-        ic2eq sp-sample-t
-        i sp-sample-count-t
-        k sp-sample-t
-        v0 sp-sample-t
-        v1 sp-sample-t
-        v2 sp-sample-t)
-      (set
-        ic1eq (array-get state 0)
-        ic2eq (array-get state 1)
-        g (tan (* M_PI cutoff))
-        k (- 2 (* 2 q-factor))
-        a1 (/ 1 (+ 1 (* g (+ g k))))
-        a2 (* g a1))
-      (for ((set i 0) (< i in-count) (set i (+ 1 i)))
+(define (sp-asynth out channel-count start duration config-len config state)
+  (status-t
+    sp-sample-t**
+    sp-sample-count-t
+    sp-sample-count-t sp-sample-count-t sp-asynth-count-t sp-asynth-partial-t* sp-sample-count-t**)
+  status-declare
+  (declare
+    amp sp-sample-t
+    channel-i sp-sample-count-t
+    end sp-sample-count-t
+    i sp-sample-count-t
+    phases sp-sample-count-t*
+    phs sp-sample-count-t
+    prt-i sp-sample-count-t
+    prt sp-asynth-partial-t
+    prt-start sp-sample-count-t
+    prt-offset sp-sample-count-t
+    prt-offset-right sp-sample-count-t
+    wvl sp-sample-count-t)
+  (sc-comment "ensure a state object like for sp-fm-synth")
+  (if *state (set phases *state)
+    (begin
+      (status-require
+        (sph-helper-calloc (* channel-count config-len (sizeof sp-sample-count-t)) &phases))
+      (for ((set i 0) (< i config-len) (set i (+ 1 i)))
+        (for ((set channel-i 0) (< channel-i channel-count) (set channel-i (+ 1 channel-i)))
+          (set (array-get phases (+ channel-i (* channel-count i)))
+            (array-get (struct-get (array-get config i) phase-offset) channel-i))))))
+  (set end (+ start duration))
+  (for ((set prt-i 0) (< prt-i config-len) (set prt-i (+ 1 prt-i)))
+    (set prt (array-get config prt-i))
+    (if (< end prt.start) break)
+    (if (<= prt.end start) continue)
+    (set
+      prt-start
+      (if* (< prt.start start) (- start prt.start)
+        0)
+      prt-offset
+      (if* (> prt.start start) (- prt.start start)
+        0)
+      prt-offset-right
+      (if* (> prt.end end) 0
+        (- end prt.end)))
+    (for ((set channel-i 0) (< channel-i channel-count) (set channel-i (+ 1 channel-i)))
+      (set phs (array-get phases (+ channel-i (* channel-count prt-i))))
+      (for ((set i 0) (< i (- duration prt-offset prt-offset-right)) (set i (+ 1 i)))
         (set
-          v0 (array-get in i)
-          v1 (+ (* a1 ic1eq) (* a2 (- v0 ic2eq)))
-          v2 (+ ic2eq (* g v1))
-          ic1eq (- (* 2 v1) ic1eq)
-          ic2eq (- (* 2 v2) ic2eq)
-          (array-get out i) transfer))
-      (set
-        (array-get state 0) ic1eq
-        (array-get state 1) ic2eq))))
+          amp (array-get prt.amplitude channel-i (+ prt-start i))
+          wvl (array-get prt.wavelength channel-i (+ prt-start i))
+          phs (sp-cheap-phase-96-float phs (/ 48000 wvl))
+          (array-get out channel-i (+ prt-offset i))
+          (+ (array-get out channel-i (+ prt-offset i)) (* amp (sp-sine-96 phs)))))
+      (set (array-get phases (+ channel-i (* channel-count prt-i))) phs)))
+  (label exit
+    (return status)))
 
-(define-sp-state-variable-filter lp v2)
-(define-sp-state-variable-filter hp (- v0 (* k v1) v2))
-(define-sp-state-variable-filter bp v1)
-(define-sp-state-variable-filter br (- v0 (* k v1)))
-(define-sp-state-variable-filter peak (+ (- (* 2 v2) v0) (* k v1)))
-(define-sp-state-variable-filter all (- v0 (* 2 k v1)))
 (pre-include "../main/windowed-sinc.c" "../main/io.c")

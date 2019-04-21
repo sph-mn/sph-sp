@@ -16,6 +16,9 @@
     sp-fm-synth-sine sp-sine-96
     sp-fm-synth-channel-limit 16
     sp-fm-synth-operator-limit 64
+    sp-asynth-count-t uint16-t
+    sp-asynth-sine sp-sine-96
+    sp-asynth-channel-limit 16
     sp-config-is-set #t)
   ; f32
   #;(pre-define
@@ -53,7 +56,9 @@
     "t must be between 0 and 95999"
     (array-get sp-sine-96-table t))
   (sp-cheap-round-positive a) (convert-type (+ 0.5 a) sp-sample-count-t)
-  (sp-cheap-floor-positive a) (convert-type a sp-sample-count-t))
+  (sp-cheap-floor-positive a) (convert-type a sp-sample-count-t)
+  (sp-cheap-ceiling-positive a)
+  (+ (convert-type a sp-sample-count-t) (< (convert-type a sp-sample-count-t) a)))
 
 (sc-include "../foreign/sph" "../foreign/sph/status")
 
@@ -98,6 +103,14 @@
       (amplitude (array sp-sample-t* sp-fm-synth-channel-limit))
       (wavelength (array sp-sample-count-t* sp-fm-synth-channel-limit))
       (phase-offset (array sp-sample-count-t sp-fm-synth-channel-limit))))
+  sp-asynth-partial-t
+  (type
+    (struct
+      (start sp-sample-count-t)
+      (end sp-sample-count-t)
+      (amplitude (array sp-sample-t* sp-asynth-channel-limit))
+      (wavelength (array sp-sample-count-t* sp-asynth-channel-limit))
+      (phase-offset (array sp-sample-count-t sp-asynth-channel-limit))))
   (sp-file-read file sample-count result-block result-sample-count)
   (status-t sp-file-t* sp-sample-count-t sp-sample-t** sp-sample-count-t*)
   (sp-file-write file block sample-count result-sample-count)
@@ -174,6 +187,11 @@
     sp-sample-count-t
     sp-sample-count-t
     sp-sample-count-t sp-fm-synth-count-t sp-fm-synth-operator-t* sp-sample-count-t**)
+  (sp-asynth out channel-count start duration config-len config state)
+  (status-t
+    sp-sample-t**
+    sp-sample-count-t
+    sp-sample-count-t sp-sample-count-t sp-asynth-count-t sp-asynth-partial-t* sp-sample-count-t**)
   (sp-state-variable-filter-lp out in in-count cutoff q-factor state)
   (void sp-sample-t* sp-sample-t* sp-float-t sp-float-t sp-sample-count-t sp-sample-t*)
   (sp-state-variable-filter-hp out in in-count cutoff q-factor state)

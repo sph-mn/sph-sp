@@ -153,7 +153,7 @@ exit:
 #define max(a, b) ((a > b) ? a : b)
 #define min(a, b) ((a < b) ? a : b)
 /** apply a centered moving average filter to samples between in-window and in-window-end inclusively and write to out.
-   removes high frequencies with little distortion in the time domain but with a long transition.
+   removes high frequencies and smoothes data with little distortion in the time domain but the frequency response has large ripples.
    all memory is managed by the caller.
    * prev and next can be null pointers if not available
    * zero is used for unavailable values
@@ -381,6 +381,48 @@ status_t sp_convolution_filter(sp_sample_t* in, sp_sample_count_t in_len, sp_con
 exit:
   return (status);
 };
+/** samples real real pair [integer integer integer] -> state
+    define a routine for a fast filter that supports multiple filter types in one.
+    state must hold two elements and is allocated and owned by the caller.
+    cutoff is as a fraction of the sample rate between 0 and 0.5.
+    uses the state-variable filter described here:
+    * http://www.cytomic.com/technical-papers
+    * http://www.earlevel.com/main/2016/02/21/filters-for-synths-starting-out/ */
+#define define_sp_state_variable_filter(suffix, transfer) \
+  void sp_state_variable_filter_##suffix(sp_sample_t* out, sp_sample_t* in, sp_float_t in_count, sp_float_t cutoff, sp_sample_count_t q_factor, sp_sample_t* state) { \
+    sp_sample_t a1; \
+    sp_sample_t a2; \
+    sp_sample_t g; \
+    sp_sample_t ic1eq; \
+    sp_sample_t ic2eq; \
+    sp_sample_count_t i; \
+    sp_sample_t k; \
+    sp_sample_t v0; \
+    sp_sample_t v1; \
+    sp_sample_t v2; \
+    ic1eq = state[0]; \
+    ic2eq = state[1]; \
+    g = tan((M_PI * cutoff)); \
+    k = (2 - (2 * q_factor)); \
+    a1 = (1 / (1 + (g * (g + k)))); \
+    a2 = (g * a1); \
+    for (i = 0; (i < in_count); i = (1 + i)) { \
+      v0 = in[i]; \
+      v1 = ((a1 * ic1eq) + (a2 * (v0 - ic2eq))); \
+      v2 = (ic2eq + (g * v1)); \
+      ic1eq = ((2 * v1) - ic1eq); \
+      ic2eq = ((2 * v2) - ic2eq); \
+      out[i] = transfer; \
+    }; \
+    state[0] = ic1eq; \
+    state[1] = ic2eq; \
+  }
+define_sp_state_variable_filter(lp, v2);
+define_sp_state_variable_filter(hp, (v0 - (k * v1) - v2));
+define_sp_state_variable_filter(bp, v1);
+define_sp_state_variable_filter(br, (v0 - (k * v1)));
+define_sp_state_variable_filter(peak, (((2 * v2) - v0) + (k * v1)));
+define_sp_state_variable_filter(all, (v0 - (2 * k * v1)));
 /** writes a sine wave of size into out. can be used as a lookup table */
 status_t sp_sine_table_new(sp_sample_t** out, sp_sample_count_t size) {
   status_declare;
@@ -404,8 +446,8 @@ sp_sample_count_t sp_cheap_phase_96(sp_sample_count_t current, sp_sample_count_t
   return (((96000 <= result) ? (result % 96000) : result));
 };
 /** accumulate an integer phase with change given as a float value.
-  change must be a positive value and is rounded */
-sp_sample_count_t sp_cheap_phase_96_float(sp_sample_count_t current, double change) { return ((sp_cheap_phase_96(current, ((1.0 > change) ? 1 : sp_cheap_floor_positive(change))))); };
+  change must be a positive value and is rounded to the next larger integer */
+sp_sample_count_t sp_cheap_phase_96_float(sp_sample_count_t current, double change) { return ((sp_cheap_phase_96(current, (sp_cheap_ceiling_positive(change))))); };
 /** create sines that can modulate the frequency of others and sum into output.
   amplitude and wavelength can be controlled by arrays separately for each operator and channel.
   modulators can be modulated themselves in chains. state is allocated if zero and owned by the caller.
@@ -489,47 +531,56 @@ exit:
   memreg_free;
   return (status);
 };
-/** samples real real pair [integer integer integer] -> state
-    define a routine for a fast filter that supports multiple filter types in one.
-    state must hold two elements and is allocated and owned by the caller.
-    cutoff is as a fraction of the sample rate between 0 and 0.5.
-    uses the state-variable filter described here:
-    * http://www.cytomic.com/technical-papers
-    * http://www.earlevel.com/main/2016/02/21/filters-for-synths-starting-out/ */
-#define define_sp_state_variable_filter(suffix, transfer) \
-  void sp_state_variable_filter_##suffix(sp_sample_t* out, sp_sample_t* in, sp_float_t in_count, sp_float_t cutoff, sp_sample_count_t q_factor, sp_sample_t* state) { \
-    sp_sample_t a1; \
-    sp_sample_t a2; \
-    sp_sample_t g; \
-    sp_sample_t ic1eq; \
-    sp_sample_t ic2eq; \
-    sp_sample_count_t i; \
-    sp_sample_t k; \
-    sp_sample_t v0; \
-    sp_sample_t v1; \
-    sp_sample_t v2; \
-    ic1eq = state[0]; \
-    ic2eq = state[1]; \
-    g = tan((M_PI * cutoff)); \
-    k = (2 - (2 * q_factor)); \
-    a1 = (1 / (1 + (g * (g + k)))); \
-    a2 = (g * a1); \
-    for (i = 0; (i < in_count); i = (1 + i)) { \
-      v0 = in[i]; \
-      v1 = ((a1 * ic1eq) + (a2 * (v0 - ic2eq))); \
-      v2 = (ic2eq + (g * v1)); \
-      ic1eq = ((2 * v1) - ic1eq); \
-      ic2eq = ((2 * v2) - ic2eq); \
-      out[i] = transfer; \
-    }; \
-    state[0] = ic1eq; \
-    state[1] = ic2eq; \
-  }
-define_sp_state_variable_filter(lp, v2);
-define_sp_state_variable_filter(hp, (v0 - (k * v1) - v2));
-define_sp_state_variable_filter(bp, v1);
-define_sp_state_variable_filter(br, (v0 - (k * v1)));
-define_sp_state_variable_filter(peak, (((2 * v2) - v0) + (k * v1)));
-define_sp_state_variable_filter(all, (v0 - (2 * k * v1)));
+status_t sp_asynth(sp_sample_t** out, sp_sample_count_t channel_count, sp_sample_count_t start, sp_sample_count_t duration, sp_asynth_count_t config_len, sp_asynth_partial_t* config, sp_sample_count_t** state) {
+  status_declare;
+  sp_sample_t amp;
+  sp_sample_count_t channel_i;
+  sp_sample_count_t end;
+  sp_sample_count_t i;
+  sp_sample_count_t* phases;
+  sp_sample_count_t phs;
+  sp_sample_count_t prt_i;
+  sp_asynth_partial_t prt;
+  sp_sample_count_t prt_start;
+  sp_sample_count_t prt_offset;
+  sp_sample_count_t prt_offset_right;
+  sp_sample_count_t wvl;
+  /* ensure a state object like for sp-fm-synth */
+  if (*state) {
+    phases = *state;
+  } else {
+    status_require((sph_helper_calloc((channel_count * config_len * sizeof(sp_sample_count_t)), (&phases))));
+    for (i = 0; (i < config_len); i = (1 + i)) {
+      for (channel_i = 0; (channel_i < channel_count); channel_i = (1 + channel_i)) {
+        phases[(channel_i + (channel_count * i))] = ((config[i]).phase_offset)[channel_i];
+      };
+    };
+  };
+  end = (start + duration);
+  for (prt_i = 0; (prt_i < config_len); prt_i = (1 + prt_i)) {
+    prt = config[prt_i];
+    if (end < prt.start) {
+      break;
+    };
+    if (prt.end <= start) {
+      continue;
+    };
+    prt_start = ((prt.start < start) ? (start - prt.start) : 0);
+    prt_offset = ((prt.start > start) ? (prt.start - start) : 0);
+    prt_offset_right = ((prt.end > end) ? 0 : (end - prt.end));
+    for (channel_i = 0; (channel_i < channel_count); channel_i = (1 + channel_i)) {
+      phs = phases[(channel_i + (channel_count * prt_i))];
+      for (i = 0; (i < (duration - prt_offset - prt_offset_right)); i = (1 + i)) {
+        amp = (prt.amplitude)[channel_i][(prt_start + i)];
+        wvl = (prt.wavelength)[channel_i][(prt_start + i)];
+        phs = sp_cheap_phase_96_float(phs, (48000 / wvl));
+        out[channel_i][(prt_offset + i)] = (out[channel_i][(prt_offset + i)] + (amp * sp_sine_96(phs)));
+      };
+      phases[(channel_i + (channel_count * prt_i))] = phs;
+    };
+  };
+exit:
+  return (status);
+};
 #include "../main/windowed-sinc.c"
 #include "../main/io.c"

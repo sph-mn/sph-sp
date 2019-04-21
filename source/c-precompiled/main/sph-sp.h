@@ -15,6 +15,9 @@
 #define sp_fm_synth_sine sp_sine_96
 #define sp_fm_synth_channel_limit 16
 #define sp_fm_synth_operator_limit 64
+#define sp_asynth_count_t uint16_t
+#define sp_asynth_sine sp_sine_96
+#define sp_asynth_channel_limit 16
 #define sp_config_is_set 1
 #endif
 #define boolean uint8_t
@@ -36,6 +39,7 @@
 #define sp_sine_96(t) sp_sine_96_table[t]
 #define sp_cheap_round_positive(a) ((sp_sample_count_t)((0.5 + a)))
 #define sp_cheap_floor_positive(a) ((sp_sample_count_t)(a))
+#define sp_cheap_ceiling_positive(a) (((sp_sample_count_t)(a)) + (((sp_sample_count_t)(a)) < a))
 #include <stdio.h>
 /** writes values with current routine name and line info to standard output.
     example: (debug-log "%d" 1)
@@ -126,6 +130,13 @@ typedef struct {
   sp_sample_count_t* wavelength[sp_fm_synth_channel_limit];
   sp_sample_count_t phase_offset[sp_fm_synth_channel_limit];
 } sp_fm_synth_operator_t;
+typedef struct {
+  sp_sample_count_t start;
+  sp_sample_count_t end;
+  sp_sample_t* amplitude[sp_asynth_channel_limit];
+  sp_sample_count_t* wavelength[sp_asynth_channel_limit];
+  sp_sample_count_t phase_offset[sp_asynth_channel_limit];
+} sp_asynth_partial_t;
 status_t sp_file_read(sp_file_t* file, sp_sample_count_t sample_count, sp_sample_t** result_block, sp_sample_count_t* result_sample_count);
 status_t sp_file_write(sp_file_t* file, sp_sample_t** block, sp_sample_count_t sample_count, sp_sample_count_t* result_sample_count);
 status_t sp_file_position(sp_file_t* file, sp_sample_count_t* result_position);
@@ -166,6 +177,7 @@ status_t sp_initialise();
 sp_sample_count_t sp_cheap_phase_96(sp_sample_count_t current, sp_sample_count_t change);
 sp_sample_count_t sp_cheap_phase_96_float(sp_sample_count_t current, double change);
 status_t sp_fm_synth(sp_sample_t** out, sp_sample_count_t channels, sp_sample_count_t start, sp_sample_count_t duration, sp_fm_synth_count_t config_len, sp_fm_synth_operator_t* config, sp_sample_count_t** state);
+status_t sp_asynth(sp_sample_t** out, sp_sample_count_t channel_count, sp_sample_count_t start, sp_sample_count_t duration, sp_asynth_count_t config_len, sp_asynth_partial_t* config, sp_sample_count_t** state);
 void sp_state_variable_filter_lp(sp_sample_t* out, sp_sample_t* in, sp_float_t in_count, sp_float_t cutoff, sp_sample_count_t q_factor, sp_sample_t* state);
 void sp_state_variable_filter_hp(sp_sample_t* out, sp_sample_t* in, sp_float_t in_count, sp_float_t cutoff, sp_sample_count_t q_factor, sp_sample_t* state);
 void sp_state_variable_filter_bp(sp_sample_t* out, sp_sample_t* in, sp_float_t in_count, sp_float_t cutoff, sp_sample_count_t q_factor, sp_sample_t* state);
