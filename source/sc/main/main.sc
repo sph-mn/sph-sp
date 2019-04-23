@@ -659,4 +659,4 @@
   (label exit
     (return status)))
 
-(pre-include "../main/windowed-sinc.c" "../main/io.c")
+(pre-include "../main/windowed-sinc.c" "../main/io.c" "../main/path.c")

@@ -587,3 +587,4 @@ exit:
 };
 #include "../main/windowed-sinc.c"
 #include "../main/io.c"
+#include "../main/path.c"
