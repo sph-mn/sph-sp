@@ -311,18 +311,38 @@ status_t test_fm_synth() {
 exit:
   return (status);
 };
+status_t test_sp_path() {
+  status_declare;
+  sp_path_t path;
+  sp_path_segment_t segments[3];
+  sp_path_segment_t s;
+  sp_path_point_t p;
+  sp_path_segment_count_t segments_len;
+  sp_path_point_count_t points_len;
+  sp_path_point_t points1[1];
+  sp_path_point_t points2[2];
+  sp_path_point_t points3[2];
+  sp_path_value_t out[3] = { 0, 0, 0 };
+  p.x = 4;
+  p.y = 8;
+  points1[0] = p;
+  s.points_len = 1;
+  s.points = points1;
+  s.interpolator = sp_path_i_line;
+  s.options_len = 0;
+  s.options = 0;
+  segments[0] = s;
+  segments_len = 1;
+  status_require((sp_path_new(segments_len, segments, (&path))));
+  sp_path_new(segments_len, segments, (&path));
+  sp_path_free(path);
+exit:
+  return (status);
+};
 int main() {
   status_declare;
   sp_initialise();
-  test_helper_test_one(test_fm_synth);
-  test_helper_test_one(test_moving_average);
-  test_helper_test_one(test_fft);
-  test_helper_test_one(test_spectral_inversion_ir);
-  test_helper_test_one(test_base);
-  test_helper_test_one(test_spectral_reversal_ir);
-  test_helper_test_one(test_convolve);
-  test_helper_test_one(test_file);
-  test_helper_test_one(test_windowed_sinc);
+  test_helper_test_one(test_sp_path);
 exit:
   test_helper_display_summary();
   return ((status.id));

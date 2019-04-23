@@ -204,3 +204,54 @@
   (void sp-sample-t* sp-sample-t* sp-float-t sp-float-t sp-sample-count-t sp-sample-t*)
   (sp-state-variable-filter-all out in in-count cutoff q-factor state)
   (void sp-sample-t* sp-sample-t* sp-float-t sp-float-t sp-sample-count-t sp-sample-t*))
+
+(pre-define
+  sp-path-point-limit 16
+  sp-path-point-count-t uint8-t
+  sp-path-segment-count-t uint16-t
+  sp-path-value-t double)
+
+(declare
+  sp-path-point-t
+  (type
+    (struct
+      (x sp-path-value-t)
+      (y sp-path-value-t)))
+  sp-path-interpolator-t
+  (type
+    (function-pointer
+      void
+      sp-sample-count-t sp-sample-count-t sp-path-point-t sp-path-point-t* void* sp-path-value-t*))
+  sp-path-segment-t
+  (type
+    (struct
+      (_start sp-path-point-t)
+      (points-len sp-path-point-count-t)
+      (points (array sp-path-point-t sp-path-point-limit))
+      (interpolator sp-path-interpolator-t)
+      (options-len uint8-t)
+      (options void*)))
+  sp-path-t
+  (type
+    (struct
+      (segments-len sp-path-segment-count-t)
+      (segments sp-path-segment-t*)))
+  (sp-path-i-line start end p-start p-rest options out)
+  (void sp-sample-count-t sp-sample-count-t sp-path-point-t sp-path-point-t* void* sp-path-value-t*)
+  (sp-path-free a) (void sp-path-t)
+  (sp-path-new segments-len segments out-path)
+  (status-t sp-path-segment-count-t sp-path-segment-t* sp-path-t*) (sp-path-get path start end out)
+  (void sp-path-t sp-sample-count-t sp-sample-count-t sp-path-value-t*)
+  (sp-path-new-get segments-len segments start end out)
+  (void
+    sp-path-segment-count-t sp-path-segment-t* sp-sample-count-t sp-sample-count-t sp-path-value-t*)
+  (sp-path-i-move start end p-start p-rest options out)
+  (void sp-sample-count-t sp-sample-count-t sp-path-point-t sp-path-point-t* void* sp-path-value-t*)
+  (sp-path-i-constant start end p-start p-rest options out)
+  (void sp-sample-count-t sp-sample-count-t sp-path-point-t sp-path-point-t* void* sp-path-value-t*)
+  (sp-path-i-bezier start end p-start p-rest options out)
+  (void sp-sample-count-t sp-sample-count-t sp-path-point-t sp-path-point-t* void* sp-path-value-t*)
+  (sp-path-i-catmull-rom start end p-start p-rest options out)
+  (void sp-sample-count-t sp-sample-count-t sp-path-point-t sp-path-point-t* void* sp-path-value-t*)
+  (sp-path-i-path start end p-start p-rest options out)
+  (void sp-sample-count-t sp-sample-count-t sp-path-point-t sp-path-point-t* void* sp-path-value-t*))

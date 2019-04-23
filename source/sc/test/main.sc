@@ -346,9 +346,41 @@
   (label exit
     (return status)))
 
+(define (test-sp-path) status-t
+  status-declare
+  (declare
+    path sp-path-t
+    segments (array sp-path-segment-t 3)
+    s sp-path-segment-t
+    p sp-path-point-t
+    segments-len sp-path-segment-count-t
+    points-len sp-path-point-count-t
+    points1 (array sp-path-point-t 1)
+    points2 (array sp-path-point-t 2)
+    points3 (array sp-path-point-t 2)
+    out (array sp-path-value-t 3 0 0 0))
+  (set
+    p.x 4
+    p.y 8
+    (array-get points1 0) p
+    s.points-len 1
+    s.points points1
+    s.interpolator sp-path-i-line
+    s.options-len 0
+    s.options 0
+    (array-get segments 0) s
+    segments-len 1)
+  (status-require (sp-path-new segments-len segments &path))
+  (sp-path-new segments-len segments &path)
+  (sp-path-free path)
+  (label exit
+    (return status)))
+
 (define (main) int
   status-declare
   (sp-initialise)
+  (test-helper-test-one test-sp-path)
+  #;(
   (test-helper-test-one test-fm-synth)
   (test-helper-test-one test-moving-average)
   (test-helper-test-one test-fft)
@@ -358,6 +390,7 @@
   (test-helper-test-one test-convolve)
   (test-helper-test-one test-file)
   (test-helper-test-one test-windowed-sinc)
+  )
   (label exit
     (test-helper-display-summary)
     (return status.id)))

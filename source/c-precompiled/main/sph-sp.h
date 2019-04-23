@@ -184,3 +184,34 @@ void sp_state_variable_filter_bp(sp_sample_t* out, sp_sample_t* in, sp_float_t i
 void sp_state_variable_filter_br(sp_sample_t* out, sp_sample_t* in, sp_float_t in_count, sp_float_t cutoff, sp_sample_count_t q_factor, sp_sample_t* state);
 void sp_state_variable_filter_peak(sp_sample_t* out, sp_sample_t* in, sp_float_t in_count, sp_float_t cutoff, sp_sample_count_t q_factor, sp_sample_t* state);
 void sp_state_variable_filter_all(sp_sample_t* out, sp_sample_t* in, sp_float_t in_count, sp_float_t cutoff, sp_sample_count_t q_factor, sp_sample_t* state);
+#define sp_path_point_limit 16
+#define sp_path_point_count_t uint8_t
+#define sp_path_segment_count_t uint16_t
+#define sp_path_value_t double
+typedef struct {
+  sp_path_value_t x;
+  sp_path_value_t y;
+} sp_path_point_t;
+typedef void (*sp_path_interpolator_t)(sp_sample_count_t, sp_sample_count_t, sp_path_point_t, sp_path_point_t*, void*, sp_path_value_t*);
+typedef struct {
+  sp_path_point_t _start;
+  sp_path_point_count_t points_len;
+  sp_path_point_t points[sp_path_point_limit];
+  sp_path_interpolator_t interpolator;
+  uint8_t options_len;
+  void* options;
+} sp_path_segment_t;
+typedef struct {
+  sp_path_segment_count_t segments_len;
+  sp_path_segment_t* segments;
+} sp_path_t;
+void sp_path_i_line(sp_sample_count_t start, sp_sample_count_t end, sp_path_point_t p_start, sp_path_point_t* p_rest, void* options, sp_path_value_t* out);
+void sp_path_free(sp_path_t a);
+status_t sp_path_new(sp_path_segment_count_t segments_len, sp_path_segment_t* segments, sp_path_t* out_path);
+void sp_path_get(sp_path_t path, sp_sample_count_t start, sp_sample_count_t end, sp_path_value_t* out);
+void sp_path_new_get(sp_path_segment_count_t segments_len, sp_path_segment_t* segments, sp_sample_count_t start, sp_sample_count_t end, sp_path_value_t* out);
+void sp_path_i_move(sp_sample_count_t start, sp_sample_count_t end, sp_path_point_t p_start, sp_path_point_t* p_rest, void* options, sp_path_value_t* out);
+void sp_path_i_constant(sp_sample_count_t start, sp_sample_count_t end, sp_path_point_t p_start, sp_path_point_t* p_rest, void* options, sp_path_value_t* out);
+void sp_path_i_bezier(sp_sample_count_t start, sp_sample_count_t end, sp_path_point_t p_start, sp_path_point_t* p_rest, void* options, sp_path_value_t* out);
+void sp_path_i_catmull_rom(sp_sample_count_t start, sp_sample_count_t end, sp_path_point_t p_start, sp_path_point_t* p_rest, void* options, sp_path_value_t* out);
+void sp_path_i_path(sp_sample_count_t start, sp_sample_count_t end, sp_path_point_t p_start, sp_path_point_t* p_rest, void* options, sp_path_value_t* out);
