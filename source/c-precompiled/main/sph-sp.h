@@ -184,10 +184,11 @@ void sp_state_variable_filter_bp(sp_sample_t* out, sp_sample_t* in, sp_float_t i
 void sp_state_variable_filter_br(sp_sample_t* out, sp_sample_t* in, sp_float_t in_count, sp_float_t cutoff, sp_sample_count_t q_factor, sp_sample_t* state);
 void sp_state_variable_filter_peak(sp_sample_t* out, sp_sample_t* in, sp_float_t in_count, sp_float_t cutoff, sp_sample_count_t q_factor, sp_sample_t* state);
 void sp_state_variable_filter_all(sp_sample_t* out, sp_sample_t* in, sp_float_t in_count, sp_float_t cutoff, sp_sample_count_t q_factor, sp_sample_t* state);
-#define sp_path_point_limit 16
+#define sp_path_point_limit 3
 #define sp_path_point_count_t uint8_t
 #define sp_path_segment_count_t uint16_t
 #define sp_path_value_t double
+#define sp_path_interpolator_points_len(a) (((sp_path_i_line == a) || (sp_path_i_move == a)) ? 1 : ((sp_path_i_bezier == a) ? 3 : 0))
 typedef struct {
   sp_path_value_t x;
   sp_path_value_t y;
@@ -195,10 +196,9 @@ typedef struct {
 typedef void (*sp_path_interpolator_t)(sp_sample_count_t, sp_sample_count_t, sp_path_point_t, sp_path_point_t*, void*, sp_path_value_t*);
 typedef struct {
   sp_path_point_t _start;
-  sp_path_point_count_t points_len;
+  sp_path_point_count_t _points_len;
   sp_path_point_t points[sp_path_point_limit];
   sp_path_interpolator_t interpolator;
-  uint8_t options_len;
   void* options;
 } sp_path_segment_t;
 typedef struct {
@@ -213,5 +213,6 @@ void sp_path_new_get(sp_path_segment_count_t segments_len, sp_path_segment_t* se
 void sp_path_i_move(sp_sample_count_t start, sp_sample_count_t end, sp_path_point_t p_start, sp_path_point_t* p_rest, void* options, sp_path_value_t* out);
 void sp_path_i_constant(sp_sample_count_t start, sp_sample_count_t end, sp_path_point_t p_start, sp_path_point_t* p_rest, void* options, sp_path_value_t* out);
 void sp_path_i_bezier(sp_sample_count_t start, sp_sample_count_t end, sp_path_point_t p_start, sp_path_point_t* p_rest, void* options, sp_path_value_t* out);
-void sp_path_i_catmull_rom(sp_sample_count_t start, sp_sample_count_t end, sp_path_point_t p_start, sp_path_point_t* p_rest, void* options, sp_path_value_t* out);
 void sp_path_i_path(sp_sample_count_t start, sp_sample_count_t end, sp_path_point_t p_start, sp_path_point_t* p_rest, void* options, sp_path_value_t* out);
+sp_path_point_t sp_path_start(sp_path_t path);
+sp_path_point_t sp_path_end(sp_path_t path);

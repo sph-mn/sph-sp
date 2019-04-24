@@ -354,24 +354,30 @@
     s sp-path-segment-t
     p sp-path-point-t
     segments-len sp-path-segment-count-t
-    points-len sp-path-point-count-t
-    points1 (array sp-path-point-t 1)
-    points2 (array sp-path-point-t 2)
-    points3 (array sp-path-point-t 2)
-    out (array sp-path-value-t 3 0 0 0))
+    out (array sp-path-value-t 10 0 0 0 0 0 0 0 0 0 0))
   (set
     p.x 4
     p.y 8
-    (array-get points1 0) p
-    s.points-len 1
-    s.points points1
+    *s.points p
     s.interpolator sp-path-i-line
-    s.options-len 0
-    s.options 0
     (array-get segments 0) s
-    segments-len 1)
+    p.x 8
+    p.y 32
+    *s.points p
+    s.interpolator sp-path-i-line
+    (array-get segments 1) s
+    segments-len 2)
   (status-require (sp-path-new segments-len segments &path))
   (sp-path-new segments-len segments &path)
+  (sp-path-get path 0 9 out)
+  (printf
+    "%f %f %f %f %f %f %f %f %f\n"
+    (array-get out 0)
+    (array-get out 1)
+    (array-get out 2)
+    (array-get out 3)
+    (array-get out 4)
+    (array-get out 5) (array-get out 6) (array-get out 7) (array-get out 8) (array-get out 9))
   (sp-path-free path)
   (label exit
     (return status)))

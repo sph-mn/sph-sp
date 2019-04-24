@@ -206,10 +206,14 @@
   (void sp-sample-t* sp-sample-t* sp-float-t sp-float-t sp-sample-count-t sp-sample-t*))
 
 (pre-define
-  sp-path-point-limit 16
+  sp-path-point-limit 3
   sp-path-point-count-t uint8-t
   sp-path-segment-count-t uint16-t
-  sp-path-value-t double)
+  sp-path-value-t double
+  (sp-path-interpolator-points-len a)
+  (if* (or (= sp-path-i-line a) (= sp-path-i-move a)) 1
+    (if* (= sp-path-i-bezier a) 3
+      0)))
 
 (declare
   sp-path-point-t
@@ -226,10 +230,9 @@
   (type
     (struct
       (_start sp-path-point-t)
-      (points-len sp-path-point-count-t)
+      (_points-len sp-path-point-count-t)
       (points (array sp-path-point-t sp-path-point-limit))
       (interpolator sp-path-interpolator-t)
-      (options-len uint8-t)
       (options void*)))
   sp-path-t
   (type
@@ -251,7 +254,7 @@
   (void sp-sample-count-t sp-sample-count-t sp-path-point-t sp-path-point-t* void* sp-path-value-t*)
   (sp-path-i-bezier start end p-start p-rest options out)
   (void sp-sample-count-t sp-sample-count-t sp-path-point-t sp-path-point-t* void* sp-path-value-t*)
-  (sp-path-i-catmull-rom start end p-start p-rest options out)
-  (void sp-sample-count-t sp-sample-count-t sp-path-point-t sp-path-point-t* void* sp-path-value-t*)
   (sp-path-i-path start end p-start p-rest options out)
-  (void sp-sample-count-t sp-sample-count-t sp-path-point-t sp-path-point-t* void* sp-path-value-t*))
+  (void sp-sample-count-t sp-sample-count-t sp-path-point-t sp-path-point-t* void* sp-path-value-t*)
+  (sp-path-start path) (sp-path-point-t sp-path-t)
+  (sp-path-end path) (sp-path-point-t sp-path-t))
