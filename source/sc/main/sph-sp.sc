@@ -7,6 +7,7 @@
     sp-file-format (bit-or SF-FORMAT-WAV SF-FORMAT-FLOAT)
     sp-float-t double
     sp-sample-count-t uint32-t
+    sp-sample-count-max UINT32_MAX
     sp-sample-rate-t uint32-t
     sp-sample-sum f64-sum
     sp-sample-t double
@@ -211,9 +212,8 @@
   sp-path-segment-count-t uint16-t
   sp-path-value-t double
   (sp-path-interpolator-points-len a)
-  (if* (or (= sp-path-i-line a) (= sp-path-i-move a)) 1
-    (if* (= sp-path-i-bezier a) 3
-      0)))
+  (if* (= sp-path-i-bezier a) 3
+    1))
 
 (declare
   sp-path-point-t
@@ -246,7 +246,7 @@
   (status-t sp-path-segment-count-t sp-path-segment-t* sp-path-t*) (sp-path-get path start end out)
   (void sp-path-t sp-sample-count-t sp-sample-count-t sp-path-value-t*)
   (sp-path-new-get segments-len segments start end out)
-  (void
+  (status-t
     sp-path-segment-count-t sp-path-segment-t* sp-sample-count-t sp-sample-count-t sp-path-value-t*)
   (sp-path-i-move start end p-start p-rest options out)
   (void sp-sample-count-t sp-sample-count-t sp-path-point-t sp-path-point-t* void* sp-path-value-t*)

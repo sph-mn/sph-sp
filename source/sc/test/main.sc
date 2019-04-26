@@ -349,36 +349,98 @@
 (define (test-sp-path) status-t
   status-declare
   (declare
+    out (array sp-path-value-t 50)
+    out-new-get (array sp-path-value-t 50)
+    i sp-sample-count-t
     path sp-path-t
-    segments (array sp-path-segment-t 3)
-    s sp-path-segment-t
     p sp-path-point-t
+    s sp-path-segment-t
+    segments (array sp-path-segment-t 4)
     segments-len sp-path-segment-count-t
-    out (array sp-path-value-t 10 0 0 0 0 0 0 0 0 0 0))
+    log-path-new-0 boolean
+    log-path-new-1 boolean
+    log-path-new-get-0 boolean
+    log-path-new-get-1 boolean)
   (set
-    p.x 4
-    p.y 8
-    *s.points p
-    s.interpolator sp-path-i-line
+    log-path-new-0 #f
+    log-path-new-1 #f
+    log-path-new-get-0 #f
+    log-path-new-get-1 #f)
+  (for ((set i 0) (< i 50) (set i (+ 1 i)))
+    (set
+      (array-get out i) 999
+      (array-get out-new-get i) 999))
+  (sc-comment "path 0")
+  (set
+    s.interpolator sp-path-i-move
+    p.x 10
+    p.y 5
+    (array-get s.points 0) p
     (array-get segments 0) s
-    p.x 8
-    p.y 32
-    *s.points p
     s.interpolator sp-path-i-line
+    p.x 20
+    p.y 10
+    (array-get s.points 0) p
     (array-get segments 1) s
-    segments-len 2)
+    s.interpolator sp-path-i-bezier
+    p.x 25
+    p.y 15
+    (array-get s.points 0) p
+    p.x 30
+    p.y 20
+    (array-get s.points 1) p
+    p.x 40
+    p.y 25
+    (array-get s.points 2) p
+    (array-get segments 2) s
+    s.interpolator sp-path-i-constant
+    (array-get segments 3) s
+    segments-len 4)
   (status-require (sp-path-new segments-len segments &path))
-  (sp-path-new segments-len segments &path)
-  (sp-path-get path 0 9 out)
-  (printf
-    "%f %f %f %f %f %f %f %f %f\n"
-    (array-get out 0)
-    (array-get out 1)
-    (array-get out 2)
-    (array-get out 3)
-    (array-get out 4)
-    (array-get out 5) (array-get out 6) (array-get out 7) (array-get out 8) (array-get out 9))
+  (sp-path-get path 5 25 out)
+  (sp-path-get path 25 55 (+ 20 out))
+  (if log-path-new-0
+    (for ((set i 0) (< i 50) (set i (+ 1 i)))
+      (printf "%lu %f\n" i (array-get out i))))
+  (test-helper-assert "path 0.0" (sp-sample-nearly-equal 0 (array-get out 0) error-margin))
+  (test-helper-assert "path 0.4" (sp-sample-nearly-equal 0 (array-get out 4) error-margin))
+  (test-helper-assert "path 0.5" (sp-sample-nearly-equal 5 (array-get out 5) error-margin))
+  (test-helper-assert "path 0.15" (sp-sample-nearly-equal 10 (array-get out 15) error-margin))
+  (test-helper-assert "path 0.16" (sp-sample-nearly-equal 10.75 (array-get out 16) error-margin))
+  (test-helper-assert "path 0.34" (sp-sample-nearly-equal 24.25 (array-get out 34) error-margin))
+  (test-helper-assert "path 0.35" (sp-sample-nearly-equal 25 (array-get out 35) error-margin))
+  (test-helper-assert "path 0.49" (sp-sample-nearly-equal 25 (array-get out 49) error-margin))
   (sp-path-free path)
+  (sc-comment "path 0 new-get")
+  (status-require (sp-path-new-get segments-len segments 5 55 out-new-get))
+  (if log-path-new-get-0
+    (for ((set i 0) (< i 50) (set i (+ 1 i)))
+      (printf "%lu %f\n" i (array-get out-new-get i))))
+  (test-helper-assert
+    "path 0 new-get equal" (not (memcmp out out-new-get (* (sizeof sp-path-value-t) 50))))
+  (sc-comment "path 1 - test last point")
+  (set
+    s.interpolator sp-path-i-line
+    p.x 10
+    p.y 5
+    (array-get s.points 0) p
+    (array-get segments 0) s
+    segments-len 1)
+  (status-require (sp-path-new segments-len segments &path))
+  (sp-path-get path 0 12 out)
+  (if log-path-new-1
+    (for ((set i 0) (< i 12) (set i (+ 1 i)))
+      (printf "%lu %f\n" i (array-get out i))))
+  (test-helper-assert "path 1.30" (sp-sample-nearly-equal 5 (array-get out 10) error-margin))
+  (test-helper-assert "path 1.31" (sp-sample-nearly-equal 0 (array-get out 11) error-margin))
+  (sp-path-free path)
+  (sc-comment "path 1 new-get")
+  (status-require (sp-path-new-get segments-len segments 0 12 out-new-get))
+  (if log-path-new-get-1
+    (for ((set i 0) (< i 12) (set i (+ 1 i)))
+      (printf "%lu %f\n" i (array-get out-new-get i))))
+  (test-helper-assert
+    "path 1 new-get equal" (not (memcmp out out-new-get (* (sizeof sp-path-value-t) 12))))
   (label exit
     (return status)))
 
@@ -386,7 +448,6 @@
   status-declare
   (sp-initialise)
   (test-helper-test-one test-sp-path)
-  #;(
   (test-helper-test-one test-fm-synth)
   (test-helper-test-one test-moving-average)
   (test-helper-test-one test-fft)
@@ -396,7 +457,6 @@
   (test-helper-test-one test-convolve)
   (test-helper-test-one test-file)
   (test-helper-test-one test-windowed-sinc)
-  )
   (label exit
     (test-helper-display-summary)
     (return status.id)))

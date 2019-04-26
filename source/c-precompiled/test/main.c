@@ -313,28 +313,101 @@ exit:
 };
 status_t test_sp_path() {
   status_declare;
+  sp_path_value_t out[50];
+  sp_path_value_t out_new_get[50];
+  sp_sample_count_t i;
   sp_path_t path;
-  sp_path_segment_t segments[3];
-  sp_path_segment_t s;
   sp_path_point_t p;
+  sp_path_segment_t s;
+  sp_path_segment_t segments[4];
   sp_path_segment_count_t segments_len;
-  sp_path_value_t out[10] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
-  p.x = 4;
-  p.y = 8;
-  *(s.points) = p;
-  s.interpolator = sp_path_i_line;
+  boolean log_path_new_0;
+  boolean log_path_new_1;
+  boolean log_path_new_get_0;
+  boolean log_path_new_get_1;
+  log_path_new_0 = 0;
+  log_path_new_1 = 0;
+  log_path_new_get_0 = 0;
+  log_path_new_get_1 = 0;
+  for (i = 0; (i < 50); i = (1 + i)) {
+    out[i] = 999;
+    out_new_get[i] = 999;
+  };
+  /* path 0 */
+  s.interpolator = sp_path_i_move;
+  p.x = 10;
+  p.y = 5;
+  (s.points)[0] = p;
   segments[0] = s;
-  p.x = 8;
-  p.y = 32;
-  *(s.points) = p;
   s.interpolator = sp_path_i_line;
+  p.x = 20;
+  p.y = 10;
+  (s.points)[0] = p;
   segments[1] = s;
-  segments_len = 2;
+  s.interpolator = sp_path_i_bezier;
+  p.x = 25;
+  p.y = 15;
+  (s.points)[0] = p;
+  p.x = 30;
+  p.y = 20;
+  (s.points)[1] = p;
+  p.x = 40;
+  p.y = 25;
+  (s.points)[2] = p;
+  segments[2] = s;
+  s.interpolator = sp_path_i_constant;
+  segments[3] = s;
+  segments_len = 4;
   status_require((sp_path_new(segments_len, segments, (&path))));
-  sp_path_new(segments_len, segments, (&path));
-  sp_path_get(path, 0, 9, out);
-  printf("%f %f %f %f %f %f %f %f %f\n", (out[0]), (out[1]), (out[2]), (out[3]), (out[4]), (out[5]), (out[6]), (out[7]), (out[8]), (out[9]));
+  sp_path_get(path, 5, 25, out);
+  sp_path_get(path, 25, 55, (20 + out));
+  if (log_path_new_0) {
+    for (i = 0; (i < 50); i = (1 + i)) {
+      printf("%lu %f\n", i, (out[i]));
+    };
+  };
+  test_helper_assert(("path 0.0"), (sp_sample_nearly_equal(0, (out[0]), error_margin)));
+  test_helper_assert(("path 0.4"), (sp_sample_nearly_equal(0, (out[4]), error_margin)));
+  test_helper_assert(("path 0.5"), (sp_sample_nearly_equal(5, (out[5]), error_margin)));
+  test_helper_assert(("path 0.15"), (sp_sample_nearly_equal(10, (out[15]), error_margin)));
+  test_helper_assert(("path 0.16"), (sp_sample_nearly_equal((10.75), (out[16]), error_margin)));
+  test_helper_assert(("path 0.34"), (sp_sample_nearly_equal((24.25), (out[34]), error_margin)));
+  test_helper_assert(("path 0.35"), (sp_sample_nearly_equal(25, (out[35]), error_margin)));
+  test_helper_assert(("path 0.49"), (sp_sample_nearly_equal(25, (out[49]), error_margin)));
   sp_path_free(path);
+  /* path 0 new-get */
+  status_require((sp_path_new_get(segments_len, segments, 5, 55, out_new_get)));
+  if (log_path_new_get_0) {
+    for (i = 0; (i < 50); i = (1 + i)) {
+      printf("%lu %f\n", i, (out_new_get[i]));
+    };
+  };
+  test_helper_assert("path 0 new-get equal", (!memcmp(out, out_new_get, (sizeof(sp_path_value_t) * 50))));
+  /* path 1 - test last point */
+  s.interpolator = sp_path_i_line;
+  p.x = 10;
+  p.y = 5;
+  (s.points)[0] = p;
+  segments[0] = s;
+  segments_len = 1;
+  status_require((sp_path_new(segments_len, segments, (&path))));
+  sp_path_get(path, 0, 12, out);
+  if (log_path_new_1) {
+    for (i = 0; (i < 12); i = (1 + i)) {
+      printf("%lu %f\n", i, (out[i]));
+    };
+  };
+  test_helper_assert(("path 1.30"), (sp_sample_nearly_equal(5, (out[10]), error_margin)));
+  test_helper_assert(("path 1.31"), (sp_sample_nearly_equal(0, (out[11]), error_margin)));
+  sp_path_free(path);
+  /* path 1 new-get */
+  status_require((sp_path_new_get(segments_len, segments, 0, 12, out_new_get)));
+  if (log_path_new_get_1) {
+    for (i = 0; (i < 12); i = (1 + i)) {
+      printf("%lu %f\n", i, (out_new_get[i]));
+    };
+  };
+  test_helper_assert("path 1 new-get equal", (!memcmp(out, out_new_get, (sizeof(sp_path_value_t) * 12))));
 exit:
   return (status);
 };
@@ -342,6 +415,15 @@ int main() {
   status_declare;
   sp_initialise();
   test_helper_test_one(test_sp_path);
+  test_helper_test_one(test_fm_synth);
+  test_helper_test_one(test_moving_average);
+  test_helper_test_one(test_fft);
+  test_helper_test_one(test_spectral_inversion_ir);
+  test_helper_test_one(test_base);
+  test_helper_test_one(test_spectral_reversal_ir);
+  test_helper_test_one(test_convolve);
+  test_helper_test_one(test_file);
+  test_helper_test_one(test_windowed_sinc);
 exit:
   test_helper_display_summary();
   return ((status.id));

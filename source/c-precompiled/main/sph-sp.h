@@ -6,6 +6,7 @@
 #define sp_file_format (SF_FORMAT_WAV | SF_FORMAT_FLOAT)
 #define sp_float_t double
 #define sp_sample_count_t uint32_t
+#define sp_sample_count_max UINT32_MAX
 #define sp_sample_rate_t uint32_t
 #define sp_sample_sum f64_sum
 #define sp_sample_t double
@@ -188,7 +189,7 @@ void sp_state_variable_filter_all(sp_sample_t* out, sp_sample_t* in, sp_float_t 
 #define sp_path_point_count_t uint8_t
 #define sp_path_segment_count_t uint16_t
 #define sp_path_value_t double
-#define sp_path_interpolator_points_len(a) (((sp_path_i_line == a) || (sp_path_i_move == a)) ? 1 : ((sp_path_i_bezier == a) ? 3 : 0))
+#define sp_path_interpolator_points_len(a) ((sp_path_i_bezier == a) ? 3 : 1)
 typedef struct {
   sp_path_value_t x;
   sp_path_value_t y;
@@ -209,7 +210,7 @@ void sp_path_i_line(sp_sample_count_t start, sp_sample_count_t end, sp_path_poin
 void sp_path_free(sp_path_t a);
 status_t sp_path_new(sp_path_segment_count_t segments_len, sp_path_segment_t* segments, sp_path_t* out_path);
 void sp_path_get(sp_path_t path, sp_sample_count_t start, sp_sample_count_t end, sp_path_value_t* out);
-void sp_path_new_get(sp_path_segment_count_t segments_len, sp_path_segment_t* segments, sp_sample_count_t start, sp_sample_count_t end, sp_path_value_t* out);
+status_t sp_path_new_get(sp_path_segment_count_t segments_len, sp_path_segment_t* segments, sp_sample_count_t start, sp_sample_count_t end, sp_path_value_t* out);
 void sp_path_i_move(sp_sample_count_t start, sp_sample_count_t end, sp_path_point_t p_start, sp_path_point_t* p_rest, void* options, sp_path_value_t* out);
 void sp_path_i_constant(sp_sample_count_t start, sp_sample_count_t end, sp_path_point_t p_start, sp_path_point_t* p_rest, void* options, sp_path_value_t* out);
 void sp_path_i_bezier(sp_sample_count_t start, sp_sample_count_t end, sp_path_point_t p_start, sp_path_point_t* p_rest, void* options, sp_path_value_t* out);
