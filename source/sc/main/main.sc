@@ -4,7 +4,9 @@
   "sndfile.h"
   "../main/sph-sp.h"
   "../foreign/sph/float.c"
-  "../foreign/sph/helper.c" "../foreign/sph/memreg.c" "foreign/nayuki-fft/fft.c")
+  "../foreign/sph/helper.c"
+  "../foreign/sph/memreg.c"
+  "foreign/mtwister/mtwister.h" "foreign/mtwister/mtwister.c" "foreign/nayuki-fft/fft.c")
 
 (pre-define
   sp-status-declare (status-declare-group sp-status-group-sp)
@@ -92,7 +94,7 @@
     (free (array-get a channel-count)))
   (free a))
 
-(define (sp-block-alloc channel-count sample-count result)
+(define (sp-block-new channel-count sample-count result)
   (status-t sp-channel-count-t sp-sample-count-t sp-sample-t***)
   "return a newly allocated array for channels with data arrays for each channel"
   status-declare

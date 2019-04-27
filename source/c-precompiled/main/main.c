@@ -5,6 +5,8 @@
 #include "../foreign/sph/float.c"
 #include "../foreign/sph/helper.c"
 #include "../foreign/sph/memreg.c"
+#include <foreign/mtwister/mtwister.h>
+#include <foreign/mtwister/mtwister.c>
 #include <foreign/nayuki-fft/fft.c>
 #define sp_status_declare status_declare_group(sp_status_group_sp)
 #define sp_libc_status_require_id(id) \
