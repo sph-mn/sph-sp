@@ -3,24 +3,24 @@
   sample-rate, radian cutoff frequency and transition band width is variable per call.
   build with the information on https://tomroelandts.com/articles/how-to-create-a-simple-low-pass-filter")
 
-(define (sp-window-blackman a width) (sp-float-t sp-float-t sp-sample-count-t)
+(define (sp-window-blackman a width) (sp-float-t sp-float-t sp-count-t)
   (return
     (+
       (- 0.42 (* 0.5 (cos (/ (* 2 M_PI a) (- width 1))))) (* 0.08 (cos (/ (* 4 M_PI a) (- width 1)))))))
 
-(define (sp-windowed-sinc-lp-hp-ir-length transition) (sp-sample-count-t sp-float-t)
+(define (sp-windowed-sinc-lp-hp-ir-length transition) (sp-count-t sp-float-t)
   "approximate impulse response length for a transition factor and
   ensure that the length is odd"
-  (declare a sp-sample-count-t)
+  (declare a sp-count-t)
   (set a (ceil (/ 4 transition)))
   (if (not (modulo a 2)) (set a (+ 1 a)))
   (return a))
 
-(define (sp-null-ir out-ir out-len) (status-t sp-sample-t** sp-sample-count-t*)
+(define (sp-null-ir out-ir out-len) (status-t sp-sample-t** sp-count-t*)
   (set *out-len 1)
   (return (sph-helper-calloc (sizeof sp-sample-t) out-ir)))
 
-(define (sp-passthrough-ir out-ir out-len) (status-t sp-sample-t** sp-sample-count-t*)
+(define (sp-passthrough-ir out-ir out-len) (status-t sp-sample-t** sp-count-t*)
   status-declare
   (status-require (sph-helper-malloc (sizeof sp-sample-t) out-ir))
   (set
@@ -30,7 +30,7 @@
     (return status)))
 
 (define (sp-windowed-sinc-lp-hp-ir cutoff transition is-high-pass out-ir out-len)
-  (status-t sp-float-t sp-float-t boolean sp-sample-t** sp-sample-count-t*)
+  (status-t sp-float-t sp-float-t boolean sp-sample-t** sp-count-t*)
   "create an impulse response kernel for a windowed sinc low-pass or high-pass filter.
   uses a truncated blackman window.
   allocates out-ir, sets out-len.
@@ -38,9 +38,9 @@
   status-declare
   (declare
     center-index sp-float-t
-    i sp-sample-count-t
+    i sp-count-t
     ir sp-sample-t*
-    len sp-sample-count-t
+    len sp-count-t
     sum sp-float-t)
   (set
     len (sp-windowed-sinc-lp-hp-ir-length transition)
@@ -63,18 +63,18 @@
 
 (define
   (sp-windowed-sinc-bp-br-ir cutoff-l cutoff-h transition-l transition-h is-reject out-ir out-len)
-  (status-t sp-float-t sp-float-t sp-float-t sp-float-t boolean sp-sample-t** sp-sample-count-t*)
+  (status-t sp-float-t sp-float-t sp-float-t sp-float-t boolean sp-sample-t** sp-count-t*)
   "like sp-windowed-sinc-ir-lp but for a band-pass or band-reject filter.
   optimisation: if one cutoff is at or above maximum then create only either low-pass or high-pass"
   status-declare
   (declare
     hp-ir sp-sample-t*
-    hp-len sp-sample-count-t
+    hp-len sp-count-t
     lp-ir sp-sample-t*
-    lp-len sp-sample-count-t
-    i sp-sample-count-t
-    start sp-sample-count-t
-    end sp-sample-count-t
+    lp-len sp-count-t
+    i sp-count-t
+    start sp-count-t
+    end sp-count-t
     out sp-sample-t*
     over sp-sample-t*)
   (if is-reject
@@ -122,7 +122,7 @@
     (return status)))
 
 (define (sp-windowed-sinc-lp-hp-ir-f arguments out-ir out-len)
-  (status-t void* sp-sample-t** sp-sample-count-t*)
+  (status-t void* sp-sample-t** sp-count-t*)
   "maps arguments from the generic ir-f-arguments array.
   arguments is (sp-float-t:cutoff sp-float-t:transition boolean:is-high-pass)"
   (declare
@@ -136,7 +136,7 @@
   (return (sp-windowed-sinc-lp-hp-ir cutoff transition is-high-pass out-ir out-len)))
 
 (define (sp-windowed-sinc-bp-br-ir-f arguments out-ir out-len)
-  (status-t void* sp-sample-t** sp-sample-count-t*)
+  (status-t void* sp-sample-t** sp-count-t*)
   "maps arguments from the generic ir-f-arguments array.
   arguments is (sp-float-t:cutoff-l sp-float-t:cutoff-h sp-float-t:transition boolean:is-reject)"
   (declare
@@ -157,7 +157,7 @@
 (define (sp-windowed-sinc-lp-hp in in-len cutoff transition is-high-pass out-state out-samples)
   (status-t
     sp-sample-t*
-    sp-sample-count-t sp-float-t sp-float-t boolean sp-convolution-filter-state-t** sp-sample-t*)
+    sp-count-t sp-float-t sp-float-t boolean sp-convolution-filter-state-t** sp-sample-t*)
   "a windowed sinc low-pass or high-pass filter for segments of continuous streams with
   variable sample-rate, frequency, transition and impulse response type per call.
   * cutoff: as a fraction of the sample rate, 0..0.5
@@ -186,7 +186,7 @@
     in in-len cutoff-l cutoff-h transition-l transition-h is-reject out-state out-samples)
   (status-t
     sp-sample-t*
-    sp-sample-count-t
+    sp-count-t
     sp-float-t sp-float-t sp-float-t sp-float-t boolean sp-convolution-filter-state-t** sp-sample-t*)
   "like sp-windowed-sinc-lp-hp but for a band-pass or band-reject filter"
   status-declare

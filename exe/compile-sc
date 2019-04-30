@@ -13,13 +13,13 @@ c="source/c-precompiled"
 copy_submodules() {
   # copy code files from submodules.
   # to not have the whole submodule repository in the source directory
-  scl=submodules/sph-sc-lib/source/sc
+  scl=submodules/sph-sc-lib/source/sc/main
   mkdir -p "$sc/foreign/sph" &&
   cp --update --target-directory="$sc/foreign" "$scl/sph.sc" &&
   cp --update --target-directory="$sc/foreign/sph" \
-    "$scl/sph/status.sc" "$scl/sph/helper.sc" "$scl/sph/memreg.sc" "$scl/sph/float.sc" \
-    "$scl/sph/string.sc" "$scl/sph/filesystem.sc" "$scl/sph/quicksort.sc" "$scl/sph/queue.sc" \
-    "$scl/sph/thread-pool.sc" "$scl/sph/futures.sc"
+    "$scl/status.sc" "$scl/helper.sc" "$scl/memreg.sc" "$scl/float.sc" \
+    "$scl/string.sc" "$scl/filesystem.sc" "$scl/quicksort.sc" "$scl/queue.sc" \
+    "$scl/thread-pool.sc" "$scl/futures.sc" "$scl/i-array.sc" "$scl/spline-path.sc"
 }
 
 compile_sc() {

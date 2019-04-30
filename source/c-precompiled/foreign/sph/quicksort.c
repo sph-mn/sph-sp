@@ -1,49 +1,33 @@
-/* quicksort implementation based on the public domain implementation from http://alienryderflex.com/quicksort/ */
-#define quicksort_t int
-#define quicksort_count_t int
-#define quicksort_max_levels 1000
-uint8_t quicksort(quicksort_t a, quicksort_count_t a_len) {
-  quicksort_t piv;
-  quicksort_t beg[quicksort_max_levels];
-  quicksort_t end[quicksort_max_levels];
-  quicksort_t i;
-  quicksort_t l;
-  quicksort_t r;
-  i = 0;
-  beg[0] = 0;
-  end[0] = a_len;
-  while ((i >= 0)) {
-    l = beg[i];
-    r = (end[i] - 1);
-    if (l >= r) {
-      i = (i - 1);
-      continue;
-    };
-    piv = a[l];
-    if (i == (quicksort_max_levels - 1)) {
-      return (1);
-    };
-    while ((l < r)) {
-      while (((a[r] >= piv) && (l < r))) {
-        r = (r - 1);
-        if (l < r) {
-          l = (1 + l);
-          a[l] = a[r];
-        };
-      };
-      while (((a[l] <= piv) && (l < r))) {
-        l = (1 + l);
-        if (l < r) {
-          r = (r - 1);
-          a[r] = a[l];
-        };
-      };
-    };
-    a[l] = piv;
-    beg[(1 + i)] = (1 + l);
-    end[(1 + i)] = end[i];
-    i = (1 + i);
-    end[i] = l;
+/* a generic quicksort implementation.
+based on the public domain implementation from http://alienryderflex.com/quicksort/ */
+/** less should return true if the first argument is < than the second.
+   swap should exchange the values of the two arguments it receives */
+void quicksort(uint8_t (*less_p)(void*, void*), void (*swap)(void*, void*), uint8_t element_size, void* array, size_t array_len) {
+  char* pivot;
+  char* a;
+  size_t i;
+  size_t j;
+  if (array_len < 2) {
+    return;
   };
-  return (0);
+  a = array;
+  pivot = (a + (element_size * (array_len / 2)));
+  i = 0;
+  j = (array_len - 1);
+  while (1) {
+    while (less_p((a + (element_size * i)), pivot)) {
+      i = (1 + i);
+    };
+    while (less_p(pivot, (a + (element_size * j)))) {
+      j = (j - 1);
+    };
+    if (i >= j) {
+      break;
+    };
+    swap((a + (element_size * i)), (a + (element_size * j)));
+    i = (1 + i);
+    j = (j - 1);
+  };
+  quicksort(less_p, swap, element_size, a, i);
+  quicksort(less_p, swap, element_size, (a + (element_size * i)), (array_len - i));
 };

@@ -1,13 +1,18 @@
 #include <stdio.h>
 #include <fcntl.h>
 #include <sndfile.h>
+#include <foreign/mtwister/mtwister.h>
+#include <foreign/mtwister/mtwister.c>
+#include <foreign/nayuki-fft/fft.c>
 #include "../main/sph-sp.h"
 #include "../foreign/sph/float.c"
 #include "../foreign/sph/helper.c"
 #include "../foreign/sph/memreg.c"
-#include <foreign/mtwister/mtwister.h>
-#include <foreign/mtwister/mtwister.c>
-#include <foreign/nayuki-fft/fft.c>
+#include "../foreign/sph/spline-path.c"
+#include "../foreign/sph/quicksort.c"
+#include "../foreign/sph/queue.c"
+#include "../foreign/sph/thread-pool.c"
+#include "../foreign/sph/futures.c"
 #define sp_status_declare status_declare_group(sp_status_group_sp)
 #define sp_libc_status_require_id(id) \
   if (id < 0) { \
@@ -24,8 +29,8 @@
     a: source
     b: target */
 #define define_sp_interleave(name, type, body) \
-  void name(type** a, type* b, sp_sample_count_t a_size, sp_channel_count_t channel_count) { \
-    sp_sample_count_t b_size; \
+  void name(type** a, type* b, sp_count_t a_size, sp_channel_count_t channel_count) { \
+    sp_count_t b_size; \
     sp_channel_count_t channel; \
     b_size = (a_size * channel_count); \
     while (a_size) { \
@@ -41,8 +46,8 @@
 define_sp_interleave(sp_interleave, sp_sample_t, ({ b[b_size] = (a[channel])[a_size]; }));
 define_sp_interleave(sp_deinterleave, sp_sample_t, ({ (a[channel])[a_size] = b[b_size]; }));
 /** display a sample array in one line */
-void debug_display_sample_array(sp_sample_t* a, sp_sample_count_t len) {
-  sp_sample_count_t i;
+void debug_display_sample_array(sp_sample_t* a, sp_count_t len) {
+  sp_count_t i;
   printf(("%.17g"), (a[0]));
   for (i = 1; (i < len); i = (1 + i)) {
     printf((" %.17g"), (a[i]));
@@ -105,7 +110,7 @@ void sp_block_free(sp_sample_t** a, sp_channel_count_t channel_count) {
   free(a);
 };
 /** return a newly allocated array for channels with data arrays for each channel */
-status_t sp_block_alloc(sp_channel_count_t channel_count, sp_sample_count_t sample_count, sp_sample_t*** result) {
+status_t sp_block_new(sp_channel_count_t channel_count, sp_count_t sample_count, sp_sample_t*** result) {
   status_declare;
   memreg_init((channel_count + 1));
   sp_sample_t* channel;
@@ -136,7 +141,7 @@ sp_sample_t sp_sin_lq(sp_float_t a) {
 /** the normalised sinc function */
 sp_float_t sp_sinc(sp_float_t a) { return (((0 == a) ? 1 : (sin((M_PI * a)) / (M_PI * a)))); };
 /** all arrays should be input-len and are managed by the caller */
-status_t sp_fft(sp_sample_count_t input_len, double* input_or_output_real, double* input_or_output_imag) {
+status_t sp_fft(sp_count_t input_len, double* input_or_output_real, double* input_or_output_imag) {
   sp_status_declare;
   status_id_require((!Fft_transform(input_or_output_real, input_or_output_imag, input_len)));
 exit:
@@ -146,7 +151,7 @@ exit:
   input-length > 0
   output-length = input-length
   output is allocated and owned by the caller */
-status_t sp_ffti(sp_sample_count_t input_len, double* input_or_output_real, double* input_or_output_imag) {
+status_t sp_ffti(sp_count_t input_len, double* input_or_output_real, double* input_or_output_imag) {
   sp_status_declare;
   status_id_require((!(1 == Fft_inverseTransform(input_or_output_real, input_or_output_imag, input_len))));
 exit:
@@ -160,15 +165,15 @@ exit:
    * prev and next can be null pointers if not available
    * zero is used for unavailable values
    * rounding errors are kept low by using modified kahan neumaier summation */
-status_t sp_moving_average(sp_sample_t* in, sp_sample_t* in_end, sp_sample_t* in_window, sp_sample_t* in_window_end, sp_sample_t* prev, sp_sample_t* prev_end, sp_sample_t* next, sp_sample_t* next_end, sp_sample_count_t radius, sp_sample_t* out) {
+status_t sp_moving_average(sp_sample_t* in, sp_sample_t* in_end, sp_sample_t* in_window, sp_sample_t* in_window_end, sp_sample_t* prev, sp_sample_t* prev_end, sp_sample_t* next, sp_sample_t* next_end, sp_count_t radius, sp_sample_t* out) {
   status_declare;
   sp_sample_t* in_left;
   sp_sample_t* in_right;
   sp_sample_t* outside;
   sp_sample_t sums[3];
-  sp_sample_count_t outside_count;
-  sp_sample_count_t in_missing;
-  sp_sample_count_t width;
+  sp_count_t outside_count;
+  sp_count_t in_missing;
+  sp_count_t width;
   width = (1 + radius + radius);
   while ((in_window <= in_window_end)) {
     sums[0] = 0;
@@ -198,9 +203,9 @@ status_t sp_moving_average(sp_sample_t* in, sp_sample_t* in_end, sp_sample_t* in
 /** modify an impulse response kernel for spectral inversion.
    a-len must be odd and "a" must have left-right symmetry.
   flips the frequency response top to bottom */
-void sp_spectral_inversion_ir(sp_sample_t* a, sp_sample_count_t a_len) {
-  sp_sample_count_t center;
-  sp_sample_count_t i;
+void sp_spectral_inversion_ir(sp_sample_t* a, sp_count_t a_len) {
+  sp_count_t center;
+  sp_count_t i;
   for (i = 0; (i < a_len); i = (1 + i)) {
     a[i] = (-1 * a[i]);
   };
@@ -210,7 +215,7 @@ void sp_spectral_inversion_ir(sp_sample_t* a, sp_sample_count_t a_len) {
 /** inverts the sign for samples at odd indexes.
   a-len must be odd and "a" must have left-right symmetry.
   flips the frequency response left to right */
-void sp_spectral_reversal_ir(sp_sample_t* a, sp_sample_count_t a_len) {
+void sp_spectral_reversal_ir(sp_sample_t* a, sp_count_t a_len) {
   while ((a_len > 1)) {
     a_len = (a_len - 2);
     a[a_len] = (-1 * a[a_len]);
@@ -219,9 +224,9 @@ void sp_spectral_reversal_ir(sp_sample_t* a, sp_sample_count_t a_len) {
 /** discrete linear convolution.
   result-samples must be all zeros, its length must be at least a-len + b-len - 1.
   result-samples is owned and allocated by the caller */
-void sp_convolve_one(sp_sample_t* a, sp_sample_count_t a_len, sp_sample_t* b, sp_sample_count_t b_len, sp_sample_t* result_samples) {
-  sp_sample_count_t a_index;
-  sp_sample_count_t b_index;
+void sp_convolve_one(sp_sample_t* a, sp_count_t a_len, sp_sample_t* b, sp_count_t b_len, sp_sample_t* result_samples) {
+  sp_count_t a_index;
+  sp_count_t b_index;
   a_index = 0;
   b_index = 0;
   while ((a_index < a_len)) {
@@ -244,11 +249,11 @@ void sp_convolve_one(sp_sample_t* a, sp_sample_count_t a_len, sp_sample_t* b, sp
   if b-len is one then there is no carryover.
   if a-len is smaller than b-len then, with the current implementation, additional performance costs ensue from shifting the carryover array each call.
   carryover is the extension of result-samples for generated values that dont fit */
-void sp_convolve(sp_sample_t* a, sp_sample_count_t a_len, sp_sample_t* b, sp_sample_count_t b_len, sp_sample_count_t carryover_len, sp_sample_t* result_carryover, sp_sample_t* result_samples) {
-  sp_sample_count_t size;
-  sp_sample_count_t a_index;
-  sp_sample_count_t b_index;
-  sp_sample_count_t c_index;
+void sp_convolve(sp_sample_t* a, sp_count_t a_len, sp_sample_t* b, sp_count_t b_len, sp_count_t carryover_len, sp_sample_t* result_carryover, sp_sample_t* result_samples) {
+  sp_count_t size;
+  sp_count_t a_index;
+  sp_count_t b_index;
+  sp_count_t c_index;
   if (carryover_len) {
     if (carryover_len <= a_len) {
       /* copy all entries to result and reset */
@@ -302,9 +307,9 @@ void sp_convolution_filter_state_free(sp_convolution_filter_state_t* state) {
 status_t sp_convolution_filter_state_set(sp_convolution_filter_ir_f_t ir_f, void* ir_f_arguments, uint8_t ir_f_arguments_len, sp_convolution_filter_state_t** out_state) {
   status_declare;
   sp_sample_t* carryover;
-  sp_sample_count_t carryover_alloc_len;
+  sp_count_t carryover_alloc_len;
   sp_sample_t* ir;
-  sp_sample_count_t ir_len;
+  sp_count_t ir_len;
   sp_convolution_filter_state_t* state;
   memreg_init(2);
   /* create state if not exists. re-use if exists and return early if ir needs not be updated */
@@ -372,9 +377,9 @@ exit:
   values that need to be carried over with calls are kept in out-state.
   * out-state: if zero then state will be allocated. owned by caller
   * out-samples: owned by the caller. length must be at least in-len and the number of output samples will be in-len */
-status_t sp_convolution_filter(sp_sample_t* in, sp_sample_count_t in_len, sp_convolution_filter_ir_f_t ir_f, void* ir_f_arguments, uint8_t ir_f_arguments_len, sp_convolution_filter_state_t** out_state, sp_sample_t* out_samples) {
+status_t sp_convolution_filter(sp_sample_t* in, sp_count_t in_len, sp_convolution_filter_ir_f_t ir_f, void* ir_f_arguments, uint8_t ir_f_arguments_len, sp_convolution_filter_state_t** out_state, sp_sample_t* out_samples) {
   status_declare;
-  sp_sample_count_t carryover_len;
+  sp_count_t carryover_len;
   carryover_len = (*out_state ? ((*out_state)->ir_len - 1) : 0);
   /* create/update the impulse response kernel */
   status_require((sp_convolution_filter_state_set(ir_f, ir_f_arguments, ir_f_arguments_len, out_state)));
@@ -391,13 +396,13 @@ exit:
     * http://www.cytomic.com/technical-papers
     * http://www.earlevel.com/main/2016/02/21/filters-for-synths-starting-out/ */
 #define define_sp_state_variable_filter(suffix, transfer) \
-  void sp_state_variable_filter_##suffix(sp_sample_t* out, sp_sample_t* in, sp_float_t in_count, sp_float_t cutoff, sp_sample_count_t q_factor, sp_sample_t* state) { \
+  void sp_state_variable_filter_##suffix(sp_sample_t* out, sp_sample_t* in, sp_float_t in_count, sp_float_t cutoff, sp_count_t q_factor, sp_sample_t* state) { \
     sp_sample_t a1; \
     sp_sample_t a2; \
     sp_sample_t g; \
     sp_sample_t ic1eq; \
     sp_sample_t ic2eq; \
-    sp_sample_count_t i; \
+    sp_count_t i; \
     sp_sample_t k; \
     sp_sample_t v0; \
     sp_sample_t v1; \
@@ -426,9 +431,9 @@ define_sp_state_variable_filter(br, (v0 - (k * v1)));
 define_sp_state_variable_filter(peak, (((2 * v2) - v0) + (k * v1)));
 define_sp_state_variable_filter(all, (v0 - (2 * k * v1)));
 /** writes a sine wave of size into out. can be used as a lookup table */
-status_t sp_sine_table_new(sp_sample_t** out, sp_sample_count_t size) {
+status_t sp_sine_table_new(sp_sample_t** out, sp_count_t size) {
   status_declare;
-  sp_sample_count_t i;
+  sp_count_t i;
   sp_sample_t* out_array;
   status_require((sph_helper_malloc((size * sizeof(sp_sample_t*)), (&out_array))));
   for (i = 0; (i < size); i = (1 + i)) {
@@ -442,14 +447,14 @@ exit:
 status_t sp_initialise() { return ((sp_sine_table_new((&sp_sine_96_table), 96000))); };
 /** accumulate an integer phase and reset it after cycles.
   float value phases would be harder to reset */
-sp_sample_count_t sp_cheap_phase_96(sp_sample_count_t current, sp_sample_count_t change) {
-  sp_sample_count_t result;
+sp_count_t sp_cheap_phase_96(sp_count_t current, sp_count_t change) {
+  sp_count_t result;
   result = (current + change);
   return (((96000 <= result) ? (result % 96000) : result));
 };
 /** accumulate an integer phase with change given as a float value.
   change must be a positive value and is rounded to the next larger integer */
-sp_sample_count_t sp_cheap_phase_96_float(sp_sample_count_t current, double change) { return ((sp_cheap_phase_96(current, (sp_cheap_ceiling_positive(change))))); };
+sp_count_t sp_cheap_phase_96_float(sp_count_t current, double change) { return ((sp_cheap_phase_96(current, (sp_cheap_ceiling_positive(change))))); };
 /** create sines that can modulate the frequency of others and sum into output.
   amplitude and wavelength can be controlled by arrays separately for each operator and channel.
   modulators can be modulated themselves in chains. state is allocated if zero and owned by the caller.
@@ -464,20 +469,20 @@ sp_sample_count_t sp_cheap_phase_96_float(sp_sample_count_t current, double chan
   * write modulator output to temporary buffers that are indexed by modified operator id
   * apply modulator output from the buffers and sum to output for final carriers
   * each operator has integer phases that are reset in cycles and kept in state between calls */
-status_t sp_fm_synth(sp_sample_t** out, sp_sample_count_t channel_count, sp_sample_count_t start, sp_sample_count_t duration, sp_fm_synth_count_t config_len, sp_fm_synth_operator_t* config, sp_sample_count_t** state) {
+status_t sp_fm_synth(sp_sample_t** out, sp_count_t channel_count, sp_count_t start, sp_count_t duration, sp_fm_synth_count_t config_len, sp_fm_synth_operator_t* config, sp_count_t** state) {
   status_declare;
   sp_sample_t amp;
   sp_sample_t* carrier;
-  sp_sample_count_t channel_i;
-  sp_sample_count_t i;
+  sp_count_t channel_i;
+  sp_count_t i;
   sp_sample_t modulated_wvl;
   sp_sample_t* modulation_index[sp_fm_synth_operator_limit][sp_fm_synth_channel_limit];
   sp_sample_t* modulation;
   sp_fm_synth_count_t op_i;
   sp_fm_synth_operator_t op;
-  sp_sample_count_t* phases;
-  sp_sample_count_t phs;
-  sp_sample_count_t wvl;
+  sp_count_t* phases;
+  sp_count_t phs;
+  sp_count_t wvl;
   /* modulation blocks (channel array + data. at least one is carrier and writes only to output) */
   memreg_init(((config_len - 1) * channel_count));
   memset(modulation_index, 0, (sizeof(modulation_index)));
@@ -486,7 +491,7 @@ status_t sp_fm_synth(sp_sample_t** out, sp_sample_count_t channel_count, sp_samp
   if (*state) {
     phases = *state;
   } else {
-    status_require((sph_helper_calloc((channel_count * config_len * sizeof(sp_sample_count_t)), (&phases))));
+    status_require((sph_helper_calloc((channel_count * config_len * sizeof(sp_count_t)), (&phases))));
     for (i = 0; (i < config_len); i = (1 + i)) {
       for (channel_i = 0; (channel_i < channel_count); channel_i = (1 + channel_i)) {
         phases[(channel_i + (channel_count * i))] = ((config[i]).phase_offset)[channel_i];
@@ -536,25 +541,25 @@ exit:
   memreg_free;
   return (status);
 };
-status_t sp_asynth(sp_sample_t** out, sp_sample_count_t channel_count, sp_sample_count_t start, sp_sample_count_t duration, sp_asynth_count_t config_len, sp_asynth_partial_t* config, sp_sample_count_t** state) {
+status_t sp_asynth(sp_sample_t** out, sp_count_t channel_count, sp_count_t start, sp_count_t duration, sp_asynth_count_t config_len, sp_asynth_partial_t* config, sp_count_t** state) {
   status_declare;
   sp_sample_t amp;
-  sp_sample_count_t channel_i;
-  sp_sample_count_t end;
-  sp_sample_count_t i;
-  sp_sample_count_t* phases;
-  sp_sample_count_t phs;
-  sp_sample_count_t prt_i;
+  sp_count_t channel_i;
+  sp_count_t end;
+  sp_count_t i;
+  sp_count_t* phases;
+  sp_count_t phs;
+  sp_count_t prt_i;
   sp_asynth_partial_t prt;
-  sp_sample_count_t prt_start;
-  sp_sample_count_t prt_offset;
-  sp_sample_count_t prt_offset_right;
-  sp_sample_count_t wvl;
+  sp_count_t prt_start;
+  sp_count_t prt_offset;
+  sp_count_t prt_offset_right;
+  sp_count_t wvl;
   /* ensure a state object like for sp-fm-synth */
   if (*state) {
     phases = *state;
   } else {
-    status_require((sph_helper_calloc((channel_count * config_len * sizeof(sp_sample_count_t)), (&phases))));
+    status_require((sph_helper_calloc((channel_count * config_len * sizeof(sp_count_t)), (&phases))));
     for (i = 0; (i < config_len); i = (1 + i)) {
       for (channel_i = 0; (channel_i < channel_count); channel_i = (1 + channel_i)) {
         phases[(channel_i + (channel_count * i))] = ((config[i]).phase_offset)[channel_i];
@@ -589,4 +594,36 @@ exit:
 };
 #include "../main/windowed-sinc.c"
 #include "../main/io.c"
-#include "../main/path.c"
+void sp_event_sort_swap(void* a, void* b) {
+  sp_event_t c;
+  c = *((sp_event_t*)(a));
+  *((sp_event_t*)(b)) = *((sp_event_t*)(a));
+  *((sp_event_t*)(b)) = c;
+};
+uint8_t sp_event_sort_less_p(void* a, void* b) { return ((((sp_event_t*)(a))->start < ((sp_event_t*)(b))->start)); };
+void sp_seq_events_prepare(sp_events_t a) { quicksort(sp_event_sort_less_p, sp_event_sort_swap, (sizeof(sp_event_t)), (a.start), (i_array_length(a))); };
+/** event arrays must have been prepared/sorted with sp-seq-event-prepare for seq to work correctly */
+void sp_seq(sp_count_t time, sp_count_t offset, sp_count_t size, sp_block_t output, sp_events_t events) {
+  sp_count_t e_count;
+  sp_count_t e_offset_right;
+  sp_count_t e_offset;
+  sp_event_t e;
+  sp_count_t e_time;
+  sp_count_t time_end;
+  time_end = (time + size);
+  e_count = i_array_length(events);
+  while (i_array_in_range(events)) {
+    e = i_array_get(events);
+    if (time_end < e.start) {
+      break;
+    } else if (e.end <= time) {
+      continue;
+    } else {
+      e_time = ((e.start < time) ? (time - e.start) : 0);
+      e_offset = ((e.start > time) ? (e.start - time) : 0);
+      e_offset_right = ((e.end > time_end) ? 0 : (time_end - e.end));
+      (e.f)(e_time, (offset + e_offset), (size - e_offset - e_offset_right), output, (events.current));
+    };
+    i_array_forward(events);
+  };
+};

@@ -1,7 +1,7 @@
 /* memreg registers memory in a local variable, for example to free all memory allocated at point.
 the variables memreg_register and memreg_index will also be available.
 usage:
-     memreg_init(4);
+     memreg_init(2);
      memreg_add(&variable-1);
      memreg_add(&variable-2);
      memreg_free; */
@@ -9,7 +9,8 @@ usage:
   void* memreg_register[register_size]; \
   unsigned int memreg_index; \
   memreg_index = 0
-/** add a pointer to the register. does not protect against buffer overflow */
+/** add a pointer to the register. memreg_init must have been called
+     with sufficient size for all pointers to be added */
 #define memreg_add(address) \
   memreg_register[memreg_index] = address; \
   memreg_index = (1 + memreg_index)

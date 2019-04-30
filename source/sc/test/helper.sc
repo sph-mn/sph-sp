@@ -24,9 +24,9 @@
   (if status-is-success (printf "--\ntests finished successfully.\n")
     (printf "\ntests failed. %d %s\n" status.id (sp-status-description status))))
 
-(define (debug-display-sample-array a len) (void sp-sample-t* sp-sample-count-t)
+(define (debug-display-sample-array a len) (void sp-sample-t* sp-count-t)
   "display a sample array in one line"
-  (declare i sp-sample-count-t)
+  (declare i sp-count-t)
   (printf "%.17g" (array-get a 0))
   (for ((set i 1) (< i len) (set i (+ 1 i)))
     (printf " %.17g" (array-get a i)))

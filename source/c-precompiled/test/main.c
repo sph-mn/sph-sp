@@ -19,7 +19,7 @@ exit:
 };
 status_t test_spectral_inversion_ir() {
   status_declare;
-  sp_sample_count_t a_len;
+  sp_count_t a_len;
   sp_sample_t a[5] = { 0.1, -0.2, 0.3, -0.2, 0.1 };
   a_len = 5;
   sp_spectral_inversion_ir(a, a_len);
@@ -29,7 +29,7 @@ exit:
 };
 status_t test_spectral_reversal_ir() {
   status_declare;
-  sp_sample_count_t a_len;
+  sp_count_t a_len;
   sp_sample_t a[5] = { 0.1, -0.2, 0.3, -0.2, 0.1 };
   a_len = 5;
   sp_spectral_reversal_ir(a, a_len);
@@ -40,14 +40,14 @@ exit:
 status_t test_convolve() {
   status_declare;
   sp_sample_t* a;
-  sp_sample_count_t a_len;
+  sp_count_t a_len;
   sp_sample_t* b;
-  sp_sample_count_t b_len;
+  sp_count_t b_len;
   sp_sample_t* carryover;
-  sp_sample_count_t carryover_len;
+  sp_count_t carryover_len;
   sp_sample_t* result;
-  sp_sample_count_t result_len;
-  sp_sample_count_t sample_count;
+  sp_count_t result_len;
+  sp_count_t sample_count;
   sp_sample_t expected_result[5] = { 2, 7, 16, 22, 28 };
   sp_sample_t expected_carryover[3] = { 27, 18, 0 };
   memreg_init(4);
@@ -103,7 +103,7 @@ exit:
 };
 status_t test_moving_average() {
   status_declare;
-  sp_sample_count_t radius;
+  sp_count_t radius;
   sp_sample_t out[5] = { 0, 0, 0, 0, 0 };
   sp_sample_t in[5] = { 1, 3, 5, 7, 8 };
   sp_sample_t prev[5] = { 9, 10, 11 };
@@ -149,7 +149,7 @@ status_t test_windowed_sinc() {
   sp_float_t transition;
   sp_float_t cutoff;
   sp_sample_t* ir;
-  sp_sample_count_t ir_len;
+  sp_count_t ir_len;
   sp_convolution_filter_state_t* state;
   sp_sample_t source[10] = { 3, 4, 5, 6, 7, 8, 9, 0, 1, 2 };
   sp_sample_t result[10] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
@@ -179,15 +179,15 @@ exit:
 };
 status_t test_file() {
   status_declare;
-  sp_sample_count_t channel;
+  sp_count_t channel;
   sp_channel_count_t channel_count;
   sp_sample_t** block;
   sp_sample_t** block_2;
-  sp_sample_count_t len;
+  sp_count_t len;
   sp_file_t file;
-  sp_sample_count_t position;
-  sp_sample_count_t sample_count;
-  sp_sample_count_t result_sample_count;
+  sp_count_t position;
+  sp_count_t sample_count;
+  sp_count_t result_sample_count;
   sp_sample_rate_t sample_rate;
   int8_t unequal;
   memreg_init(2);
@@ -199,9 +199,9 @@ status_t test_file() {
   sample_count = 5;
   position = 0;
   channel = channel_count;
-  status_require((sp_block_alloc(channel_count, sample_count, (&block))));
+  status_require((sp_block_new(channel_count, sample_count, (&block))));
   memreg_add(block);
-  status_require((sp_block_alloc(channel_count, sample_count, (&block_2))));
+  status_require((sp_block_new(channel_count, sample_count, (&block_2))));
   memreg_add(block_2);
   while (channel) {
     channel = (channel - 1);
@@ -255,7 +255,7 @@ status_t test_fft() {
   status_declare;
   sp_sample_t a_real[6] = { -0.6, 0.1, 0.4, 0.8, 0, 0 };
   sp_sample_t a_imag[6] = { 0, 0, 0, 0, 0, 0 };
-  sp_sample_count_t a_len;
+  sp_count_t a_len;
   a_len = 6;
   status_require((sp_fft(a_len, a_real, a_imag)));
   status_require((sp_ffti(a_len, a_real, a_imag)));
@@ -264,17 +264,17 @@ exit:
 };
 status_t test_fm_synth() {
   status_declare;
-  sp_sample_count_t* state;
-  sp_sample_count_t config_len;
+  sp_count_t* state;
+  sp_count_t config_len;
   sp_sample_t** out1;
   sp_sample_t** out2;
   sp_channel_count_t channels;
-  sp_sample_count_t duration;
+  sp_count_t duration;
   sp_fm_synth_operator_t op1;
   sp_fm_synth_operator_t op2;
   sp_fm_synth_operator_t op3;
   sp_fm_synth_operator_t config[3];
-  sp_sample_count_t wvl[4] = { 2, 2, 2, 2 };
+  sp_count_t wvl[4] = { 2, 2, 2, 2 };
   sp_sample_t amp[4] = { 0.1, 0.2, 0.3, 0.4 };
   state = 0;
   duration = 4;
@@ -304,117 +304,16 @@ status_t test_fm_synth() {
   config[0] = op1;
   config[1] = op2;
   config[2] = op3;
-  status_require((sp_block_alloc(channels, duration, (&out1))));
-  status_require((sp_block_alloc(channels, duration, (&out2))));
+  status_require((sp_block_new(channels, duration, (&out1))));
+  status_require((sp_block_new(channels, duration, (&out2))));
   status_require((sp_fm_synth(out1, channels, 0, duration, config_len, config, (&state))));
   status_require((sp_fm_synth(out2, channels, 0, duration, config_len, config, (&state))));
-exit:
-  return (status);
-};
-status_t test_sp_path() {
-  status_declare;
-  sp_path_value_t out[50];
-  sp_path_value_t out_new_get[50];
-  sp_sample_count_t i;
-  sp_path_t path;
-  sp_path_point_t p;
-  sp_path_segment_t s;
-  sp_path_segment_t segments[4];
-  sp_path_segment_count_t segments_len;
-  boolean log_path_new_0;
-  boolean log_path_new_1;
-  boolean log_path_new_get_0;
-  boolean log_path_new_get_1;
-  log_path_new_0 = 0;
-  log_path_new_1 = 0;
-  log_path_new_get_0 = 0;
-  log_path_new_get_1 = 0;
-  for (i = 0; (i < 50); i = (1 + i)) {
-    out[i] = 999;
-    out_new_get[i] = 999;
-  };
-  /* path 0 */
-  s.interpolator = sp_path_i_move;
-  p.x = 10;
-  p.y = 5;
-  (s.points)[0] = p;
-  segments[0] = s;
-  s.interpolator = sp_path_i_line;
-  p.x = 20;
-  p.y = 10;
-  (s.points)[0] = p;
-  segments[1] = s;
-  s.interpolator = sp_path_i_bezier;
-  p.x = 25;
-  p.y = 15;
-  (s.points)[0] = p;
-  p.x = 30;
-  p.y = 20;
-  (s.points)[1] = p;
-  p.x = 40;
-  p.y = 25;
-  (s.points)[2] = p;
-  segments[2] = s;
-  s.interpolator = sp_path_i_constant;
-  segments[3] = s;
-  segments_len = 4;
-  status_require((sp_path_new(segments_len, segments, (&path))));
-  sp_path_get(path, 5, 25, out);
-  sp_path_get(path, 25, 55, (20 + out));
-  if (log_path_new_0) {
-    for (i = 0; (i < 50); i = (1 + i)) {
-      printf("%lu %f\n", i, (out[i]));
-    };
-  };
-  test_helper_assert(("path 0.0"), (sp_sample_nearly_equal(0, (out[0]), error_margin)));
-  test_helper_assert(("path 0.4"), (sp_sample_nearly_equal(0, (out[4]), error_margin)));
-  test_helper_assert(("path 0.5"), (sp_sample_nearly_equal(5, (out[5]), error_margin)));
-  test_helper_assert(("path 0.15"), (sp_sample_nearly_equal(10, (out[15]), error_margin)));
-  test_helper_assert(("path 0.16"), (sp_sample_nearly_equal((10.75), (out[16]), error_margin)));
-  test_helper_assert(("path 0.34"), (sp_sample_nearly_equal((24.25), (out[34]), error_margin)));
-  test_helper_assert(("path 0.35"), (sp_sample_nearly_equal(25, (out[35]), error_margin)));
-  test_helper_assert(("path 0.49"), (sp_sample_nearly_equal(25, (out[49]), error_margin)));
-  sp_path_free(path);
-  /* path 0 new-get */
-  status_require((sp_path_new_get(segments_len, segments, 5, 55, out_new_get)));
-  if (log_path_new_get_0) {
-    for (i = 0; (i < 50); i = (1 + i)) {
-      printf("%lu %f\n", i, (out_new_get[i]));
-    };
-  };
-  test_helper_assert("path 0 new-get equal", (!memcmp(out, out_new_get, (sizeof(sp_path_value_t) * 50))));
-  /* path 1 - test last point */
-  s.interpolator = sp_path_i_line;
-  p.x = 10;
-  p.y = 5;
-  (s.points)[0] = p;
-  segments[0] = s;
-  segments_len = 1;
-  status_require((sp_path_new(segments_len, segments, (&path))));
-  sp_path_get(path, 0, 12, out);
-  if (log_path_new_1) {
-    for (i = 0; (i < 12); i = (1 + i)) {
-      printf("%lu %f\n", i, (out[i]));
-    };
-  };
-  test_helper_assert(("path 1.30"), (sp_sample_nearly_equal(5, (out[10]), error_margin)));
-  test_helper_assert(("path 1.31"), (sp_sample_nearly_equal(0, (out[11]), error_margin)));
-  sp_path_free(path);
-  /* path 1 new-get */
-  status_require((sp_path_new_get(segments_len, segments, 0, 12, out_new_get)));
-  if (log_path_new_get_1) {
-    for (i = 0; (i < 12); i = (1 + i)) {
-      printf("%lu %f\n", i, (out_new_get[i]));
-    };
-  };
-  test_helper_assert("path 1 new-get equal", (!memcmp(out, out_new_get, (sizeof(sp_path_value_t) * 12))));
 exit:
   return (status);
 };
 int main() {
   status_declare;
   sp_initialise();
-  test_helper_test_one(test_sp_path);
   test_helper_test_one(test_fm_synth);
   test_helper_test_one(test_moving_average);
   test_helper_test_one(test_fft);

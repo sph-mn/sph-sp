@@ -2,7 +2,7 @@
   "memreg registers memory in a local variable, for example to free all memory allocated at point."
   "the variables memreg_register and memreg_index will also be available."
   "usage:
-     memreg_init(4);
+     memreg_init(2);
      memreg_add(&variable-1);
      memreg_add(&variable-2);
      memreg_free;")
@@ -16,7 +16,8 @@
     (set memreg-index 0))
   (memreg-add address)
   (begin
-    "add a pointer to the register. does not protect against buffer overflow"
+    "add a pointer to the register. memreg_init must have been called
+     with sufficient size for all pointers to be added"
     (set
       (array-get memreg-register memreg-index) address
       memreg-index (+ 1 memreg-index)))

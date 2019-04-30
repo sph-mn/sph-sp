@@ -49,14 +49,14 @@
     (return status)))
 
 (define (sp-file-write file channel-data sample-count result-sample-count)
-  (status-t sp-file-t* sp-sample-t** sp-sample-count-t sp-sample-count-t*)
+  (status-t sp-file-t* sp-sample-t** sp-count-t sp-count-t*)
   "failure status if not all samples could be written (sp-status-id-file-incomplete)"
   status-declare
   (declare
     channel-count sp-channel-count-t
     snd_file SNDFILE*
     interleaved sp-sample-t*
-    interleaved-size sp-sample-count-t
+    interleaved-size sp-count-t
     frames-count sf-count-t)
   (memreg-init 1)
   (set
@@ -75,12 +75,12 @@
     (return status)))
 
 (define (sp-file-read file sample-count result-channel-data result-sample-count)
-  (status-t sp-file-t* sp-sample-count-t sp-sample-t** sp-sample-count-t*)
+  (status-t sp-file-t* sp-count-t sp-sample-t** sp-count-t*)
   "failure status only if no results read (sp-status-id-eof)"
   status-declare
   (declare
     channel-count sp-channel-count-t
-    interleaved-size sp-sample-count-t
+    interleaved-size sp-count-t
     interleaved sp-sample-t*
     frames-count sf-count-t)
   (memreg-init 1)
@@ -97,7 +97,7 @@
     memreg-free
     (return status)))
 
-(define (sp-file-position-set file a) (status-t sp-file-t* sp-sample-count-t)
+(define (sp-file-position-set file a) (status-t sp-file-t* sp-count-t)
   "seeks are defined in number of (multichannel) frames.
   therefore, a seek in a stereo file from the current position forward with an offset of 1 would skip forward by one sample of both channels"
   status-declare
@@ -111,7 +111,7 @@
   (label exit
     (return status)))
 
-(define (sp-file-position file result-position) (status-t sp-file-t* sp-sample-count-t*)
+(define (sp-file-position file result-position) (status-t sp-file-t* sp-count-t*)
   status-declare
   (declare
     snd_file SNDFILE*

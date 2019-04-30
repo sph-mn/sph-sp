@@ -1,8 +1,6 @@
-/* thread-pool that uses wait-conditions to pause unused threads.
+/* thread-pool that uses pthread condition variables to pause unused threads.
    based on the design of thread-pool.scm from sph-lib which has been stress tested in servers and digital signal processing.
-   # notes
-   * if a task returns false then the thread it was called in exits. this allows cancellation of threads without other more obscure means
-   * all threads can be ended with thread-pool-finish, which enqueues number-of-threads tasks that return false and waits/joins threads */
+   queue.c must be included beforehand */
 #include <inttypes.h>
 #include <pthread.h>
 #ifndef thread_pool_size_t
@@ -18,84 +16,108 @@ typedef struct {
   thread_pool_size_t size;
   pthread_t threads[thread_pool_thread_limit];
 } thread_pool_t;
-typedef boolean (*thread_pool_task_f_t)(void*);
-typedef struct {
+struct thread_pool_task_t;
+typedef struct thread_pool_task_t {
   queue_node_t q;
-  thread_pool_task_f_t f;
+  void (*f)(struct thread_pool_task_t*);
   void* data;
 } thread_pool_task_t;
-/** add a task to be processed by the next free thread */
+typedef void (*thread_pool_task_f_t)(struct thread_pool_task_t*);
+void thread_pool_destroy(thread_pool_t* a) {
+  pthread_cond_destroy((&(a->queue_not_empty)));
+  pthread_mutex_destroy((&(a->queue_mutex)));
+};
+/** if enqueued call pthread-exit to end the thread it was dequeued in */
+void thread_finish(thread_pool_task_t* task) {
+  free(task);
+  pthread_exit(0);
+};
+/** add a task to be processed by the next free thread.
+  mutexes are used so that the queue is only ever accessed by a single thread */
 void thread_pool_enqueue(thread_pool_t* a, thread_pool_task_t* task) {
   pthread_mutex_lock((&(a->queue_mutex)));
-  queue_enq((&(a->queue)), (task->q));
+  queue_enq((&(a->queue)), (&(task->q)));
   pthread_cond_signal((&(a->queue_not_empty)));
   pthread_mutex_unlock((&(a->queue_mutex)));
 };
-void thread_pool_worker(thread_pool_t* a) {
+/** let threads complete all currently enqueued tasks, close the threads and free resources unless no_wait is true.
+  if no_wait is true then the call is non-blocking and threads might still be running until they finish the queue after this call.
+  thread_pool_finish can be called again without no_wait. with only no_wait thread_pool_destroy will not be called
+  and it is unclear when it can be used to free some final resources.
+  if discard_queue is true then the current queue is emptied, but note
+  that if enqueued tasks free their task object these tasks wont get called anymore */
+int thread_pool_finish(thread_pool_t* a, uint8_t no_wait, uint8_t discard_queue) {
+  void* exit_value;
+  thread_pool_size_t i;
+  thread_pool_size_t size;
   thread_pool_task_t* task;
-  "internal worker routine";
+  if (discard_queue) {
+    pthread_mutex_lock((&(a->queue_mutex)));
+    queue_init((&(a->queue)));
+    pthread_mutex_unlock((&(a->queue_mutex)));
+  };
+  size = a->size;
+  for (i = 0; (i < size); i = (1 + i)) {
+    task = malloc((sizeof(thread_pool_task_t)));
+    if (!task) {
+      return (1);
+    };
+    task->f = thread_finish;
+    thread_pool_enqueue(a, task);
+  };
+  if (!no_wait) {
+    for (i = 0; (i < size); i = (1 + i)) {
+      if (0 == pthread_join(((a->threads)[i]), (&exit_value))) {
+        a->size = (a->size - 1);
+        if (0 == a->size) {
+          thread_pool_destroy(a);
+        };
+      };
+    };
+  };
+  return (0);
+};
+/** internal worker routine */
+void* thread_pool_worker(thread_pool_t* a) {
+  thread_pool_task_t* task;
 get_task:
   pthread_mutex_lock((&(a->queue_mutex)));
 wait:
   /* considers so-called spurious wakeups */
-  if (queue_is_empty((&(a->queue)))) {
+  if (a->queue.size) {
+    task = queue_get((queue_deq((&(a->queue)))), thread_pool_task_t, q);
+  } else {
     pthread_cond_wait((&(a->queue_not_empty)), (&(a->queue_mutex)));
     goto wait;
-  } else {
-    task = queue_get((queue_deq((&(a->queue)))), thread_pool_task_t, q);
   };
   pthread_mutex_unlock((&(a->queue_mutex)));
-  if ((task->f)(task)) {
-    goto get_task;
-  } else {
-    pthread_exit(0);
-  };
+  (task->f)(task);
+  goto get_task;
 };
-/** returns zero when successful and a pthread error code otherwise */
+/** returns zero when successful and a non-zero pthread error code otherwise */
 int thread_pool_new(thread_pool_size_t size, thread_pool_t* a) {
   thread_pool_size_t i;
   pthread_attr_t attr;
-  int rc;
+  int error;
+  error = 0;
   queue_init((&(a->queue)));
   pthread_mutex_init((&(a->queue_mutex)), 0);
-  pthread_cond_init((&(a->queue_not_empty)));
+  pthread_cond_init((&(a->queue_not_empty)), 0);
   pthread_attr_init((&attr));
   pthread_attr_setdetachstate((&attr), PTHREAD_CREATE_JOINABLE);
-  for (i = 0; (i < size); i = (1 == i)) {
-    rc = pthread_create((size + a->threads), (&attr), thread_pool_worker, ((void*)(a)));
-    if (rc) {
-      /* try to finish previously created threads */
-      a->size = i;
-      thread_pool_finish(a, 0);
+  for (i = 0; (i < size); i = (1 + i)) {
+    error = pthread_create((i + a->threads), (&attr), ((void* (*)(void*))(thread_pool_worker)), ((void*)(a)));
+    if (error) {
+      if (0 < i) {
+        /* try to finish previously created threads */
+        a->size = i;
+        thread_pool_finish(a, 1, 0);
+      };
       goto exit;
     };
   };
   a->size = size;
 exit:
   pthread_attr_destroy((&attr));
-  return (rc);
-};
-boolean thread_finish() { return (0); };
-/** let threads complete all currently enqueued tasks and exit.
-  returns the first pthread-join error code if an error occurred */
-void thread_pool_finish(thread_pool_t* a, boolean wait) {
-  status_declare;
-  void* exit_value;
-  thread_pool_size_t i;
-  thread_pool_size_t size;
-  thread_pool_task_t task;
-  size = a->size;
-  task.f = thread_finish;
-  for (i = 0; (i < size); i = (1 + i)) {
-    thread_pool_enqueue(a, task);
-  };
-  if (wait) {
-    for (i = 0; (i < size); i = (1 + i)) {
-      pthread_join((i + a.threads), (&exit_value));
-    };
-  };
-};
-void thread_pool_destroy(thread_pool_t* a) {
-  pthread_cond_destroy((&(a->queue_not_empty)));
-  pthread_mutex_destroy((&(a->queue_mutex)));
+  return (error);
 };

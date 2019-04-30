@@ -27,7 +27,7 @@
 (define (test-spectral-inversion-ir) status-t
   status-declare
   (declare
-    a-len sp-sample-count-t
+    a-len sp-count-t
     a (array sp-sample-t 5 0.1 -0.2 0.3 -0.2 0.1))
   (set a-len 5)
   (sp-spectral-inversion-ir a a-len)
@@ -45,7 +45,7 @@
 (define (test-spectral-reversal-ir) status-t
   status-declare
   (declare
-    a-len sp-sample-count-t
+    a-len sp-count-t
     a (array sp-sample-t 5 0.1 -0.2 0.3 -0.2 0.1))
   (set a-len 5)
   (sp-spectral-reversal-ir a a-len)
@@ -64,14 +64,14 @@
   status-declare
   (declare
     a sp-sample-t*
-    a-len sp-sample-count-t
+    a-len sp-count-t
     b sp-sample-t*
-    b-len sp-sample-count-t
+    b-len sp-count-t
     carryover sp-sample-t*
-    carryover-len sp-sample-count-t
+    carryover-len sp-count-t
     result sp-sample-t*
-    result-len sp-sample-count-t
-    sample-count sp-sample-count-t
+    result-len sp-count-t
+    sample-count sp-count-t
     expected-result (array sp-sample-t (5) 2 7 16 22 28)
     expected-carryover (array sp-sample-t (3) 27 18 0))
   (memreg-init 4)
@@ -121,7 +121,7 @@
 (define (test-moving-average) status-t
   status-declare
   (declare
-    radius sp-sample-count-t
+    radius sp-count-t
     out (array sp-sample-t (5) 0 0 0 0 0)
     in (array sp-sample-t (5) 1 3 5 7 8)
     prev (array sp-sample-t (5) 9 10 11)
@@ -171,7 +171,7 @@
     transition sp-float-t
     cutoff sp-float-t
     ir sp-sample-t*
-    ir-len sp-sample-count-t
+    ir-len sp-count-t
     state sp-convolution-filter-state-t*
     source (array sp-sample-t 10 3 4 5 6 7 8 9 0 1 2)
     result (array sp-sample-t 10 0 0 0 0 0 0 0 0 0 0))
@@ -203,15 +203,15 @@
 (define (test-file) status-t
   status-declare
   (declare
-    channel sp-sample-count-t
+    channel sp-count-t
     channel-count sp-channel-count-t
     block sp-sample-t**
     block-2 sp-sample-t**
-    len sp-sample-count-t
+    len sp-count-t
     file sp-file-t
-    position sp-sample-count-t
-    sample-count sp-sample-count-t
-    result-sample-count sp-sample-count-t
+    position sp-count-t
+    sample-count sp-count-t
+    result-sample-count sp-count-t
     sample-rate sp-sample-rate-t
     unequal int8-t)
   (memreg-init 2)
@@ -222,9 +222,9 @@
     sample-count 5
     position 0
     channel channel-count)
-  (status-require (sp-block-alloc channel-count sample-count &block))
+  (status-require (sp-block-new channel-count sample-count &block))
   (memreg-add block)
-  (status-require (sp-block-alloc channel-count sample-count &block-2))
+  (status-require (sp-block-new channel-count sample-count &block-2))
   (memreg-add block-2)
   (while channel
     (set
@@ -288,7 +288,7 @@
   (declare
     a-real (array sp-sample-t 6 -0.6 0.1 0.4 0.8 0 0)
     a-imag (array sp-sample-t 6 0 0 0 0 0 0)
-    a-len sp-sample-count-t)
+    a-len sp-count-t)
   (set a-len 6)
   (status-require (sp-fft a-len a-real a-imag))
   (status-require (sp-ffti a-len a-real a-imag))
@@ -298,17 +298,17 @@
 (define (test-fm-synth) status-t
   status-declare
   (declare
-    state sp-sample-count-t*
-    config-len sp-sample-count-t
+    state sp-count-t*
+    config-len sp-count-t
     out1 sp-sample-t**
     out2 sp-sample-t**
     channels sp-channel-count-t
-    duration sp-sample-count-t
+    duration sp-count-t
     op1 sp-fm-synth-operator-t
     op2 sp-fm-synth-operator-t
     op3 sp-fm-synth-operator-t
     config (array sp-fm-synth-operator-t 3)
-    wvl (array sp-sample-count-t 4 2 2 2 2)
+    wvl (array sp-count-t 4 2 2 2 2)
     amp (array sp-sample-t 4 0.1 0.2 0.3 0.4))
   (set
     state 0
@@ -339,115 +339,16 @@
     (array-get config 0) op1
     (array-get config 1) op2
     (array-get config 2) op3)
-  (status-require (sp-block-alloc channels duration &out1))
-  (status-require (sp-block-alloc channels duration &out2))
+  (status-require (sp-block-new channels duration &out1))
+  (status-require (sp-block-new channels duration &out2))
   (status-require (sp-fm-synth out1 channels 0 duration config-len config &state))
   (status-require (sp-fm-synth out2 channels 0 duration config-len config &state))
-  (label exit
-    (return status)))
-
-(define (test-sp-path) status-t
-  status-declare
-  (declare
-    out (array sp-path-value-t 50)
-    out-new-get (array sp-path-value-t 50)
-    i sp-sample-count-t
-    path sp-path-t
-    p sp-path-point-t
-    s sp-path-segment-t
-    segments (array sp-path-segment-t 4)
-    segments-len sp-path-segment-count-t
-    log-path-new-0 boolean
-    log-path-new-1 boolean
-    log-path-new-get-0 boolean
-    log-path-new-get-1 boolean)
-  (set
-    log-path-new-0 #f
-    log-path-new-1 #f
-    log-path-new-get-0 #f
-    log-path-new-get-1 #f)
-  (for ((set i 0) (< i 50) (set i (+ 1 i)))
-    (set
-      (array-get out i) 999
-      (array-get out-new-get i) 999))
-  (sc-comment "path 0")
-  (set
-    s.interpolator sp-path-i-move
-    p.x 10
-    p.y 5
-    (array-get s.points 0) p
-    (array-get segments 0) s
-    s.interpolator sp-path-i-line
-    p.x 20
-    p.y 10
-    (array-get s.points 0) p
-    (array-get segments 1) s
-    s.interpolator sp-path-i-bezier
-    p.x 25
-    p.y 15
-    (array-get s.points 0) p
-    p.x 30
-    p.y 20
-    (array-get s.points 1) p
-    p.x 40
-    p.y 25
-    (array-get s.points 2) p
-    (array-get segments 2) s
-    s.interpolator sp-path-i-constant
-    (array-get segments 3) s
-    segments-len 4)
-  (status-require (sp-path-new segments-len segments &path))
-  (sp-path-get path 5 25 out)
-  (sp-path-get path 25 55 (+ 20 out))
-  (if log-path-new-0
-    (for ((set i 0) (< i 50) (set i (+ 1 i)))
-      (printf "%lu %f\n" i (array-get out i))))
-  (test-helper-assert "path 0.0" (sp-sample-nearly-equal 0 (array-get out 0) error-margin))
-  (test-helper-assert "path 0.4" (sp-sample-nearly-equal 0 (array-get out 4) error-margin))
-  (test-helper-assert "path 0.5" (sp-sample-nearly-equal 5 (array-get out 5) error-margin))
-  (test-helper-assert "path 0.15" (sp-sample-nearly-equal 10 (array-get out 15) error-margin))
-  (test-helper-assert "path 0.16" (sp-sample-nearly-equal 10.75 (array-get out 16) error-margin))
-  (test-helper-assert "path 0.34" (sp-sample-nearly-equal 24.25 (array-get out 34) error-margin))
-  (test-helper-assert "path 0.35" (sp-sample-nearly-equal 25 (array-get out 35) error-margin))
-  (test-helper-assert "path 0.49" (sp-sample-nearly-equal 25 (array-get out 49) error-margin))
-  (sp-path-free path)
-  (sc-comment "path 0 new-get")
-  (status-require (sp-path-new-get segments-len segments 5 55 out-new-get))
-  (if log-path-new-get-0
-    (for ((set i 0) (< i 50) (set i (+ 1 i)))
-      (printf "%lu %f\n" i (array-get out-new-get i))))
-  (test-helper-assert
-    "path 0 new-get equal" (not (memcmp out out-new-get (* (sizeof sp-path-value-t) 50))))
-  (sc-comment "path 1 - test last point")
-  (set
-    s.interpolator sp-path-i-line
-    p.x 10
-    p.y 5
-    (array-get s.points 0) p
-    (array-get segments 0) s
-    segments-len 1)
-  (status-require (sp-path-new segments-len segments &path))
-  (sp-path-get path 0 12 out)
-  (if log-path-new-1
-    (for ((set i 0) (< i 12) (set i (+ 1 i)))
-      (printf "%lu %f\n" i (array-get out i))))
-  (test-helper-assert "path 1.30" (sp-sample-nearly-equal 5 (array-get out 10) error-margin))
-  (test-helper-assert "path 1.31" (sp-sample-nearly-equal 0 (array-get out 11) error-margin))
-  (sp-path-free path)
-  (sc-comment "path 1 new-get")
-  (status-require (sp-path-new-get segments-len segments 0 12 out-new-get))
-  (if log-path-new-get-1
-    (for ((set i 0) (< i 12) (set i (+ 1 i)))
-      (printf "%lu %f\n" i (array-get out-new-get i))))
-  (test-helper-assert
-    "path 1 new-get equal" (not (memcmp out out-new-get (* (sizeof sp-path-value-t) 12))))
   (label exit
     (return status)))
 
 (define (main) int
   status-declare
   (sp-initialise)
-  (test-helper-test-one test-sp-path)
   (test-helper-test-one test-fm-synth)
   (test-helper-test-one test-moving-average)
   (test-helper-test-one test-fft)

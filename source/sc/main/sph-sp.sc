@@ -6,7 +6,7 @@
     sp-channel-count-t uint8-t
     sp-file-format (bit-or SF-FORMAT-WAV SF-FORMAT-FLOAT)
     sp-float-t double
-    sp-sample-count-t uint32-t
+    sp-count-t uint32-t
     sp-sample-count-max UINT32_MAX
     sp-sample-rate-t uint32-t
     sp-sample-sum f64-sum
@@ -26,7 +26,7 @@
     sp-channel-count-t uint8-t
     sp-file-format (bit-or SF-FORMAT-WAV SF-FORMAT-FLOAT)
     sp-float-t float
-    sp-sample-count-t size-t
+    sp-count-t size-t
     sp-sample-rate-t uint32-t
     sp-sample-sum f32-sum
     sp-sample-t float
@@ -56,12 +56,11 @@
   (begin
     "t must be between 0 and 95999"
     (array-get sp-sine-96-table t))
-  (sp-cheap-round-positive a) (convert-type (+ 0.5 a) sp-sample-count-t)
-  (sp-cheap-floor-positive a) (convert-type a sp-sample-count-t)
-  (sp-cheap-ceiling-positive a)
-  (+ (convert-type a sp-sample-count-t) (< (convert-type a sp-sample-count-t) a)))
+  (sp-cheap-round-positive a) (convert-type (+ 0.5 a) sp-count-t)
+  (sp-cheap-floor-positive a) (convert-type a sp-count-t)
+  (sp-cheap-ceiling-positive a) (+ (convert-type a sp-count-t) (< (convert-type a sp-count-t) a)))
 
-(sc-include "../foreign/sph" "../foreign/sph/status")
+(sc-include "../foreign/sph" "../foreign/sph/status" "../foreign/sph/i-array")
 
 (enum
   (sp-status-id-file-channel-mismatch
@@ -84,177 +83,144 @@
       (sample-rate sp-sample-rate-t)
       (channel-count sp-channel-count-t)
       (data void*)))
-  sp-convolution-filter-ir-f-t
-  (type (function-pointer status-t void* sp-sample-t** sp-sample-count-t*))
+  sp-convolution-filter-ir-f-t (type (function-pointer status-t void* sp-sample-t** sp-count-t*))
   sp-convolution-filter-state-t
   (type
     (struct
       (carryover sp-sample-t*)
-      (carryover-len sp-sample-count-t)
-      (carryover-alloc-len sp-sample-count-t)
+      (carryover-len sp-count-t)
+      (carryover-alloc-len sp-count-t)
       (ir sp-sample-t*)
       (ir-f sp-convolution-filter-ir-f-t)
       (ir-f-arguments void*)
       (ir-f-arguments-len uint8-t)
-      (ir-len sp-sample-count-t)))
+      (ir-len sp-count-t)))
   sp-fm-synth-operator-t
   (type
     (struct
       (modifies sp-fm-synth-count-t)
       (amplitude (array sp-sample-t* sp-fm-synth-channel-limit))
-      (wavelength (array sp-sample-count-t* sp-fm-synth-channel-limit))
-      (phase-offset (array sp-sample-count-t sp-fm-synth-channel-limit))))
+      (wavelength (array sp-count-t* sp-fm-synth-channel-limit))
+      (phase-offset (array sp-count-t sp-fm-synth-channel-limit))))
   sp-asynth-partial-t
   (type
     (struct
-      (start sp-sample-count-t)
-      (end sp-sample-count-t)
+      (start sp-count-t)
+      (end sp-count-t)
       (amplitude (array sp-sample-t* sp-asynth-channel-limit))
-      (wavelength (array sp-sample-count-t* sp-asynth-channel-limit))
-      (phase-offset (array sp-sample-count-t sp-asynth-channel-limit))))
+      (wavelength (array sp-count-t* sp-asynth-channel-limit))
+      (phase-offset (array sp-count-t sp-asynth-channel-limit))))
   (sp-file-read file sample-count result-block result-sample-count)
-  (status-t sp-file-t* sp-sample-count-t sp-sample-t** sp-sample-count-t*)
+  (status-t sp-file-t* sp-count-t sp-sample-t** sp-count-t*)
   (sp-file-write file block sample-count result-sample-count)
-  (status-t sp-file-t* sp-sample-t** sp-sample-count-t sp-sample-count-t*)
-  (sp-file-position file result-position) (status-t sp-file-t* sp-sample-count-t*)
-  (sp-file-position-set file sample-offset) (status-t sp-file-t* sp-sample-count-t)
-  (sp-file-open path mode channel-count sample-rate result-file)
+  (status-t sp-file-t* sp-sample-t** sp-count-t sp-count-t*) (sp-file-position file result-position)
+  (status-t sp-file-t* sp-count-t*) (sp-file-position-set file sample-offset)
+  (status-t sp-file-t* sp-count-t) (sp-file-open path mode channel-count sample-rate result-file)
   (status-t uint8-t* int sp-channel-count-t sp-sample-rate-t sp-file-t*) (sp-file-close a)
-  (status-t sp-file-t*) (sp-block-alloc channel-count sample-count result)
-  (status-t sp-channel-count-t sp-sample-count-t sp-sample-t***) (sp-status-description a)
+  (status-t sp-file-t*) (sp-block-new channel-count sample-count result)
+  (status-t sp-channel-count-t sp-count-t sp-sample-t***) (sp-status-description a)
   (uint8-t* status-t) (sp-status-name a)
   (uint8-t* status-t) (sp-sin-lq a)
   (sp-sample-t sp-float-t) (sp-sinc a)
   (sp-float-t sp-float-t) (sp-windowed-sinc-lp-hp-ir-length transition)
-  (sp-sample-count-t sp-float-t) (sp-windowed-sinc-ir cutoff transition result-len result-ir)
-  (status-t sp-float-t sp-float-t sp-sample-count-t* sp-sample-t**)
-  (sp-convolution-filter-state-free state) (void sp-convolution-filter-state-t*)
+  (sp-count-t sp-float-t) (sp-windowed-sinc-ir cutoff transition result-len result-ir)
+  (status-t sp-float-t sp-float-t sp-count-t* sp-sample-t**) (sp-convolution-filter-state-free state)
+  (void sp-convolution-filter-state-t*)
   (sp-convolution-filter-state-set ir-f ir-f-arguments ir-f-arguments-len out-state)
   (status-t sp-convolution-filter-ir-f-t void* uint8-t sp-convolution-filter-state-t**)
   (sp-convolution-filter in in-len ir-f ir-f-arguments ir-f-arguments-len out-state out-samples)
   (status-t
     sp-sample-t*
-    sp-sample-count-t
+    sp-count-t
     sp-convolution-filter-ir-f-t void* uint8-t sp-convolution-filter-state-t** sp-sample-t*)
   (sp-windowed-sinc-lp-hp-ir cutoff transition is-high-pass out-ir out-len)
-  (status-t sp-float-t sp-float-t boolean sp-sample-t** sp-sample-count-t*)
+  (status-t sp-float-t sp-float-t boolean sp-sample-t** sp-count-t*)
   (sp-windowed-sinc-bp-br-ir cutoff-l cutoff-h transition-l transition-h is-reject out-ir out-len)
-  (status-t sp-float-t sp-float-t sp-float-t sp-float-t boolean sp-sample-t** sp-sample-count-t*)
-  (sp-windowed-sinc-lp-hp-ir-f arguments out-ir out-len)
-  (status-t void* sp-sample-t** sp-sample-count-t*)
-  (sp-windowed-sinc-bp-br-ir-f arguments out-ir out-len)
-  (status-t void* sp-sample-t** sp-sample-count-t*)
+  (status-t sp-float-t sp-float-t sp-float-t sp-float-t boolean sp-sample-t** sp-count-t*)
+  (sp-windowed-sinc-lp-hp-ir-f arguments out-ir out-len) (status-t void* sp-sample-t** sp-count-t*)
+  (sp-windowed-sinc-bp-br-ir-f arguments out-ir out-len) (status-t void* sp-sample-t** sp-count-t*)
   (sp-windowed-sinc-lp-hp in in-len cutoff transition is-high-pass out-state out-samples)
   (status-t
     sp-sample-t*
-    sp-sample-count-t sp-float-t sp-float-t boolean sp-convolution-filter-state-t** sp-sample-t*)
+    sp-count-t sp-float-t sp-float-t boolean sp-convolution-filter-state-t** sp-sample-t*)
   (sp-windowed-sinc-bp-br
     in in-len cutoff-l cutoff-h transition-l transition-h is-reject out-state out-samples)
   (status-t
     sp-sample-t*
-    sp-sample-count-t
+    sp-count-t
     sp-float-t sp-float-t sp-float-t sp-float-t boolean sp-convolution-filter-state-t** sp-sample-t*)
-  (sp-window-blackman a width) (sp-float-t sp-float-t sp-sample-count-t)
-  (sp-spectral-inversion-ir a a-len) (void sp-sample-t* sp-sample-count-t)
-  (sp-spectral-reversal-ir a a-len) (void sp-sample-t* sp-sample-count-t)
-  (sp-fft input-len input/output-real input/output-imag) (status-t sp-sample-count-t double* double*)
-  (sp-ffti input-len input/output-real input/output-imag)
-  (status-t sp-sample-count-t double* double*)
+  (sp-window-blackman a width) (sp-float-t sp-float-t sp-count-t)
+  (sp-spectral-inversion-ir a a-len) (void sp-sample-t* sp-count-t)
+  (sp-spectral-reversal-ir a a-len) (void sp-sample-t* sp-count-t)
+  (sp-fft input-len input/output-real input/output-imag) (status-t sp-count-t double* double*)
+  (sp-ffti input-len input/output-real input/output-imag) (status-t sp-count-t double* double*)
   (sp-moving-average in in-end in-window in-window-end prev prev-end next next-end radius out)
   (status-t
     sp-sample-t*
     sp-sample-t*
     sp-sample-t*
-    sp-sample-t* sp-sample-t* sp-sample-t* sp-sample-t* sp-sample-t* sp-sample-count-t sp-sample-t*)
+    sp-sample-t* sp-sample-t* sp-sample-t* sp-sample-t* sp-sample-t* sp-count-t sp-sample-t*)
   (sp-convolve-one a a-len b b-len result-samples)
-  (void sp-sample-t* sp-sample-count-t sp-sample-t* sp-sample-count-t sp-sample-t*)
+  (void sp-sample-t* sp-count-t sp-sample-t* sp-count-t sp-sample-t*)
   (sp-convolve a a-len b b-len result-carryover-len result-carryover result-samples)
-  (void
-    sp-sample-t*
-    sp-sample-count-t sp-sample-t* sp-sample-count-t sp-sample-count-t sp-sample-t* sp-sample-t*)
+  (void sp-sample-t* sp-count-t sp-sample-t* sp-count-t sp-count-t sp-sample-t* sp-sample-t*)
   (sp-block-free a channel-count) (void sp-sample-t** sp-channel-count-t)
   (sp-windowed-sinc-lp-hp-ir cutoff transition is-high-pass out-ir out-len)
-  (status-t sp-float-t sp-float-t boolean sp-sample-t** sp-sample-count-t*)
-  (sp-null-ir out-ir out-len) (status-t sp-sample-t** sp-sample-count-t*)
-  (sp-passthrough-ir out-ir out-len) (status-t sp-sample-t** sp-sample-count-t*)
-  (sp-sine-table-new out size) (status-t sp-sample-t** sp-sample-count-t)
-  sp-sine-96-table sp-sample-t*
-  (sp-initialise) status-t
-  (sp-cheap-phase-96 current change) (sp-sample-count-t sp-sample-count-t sp-sample-count-t)
-  (sp-cheap-phase-96-float current change) (sp-sample-count-t sp-sample-count-t double)
-  (sp-fm-synth out channels start duration config-len config state)
+  (status-t sp-float-t sp-float-t boolean sp-sample-t** sp-count-t*) (sp-null-ir out-ir out-len)
+  (status-t sp-sample-t** sp-count-t*) (sp-passthrough-ir out-ir out-len)
+  (status-t sp-sample-t** sp-count-t*) (sp-sine-table-new out size)
+  (status-t sp-sample-t** sp-count-t) sp-sine-96-table
+  sp-sample-t* (sp-initialise)
+  status-t (sp-cheap-phase-96 current change)
+  (sp-count-t sp-count-t sp-count-t) (sp-cheap-phase-96-float current change)
+  (sp-count-t sp-count-t double) (sp-fm-synth out channels start duration config-len config state)
   (status-t
     sp-sample-t**
-    sp-sample-count-t
-    sp-sample-count-t
-    sp-sample-count-t sp-fm-synth-count-t sp-fm-synth-operator-t* sp-sample-count-t**)
+    sp-count-t sp-count-t sp-count-t sp-fm-synth-count-t sp-fm-synth-operator-t* sp-count-t**)
   (sp-asynth out channel-count start duration config-len config state)
   (status-t
     sp-sample-t**
-    sp-sample-count-t
-    sp-sample-count-t sp-sample-count-t sp-asynth-count-t sp-asynth-partial-t* sp-sample-count-t**)
+    sp-count-t sp-count-t sp-count-t sp-asynth-count-t sp-asynth-partial-t* sp-count-t**)
   (sp-state-variable-filter-lp out in in-count cutoff q-factor state)
-  (void sp-sample-t* sp-sample-t* sp-float-t sp-float-t sp-sample-count-t sp-sample-t*)
+  (void sp-sample-t* sp-sample-t* sp-float-t sp-float-t sp-count-t sp-sample-t*)
   (sp-state-variable-filter-hp out in in-count cutoff q-factor state)
-  (void sp-sample-t* sp-sample-t* sp-float-t sp-float-t sp-sample-count-t sp-sample-t*)
+  (void sp-sample-t* sp-sample-t* sp-float-t sp-float-t sp-count-t sp-sample-t*)
   (sp-state-variable-filter-bp out in in-count cutoff q-factor state)
-  (void sp-sample-t* sp-sample-t* sp-float-t sp-float-t sp-sample-count-t sp-sample-t*)
+  (void sp-sample-t* sp-sample-t* sp-float-t sp-float-t sp-count-t sp-sample-t*)
   (sp-state-variable-filter-br out in in-count cutoff q-factor state)
-  (void sp-sample-t* sp-sample-t* sp-float-t sp-float-t sp-sample-count-t sp-sample-t*)
+  (void sp-sample-t* sp-sample-t* sp-float-t sp-float-t sp-count-t sp-sample-t*)
   (sp-state-variable-filter-peak out in in-count cutoff q-factor state)
-  (void sp-sample-t* sp-sample-t* sp-float-t sp-float-t sp-sample-count-t sp-sample-t*)
+  (void sp-sample-t* sp-sample-t* sp-float-t sp-float-t sp-count-t sp-sample-t*)
   (sp-state-variable-filter-all out in in-count cutoff q-factor state)
-  (void sp-sample-t* sp-sample-t* sp-float-t sp-float-t sp-sample-count-t sp-sample-t*))
+  (void sp-sample-t* sp-sample-t* sp-float-t sp-float-t sp-count-t sp-sample-t*))
 
-(pre-define
-  sp-path-point-limit 3
-  sp-path-point-count-t uint8-t
-  sp-path-segment-count-t uint16-t
-  sp-path-value-t double
-  (sp-path-interpolator-points-len a)
-  (if* (= sp-path-i-bezier a) 3
-    1))
+(pre-define sp-events-new i-array-allocate-sp-events-t)
 
 (declare
-  sp-path-point-t
+  sp-block-t
   (type
     (struct
-      (x sp-path-value-t)
-      (y sp-path-value-t)))
-  sp-path-interpolator-t
-  (type
-    (function-pointer
-      void
-      sp-sample-count-t sp-sample-count-t sp-path-point-t sp-path-point-t* void* sp-path-value-t*))
-  sp-path-segment-t
+      (channels sp-channel-count-t)
+      (size sp-count-t)
+      (samples sp-sample-t*)))
+  sp-event-t struct
+  sp-event-t
   (type
     (struct
-      (_start sp-path-point-t)
-      (_points-len sp-path-point-count-t)
-      (points (array sp-path-point-t sp-path-point-limit))
-      (interpolator sp-path-interpolator-t)
-      (options void*)))
-  sp-path-t
-  (type
-    (struct
-      (segments-len sp-path-segment-count-t)
-      (segments sp-path-segment-t*)))
-  (sp-path-i-line start end p-start p-rest options out)
-  (void sp-sample-count-t sp-sample-count-t sp-path-point-t sp-path-point-t* void* sp-path-value-t*)
-  (sp-path-free a) (void sp-path-t)
-  (sp-path-new segments-len segments out-path)
-  (status-t sp-path-segment-count-t sp-path-segment-t* sp-path-t*) (sp-path-get path start end out)
-  (void sp-path-t sp-sample-count-t sp-sample-count-t sp-path-value-t*)
-  (sp-path-new-get segments-len segments start end out)
-  (status-t
-    sp-path-segment-count-t sp-path-segment-t* sp-sample-count-t sp-sample-count-t sp-path-value-t*)
-  (sp-path-i-move start end p-start p-rest options out)
-  (void sp-sample-count-t sp-sample-count-t sp-path-point-t sp-path-point-t* void* sp-path-value-t*)
-  (sp-path-i-constant start end p-start p-rest options out)
-  (void sp-sample-count-t sp-sample-count-t sp-path-point-t sp-path-point-t* void* sp-path-value-t*)
-  (sp-path-i-bezier start end p-start p-rest options out)
-  (void sp-sample-count-t sp-sample-count-t sp-path-point-t sp-path-point-t* void* sp-path-value-t*)
-  (sp-path-i-path start end p-start p-rest options out)
-  (void sp-sample-count-t sp-sample-count-t sp-path-point-t sp-path-point-t* void* sp-path-value-t*)
-  (sp-path-start path) (sp-path-point-t sp-path-t)
-  (sp-path-end path) (sp-path-point-t sp-path-t))
+      sp-event-t
+      (state void*)
+      (start sp-count-t)
+      (end sp-count-t)
+      (f
+        (function-pointer
+          void sp-count-t sp-count-t sp-count-t sp-block-t
+          (struct
+            sp-event-t*)))))
+  sp-event-f-t (type (function-pointer void sp-count-t sp-count-t sp-count-t sp-block-t sp-event-t*)))
+
+(i-array-declare-type sp-events-t sp-event-t)
+
+(declare
+  (sp-seq-events-prepare a) (void sp-events-t)
+  (sp-seq time offset size output events)
+  (void sp-count-t sp-count-t sp-count-t sp-block-t sp-events-t))

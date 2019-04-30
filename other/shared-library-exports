@@ -1,7 +1,7 @@
 exports {
   global:
     sp_asynth;
-    sp_block_alloc;
+    sp_block_new;
     sp_block_free;
     sp_cheap_phase_96;
     sp_cheap_phase_96_float;

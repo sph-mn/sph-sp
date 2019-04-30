@@ -1,50 +1,32 @@
 (sc-comment
-  "quicksort implementation based on the public domain implementation from http://alienryderflex.com/quicksort/")
+  "a generic quicksort implementation."
+  "based on the public domain implementation from http://alienryderflex.com/quicksort/")
 
-(pre-define
-  quicksort-t int
-  quicksort-count-t int
-  quicksort-max-levels 1000)
-
-(define (quicksort a a-len) (uint8-t quicksort-t quicksort-count-t)
+(define (quicksort less? swap element-size array array-len)
+  (void
+    (function-pointer uint8-t void* void*) (function-pointer void void* void*) uint8-t void* size-t)
+  "less should return true if the first argument is < than the second.
+   swap should exchange the values of the two arguments it receives"
   (declare
-    piv quicksort-t
-    beg (array quicksort-t quicksort-max-levels)
-    end (array quicksort-t quicksort-max-levels)
-    i quicksort-t
-    l quicksort-t
-    r quicksort-t)
+    pivot char*
+    a char*
+    i size-t
+    j size-t)
+  (if (< array-len 2) return)
   (set
+    a array
+    pivot (+ a (* element-size (/ array-len 2)))
     i 0
-    (array-get beg 0) 0
-    (array-get end 0) a-len)
-  (while (>= i 0)
+    j (- array-len 1))
+  (while #t
+    (while (less? (+ a (* element-size i)) pivot)
+      (set i (+ 1 i)))
+    (while (less? pivot (+ a (* element-size j)))
+      (set j (- j 1)))
+    (if (>= i j) break)
+    (swap (+ a (* element-size i)) (+ a (* element-size j)))
     (set
-      l (array-get beg i)
-      r (- (array-get end i) 1))
-    (if (>= l r)
-      (begin
-        (set i (- i 1))
-        continue))
-    (set piv (array-get a l))
-    (if (= i (- quicksort-max-levels 1)) (return 1))
-    (while (< l r)
-      (while (and (>= (array-get a r) piv) (< l r))
-        (set r (- r 1))
-        (if (< l r)
-          (set
-            l (+ 1 l)
-            (array-get a l) (array-get a r))))
-      (while (and (<= (array-get a l) piv) (< l r))
-        (set l (+ 1 l))
-        (if (< l r)
-          (set
-            r (- r 1)
-            (array-get a r) (array-get a l)))))
-    (set
-      (array-get a l) piv
-      (array-get beg (+ 1 i)) (+ 1 l)
-      (array-get end (+ 1 i)) (array-get end i)
       i (+ 1 i)
-      (array-get end i) l))
-  (return 0))
+      j (- j 1)))
+  (quicksort less? swap element-size a i)
+  (quicksort less? swap element-size (+ a (* element-size i)) (- array-len i)))

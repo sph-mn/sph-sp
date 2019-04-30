@@ -47,12 +47,12 @@ exit:
   return (status);
 };
 /** failure status if not all samples could be written (sp-status-id-file-incomplete) */
-status_t sp_file_write(sp_file_t* file, sp_sample_t** channel_data, sp_sample_count_t sample_count, sp_sample_count_t* result_sample_count) {
+status_t sp_file_write(sp_file_t* file, sp_sample_t** channel_data, sp_count_t sample_count, sp_count_t* result_sample_count) {
   status_declare;
   sp_channel_count_t channel_count;
   SNDFILE* snd_file;
   sp_sample_t* interleaved;
-  sp_sample_count_t interleaved_size;
+  sp_count_t interleaved_size;
   sf_count_t frames_count;
   memreg_init(1);
   channel_count = file->channel_count;
@@ -71,10 +71,10 @@ exit:
   return (status);
 };
 /** failure status only if no results read (sp-status-id-eof) */
-status_t sp_file_read(sp_file_t* file, sp_sample_count_t sample_count, sp_sample_t** result_channel_data, sp_sample_count_t* result_sample_count) {
+status_t sp_file_read(sp_file_t* file, sp_count_t sample_count, sp_sample_t** result_channel_data, sp_count_t* result_sample_count) {
   status_declare;
   sp_channel_count_t channel_count;
-  sp_sample_count_t interleaved_size;
+  sp_count_t interleaved_size;
   sp_sample_t* interleaved;
   sf_count_t frames_count;
   memreg_init(1);
@@ -95,7 +95,7 @@ exit:
 };
 /** seeks are defined in number of (multichannel) frames.
   therefore, a seek in a stereo file from the current position forward with an offset of 1 would skip forward by one sample of both channels */
-status_t sp_file_position_set(sp_file_t* file, sp_sample_count_t a) {
+status_t sp_file_position_set(sp_file_t* file, sp_count_t a) {
   status_declare;
   SNDFILE* snd_file;
   sf_count_t count;
@@ -107,7 +107,7 @@ status_t sp_file_position_set(sp_file_t* file, sp_sample_count_t a) {
 exit:
   return (status);
 };
-status_t sp_file_position(sp_file_t* file, sp_sample_count_t* result_position) {
+status_t sp_file_position(sp_file_t* file, sp_count_t* result_position) {
   status_declare;
   SNDFILE* snd_file;
   sf_count_t count;
