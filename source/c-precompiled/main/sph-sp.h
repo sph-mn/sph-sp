@@ -38,9 +38,7 @@
 #define sp_cheap_round_positive(a) ((sp_count_t)((0.5 + a)))
 #define sp_cheap_floor_positive(a) ((sp_count_t)(a))
 #define sp_cheap_ceiling_positive(a) (((sp_count_t)(a)) + (((sp_count_t)(a)) < a))
-#define sp_block_set_null(a) \
-  a.channels = 0; \
-  a.samples = 0
+#define sp_block_set_null(a) a.channels = 0
 #include <stdio.h>
 /** writes values with current routine name and line info to standard output.
     example: (debug-log "%d" 1)
@@ -181,10 +179,11 @@ enum { sp_status_id_file_channel_mismatch,
   sp_status_id_file_position,
   sp_status_id_file_type,
   sp_status_id_undefined };
+#define sp_channel_limit 2
 typedef struct {
   sp_channel_count_t channels;
   sp_count_t size;
-  sp_sample_t** samples;
+  sp_sample_t* samples[sp_channel_limit];
 } sp_block_t;
 typedef struct {
   uint8_t flags;
@@ -207,9 +206,9 @@ typedef struct {
   sp_count_t start;
   sp_count_t end;
   sp_synth_count_t modifies;
-  sp_sample_t* amplitude[sp_synth_channel_limit];
-  sp_count_t* wavelength[sp_synth_channel_limit];
-  sp_count_t phase_offset[sp_synth_channel_limit];
+  sp_sample_t* amp[sp_synth_channel_limit];
+  sp_count_t* wvl[sp_synth_channel_limit];
+  sp_count_t phs[sp_synth_channel_limit];
 } sp_synth_partial_t;
 status_t sp_file_read(sp_file_t* file, sp_count_t sample_count, sp_sample_t** result_block, sp_count_t* result_sample_count);
 status_t sp_file_write(sp_file_t* file, sp_sample_t** block, sp_count_t sample_count, sp_count_t* result_sample_count);
@@ -264,9 +263,9 @@ typedef struct sp_event_t {
   void* state;
   sp_count_t start;
   sp_count_t end;
-  void (*f)(sp_count_t, sp_count_t, sp_count_t, sp_block_t, struct sp_event_t*);
+  void (*f)(sp_count_t, sp_count_t, sp_block_t, struct sp_event_t*);
 } sp_event_t;
-typedef void (*sp_event_f_t)(sp_count_t, sp_count_t, sp_count_t, sp_block_t, sp_event_t*);
+typedef void (*sp_event_f_t)(sp_count_t, sp_count_t, sp_block_t, sp_event_t*);
 typedef struct {
   sp_synth_count_t config_len;
   sp_synth_partial_t config[sp_synth_partial_limit];
@@ -275,3 +274,5 @@ typedef struct {
 i_array_declare_type(sp_events_t, sp_event_t);
 void sp_seq_events_prepare(sp_events_t a);
 void sp_seq(sp_count_t time, sp_count_t offset, sp_count_t size, sp_block_t output, sp_events_t events);
+status_t sp_synth_event(sp_count_t start, sp_count_t end, sp_count_t channel_count, sp_count_t config_len, sp_synth_partial_t* config, sp_event_t* out_event);
+void sp_plot_samples(sp_sample_t* a);

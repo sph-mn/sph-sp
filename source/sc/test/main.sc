@@ -326,24 +326,24 @@
     prt1.end duration
     prt2.end prt1.end
     prt3.end prt1.end
-    (array-get prt1.amplitude 0) amp
-    (array-get prt1.amplitude 1) amp
-    (array-get prt1.wavelength 0) wvl
-    (array-get prt1.wavelength 1) wvl
-    (array-get prt1.phase-offset 0) 1
-    (array-get prt1.phase-offset 2) 2
-    (array-get prt2.amplitude 0) amp
-    (array-get prt2.amplitude 1) amp
-    (array-get prt2.wavelength 0) wvl
-    (array-get prt2.wavelength 1) wvl
-    (array-get prt2.phase-offset 0) 1
-    (array-get prt2.phase-offset 2) 2
-    (array-get prt3.amplitude 0) amp
-    (array-get prt3.amplitude 1) amp
-    (array-get prt3.wavelength 0) wvl
-    (array-get prt3.wavelength 1) wvl
-    (array-get prt3.phase-offset 0) 1
-    (array-get prt3.phase-offset 2) 2
+    (array-get prt1.amp 0) amp
+    (array-get prt1.amp 1) amp
+    (array-get prt1.wvl 0) wvl
+    (array-get prt1.wvl 1) wvl
+    (array-get prt1.phs 0) 1
+    (array-get prt1.phs 2) 2
+    (array-get prt2.amp 0) amp
+    (array-get prt2.amp 1) amp
+    (array-get prt2.wvl 0) wvl
+    (array-get prt2.wvl 1) wvl
+    (array-get prt2.phs 0) 1
+    (array-get prt2.phs 2) 2
+    (array-get prt3.amp 0) amp
+    (array-get prt3.amp 1) amp
+    (array-get prt3.wvl 0) wvl
+    (array-get prt3.wvl 1) wvl
+    (array-get prt3.phs 0) 1
+    (array-get prt3.phs 2) 2
     (array-get config 0) prt1
     (array-get config 1) prt2
     (array-get config 2) prt3)
@@ -355,28 +355,61 @@
   (label exit
     (return status)))
 
-#;(define (test-sp-seq) status-t
+(pre-define
+  sp-seq-duration 20
+  sp-seq-half-duration (/ sp-seq-duration 2))
+
+(define (test-sp-seq) status-t
   status-declare
   (declare
     events sp-events-t
-    output sp-block-t
+    state sp-count-t*
+    out sp-block-t
+    prt sp-synth-partial-t
+    config (array sp-synth-partial-t 1)
+    wvl (array sp-count-t sp-seq-duration)
+    amp (array sp-sample-t sp-seq-duration)
+    i sp-count-t
     e sp-event-t)
-  (status-id-require (sp-events-new 10 &events))
+  (for ((set i 0) (< i sp-seq-duration) (set i (+ 1 i)))
+    (set
+      (array-get wvl i) 5
+      (array-get amp i) 0.5))
   (set
-    e.start 10
-    e.end 50
-    e.f event-f)
+    prt.modifies 0
+    prt.start 0
+    prt.end sp-seq-duration
+    (array-get prt.amp 0) amp
+    (array-get prt.wvl 0) wvl
+    (array-get prt.phs 0) 0
+    (array-get config 0) prt)
+  (status-id-require (i-array-allocate-sp-events-t 2 &events))
+  (status-require (sp-synth-event 0 sp-seq-half-duration 1 1 config &e))
+  (i-array-add events e)
+  (status-require (sp-synth-event sp-seq-half-duration sp-seq-duration 1 1 config &e))
   (i-array-add events e)
   (sp-seq-events-prepare events)
-  (sp-seq 0 0 100 output events)
-  ;(void sp-count-t sp-count-t sp-count-t sp-block-t sp-events-t)
+  (status-require (sp-block-new 1 sp-seq-duration &out))
+  (sp-seq 0 0 sp-seq-half-duration out events)
+  (sp-seq sp-seq-half-duration sp-seq-half-duration sp-seq-half-duration out events)
+  (for ((set i 0) (< i sp-seq-duration) (set i (+ 1 i)))
+    (printf "%f " (array-get (array-get *out.samples i))))
+  (label exit
+    (return status)))
+
+(define (test-sp-plot) status-t
+  status-declare
+  (declare a (array sp-sample-t 4 0.1 0.2 0.3 0.4))
+  (sp-plot-samples a)
   (label exit
     (return status)))
 
 (define (main) int
   status-declare
+  (test-sp-plot)
+  (goto exit)
   (sp-initialise)
-  ;(test-helper-test-one test-sp-seq)
+  (test-helper-test-one test-sp-seq)
   (test-helper-test-one test-synth)
   (test-helper-test-one test-moving-average)
   (test-helper-test-one test-fft)

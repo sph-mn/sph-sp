@@ -289,24 +289,24 @@ status_t test_synth() {
   prt1.end = duration;
   prt2.end = prt1.end;
   prt3.end = prt1.end;
-  (prt1.amplitude)[0] = amp;
-  (prt1.amplitude)[1] = amp;
-  (prt1.wavelength)[0] = wvl;
-  (prt1.wavelength)[1] = wvl;
-  (prt1.phase_offset)[0] = 1;
-  (prt1.phase_offset)[2] = 2;
-  (prt2.amplitude)[0] = amp;
-  (prt2.amplitude)[1] = amp;
-  (prt2.wavelength)[0] = wvl;
-  (prt2.wavelength)[1] = wvl;
-  (prt2.phase_offset)[0] = 1;
-  (prt2.phase_offset)[2] = 2;
-  (prt3.amplitude)[0] = amp;
-  (prt3.amplitude)[1] = amp;
-  (prt3.wavelength)[0] = wvl;
-  (prt3.wavelength)[1] = wvl;
-  (prt3.phase_offset)[0] = 1;
-  (prt3.phase_offset)[2] = 2;
+  (prt1.amp)[0] = amp;
+  (prt1.amp)[1] = amp;
+  (prt1.wvl)[0] = wvl;
+  (prt1.wvl)[1] = wvl;
+  (prt1.phs)[0] = 1;
+  (prt1.phs)[2] = 2;
+  (prt2.amp)[0] = amp;
+  (prt2.amp)[1] = amp;
+  (prt2.wvl)[0] = wvl;
+  (prt2.wvl)[1] = wvl;
+  (prt2.phs)[0] = 1;
+  (prt2.phs)[2] = 2;
+  (prt3.amp)[0] = amp;
+  (prt3.amp)[1] = amp;
+  (prt3.wvl)[0] = wvl;
+  (prt3.wvl)[1] = wvl;
+  (prt3.phs)[0] = 1;
+  (prt3.phs)[2] = 2;
   config[0] = prt1;
   config[1] = prt2;
   config[2] = prt3;
@@ -318,9 +318,58 @@ status_t test_synth() {
 exit:
   return (status);
 };
+#define sp_seq_duration 20
+#define sp_seq_half_duration (sp_seq_duration / 2)
+status_t test_sp_seq() {
+  status_declare;
+  sp_events_t events;
+  sp_count_t* state;
+  sp_block_t out;
+  sp_synth_partial_t prt;
+  sp_synth_partial_t config[1];
+  sp_count_t wvl[sp_seq_duration];
+  sp_sample_t amp[sp_seq_duration];
+  sp_count_t i;
+  sp_event_t e;
+  for (i = 0; (i < sp_seq_duration); i = (1 + i)) {
+    wvl[i] = 5;
+    amp[i] = 0.5;
+  };
+  prt.modifies = 0;
+  prt.start = 0;
+  prt.end = sp_seq_duration;
+  (prt.amp)[0] = amp;
+  (prt.wvl)[0] = wvl;
+  (prt.phs)[0] = 0;
+  config[0] = prt;
+  status_id_require((i_array_allocate_sp_events_t(2, (&events))));
+  status_require((sp_synth_event(0, sp_seq_half_duration, 1, 1, config, (&e))));
+  i_array_add(events, e);
+  status_require((sp_synth_event(sp_seq_half_duration, sp_seq_duration, 1, 1, config, (&e))));
+  i_array_add(events, e);
+  sp_seq_events_prepare(events);
+  status_require((sp_block_new(1, sp_seq_duration, (&out))));
+  sp_seq(0, 0, sp_seq_half_duration, out, events);
+  sp_seq(sp_seq_half_duration, sp_seq_half_duration, sp_seq_half_duration, out, events);
+  for (i = 0; (i < sp_seq_duration); i = (1 + i)) {
+    printf("%f ", ((*(out.samples))[i]));
+  };
+exit:
+  return (status);
+};
+status_t test_sp_plot() {
+  status_declare;
+  sp_sample_t a[4] = { 0.1, 0.2, 0.3, 0.4 };
+  sp_plot_samples(a);
+exit:
+  return (status);
+};
 int main() {
   status_declare;
+  test_sp_plot();
+  goto exit;
   sp_initialise();
+  test_helper_test_one(test_sp_seq);
   test_helper_test_one(test_synth);
   test_helper_test_one(test_moving_average);
   test_helper_test_one(test_fft);

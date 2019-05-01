@@ -95,28 +95,23 @@
 (define (sp-block-free a) (void sp-block-t)
   (declare i sp-count-t)
   (for ((set i 0) (< i a.channels) (set i (+ 1 i)))
-    (free (array-get a.samples i)))
-  (free a.samples))
+    (free (array-get a.samples i))))
 
 (define (sp-block-new channel-count sample-count out-block)
   (status-t sp-channel-count-t sp-count-t sp-block-t*)
   "return a newly allocated array for channels with data arrays for each channel"
   status-declare
-  (memreg-init (+ channel-count 1))
+  (memreg-init channel-count)
   (declare
     channel sp-sample-t*
-    a sp-sample-t**)
-  (status-require (sph-helper-malloc (* channel-count (sizeof sp-sample-t*)) &a))
-  (memreg-add a)
-  (while channel-count
-    (set channel-count (- channel-count 1))
+    i sp-count-t)
+  (for ((set i 0) (< i channel-count) (set i (+ 1 i)))
     (status-require (sph-helper-calloc (* sample-count (sizeof sp-sample-t)) &channel))
     (memreg-add channel)
-    (set (array-get a channel-count) channel))
+    (set (array-get out-block:samples i) channel))
   (set
     out-block:size sample-count
-    out-block:channels channel-count
-    out-block:samples a)
+    out-block:channels channel-count)
   (label exit
     (if status-is-failure memreg-free)
     (return status)))
@@ -527,7 +522,7 @@
   (for ((set i 0) (< i config-len) (set i (+ 1 i)))
     (for ((set channel-i 0) (< channel-i channel-count) (set channel-i (+ 1 channel-i)))
       (set (array-get *out-state (+ channel-i (* channel-count i)))
-        (array-get (struct-get (array-get config i) phase-offset) channel-i))))
+        (array-get (struct-get (array-get config i) phs) channel-i))))
   (label exit
     (return status)))
 
@@ -605,10 +600,10 @@
           modulation (array-get modulation-index prt-i channel-i))
         (for ((set i 0) (< i prt-duration) (set i (+ 1 i)))
           (set
-            amp (array-get prt.amplitude channel-i (+ prt-start i))
+            amp (array-get prt.amp channel-i (+ prt-start i))
             (array-get carrier (+ prt-offset i))
             (+ (array-get carrier (+ prt-offset i)) (* amp (sp-sine-96 phs))) wvl
-            (array-get prt.wavelength channel-i (+ prt-start i)) modulated-wvl
+            (array-get prt.wvl channel-i (+ prt-start i)) modulated-wvl
             (if* modulation (+ wvl (* wvl (array-get modulation (+ prt-offset i))))
               wvl)
             phs (sp-cheap-phase-96-float phs (/ 48000 modulated-wvl))))
@@ -621,8 +616,8 @@
           modulation (array-get modulation-index prt-i channel-i))
         (for ((set i 0) (< i prt-duration) (set i (+ 1 i)))
           (set
-            amp (array-get prt.amplitude channel-i (+ prt-start i))
-            wvl (array-get prt.wavelength channel-i (+ prt-start i))
+            amp (array-get prt.amp channel-i (+ prt-start i))
+            wvl (array-get prt.wvl channel-i (+ prt-start i))
             modulated-wvl
             (if* modulation (+ wvl (* wvl (array-get modulation (+ prt-offset i))))
               wvl)
@@ -649,25 +644,30 @@
 (define (sp-seq-events-prepare a) (void sp-events-t)
   (quicksort sp-event-sort-less? sp-event-sort-swap (sizeof sp-event-t) a.start (i-array-length a)))
 
-(define (sp-seq time offset size output events)
+(define (sp-block-at-offset a offset) (void sp-block-t* sp-count-t)
+  "add offset to the all channel sample arrays in block. modifies the block object"
+  (declare i sp-count-t)
+  (for ((set i 0) (< i a:channels) (set i (+ 1 i)))
+    (set (array-get a:samples i) (+ offset (array-get a:samples i)))))
+
+(define (sp-seq time offset size out events)
   (void sp-count-t sp-count-t sp-count-t sp-block-t sp-events-t)
   "event arrays must have been prepared/sorted with sp-seq-event-prepare for seq to work correctly"
   (declare
-    e-count sp-count-t
     e-offset-right sp-count-t
     e-offset sp-count-t
     e sp-event-t
     e-time sp-count-t
+    i sp-count-t
     time-end sp-count-t)
-  (set
-    time-end (+ time size)
-    e-count (i-array-length events))
-  (while (i-array-in-range events)
-    (set e (i-array-get events))
+  (set time-end (+ time size))
+  (for ((set i 0) (< i (i-array-length events)) (set i (+ 1 i)))
+    (set e (array-get events.start i))
     (cond
-      ((< time-end e.start) break)
+      ((<= time-end e.start) break)
       ((<= e.end time) continue)
       (else
+        (printf "from %lu to %lu time %lu\n" e.start e.end time)
         (set
           e-time
           (if* (< e.start time) (- time e.start)
@@ -678,30 +678,28 @@
           e-offset-right
           (if* (> e.end time-end) 0
             (- time-end e.end)))
-        (e.f e-time (+ offset e-offset) (- size e-offset e-offset-right) output events.current)))
-    (i-array-forward events)))
+        (if (+ offset e-offset) (sp-block-at-offset &out (+ offset e-offset)))
+        (e.f e-time (- size e-offset e-offset-right) out &e)))))
 
-(define (sp-block-at-offset a offset) (void sp-block-t* sp-count-t)
-  (declare i sp-count-t)
-  (for ((set i 0) (< i a:channels) (set i (+ 1 i)))
-    (set (array-get a:samples i) (+ offset (array-get a:samples i)))))
-
-(define (sp-synth-event-f time offset size output event)
-  (void sp-count-t sp-count-t sp-count-t sp-block-t sp-event-t*)
+(define (sp-synth-event-f time size out event) (void sp-count-t sp-count-t sp-block-t sp-event-t*)
   (declare state sp-synth-event-state-t*)
   (set state event:state)
-  (if offset (sp-block-at-offset &output offset))
-  (sp-synth output time size state:config-len state:config state:state))
+  (if (not size) (printf "size %lu at time %lu\n" size time))
+  (sp-synth out time size state:config-len state:config state:state))
 
 (define (sp-synth-event start end channel-count config-len config out-event)
   (status-t sp-count-t sp-count-t sp-count-t sp-count-t sp-synth-partial-t* sp-event-t*)
+  "memory for event.state is allocated and owned by the caller.
+  config is copied into event.state"
   status-declare
   (declare
     e sp-event-t
     state sp-synth-event-state-t*)
   (status-require (sph-helper-malloc (* channel-count (sizeof sp-synth-event-state-t)) &state))
   (status-require (sp-synth-state-new channel-count config-len config &state:state))
+  (memcpy state:config config (* config-len (sizeof sp-synth-partial-t)))
   (set
+    state:config-len config-len
     e.start start
     e.end end
     e.f sp-synth-event-f
@@ -709,3 +707,17 @@
   (set *out-event e)
   (label exit
     (return status)))
+
+(pre-define
+  sp-plot-temp-path "/tmp/sp-plot"
+  sp-plot-command
+  (pre-string-concat
+    "echo gnuplot --persist -e \"set key off; set size ratio 0.5; plot "
+    sp-plot-temp-path " with lines lc rgb blue\""))
+
+#;(define (sp-plot-samples->file a path) (void sp-sample-t* uint8-t*)
+  (declare FILE file)
+  (set file (fopen path "w"))
+  (flose file))
+
+(define (sp-plot-samples a) (void sp-sample-t*) (system sp-plot-command))

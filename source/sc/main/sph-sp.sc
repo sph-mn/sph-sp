@@ -56,10 +56,7 @@
   (sp-cheap-round-positive a) (convert-type (+ 0.5 a) sp-count-t)
   (sp-cheap-floor-positive a) (convert-type a sp-count-t)
   (sp-cheap-ceiling-positive a) (+ (convert-type a sp-count-t) (< (convert-type a sp-count-t) a))
-  (sp-block-set-null a)
-  (set
-    a.channels 0
-    a.samples 0))
+  (sp-block-set-null a) (set a.channels 0))
 
 (sc-include "../foreign/sph" "../foreign/sph/status" "../foreign/sph/i-array")
 
@@ -76,13 +73,15 @@
     sp-status-id-not-implemented
     sp-status-id-file-closed sp-status-id-file-position sp-status-id-file-type sp-status-id-undefined))
 
+(pre-define sp-channel-limit 2)
+
 (declare
   sp-block-t
   (type
     (struct
       (channels sp-channel-count-t)
       (size sp-count-t)
-      (samples sp-sample-t**)))
+      (samples (array sp-sample-t* sp-channel-limit))))
   sp-file-t
   (type
     (struct
@@ -108,9 +107,9 @@
       (start sp-count-t)
       (end sp-count-t)
       (modifies sp-synth-count-t)
-      (amplitude (array sp-sample-t* sp-synth-channel-limit))
-      (wavelength (array sp-count-t* sp-synth-channel-limit))
-      (phase-offset (array sp-count-t sp-synth-channel-limit))))
+      (amp (array sp-sample-t* sp-synth-channel-limit))
+      (wvl (array sp-count-t* sp-synth-channel-limit))
+      (phs (array sp-count-t sp-synth-channel-limit))))
   (sp-file-read file sample-count result-block result-sample-count)
   (status-t sp-file-t* sp-count-t sp-sample-t** sp-count-t*)
   (sp-file-write file block sample-count result-sample-count)
@@ -175,8 +174,7 @@
   status-t (sp-cheap-phase-96 current change)
   (sp-count-t sp-count-t sp-count-t) (sp-cheap-phase-96-float current change)
   (sp-count-t sp-count-t double) (sp-synth out start duration config-len config phases)
-  (status-t
-    sp-block-t sp-count-t sp-count-t sp-synth-count-t sp-synth-partial-t* sp-count-t*)
+  (status-t sp-block-t sp-count-t sp-count-t sp-synth-count-t sp-synth-partial-t* sp-count-t*)
   (sp-synth-state-new channel-count config-len config out-state)
   (status-t sp-count-t sp-synth-count-t sp-synth-partial-t* sp-count-t**)
   (sp-state-variable-filter-lp out in in-count cutoff q-factor state)
@@ -204,11 +202,10 @@
       (start sp-count-t)
       (end sp-count-t)
       (f
-        (function-pointer
-          void sp-count-t sp-count-t sp-count-t sp-block-t
+        (function-pointer void sp-count-t sp-count-t sp-block-t
           (struct
             sp-event-t*)))))
-  sp-event-f-t (type (function-pointer void sp-count-t sp-count-t sp-count-t sp-block-t sp-event-t*))
+  sp-event-f-t (type (function-pointer void sp-count-t sp-count-t sp-block-t sp-event-t*))
   sp-synth-event-state-t
   (type
     (struct
@@ -221,4 +218,7 @@
 (declare
   (sp-seq-events-prepare a) (void sp-events-t)
   (sp-seq time offset size output events)
-  (void sp-count-t sp-count-t sp-count-t sp-block-t sp-events-t))
+  (void sp-count-t sp-count-t sp-count-t sp-block-t sp-events-t)
+  (sp-synth-event start end channel-count config-len config out-event)
+  (status-t sp-count-t sp-count-t sp-count-t sp-count-t sp-synth-partial-t* sp-event-t*)
+  (sp-plot-samples a) (void sp-sample-t*))

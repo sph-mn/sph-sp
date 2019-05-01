@@ -107,25 +107,20 @@ void sp_block_free(sp_block_t a) {
   for (i = 0; (i < a.channels); i = (1 + i)) {
     free(((a.samples)[i]));
   };
-  free((a.samples));
 };
 /** return a newly allocated array for channels with data arrays for each channel */
 status_t sp_block_new(sp_channel_count_t channel_count, sp_count_t sample_count, sp_block_t* out_block) {
   status_declare;
-  memreg_init((channel_count + 1));
+  memreg_init(channel_count);
   sp_sample_t* channel;
-  sp_sample_t** a;
-  status_require((sph_helper_malloc((channel_count * sizeof(sp_sample_t*)), (&a))));
-  memreg_add(a);
-  while (channel_count) {
-    channel_count = (channel_count - 1);
+  sp_count_t i;
+  for (i = 0; (i < channel_count); i = (1 + i)) {
     status_require((sph_helper_calloc((sample_count * sizeof(sp_sample_t)), (&channel))));
     memreg_add(channel);
-    a[channel_count] = channel;
+    (out_block->samples)[i] = channel;
   };
   out_block->size = sample_count;
   out_block->channels = channel_count;
-  out_block->samples = a;
 exit:
   if (status_is_failure) {
     memreg_free;
@@ -466,7 +461,7 @@ status_t sp_synth_state_new(sp_count_t channel_count, sp_synth_count_t config_le
   status_require((sph_helper_calloc((channel_count * config_len * sizeof(sp_count_t)), out_state)));
   for (i = 0; (i < config_len); i = (1 + i)) {
     for (channel_i = 0; (channel_i < channel_count); channel_i = (1 + channel_i)) {
-      (*out_state)[(channel_i + (channel_count * i))] = ((config[i]).phase_offset)[channel_i];
+      (*out_state)[(channel_i + (channel_count * i))] = ((config[i]).phs)[channel_i];
     };
   };
 exit:
@@ -534,9 +529,9 @@ status_t sp_synth(sp_block_t out, sp_count_t start, sp_count_t duration, sp_synt
         phs = phases[(channel_i + (out.channels * prt_i))];
         modulation = modulation_index[prt_i][channel_i];
         for (i = 0; (i < prt_duration); i = (1 + i)) {
-          amp = (prt.amplitude)[channel_i][(prt_start + i)];
+          amp = (prt.amp)[channel_i][(prt_start + i)];
           carrier[(prt_offset + i)] = (carrier[(prt_offset + i)] + (amp * sp_sine_96(phs)));
-          wvl = (prt.wavelength)[channel_i][(prt_start + i)];
+          wvl = (prt.wvl)[channel_i][(prt_start + i)];
           modulated_wvl = (modulation ? (wvl + (wvl * modulation[(prt_offset + i)])) : wvl);
           phs = sp_cheap_phase_96_float(phs, (48000 / modulated_wvl));
         };
@@ -548,8 +543,8 @@ status_t sp_synth(sp_block_t out, sp_count_t start, sp_count_t duration, sp_synt
         phs = phases[(channel_i + (out.channels * prt_i))];
         modulation = modulation_index[prt_i][channel_i];
         for (i = 0; (i < prt_duration); i = (1 + i)) {
-          amp = (prt.amplitude)[channel_i][(prt_start + i)];
-          wvl = (prt.wavelength)[channel_i][(prt_start + i)];
+          amp = (prt.amp)[channel_i][(prt_start + i)];
+          wvl = (prt.wvl)[channel_i][(prt_start + i)];
           modulated_wvl = (modulation ? (wvl + (wvl * modulation[(prt_offset + i)])) : wvl);
           phs = sp_cheap_phase_96_float(phs, (48000 / modulated_wvl));
           (out.samples)[channel_i][(prt_offset + i)] = ((out.samples)[channel_i][(prt_offset + i)] + (amp * sp_sine_96(phs)));
@@ -572,51 +567,58 @@ void sp_event_sort_swap(void* a, void* b) {
 };
 uint8_t sp_event_sort_less_p(void* a, void* b) { return ((((sp_event_t*)(a))->start < ((sp_event_t*)(b))->start)); };
 void sp_seq_events_prepare(sp_events_t a) { quicksort(sp_event_sort_less_p, sp_event_sort_swap, (sizeof(sp_event_t)), (a.start), (i_array_length(a))); };
-/** event arrays must have been prepared/sorted with sp-seq-event-prepare for seq to work correctly */
-void sp_seq(sp_count_t time, sp_count_t offset, sp_count_t size, sp_block_t output, sp_events_t events) {
-  sp_count_t e_count;
-  sp_count_t e_offset_right;
-  sp_count_t e_offset;
-  sp_event_t e;
-  sp_count_t e_time;
-  sp_count_t time_end;
-  time_end = (time + size);
-  e_count = i_array_length(events);
-  while (i_array_in_range(events)) {
-    e = i_array_get(events);
-    if (time_end < e.start) {
-      break;
-    } else if (e.end <= time) {
-      continue;
-    } else {
-      e_time = ((e.start < time) ? (time - e.start) : 0);
-      e_offset = ((e.start > time) ? (e.start - time) : 0);
-      e_offset_right = ((e.end > time_end) ? 0 : (time_end - e.end));
-      (e.f)(e_time, (offset + e_offset), (size - e_offset - e_offset_right), output, (events.current));
-    };
-    i_array_forward(events);
-  };
-};
+/** add offset to the all channel sample arrays in block. modifies the block object */
 void sp_block_at_offset(sp_block_t* a, sp_count_t offset) {
   sp_count_t i;
   for (i = 0; (i < a->channels); i = (1 + i)) {
     (a->samples)[i] = (offset + (a->samples)[i]);
   };
 };
-void sp_synth_event_f(sp_count_t time, sp_count_t offset, sp_count_t size, sp_block_t output, sp_event_t* event) {
+/** event arrays must have been prepared/sorted with sp-seq-event-prepare for seq to work correctly */
+void sp_seq(sp_count_t time, sp_count_t offset, sp_count_t size, sp_block_t out, sp_events_t events) {
+  sp_count_t e_offset_right;
+  sp_count_t e_offset;
+  sp_event_t e;
+  sp_count_t e_time;
+  sp_count_t i;
+  sp_count_t time_end;
+  time_end = (time + size);
+  for (i = 0; (i < i_array_length(events)); i = (1 + i)) {
+    e = (events.start)[i];
+    if (time_end <= e.start) {
+      break;
+    } else if (e.end <= time) {
+      continue;
+    } else {
+      printf("from %lu to %lu time %lu\n", (e.start), (e.end), time);
+      e_time = ((e.start < time) ? (time - e.start) : 0);
+      e_offset = ((e.start > time) ? (e.start - time) : 0);
+      e_offset_right = ((e.end > time_end) ? 0 : (time_end - e.end));
+      if (offset + e_offset) {
+        sp_block_at_offset((&out), (offset + e_offset));
+      };
+      (e.f)(e_time, (size - e_offset - e_offset_right), out, (&e));
+    };
+  };
+};
+void sp_synth_event_f(sp_count_t time, sp_count_t size, sp_block_t out, sp_event_t* event) {
   sp_synth_event_state_t* state;
   state = event->state;
-  if (offset) {
-    sp_block_at_offset((&output), offset);
+  if (!size) {
+    printf("size %lu at time %lu\n", size, time);
   };
-  sp_synth(output, time, size, (state->config_len), (state->config), (state->state));
+  sp_synth(out, time, size, (state->config_len), (state->config), (state->state));
 };
+/** memory for event.state is allocated and owned by the caller.
+  config is copied into event.state */
 status_t sp_synth_event(sp_count_t start, sp_count_t end, sp_count_t channel_count, sp_count_t config_len, sp_synth_partial_t* config, sp_event_t* out_event) {
   status_declare;
   sp_event_t e;
   sp_synth_event_state_t* state;
   status_require((sph_helper_malloc((channel_count * sizeof(sp_synth_event_state_t)), (&state))));
   status_require((sp_synth_state_new(channel_count, config_len, config, (&(state->state)))));
+  memcpy((state->config), config, (config_len * sizeof(sp_synth_partial_t)));
+  state->config_len = config_len;
   e.start = start;
   e.end = end;
   e.f = sp_synth_event_f;
@@ -625,3 +627,6 @@ status_t sp_synth_event(sp_count_t start, sp_count_t end, sp_count_t channel_cou
 exit:
   return (status);
 };
+#define sp_plot_temp_path "/tmp/sp-plot"
+#define sp_plot_command "echo gnuplot --persist -e \"set key off; set size ratio 0.5; plot " sp_plot_temp_path " with lines lc rgb blue\""
+void sp_plot_samples(sp_sample_t* a) { system(sp_plot_command); };

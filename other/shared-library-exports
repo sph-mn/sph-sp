@@ -31,6 +31,11 @@ exports {
     sp_path_i_line;
     sp_path_i_move;
     sp_path_i_path;
+    sp_synth_event;
+    sp_plot_samples;
+    sp_plot_samples_to_file;
+    sp_plot_spectrum;
+    sp_plot_spectrum_to_file;
     sp_path_new;
     sp_path_new_get;
     sp_path_start;
