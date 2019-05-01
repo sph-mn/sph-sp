@@ -1,6 +1,5 @@
 exports {
   global:
-    sp_asynth;
     sp_block_new;
     sp_block_free;
     sp_cheap_phase_96;
@@ -18,7 +17,8 @@ exports {
     sp_file_position_set;
     sp_file_read;
     sp_file_write;
-    sp_fm_synth;
+    sp_synth;
+    sp_synth_state_new;
     sp_initialise;
     sp_moving_average;
     sp_null_ir;
@@ -34,6 +34,9 @@ exports {
     sp_path_new;
     sp_path_new_get;
     sp_path_start;
+    sp_seq;
+    sp_seq_events_prepare;
+    sp_seq_parallel;
     sp_sinc;
     sp_sine_96_table;
     sp_sine_table_new;

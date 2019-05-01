@@ -102,15 +102,15 @@ uint8_t* sp_status_name(status_t a) {
   };
   return (b);
 };
-void sp_block_free(sp_sample_t** a, sp_channel_count_t channel_count) {
-  while (channel_count) {
-    channel_count = (channel_count - 1);
-    free((a[channel_count]));
+void sp_block_free(sp_block_t a) {
+  sp_count_t i;
+  for (i = 0; (i < a.channels); i = (1 + i)) {
+    free(((a.samples)[i]));
   };
-  free(a);
+  free((a.samples));
 };
 /** return a newly allocated array for channels with data arrays for each channel */
-status_t sp_block_new(sp_channel_count_t channel_count, sp_count_t sample_count, sp_sample_t*** result) {
+status_t sp_block_new(sp_channel_count_t channel_count, sp_count_t sample_count, sp_block_t* out_block) {
   status_declare;
   memreg_init((channel_count + 1));
   sp_sample_t* channel;
@@ -123,7 +123,9 @@ status_t sp_block_new(sp_channel_count_t channel_count, sp_count_t sample_count,
     memreg_add(channel);
     a[channel_count] = channel;
   };
-  *result = a;
+  out_block->size = sample_count;
+  out_block->channels = channel_count;
+  out_block->samples = a;
 exit:
   if (status_is_failure) {
     memreg_free;
@@ -455,119 +457,62 @@ sp_count_t sp_cheap_phase_96(sp_count_t current, sp_count_t change) {
 /** accumulate an integer phase with change given as a float value.
   change must be a positive value and is rounded to the next larger integer */
 sp_count_t sp_cheap_phase_96_float(sp_count_t current, double change) { return ((sp_cheap_phase_96(current, (sp_cheap_ceiling_positive(change))))); };
-/** create sines that can modulate the frequency of others and sum into output.
-  amplitude and wavelength can be controlled by arrays separately for each operator and channel.
-  modulators can be modulated themselves in chains. state is allocated if zero and owned by the caller.
+/** contains the initial phase offsets per partial and channel
+  as a flat array */
+status_t sp_synth_state_new(sp_count_t channel_count, sp_synth_count_t config_len, sp_synth_partial_t* config, sp_count_t** out_state) {
+  status_declare;
+  sp_count_t i;
+  sp_count_t channel_i;
+  status_require((sph_helper_calloc((channel_count * config_len * sizeof(sp_count_t)), out_state)));
+  for (i = 0; (i < config_len); i = (1 + i)) {
+    for (channel_i = 0; (channel_i < channel_count); channel_i = (1 + channel_i)) {
+      (*out_state)[(channel_i + (channel_count * i))] = ((config[i]).phase_offset)[channel_i];
+    };
+  };
+exit:
+  return (status);
+};
+/** create sines that start and end at specific times and can optionally modulate the frequency of others.
+  sp-synth output is summed into out.
+  amplitude and wavelength can be controlled by arrays separately for each partial and channel.
+  modulators can be modulated themselves in chains. state has to be allocated by the caller with sp-synth-state-new.
   modulator amplitude is relative to carrier wavelength.
+  paths are relative to the start of partials.
   # requirements
   * modulators must come after carriers in config
   * config-len must not change between calls with the same state
   * all amplitude/wavelength arrays must be of sufficient size and available for all channels
-  * sp-initialise must have been called once before using sp-fm-synth
+  * sp-initialise must have been called once before using sp-synth
   # algorithm
   * read config from the end to the start
-  * write modulator output to temporary buffers that are indexed by modified operator id
+  * write modulator output to temporary buffers that are indexed by modified partial id
   * apply modulator output from the buffers and sum to output for final carriers
-  * each operator has integer phases that are reset in cycles and kept in state between calls */
-status_t sp_fm_synth(sp_sample_t** out, sp_count_t channel_count, sp_count_t start, sp_count_t duration, sp_fm_synth_count_t config_len, sp_fm_synth_operator_t* config, sp_count_t** state) {
+  * each partial has integer phases that are reset in cycles and kept in state between calls */
+status_t sp_synth(sp_block_t out, sp_count_t start, sp_count_t duration, sp_synth_count_t config_len, sp_synth_partial_t* config, sp_count_t* phases) {
   status_declare;
   sp_sample_t amp;
   sp_sample_t* carrier;
   sp_count_t channel_i;
-  sp_count_t i;
-  sp_sample_t modulated_wvl;
-  sp_sample_t* modulation_index[sp_fm_synth_operator_limit][sp_fm_synth_channel_limit];
-  sp_sample_t* modulation;
-  sp_fm_synth_count_t op_i;
-  sp_fm_synth_operator_t op;
-  sp_count_t* phases;
-  sp_count_t phs;
-  sp_count_t wvl;
-  /* modulation blocks (channel array + data. at least one is carrier and writes only to output) */
-  memreg_init(((config_len - 1) * channel_count));
-  memset(modulation_index, 0, (sizeof(modulation_index)));
-  /* ensure a state object that contains the initial phase offsets per operator and channel
-    as a flat array */
-  if (*state) {
-    phases = *state;
-  } else {
-    status_require((sph_helper_calloc((channel_count * config_len * sizeof(sp_count_t)), (&phases))));
-    for (i = 0; (i < config_len); i = (1 + i)) {
-      for (channel_i = 0; (channel_i < channel_count); channel_i = (1 + channel_i)) {
-        phases[(channel_i + (channel_count * i))] = ((config[i]).phase_offset)[channel_i];
-      };
-    };
-  };
-  op_i = config_len;
-  while (op_i) {
-    op_i = (op_i - 1);
-    op = config[op_i];
-    if (op.modifies) {
-      for (channel_i = 0; (channel_i < channel_count); channel_i = (1 + channel_i)) {
-        carrier = modulation_index[(op.modifies - 1)][channel_i];
-        if (!carrier) {
-          status_require((sph_helper_calloc((duration * sizeof(sp_sample_t)), (&carrier))));
-          memreg_add(carrier);
-        };
-        phs = phases[(channel_i + (channel_count * op_i))];
-        modulation = modulation_index[op_i][channel_i];
-        for (i = 0; (i < duration); i = (1 + i)) {
-          amp = (op.amplitude)[channel_i][(start + i)];
-          carrier[i] = (carrier[i] + (amp * sp_sine_96(phs)));
-          wvl = (op.wavelength)[channel_i][(start + i)];
-          modulated_wvl = (modulation ? (wvl + (wvl * modulation[i])) : wvl);
-          phs = sp_cheap_phase_96_float(phs, (48000 / modulated_wvl));
-        };
-        phases[(channel_i + (channel_count * op_i))] = phs;
-        modulation_index[(op.modifies - 1)][channel_i] = carrier;
-      };
-    } else {
-      for (channel_i = 0; (channel_i < channel_count); channel_i = (1 + channel_i)) {
-        phs = phases[(channel_i + (channel_count * op_i))];
-        modulation = modulation_index[op_i][channel_i];
-        for (i = 0; (i < duration); i = (1 + i)) {
-          amp = (op.amplitude)[channel_i][(start + i)];
-          wvl = (op.wavelength)[channel_i][(start + i)];
-          modulated_wvl = (modulation ? (wvl + (wvl * modulation[i])) : wvl);
-          phs = sp_cheap_phase_96_float(phs, (48000 / modulated_wvl));
-          out[channel_i][i] = (out[channel_i][i] + (amp * sp_sine_96(phs)));
-        };
-        phases[(channel_i + (channel_count * op_i))] = phs;
-      };
-    };
-  };
-  *state = phases;
-exit:
-  memreg_free;
-  return (status);
-};
-status_t sp_asynth(sp_sample_t** out, sp_count_t channel_count, sp_count_t start, sp_count_t duration, sp_asynth_count_t config_len, sp_asynth_partial_t* config, sp_count_t** state) {
-  status_declare;
-  sp_sample_t amp;
-  sp_count_t channel_i;
   sp_count_t end;
   sp_count_t i;
-  sp_count_t* phases;
+  sp_sample_t modulated_wvl;
+  sp_sample_t* modulation_index[sp_synth_partial_limit][sp_synth_channel_limit];
+  sp_sample_t* modulation;
   sp_count_t phs;
-  sp_count_t prt_i;
-  sp_asynth_partial_t prt;
-  sp_count_t prt_start;
-  sp_count_t prt_offset;
+  sp_count_t prt_duration;
+  sp_synth_count_t prt_i;
   sp_count_t prt_offset_right;
+  sp_count_t prt_offset;
+  sp_synth_partial_t prt;
+  sp_count_t prt_start;
   sp_count_t wvl;
-  /* ensure a state object like for sp-fm-synth */
-  if (*state) {
-    phases = *state;
-  } else {
-    status_require((sph_helper_calloc((channel_count * config_len * sizeof(sp_count_t)), (&phases))));
-    for (i = 0; (i < config_len); i = (1 + i)) {
-      for (channel_i = 0; (channel_i < channel_count); channel_i = (1 + channel_i)) {
-        phases[(channel_i + (channel_count * i))] = ((config[i]).phase_offset)[channel_i];
-      };
-    };
-  };
+  /* modulation blocks (channel array + data. at least one is carrier and writes only to output) */
+  memreg_init(((config_len - 1) * out.channels));
+  memset(modulation_index, 0, (sizeof(modulation_index)));
   end = (start + duration);
-  for (prt_i = 0; (prt_i < config_len); prt_i = (1 + prt_i)) {
+  prt_i = config_len;
+  while (prt_i) {
+    prt_i = (prt_i - 1);
     prt = config[prt_i];
     if (end < prt.start) {
       break;
@@ -578,18 +523,43 @@ status_t sp_asynth(sp_sample_t** out, sp_count_t channel_count, sp_count_t start
     prt_start = ((prt.start < start) ? (start - prt.start) : 0);
     prt_offset = ((prt.start > start) ? (prt.start - start) : 0);
     prt_offset_right = ((prt.end > end) ? 0 : (end - prt.end));
-    for (channel_i = 0; (channel_i < channel_count); channel_i = (1 + channel_i)) {
-      phs = phases[(channel_i + (channel_count * prt_i))];
-      for (i = 0; (i < (duration - prt_offset - prt_offset_right)); i = (1 + i)) {
-        amp = (prt.amplitude)[channel_i][(prt_start + i)];
-        wvl = (prt.wavelength)[channel_i][(prt_start + i)];
-        phs = sp_cheap_phase_96_float(phs, (48000 / wvl));
-        out[channel_i][(prt_offset + i)] = (out[channel_i][(prt_offset + i)] + (amp * sp_sine_96(phs)));
+    prt_duration = (duration - prt_offset - prt_offset_right);
+    if (prt.modifies) {
+      for (channel_i = 0; (channel_i < out.channels); channel_i = (1 + channel_i)) {
+        carrier = modulation_index[(prt.modifies - 1)][channel_i];
+        if (!carrier) {
+          status_require((sph_helper_calloc((duration * sizeof(sp_sample_t)), (&carrier))));
+          memreg_add(carrier);
+        };
+        phs = phases[(channel_i + (out.channels * prt_i))];
+        modulation = modulation_index[prt_i][channel_i];
+        for (i = 0; (i < prt_duration); i = (1 + i)) {
+          amp = (prt.amplitude)[channel_i][(prt_start + i)];
+          carrier[(prt_offset + i)] = (carrier[(prt_offset + i)] + (amp * sp_sine_96(phs)));
+          wvl = (prt.wavelength)[channel_i][(prt_start + i)];
+          modulated_wvl = (modulation ? (wvl + (wvl * modulation[(prt_offset + i)])) : wvl);
+          phs = sp_cheap_phase_96_float(phs, (48000 / modulated_wvl));
+        };
+        phases[(channel_i + (out.channels * prt_i))] = phs;
+        modulation_index[(prt.modifies - 1)][channel_i] = carrier;
       };
-      phases[(channel_i + (channel_count * prt_i))] = phs;
+    } else {
+      for (channel_i = 0; (channel_i < out.channels); channel_i = (1 + channel_i)) {
+        phs = phases[(channel_i + (out.channels * prt_i))];
+        modulation = modulation_index[prt_i][channel_i];
+        for (i = 0; (i < prt_duration); i = (1 + i)) {
+          amp = (prt.amplitude)[channel_i][(prt_start + i)];
+          wvl = (prt.wavelength)[channel_i][(prt_start + i)];
+          modulated_wvl = (modulation ? (wvl + (wvl * modulation[(prt_offset + i)])) : wvl);
+          phs = sp_cheap_phase_96_float(phs, (48000 / modulated_wvl));
+          (out.samples)[channel_i][(prt_offset + i)] = ((out.samples)[channel_i][(prt_offset + i)] + (amp * sp_sine_96(phs)));
+        };
+        phases[(channel_i + (out.channels * prt_i))] = phs;
+      };
     };
   };
 exit:
+  memreg_free;
   return (status);
 };
 #include "../main/windowed-sinc.c"
@@ -626,4 +596,32 @@ void sp_seq(sp_count_t time, sp_count_t offset, sp_count_t size, sp_block_t outp
     };
     i_array_forward(events);
   };
+};
+void sp_block_at_offset(sp_block_t* a, sp_count_t offset) {
+  sp_count_t i;
+  for (i = 0; (i < a->channels); i = (1 + i)) {
+    (a->samples)[i] = (offset + (a->samples)[i]);
+  };
+};
+void sp_synth_event_f(sp_count_t time, sp_count_t offset, sp_count_t size, sp_block_t output, sp_event_t* event) {
+  sp_synth_event_state_t* state;
+  state = event->state;
+  if (offset) {
+    sp_block_at_offset((&output), offset);
+  };
+  sp_synth(output, time, size, (state->config_len), (state->config), (state->state));
+};
+status_t sp_synth_event(sp_count_t start, sp_count_t end, sp_count_t channel_count, sp_count_t config_len, sp_synth_partial_t* config, sp_event_t* out_event) {
+  status_declare;
+  sp_event_t e;
+  sp_synth_event_state_t* state;
+  status_require((sph_helper_malloc((channel_count * sizeof(sp_synth_event_state_t)), (&state))));
+  status_require((sp_synth_state_new(channel_count, config_len, config, (&(state->state)))));
+  e.start = start;
+  e.end = end;
+  e.f = sp_synth_event_f;
+  e.state = state;
+  *out_event = e;
+exit:
+  return (status);
 };

@@ -12,13 +12,10 @@
 #define sp_sample_t double
 #define sp_sf_read sf_readf_double
 #define sp_sf_write sf_writef_double
-#define sp_fm_synth_count_t uint8_t
-#define sp_fm_synth_sine sp_sine_96
-#define sp_fm_synth_channel_limit 16
-#define sp_fm_synth_operator_limit 64
-#define sp_asynth_count_t uint16_t
-#define sp_asynth_sine sp_sine_96
-#define sp_asynth_channel_limit 16
+#define sp_synth_count_t uint16_t
+#define sp_synth_sine sp_sine_96
+#define sp_synth_channel_limit 16
+#define sp_synth_partial_limit 64
 #define sp_config_is_set 1
 #endif
 #define boolean uint8_t
@@ -41,6 +38,9 @@
 #define sp_cheap_round_positive(a) ((sp_count_t)((0.5 + a)))
 #define sp_cheap_floor_positive(a) ((sp_count_t)(a))
 #define sp_cheap_ceiling_positive(a) (((sp_count_t)(a)) + (((sp_count_t)(a)) < a))
+#define sp_block_set_null(a) \
+  a.channels = 0; \
+  a.samples = 0
 #include <stdio.h>
 /** writes values with current routine name and line info to standard output.
     example: (debug-log "%d" 1)
@@ -182,6 +182,11 @@ enum { sp_status_id_file_channel_mismatch,
   sp_status_id_file_type,
   sp_status_id_undefined };
 typedef struct {
+  sp_channel_count_t channels;
+  sp_count_t size;
+  sp_sample_t** samples;
+} sp_block_t;
+typedef struct {
   uint8_t flags;
   sp_sample_rate_t sample_rate;
   sp_channel_count_t channel_count;
@@ -199,25 +204,20 @@ typedef struct {
   sp_count_t ir_len;
 } sp_convolution_filter_state_t;
 typedef struct {
-  sp_fm_synth_count_t modifies;
-  sp_sample_t* amplitude[sp_fm_synth_channel_limit];
-  sp_count_t* wavelength[sp_fm_synth_channel_limit];
-  sp_count_t phase_offset[sp_fm_synth_channel_limit];
-} sp_fm_synth_operator_t;
-typedef struct {
   sp_count_t start;
   sp_count_t end;
-  sp_sample_t* amplitude[sp_asynth_channel_limit];
-  sp_count_t* wavelength[sp_asynth_channel_limit];
-  sp_count_t phase_offset[sp_asynth_channel_limit];
-} sp_asynth_partial_t;
+  sp_synth_count_t modifies;
+  sp_sample_t* amplitude[sp_synth_channel_limit];
+  sp_count_t* wavelength[sp_synth_channel_limit];
+  sp_count_t phase_offset[sp_synth_channel_limit];
+} sp_synth_partial_t;
 status_t sp_file_read(sp_file_t* file, sp_count_t sample_count, sp_sample_t** result_block, sp_count_t* result_sample_count);
 status_t sp_file_write(sp_file_t* file, sp_sample_t** block, sp_count_t sample_count, sp_count_t* result_sample_count);
 status_t sp_file_position(sp_file_t* file, sp_count_t* result_position);
 status_t sp_file_position_set(sp_file_t* file, sp_count_t sample_offset);
 status_t sp_file_open(uint8_t* path, int mode, sp_channel_count_t channel_count, sp_sample_rate_t sample_rate, sp_file_t* result_file);
 status_t sp_file_close(sp_file_t* a);
-status_t sp_block_new(sp_channel_count_t channel_count, sp_count_t sample_count, sp_sample_t*** result);
+status_t sp_block_new(sp_channel_count_t channel_count, sp_count_t sample_count, sp_block_t* out_block);
 uint8_t* sp_status_description(status_t a);
 uint8_t* sp_status_name(status_t a);
 sp_sample_t sp_sin_lq(sp_float_t a);
@@ -241,7 +241,7 @@ status_t sp_ffti(sp_count_t input_len, double* input_or_output_real, double* inp
 status_t sp_moving_average(sp_sample_t* in, sp_sample_t* in_end, sp_sample_t* in_window, sp_sample_t* in_window_end, sp_sample_t* prev, sp_sample_t* prev_end, sp_sample_t* next, sp_sample_t* next_end, sp_count_t radius, sp_sample_t* out);
 void sp_convolve_one(sp_sample_t* a, sp_count_t a_len, sp_sample_t* b, sp_count_t b_len, sp_sample_t* result_samples);
 void sp_convolve(sp_sample_t* a, sp_count_t a_len, sp_sample_t* b, sp_count_t b_len, sp_count_t result_carryover_len, sp_sample_t* result_carryover, sp_sample_t* result_samples);
-void sp_block_free(sp_sample_t** a, sp_channel_count_t channel_count);
+void sp_block_free(sp_block_t a);
 status_t sp_windowed_sinc_lp_hp_ir(sp_float_t cutoff, sp_float_t transition, boolean is_high_pass, sp_sample_t** out_ir, sp_count_t* out_len);
 status_t sp_null_ir(sp_sample_t** out_ir, sp_count_t* out_len);
 status_t sp_passthrough_ir(sp_sample_t** out_ir, sp_count_t* out_len);
@@ -250,8 +250,8 @@ sp_sample_t* sp_sine_96_table;
 status_t sp_initialise();
 sp_count_t sp_cheap_phase_96(sp_count_t current, sp_count_t change);
 sp_count_t sp_cheap_phase_96_float(sp_count_t current, double change);
-status_t sp_fm_synth(sp_sample_t** out, sp_count_t channels, sp_count_t start, sp_count_t duration, sp_fm_synth_count_t config_len, sp_fm_synth_operator_t* config, sp_count_t** state);
-status_t sp_asynth(sp_sample_t** out, sp_count_t channel_count, sp_count_t start, sp_count_t duration, sp_asynth_count_t config_len, sp_asynth_partial_t* config, sp_count_t** state);
+status_t sp_synth(sp_block_t out, sp_count_t start, sp_count_t duration, sp_synth_count_t config_len, sp_synth_partial_t* config, sp_count_t* phases);
+status_t sp_synth_state_new(sp_count_t channel_count, sp_synth_count_t config_len, sp_synth_partial_t* config, sp_count_t** out_state);
 void sp_state_variable_filter_lp(sp_sample_t* out, sp_sample_t* in, sp_float_t in_count, sp_float_t cutoff, sp_count_t q_factor, sp_sample_t* state);
 void sp_state_variable_filter_hp(sp_sample_t* out, sp_sample_t* in, sp_float_t in_count, sp_float_t cutoff, sp_count_t q_factor, sp_sample_t* state);
 void sp_state_variable_filter_bp(sp_sample_t* out, sp_sample_t* in, sp_float_t in_count, sp_float_t cutoff, sp_count_t q_factor, sp_sample_t* state);
@@ -259,11 +259,6 @@ void sp_state_variable_filter_br(sp_sample_t* out, sp_sample_t* in, sp_float_t i
 void sp_state_variable_filter_peak(sp_sample_t* out, sp_sample_t* in, sp_float_t in_count, sp_float_t cutoff, sp_count_t q_factor, sp_sample_t* state);
 void sp_state_variable_filter_all(sp_sample_t* out, sp_sample_t* in, sp_float_t in_count, sp_float_t cutoff, sp_count_t q_factor, sp_sample_t* state);
 #define sp_events_new i_array_allocate_sp_events_t
-typedef struct {
-  sp_channel_count_t channels;
-  sp_count_t size;
-  sp_sample_t* samples;
-} sp_block_t;
 struct sp_event_t;
 typedef struct sp_event_t {
   void* state;
@@ -272,6 +267,11 @@ typedef struct sp_event_t {
   void (*f)(sp_count_t, sp_count_t, sp_count_t, sp_block_t, struct sp_event_t*);
 } sp_event_t;
 typedef void (*sp_event_f_t)(sp_count_t, sp_count_t, sp_count_t, sp_block_t, sp_event_t*);
+typedef struct {
+  sp_synth_count_t config_len;
+  sp_synth_partial_t config[sp_synth_partial_limit];
+  sp_count_t* state;
+} sp_synth_event_state_t;
 i_array_declare_type(sp_events_t, sp_event_t);
 void sp_seq_events_prepare(sp_events_t a);
 void sp_seq(sp_count_t time, sp_count_t offset, sp_count_t size, sp_block_t output, sp_events_t events);

@@ -205,8 +205,8 @@
   (declare
     channel sp-count-t
     channel-count sp-channel-count-t
-    block sp-sample-t**
-    block-2 sp-sample-t**
+    block sp-block-t
+    block-2 sp-block-t
     len sp-count-t
     file sp-file-t
     position sp-count-t
@@ -214,7 +214,6 @@
     result-sample-count sp-count-t
     sample-rate sp-sample-rate-t
     unequal int8-t)
-  (memreg-init 2)
   (if (file-exists test-file-path) (unlink test-file-path))
   (set
     channel-count 2
@@ -222,10 +221,10 @@
     sample-count 5
     position 0
     channel channel-count)
+  (sp-block-set-null block)
+  (sp-block-set-null block-2)
   (status-require (sp-block-new channel-count sample-count &block))
-  (memreg-add block)
   (status-require (sp-block-new channel-count sample-count &block-2))
-  (memreg-add block-2)
   (while channel
     (set
       channel (- channel 1)
@@ -233,18 +232,18 @@
     (while len
       (set
         len (- len 1)
-        (array-get (array-get block channel) len) len)))
+        (array-get (array-get block.samples channel) len) len)))
   (goto exit)
   (sc-comment "test create")
   (status-require
     (sp-file-open test-file-path sp-file-mode-read-write channel-count sample-rate &file))
   (printf "  create\n")
   (status-require (sp-file-position &file &position))
-  (status-require (sp-file-write &file block sample-count &result-sample-count))
+  (status-require (sp-file-write &file block.samples sample-count &result-sample-count))
   (status-require (sp-file-position &file &position))
   (test-helper-assert "sp-file-position file after write" (= sample-count position))
   (status-require (sp-file-position-set &file 0))
-  (status-require (sp-file-read &file sample-count block-2 &result-sample-count))
+  (status-require (sp-file-read &file sample-count block-2.samples &result-sample-count))
   (sc-comment "compare read result with output data")
   (set
     len channel-count
@@ -255,7 +254,8 @@
       unequal
       (not
         (sp-sample-array-nearly-equal
-          (array-get block len) sample-count (array-get block-2 len) sample-count error-margin))))
+          (array-get block.samples len)
+          sample-count (array-get block-2.samples len) sample-count error-margin))))
   (test-helper-assert "sp-file-read new file result" (not unequal))
   (status-require (sp-file-close &file))
   (printf "  write\n")
@@ -264,7 +264,7 @@
   (status-require (sp-file-position &file &position))
   (test-helper-assert "sp-file-position existing file" (= sample-count position))
   (status-require (sp-file-position-set &file 0))
-  (sp-file-read &file sample-count block-2 &result-sample-count)
+  (sp-file-read &file sample-count block-2.samples &result-sample-count)
   (sc-comment "compare read result with output data")
   (set
     unequal 0
@@ -275,12 +275,14 @@
       unequal
       (not
         (sp-sample-array-nearly-equal
-          (array-get block len) sample-count (array-get block-2 len) sample-count error-margin))))
+          (array-get block.samples len)
+          sample-count (array-get block-2.samples len) sample-count error-margin))))
   (test-helper-assert "sp-file-read existing result" (not unequal))
   (status-require (sp-file-close &file))
   (printf "  open\n")
   (label exit
-    memreg-free
+    (sp-block-free block)
+    (sp-block-free block-2)
     (return status)))
 
 (define (test-fft) status-t
@@ -295,19 +297,19 @@
   (label exit
     (return status)))
 
-(define (test-fm-synth) status-t
+(define (test-synth) status-t
   status-declare
   (declare
     state sp-count-t*
     config-len sp-count-t
-    out1 sp-sample-t**
-    out2 sp-sample-t**
+    out1 sp-block-t
+    out2 sp-block-t
     channels sp-channel-count-t
     duration sp-count-t
-    op1 sp-fm-synth-operator-t
-    op2 sp-fm-synth-operator-t
-    op3 sp-fm-synth-operator-t
-    config (array sp-fm-synth-operator-t 3)
+    prt1 sp-synth-partial-t
+    prt2 sp-synth-partial-t
+    prt3 sp-synth-partial-t
+    config (array sp-synth-partial-t 3)
     wvl (array sp-count-t 4 2 2 2 2)
     amp (array sp-sample-t 4 0.1 0.2 0.3 0.4))
   (set
@@ -315,41 +317,67 @@
     duration 4
     channels 2
     config-len 3
-    op1.modifies 0
-    op2.modifies 1
-    op3.modifies 0
-    (array-get op1.amplitude 0) amp
-    (array-get op1.amplitude 1) amp
-    (array-get op1.wavelength 0) wvl
-    (array-get op1.wavelength 1) wvl
-    (array-get op1.phase-offset 0) 1
-    (array-get op1.phase-offset 2) 2
-    (array-get op2.amplitude 0) amp
-    (array-get op2.amplitude 1) amp
-    (array-get op2.wavelength 0) wvl
-    (array-get op2.wavelength 1) wvl
-    (array-get op2.phase-offset 0) 1
-    (array-get op2.phase-offset 2) 2
-    (array-get op3.amplitude 0) amp
-    (array-get op3.amplitude 1) amp
-    (array-get op3.wavelength 0) wvl
-    (array-get op3.wavelength 1) wvl
-    (array-get op3.phase-offset 0) 1
-    (array-get op3.phase-offset 2) 2
-    (array-get config 0) op1
-    (array-get config 1) op2
-    (array-get config 2) op3)
+    prt1.modifies 0
+    prt2.modifies 1
+    prt3.modifies 0
+    prt1.start 0
+    prt2.start prt1.start
+    prt3.start prt1.start
+    prt1.end duration
+    prt2.end prt1.end
+    prt3.end prt1.end
+    (array-get prt1.amplitude 0) amp
+    (array-get prt1.amplitude 1) amp
+    (array-get prt1.wavelength 0) wvl
+    (array-get prt1.wavelength 1) wvl
+    (array-get prt1.phase-offset 0) 1
+    (array-get prt1.phase-offset 2) 2
+    (array-get prt2.amplitude 0) amp
+    (array-get prt2.amplitude 1) amp
+    (array-get prt2.wavelength 0) wvl
+    (array-get prt2.wavelength 1) wvl
+    (array-get prt2.phase-offset 0) 1
+    (array-get prt2.phase-offset 2) 2
+    (array-get prt3.amplitude 0) amp
+    (array-get prt3.amplitude 1) amp
+    (array-get prt3.wavelength 0) wvl
+    (array-get prt3.wavelength 1) wvl
+    (array-get prt3.phase-offset 0) 1
+    (array-get prt3.phase-offset 2) 2
+    (array-get config 0) prt1
+    (array-get config 1) prt2
+    (array-get config 2) prt3)
   (status-require (sp-block-new channels duration &out1))
   (status-require (sp-block-new channels duration &out2))
-  (status-require (sp-fm-synth out1 channels 0 duration config-len config &state))
-  (status-require (sp-fm-synth out2 channels 0 duration config-len config &state))
+  (status-require (sp-synth-state-new channels config-len config &state))
+  (status-require (sp-synth out1 0 duration config-len config state))
+  (status-require (sp-synth out2 0 duration config-len config state))
+  (label exit
+    (return status)))
+
+#;(define (test-sp-seq) status-t
+  status-declare
+  (declare
+    events sp-events-t
+    output sp-block-t
+    e sp-event-t)
+  (status-id-require (sp-events-new 10 &events))
+  (set
+    e.start 10
+    e.end 50
+    e.f event-f)
+  (i-array-add events e)
+  (sp-seq-events-prepare events)
+  (sp-seq 0 0 100 output events)
+  ;(void sp-count-t sp-count-t sp-count-t sp-block-t sp-events-t)
   (label exit
     (return status)))
 
 (define (main) int
   status-declare
   (sp-initialise)
-  (test-helper-test-one test-fm-synth)
+  ;(test-helper-test-one test-sp-seq)
+  (test-helper-test-one test-synth)
   (test-helper-test-one test-moving-average)
   (test-helper-test-one test-fft)
   (test-helper-test-one test-spectral-inversion-ir)
