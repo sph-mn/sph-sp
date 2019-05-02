@@ -34,7 +34,9 @@ exports {
     sp_synth_event;
     sp_plot_samples;
     sp_plot_samples_to_file;
+    sp_plot_samples_file;
     sp_plot_spectrum;
+    sp_plot_spectrum_file;
     sp_plot_spectrum_to_file;
     sp_path_new;
     sp_path_new_get;

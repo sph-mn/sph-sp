@@ -257,8 +257,8 @@ status_t test_fft() {
   sp_sample_t a_imag[6] = { 0, 0, 0, 0, 0, 0 };
   sp_count_t a_len;
   a_len = 6;
-  status_require((sp_fft(a_len, a_real, a_imag)));
-  status_require((sp_ffti(a_len, a_real, a_imag)));
+  status_id_require((sp_fft(a_len, a_real, a_imag)));
+  status_id_require((sp_ffti(a_len, a_real, a_imag)));
 exit:
   return (status);
 };
@@ -357,17 +357,17 @@ status_t test_sp_seq() {
 exit:
   return (status);
 };
+/** better test separately as it opens gnuplot windows */
 status_t test_sp_plot() {
   status_declare;
-  sp_sample_t a[4] = { 0.1, 0.2, 0.3, 0.4 };
-  sp_plot_samples(a);
+  sp_sample_t a[9] = { 0.1, -0.2, 0.1, -0.4, 0.3, -0.4, 0.2, -0.2, 0.1 };
+  sp_plot_samples(a, 9);
+  sp_plot_spectrum(a, 9);
 exit:
   return (status);
 };
 int main() {
   status_declare;
-  test_sp_plot();
-  goto exit;
   sp_initialise();
   test_helper_test_one(test_sp_seq);
   test_helper_test_one(test_synth);

@@ -152,8 +152,8 @@
   (sp-window-blackman a width) (sp-float-t sp-float-t sp-count-t)
   (sp-spectral-inversion-ir a a-len) (void sp-sample-t* sp-count-t)
   (sp-spectral-reversal-ir a a-len) (void sp-sample-t* sp-count-t)
-  (sp-fft input-len input/output-real input/output-imag) (status-t sp-count-t double* double*)
-  (sp-ffti input-len input/output-real input/output-imag) (status-t sp-count-t double* double*)
+  (sp-fft input-len input/output-real input/output-imag) (status-id-t sp-count-t double* double*)
+  (sp-ffti input-len input/output-real input/output-imag) (status-id-t sp-count-t double* double*)
   (sp-moving-average in in-end in-window in-window-end prev prev-end next next-end radius out)
   (status-t
     sp-sample-t*
@@ -221,4 +221,9 @@
   (void sp-count-t sp-count-t sp-count-t sp-block-t sp-events-t)
   (sp-synth-event start end channel-count config-len config out-event)
   (status-t sp-count-t sp-count-t sp-count-t sp-count-t sp-synth-partial-t* sp-event-t*)
-  (sp-plot-samples a) (void sp-sample-t*))
+  (sp-plot-samples a a-size) (void sp-sample-t* sp-count-t)
+  (sp-plot-samples->file a a-size path) (void sp-sample-t* sp-count-t uint8-t*)
+  (sp-plot-samples-file path use-steps) (void uint8-t* uint8-t)
+  (sp-plot-spectrum->file a a-size path) (void sp-sample-t* sp-count-t uint8-t*)
+  (sp-plot-spectrum-file path) (void uint8-t*)
+  (sp-plot-spectrum a a-size) (void sp-sample-t* sp-count-t))

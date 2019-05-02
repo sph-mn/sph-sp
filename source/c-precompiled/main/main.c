@@ -138,22 +138,12 @@ sp_sample_t sp_sin_lq(sp_float_t a) {
 /** the normalised sinc function */
 sp_float_t sp_sinc(sp_float_t a) { return (((0 == a) ? 1 : (sin((M_PI * a)) / (M_PI * a)))); };
 /** all arrays should be input-len and are managed by the caller */
-status_t sp_fft(sp_count_t input_len, double* input_or_output_real, double* input_or_output_imag) {
-  sp_status_declare;
-  status_id_require((!Fft_transform(input_or_output_real, input_or_output_imag, input_len)));
-exit:
-  return (status);
-};
+status_id_t sp_fft(sp_count_t input_len, double* input_or_output_real, double* input_or_output_imag) { return ((!Fft_transform(input_or_output_real, input_or_output_imag, input_len))); };
 /** [[real, imaginary], ...]:complex-numbers -> real-numbers
   input-length > 0
   output-length = input-length
   output is allocated and owned by the caller */
-status_t sp_ffti(sp_count_t input_len, double* input_or_output_real, double* input_or_output_imag) {
-  sp_status_declare;
-  status_id_require((!(1 == Fft_inverseTransform(input_or_output_real, input_or_output_imag, input_len))));
-exit:
-  return (status);
-};
+status_id_t sp_ffti(sp_count_t input_len, double* input_or_output_real, double* input_or_output_imag) { return ((!(1 == Fft_inverseTransform(input_or_output_real, input_or_output_imag, input_len)))); };
 #define max(a, b) ((a > b) ? a : b)
 #define min(a, b) ((a < b) ? a : b)
 /** apply a centered moving average filter to samples between in-window and in-window-end inclusively and write to out.
@@ -627,6 +617,82 @@ status_t sp_synth_event(sp_count_t start, sp_count_t end, sp_count_t channel_cou
 exit:
   return (status);
 };
+uint32_t sp_plot_temp_file_index = 0;
 #define sp_plot_temp_path "/tmp/sp-plot"
-#define sp_plot_command "echo gnuplot --persist -e \"set key off; set size ratio 0.5; plot " sp_plot_temp_path " with lines lc rgb blue\""
-void sp_plot_samples(sp_sample_t* a) { system(sp_plot_command); };
+#define sp_plot_temp_file_index_maxlength 10
+#define sp_plot_command_pattern_lines "gnuplot --persist -e 'set key off; set size ratio 0.5; plot \"%s\" with lines lc rgb \"blue\"'"
+#define sp_plot_command_pattern_steps "gnuplot --persist -e 'set key off; set size ratio 0.5; plot \"%s\" with histeps lc rgb \"blue\"'"
+void sp_plot_samples_to_file(sp_sample_t* a, sp_count_t a_size, uint8_t* path) {
+  FILE* file;
+  sp_count_t i;
+  file = fopen(path, "w");
+  for (i = 0; (i < a_size); i = (1 + i)) {
+    fprintf(file, ("%.3f\n"), (a[i]));
+  };
+  fclose(file);
+};
+void sp_plot_samples_file(uint8_t* path, uint8_t use_steps) {
+  uint8_t* command;
+  uint8_t* command_pattern;
+  size_t command_size;
+  command_pattern = (use_steps ? sp_plot_command_pattern_steps : sp_plot_command_pattern_lines);
+  command_size = (strlen(path) + strlen(command_pattern));
+  command = malloc(command_size);
+  if (!command) {
+    return;
+  };
+  snprintf(command, command_size, command_pattern, path);
+  system(command);
+  free(command);
+};
+void sp_plot_samples(sp_sample_t* a, sp_count_t a_size) {
+  uint8_t path_size = (1 + sp_plot_temp_file_index_maxlength + strlen(sp_plot_temp_path));
+  uint8_t* path = calloc(path_size, 1);
+  if (!path) {
+    return;
+  };
+  snprintf(path, path_size, "%s-%lu", sp_plot_temp_path, sp_plot_temp_file_index);
+  sp_plot_temp_file_index = (1 + sp_plot_temp_file_index);
+  sp_plot_samples_to_file(a, a_size, path);
+  sp_plot_samples_file(path, 0);
+  free(path);
+};
+/** take the fft for given samples, convert complex values to magnitudes and write plot data to file */
+void sp_plot_spectrum_to_file(sp_sample_t* a, sp_count_t a_size, uint8_t* path) {
+  FILE* file;
+  sp_count_t i;
+  double* imag;
+  double* real;
+  imag = calloc(a_size, (sizeof(sp_sample_t)));
+  if (!imag) {
+    return;
+  };
+  real = malloc((sizeof(sp_sample_t) * a_size));
+  if (!real) {
+    return;
+  };
+  memcpy(real, a, (sizeof(sp_sample_t) * a_size));
+  if (sp_fft(a_size, real, imag)) {
+    return;
+  };
+  file = fopen(path, "w");
+  for (i = 0; (i < a_size); i = (1 + i)) {
+    fprintf(file, ("%.3f\n"), (2 * (sqrt(((real[i] * real[i]) + (imag[i] * imag[i]))) / a_size)));
+  };
+  fclose(file);
+  free(imag);
+  free(real);
+};
+void sp_plot_spectrum_file(uint8_t* path) { sp_plot_samples_file(path, 1); };
+void sp_plot_spectrum(sp_sample_t* a, sp_count_t a_size) {
+  uint8_t path_size = (1 + sp_plot_temp_file_index_maxlength + strlen(sp_plot_temp_path));
+  uint8_t* path = calloc(path_size, 1);
+  if (!path) {
+    return;
+  };
+  snprintf(path, path_size, "%s-%lu", sp_plot_temp_path, sp_plot_temp_file_index);
+  sp_plot_temp_file_index = (1 + sp_plot_temp_file_index);
+  sp_plot_spectrum_to_file(a, a_size, path);
+  sp_plot_spectrum_file(path);
+  free(path);
+};

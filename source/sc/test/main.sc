@@ -292,8 +292,8 @@
     a-imag (array sp-sample-t 6 0 0 0 0 0 0)
     a-len sp-count-t)
   (set a-len 6)
-  (status-require (sp-fft a-len a-real a-imag))
-  (status-require (sp-ffti a-len a-real a-imag))
+  (status-id-require (sp-fft a-len a-real a-imag))
+  (status-id-require (sp-ffti a-len a-real a-imag))
   (label exit
     (return status)))
 
@@ -398,16 +398,16 @@
     (return status)))
 
 (define (test-sp-plot) status-t
+  "better test separately as it opens gnuplot windows"
   status-declare
-  (declare a (array sp-sample-t 4 0.1 0.2 0.3 0.4))
-  (sp-plot-samples a)
+  (declare a (array sp-sample-t 9 0.1 -0.2 0.1 -0.4 0.3 -0.4 0.2 -0.2 0.1))
+  (sp-plot-samples a 9)
+  (sp-plot-spectrum a 9)
   (label exit
     (return status)))
 
 (define (main) int
   status-declare
-  (test-sp-plot)
-  (goto exit)
   (sp-initialise)
   (test-helper-test-one test-sp-seq)
   (test-helper-test-one test-synth)
