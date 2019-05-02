@@ -345,15 +345,13 @@ status_t test_sp_seq() {
   status_id_require((i_array_allocate_sp_events_t(2, (&events))));
   status_require((sp_synth_event(0, sp_seq_half_duration, 1, 1, config, (&e))));
   i_array_add(events, e);
-  status_require((sp_synth_event(sp_seq_half_duration, sp_seq_duration, 1, 1, config, (&e))));
+  status_require((sp_synth_event((2 + sp_seq_half_duration), (sp_seq_duration - 2), 1, 1, config, (&e))));
   i_array_add(events, e);
   sp_seq_events_prepare(events);
   status_require((sp_block_new(1, sp_seq_duration, (&out))));
   sp_seq(0, 0, sp_seq_half_duration, out, events);
   sp_seq(sp_seq_half_duration, sp_seq_half_duration, sp_seq_half_duration, out, events);
-  for (i = 0; (i < sp_seq_duration); i = (1 + i)) {
-    printf("%f ", ((*(out.samples))[i]));
-  };
+  sp_plot_samples((*(out.samples)), (out.size));
 exit:
   return (status);
 };
@@ -369,7 +367,6 @@ exit:
 int main() {
   status_declare;
   sp_initialise();
-  test_helper_test_one(test_sp_seq);
   test_helper_test_one(test_synth);
   test_helper_test_one(test_moving_average);
   test_helper_test_one(test_fft);

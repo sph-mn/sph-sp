@@ -1,4 +1,5 @@
-sp-default-random-state  MTRand
+sp-default-random-state
+MTRand
 
 (define (sp-seq-parallel time offset size output events)
   (void sp-count-t sp-count-t sp-count-t sp-block-t sp-events-t)
@@ -77,78 +78,16 @@ sp-default-random-state  MTRand
   (genRand &random-state))
 
 (define (sp-noise-uniform random-state) (sp-sample-t MTRand) (- (* 2 (genRand &random-state)) 1))
-
-(define (sp-fftr a) "samples -> #(complex ...)"
-  (let*
-    ( (b (sp-fft (list->vector (map (l (a) (make-rectangular a 0)) (sp-samples->list a)))))
-      (c-len (+ 1 (/ (vector-length b) 2))) (c (make-vector c-len 0)))
-    (let
-      loop
-      ((i 0))
-      (if (< i c-len)
-        (begin
-          (vector-set! c i (vector-ref b i))
-          (loop (+ 1 i)))))
-    c))
-
-(define (sp-fftri a) "#(complex ...) -> samples"
-  (sp-samples-from-list (map real-part (vector->list (sp-ffti a)))))
-
-(define (sp-spectrum a) "samples -> #(real ...)"
-  (vector-map (l (b) (* 2 (/ (magnitude b) (sp-samples-length a)))) (sp-fftr a)))
-
-(define*
-  (sp-plot-samples-display-file file-path #:key (type (q lines)) (color "blue"))
-  "string #:type symbol:lines/points #:color string -> unspecified
-     type and color correspond to gnuplot options"
-  (system*
-    "gnuplot"
-    "--persist"
-    "-e"
-    (string-append
-      "set key off; set size ratio 0.5; plot \""
-      file-path
-      "\""
-      " with "
-      (if (string? type) type
-        (case type ((points) "points pointtype 5 ps 0.3")
-          (else "lines")))
-      " lc rgb \"" color "\"")))
-
-(define (sp-plot-samples->file a path)
-  (call-with-output-file path (l (file) (each (l (a) (display-line a file)) (sp-samples->list a)))))
-
-(define (sp-plot-samples a . display-args)
-  "samples [#:type #:color] -> unspecified
-     for display-args see sp-plot-samples-display-file"
-  (let
-    (path (tmpnam))
-    (sp-plot-samples->file a path) (apply sp-plot-samples-display-file path display-args)))
-
-(define (sp-plot-spectrum-display-file path) (sp-plot-samples-display-file path #:type "histeps"))
-
-(define (sp-plot-spectrum->file a path)
-  "apply sp-spectrum on \"a\" and write the result to file at path"
-  (call-with-output-file
-    path (l (file) (vector-each (l (a) (display-line a file)) (sp-spectrum a)))))
-
-(define (sp-plot-spectrum a)
-  (let (path (tmpnam)) (sp-plot-spectrum->file a path) (sp-plot-spectrum-display-file path)))
-
-; seq-parallel
-; plot-samples
-; plot-spectrum
-; how to update event state
-; how to update event list
-; -- next
-; noise-event
-; cheap-noise-event
-; event-group
-; cached-event
-; fm-synth-event
-; asynth-event
-; events->block
+;
+; # todo
+; sp-noise
 ; block->file
 ; blocks->file
-; sp-path-new*
+; cached-event
+; cheap-noise-event
+; event-group
+; events->block
+; noise-event
+; seq-parallel
 ; sp-event-with-resolution
+; sp-path-new*

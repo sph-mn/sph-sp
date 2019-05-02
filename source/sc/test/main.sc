@@ -386,14 +386,15 @@
   (status-id-require (i-array-allocate-sp-events-t 2 &events))
   (status-require (sp-synth-event 0 sp-seq-half-duration 1 1 config &e))
   (i-array-add events e)
-  (status-require (sp-synth-event sp-seq-half-duration sp-seq-duration 1 1 config &e))
+  (status-require (sp-synth-event (+ 2 sp-seq-half-duration) (- sp-seq-duration 2) 1 1 config &e))
   (i-array-add events e)
   (sp-seq-events-prepare events)
   (status-require (sp-block-new 1 sp-seq-duration &out))
   (sp-seq 0 0 sp-seq-half-duration out events)
   (sp-seq sp-seq-half-duration sp-seq-half-duration sp-seq-half-duration out events)
-  (for ((set i 0) (< i sp-seq-duration) (set i (+ 1 i)))
+  #;(for ((set i 0) (< i sp-seq-duration) (set i (+ 1 i)))
     (printf "%f " (array-get (array-get *out.samples i))))
+  (sp-plot-samples *out.samples out.size)
   (label exit
     (return status)))
 
@@ -409,7 +410,8 @@
 (define (main) int
   status-declare
   (sp-initialise)
-  (test-helper-test-one test-sp-seq)
+  ;(test-helper-test-one test-sp-seq)
+  ;(goto exit)
   (test-helper-test-one test-synth)
   (test-helper-test-one test-moving-average)
   (test-helper-test-one test-fft)
