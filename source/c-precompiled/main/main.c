@@ -1,8 +1,6 @@
 #include <stdio.h>
 #include <fcntl.h>
 #include <sndfile.h>
-#include <foreign/mtwister/mtwister.h>
-#include <foreign/mtwister/mtwister.c>
 #include <foreign/nayuki-fft/fft.c>
 #include "../main/sph-sp.h"
 #include "../foreign/sph/float.c"
@@ -434,14 +432,14 @@ exit:
 status_t sp_initialise() { return ((sp_sine_table_new((&sp_sine_96_table), 96000))); };
 /** accumulate an integer phase and reset it after cycles.
   float value phases would be harder to reset */
-sp_count_t sp_cheap_phase_96(sp_count_t current, sp_count_t change) {
+sp_count_t sp_phase_96(sp_count_t current, sp_count_t change) {
   sp_count_t result;
   result = (current + change);
   return (((96000 <= result) ? (result % 96000) : result));
 };
 /** accumulate an integer phase with change given as a float value.
   change must be a positive value and is rounded to the next larger integer */
-sp_count_t sp_cheap_phase_96_float(sp_count_t current, double change) { return ((sp_cheap_phase_96(current, (sp_cheap_ceiling_positive(change))))); };
+sp_count_t sp_phase_96_float(sp_count_t current, double change) { return ((sp_phase_96(current, (sp_cheap_ceiling_positive(change))))); };
 /** contains the initial phase offsets per partial and channel
   as a flat array */
 status_t sp_synth_state_new(sp_count_t channel_count, sp_synth_count_t config_len, sp_synth_partial_t* config, sp_count_t** out_state) {
@@ -523,7 +521,7 @@ status_t sp_synth(sp_block_t out, sp_count_t start, sp_count_t duration, sp_synt
           carrier[(prt_offset + i)] = (carrier[(prt_offset + i)] + (amp * sp_sine_96(phs)));
           wvl = (prt.wvl)[channel_i][(prt_start + i)];
           modulated_wvl = (modulation ? (wvl + (wvl * modulation[(prt_offset + i)])) : wvl);
-          phs = sp_cheap_phase_96_float(phs, (48000 / modulated_wvl));
+          phs = sp_phase_96_float(phs, (48000 / modulated_wvl));
         };
         phases[(channel_i + (out.channels * prt_i))] = phs;
         modulation_index[(prt.modifies - 1)][channel_i] = carrier;
@@ -536,7 +534,7 @@ status_t sp_synth(sp_block_t out, sp_count_t start, sp_count_t duration, sp_synt
           amp = (prt.amp)[channel_i][(prt_start + i)];
           wvl = (prt.wvl)[channel_i][(prt_start + i)];
           modulated_wvl = (modulation ? (wvl + (wvl * modulation[(prt_offset + i)])) : wvl);
-          phs = sp_cheap_phase_96_float(phs, (48000 / modulated_wvl));
+          phs = sp_phase_96_float(phs, (48000 / modulated_wvl));
           (out.samples)[channel_i][(prt_offset + i)] = ((out.samples)[channel_i][(prt_offset + i)] + (amp * sp_sine_96(phs)));
         };
         phases[(channel_i + (out.channels * prt_i))] = phs;
@@ -695,4 +693,52 @@ void sp_plot_spectrum(sp_sample_t* a, sp_count_t a_size) {
   sp_plot_spectrum_to_file(a, a_size, path);
   sp_plot_spectrum_file(path);
   free(path);
+};
+/** return a sample for a triangular wave with center offsets a left and b right.
+   creates sawtooth waves if either a or b is 0 */
+sp_sample_t sp_triangle(sp_count_t t, sp_count_t a, sp_count_t b) {
+  sp_count_t remainder;
+  remainder = (t % (a + b));
+  return (((remainder < a) ? (remainder * (1 / ((sp_sample_t)(a)))) : ((((sp_sample_t)(b)) - (remainder - ((sp_sample_t)(a)))) * (1 / ((sp_sample_t)(b))))));
+};
+sp_sample_t sp_triangle_96(sp_count_t t) { return ((sp_triangle(t, 48000, 48000))); };
+sp_sample_t sp_square_96(sp_count_t t) { return (((((2 * t) % (2 * 96000)) < 96000) ? -1 : 1)); };
+/** guarantees that all dyadic rationals of the form (k / 2**−53) will be equally likely. this conversion prefers the high bits of x.
+    from http://xoshiro.di.unimi.it/ */
+#define double_from_uint64(a) ((a >> 11) * (1.0 / (UINT64_C(1) << 53)))
+#define rotl(x, k) ((x << k) | (x >> (64 - k)))
+/** use the given uint64 as a seed and set state with splitmix64 results.
+  the same seed will to the same series of random numbers from sp-random */
+sp_random_state_t sp_random_state_new(uint64_t seed) {
+  uint8_t i;
+  uint64_t z;
+  sp_random_state_t result;
+  for (i = 0; (i < 4); i = (1 + i)) {
+    seed = (seed + UINT64_C(11400714819323198485));
+    z = seed;
+    z = ((z ^ (z >> 30)) * UINT64_C(13787848793156543929));
+    z = ((z ^ (z >> 27)) * UINT64_C(10723151780598845931));
+    (result.data)[i] = (z ^ (z >> 31));
+  };
+  return (result);
+};
+/** return uniformly distributed random real numbers in the range -1 to 1.
+   implements xoshiro256plus from http://xoshiro.di.unimi.it/
+   referenced by https://nullprogram.com/blog/2017/09/21/ */
+sp_random_state_t sp_random(sp_random_state_t state, sp_count_t size, sp_sample_t* out) {
+  uint64_t result_plus;
+  sp_count_t i;
+  uint64_t t;
+  for (i = 0; (i < size); i = (1 + i)) {
+    result_plus = ((state.data)[0] + (state.data)[3]);
+    t = ((state.data)[1] << 17);
+    (state.data)[2] = ((state.data)[2] ^ (state.data)[0]);
+    (state.data)[3] = ((state.data)[3] ^ (state.data)[1]);
+    (state.data)[1] = ((state.data)[1] ^ (state.data)[2]);
+    (state.data)[0] = ((state.data)[0] ^ (state.data)[3]);
+    (state.data)[2] = ((state.data)[2] ^ t);
+    (state.data)[3] = rotl(((state.data)[3]), 45);
+    out[i] = ((2 * double_from_uint64(result_plus)) - 1.0);
+  };
+  return (state);
 };

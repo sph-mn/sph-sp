@@ -59,20 +59,6 @@ MTRand
                   results)
                 (tail rest)))))))))
 
-(define (sp-triangle t a b) (sp-sample-t sp-count-t sp-count-t)
-  "return a sample for a triangular wave with center offsets a left and b right.
-   creates sawtooth waves if either a or b is 0"
-  (declare remainder sp-count-t)
-  (set remainder (modulo t (+ a b)))
-  (if (< remainder a) (* remainder (/ 2 (convert-type a sp-sample-t)))
-    (*
-      (- (convert-type b sp-sample-t) (- 2 (convert-type a sp-sample-t)))
-      (/ 2 (convert-type b sp-sample-t)))))
-
-(define (sp-square-96 t) (sp-sample-t sp-count-t)
-  (if (< (modulo (* 2 t) (* 2 96000)) 96000) -1
-    1))
-
 (define (sp-random-real random-state) (double MTRand)
   (set sp-default-random-state (seedRand 1337))
   (genRand &random-state))

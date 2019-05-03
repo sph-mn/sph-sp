@@ -407,11 +407,53 @@
   (label exit
     (return status)))
 
+(define (test-sp-triangle-square) status-t
+  status-declare
+  (declare
+    i sp-count-t
+    out-t sp-sample-t*
+    out-s sp-sample-t*)
+  (status-require (sph-helper-calloc (* 96000 (sizeof sp-sample-t*)) &out-t))
+  (status-require (sph-helper-calloc (* 96000 (sizeof sp-sample-t*)) &out-s))
+  (for ((set i 0) (< i 96000) (set i (+ 1 i)))
+    (set
+      (array-get out-t i) (sp-triangle-96 i)
+      (array-get out-s i) (sp-square-96 i)))
+  (test-helper-assert "triangle 0" (= 0 (array-get out-t 0)))
+  (test-helper-assert "triangle 1/2" (= 1 (array-get out-t 48000)))
+  (test-helper-assert "triangle 1" (f64-nearly-equal 0 (array-get out-t 95999) error-margin))
+  (test-helper-assert "square 0" (= -1 (array-get out-s 0)))
+  (test-helper-assert "square 1/4" (= -1 (array-get out-s 24000)))
+  (test-helper-assert "square 1/2 - 1" (= -1 (array-get out-s 47999)))
+  (test-helper-assert "square 1/2" (= 1 (array-get out-s 48000)))
+  (test-helper-assert "square 3/4" (= 1 (array-get out-s 72000)))
+  (test-helper-assert "square 1" (= 1 (array-get out-s 95999)))
+  (free out-t)
+  (free out-s)
+  (label exit
+    (return status)))
+
+(define (test-sp-random) status-t
+  status-declare
+  (declare
+    s sp-random-state-t
+    out (array sp-sample-t 20))
+  (set
+    s (sp-random-state-new 80)
+    s (sp-random s 10 out)
+    s (sp-random s 10 (+ 10 out)))
+  (test-helper-assert "last value" (f64-nearly-equal 0.355602 (array-get out 19) error-margin))
+  #;(for ((define i sp-count-t 0) (< i 20) (set i (+ 1 i)))
+    (printf "%f " (array-get out i)))
+  (label exit
+    (return status)))
+
 (define (main) int
   status-declare
   (sp-initialise)
   ;(test-helper-test-one test-sp-seq)
-  ;(goto exit)
+  (test-helper-test-one test-sp-random)
+  (test-helper-test-one test-sp-triangle-square)
   (test-helper-test-one test-synth)
   (test-helper-test-one test-moving-average)
   (test-helper-test-one test-fft)

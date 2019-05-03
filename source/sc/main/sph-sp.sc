@@ -171,8 +171,8 @@
   (status-t sp-sample-t** sp-count-t*) (sp-sine-table-new out size)
   (status-t sp-sample-t** sp-count-t) sp-sine-96-table
   sp-sample-t* (sp-initialise)
-  status-t (sp-cheap-phase-96 current change)
-  (sp-count-t sp-count-t sp-count-t) (sp-cheap-phase-96-float current change)
+  status-t (sp-phase-96 current change)
+  (sp-count-t sp-count-t sp-count-t) (sp-phase-96-float current change)
   (sp-count-t sp-count-t double) (sp-synth out start duration config-len config phases)
   (status-t sp-block-t sp-count-t sp-count-t sp-synth-count-t sp-synth-partial-t* sp-count-t*)
   (sp-synth-state-new channel-count config-len config out-state)
@@ -226,4 +226,13 @@
   (sp-plot-samples-file path use-steps) (void uint8-t* uint8-t)
   (sp-plot-spectrum->file a a-size path) (void sp-sample-t* sp-count-t uint8-t*)
   (sp-plot-spectrum-file path) (void uint8-t*)
-  (sp-plot-spectrum a a-size) (void sp-sample-t* sp-count-t))
+  (sp-plot-spectrum a a-size) (void sp-sample-t* sp-count-t)
+  (sp-square-96 t) (sp-sample-t sp-count-t)
+  (sp-triangle t a b) (sp-sample-t sp-count-t sp-count-t sp-count-t)
+  (sp-triangle-96 t) (sp-sample-t sp-count-t)
+  sp-random-state-t
+  (type
+    (struct
+      (data (array uint64-t 4))))
+  (sp-random state size out) (sp-random-state-t sp-random-state-t sp-count-t sp-sample-t*)
+  (sp-random-state-new seed) (sp-random-state-t uint64-t))

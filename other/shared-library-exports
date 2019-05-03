@@ -47,6 +47,9 @@ exports {
     sp_sinc;
     sp_sine_96_table;
     sp_sine_table_new;
+    sp_triangle;
+    sp_triangle_96;
+    sp_square_96;
     sp_sin_lq;
     sp_spectral_inversion_ir;
     sp_spectral_reversal_ir;
@@ -65,6 +68,8 @@ exports {
     sp_windowed_sinc_lp_hp;
     sp_windowed_sinc_lp_hp_ir;
     sp_windowed_sinc_lp_hp_ir_f;
+    sp_random;
+    sp_random_state_new;
     sp_windowed_sinc_lp_hp_ir_length;
   local: *;
 };

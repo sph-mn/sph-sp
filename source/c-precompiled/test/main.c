@@ -364,9 +364,47 @@ status_t test_sp_plot() {
 exit:
   return (status);
 };
+status_t test_sp_triangle_square() {
+  status_declare;
+  sp_count_t i;
+  sp_sample_t* out_t;
+  sp_sample_t* out_s;
+  status_require((sph_helper_calloc((96000 * sizeof(sp_sample_t*)), (&out_t))));
+  status_require((sph_helper_calloc((96000 * sizeof(sp_sample_t*)), (&out_s))));
+  for (i = 0; (i < 96000); i = (1 + i)) {
+    out_t[i] = sp_triangle_96(i);
+    out_s[i] = sp_square_96(i);
+  };
+  test_helper_assert("triangle 0", (0 == out_t[0]));
+  test_helper_assert("triangle 1/2", (1 == out_t[48000]));
+  test_helper_assert("triangle 1", (f64_nearly_equal(0, (out_t[95999]), error_margin)));
+  test_helper_assert("square 0", (-1 == out_s[0]));
+  test_helper_assert("square 1/4", (-1 == out_s[24000]));
+  test_helper_assert("square 1/2 - 1", (-1 == out_s[47999]));
+  test_helper_assert("square 1/2", (1 == out_s[48000]));
+  test_helper_assert("square 3/4", (1 == out_s[72000]));
+  test_helper_assert("square 1", (1 == out_s[95999]));
+  free(out_t);
+  free(out_s);
+exit:
+  return (status);
+};
+status_t test_sp_random() {
+  status_declare;
+  sp_random_state_t s;
+  sp_sample_t out[20];
+  s = sp_random_state_new(80);
+  s = sp_random(s, 10, out);
+  s = sp_random(s, 10, (10 + out));
+  test_helper_assert("last value", (f64_nearly_equal((0.355602), (out[19]), error_margin)));
+exit:
+  return (status);
+};
 int main() {
   status_declare;
   sp_initialise();
+  test_helper_test_one(test_sp_random);
+  test_helper_test_one(test_sp_triangle_square);
   test_helper_test_one(test_synth);
   test_helper_test_one(test_moving_average);
   test_helper_test_one(test_fft);

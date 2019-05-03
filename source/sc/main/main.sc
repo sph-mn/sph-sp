@@ -2,8 +2,6 @@
   "stdio.h"
   "fcntl.h"
   "sndfile.h"
-  "foreign/mtwister/mtwister.h"
-  "foreign/mtwister/mtwister.c"
   "foreign/nayuki-fft/fft.c"
   "../main/sph-sp.h"
   "../foreign/sph/float.c"
@@ -489,7 +487,7 @@
   "fills the sine wave lookup table"
   (return (sp-sine-table-new &sp-sine-96-table 96000)))
 
-(define (sp-cheap-phase-96 current change) (sp-count-t sp-count-t sp-count-t)
+(define (sp-phase-96 current change) (sp-count-t sp-count-t sp-count-t)
   "accumulate an integer phase and reset it after cycles.
   float value phases would be harder to reset"
   (declare result sp-count-t)
@@ -498,10 +496,10 @@
     (if* (<= 96000 result) (modulo result 96000)
       result)))
 
-(define (sp-cheap-phase-96-float current change) (sp-count-t sp-count-t double)
+(define (sp-phase-96-float current change) (sp-count-t sp-count-t double)
   "accumulate an integer phase with change given as a float value.
   change must be a positive value and is rounded to the next larger integer"
-  (return (sp-cheap-phase-96 current (sp-cheap-ceiling-positive change))))
+  (return (sp-phase-96 current (sp-cheap-ceiling-positive change))))
 
 (define (sp-synth-state-new channel-count config-len config out-state)
   (status-t sp-count-t sp-synth-count-t sp-synth-partial-t* sp-count-t**)
@@ -599,7 +597,7 @@
             (array-get prt.wvl channel-i (+ prt-start i)) modulated-wvl
             (if* modulation (+ wvl (* wvl (array-get modulation (+ prt-offset i))))
               wvl)
-            phs (sp-cheap-phase-96-float phs (/ 48000 modulated-wvl))))
+            phs (sp-phase-96-float phs (/ 48000 modulated-wvl))))
         (set
           (array-get phases (+ channel-i (* out.channels prt-i))) phs
           (array-get modulation-index (- prt.modifies 1) channel-i) carrier))
@@ -614,7 +612,7 @@
             modulated-wvl
             (if* modulation (+ wvl (* wvl (array-get modulation (+ prt-offset i))))
               wvl)
-            phs (sp-cheap-phase-96-float phs (/ 48000 modulated-wvl))
+            phs (sp-phase-96-float phs (/ 48000 modulated-wvl))
             (array-get out.samples channel-i (+ prt-offset i))
             (+ (array-get out.samples channel-i (+ prt-offset i)) (* amp (sp-sine-96 phs)))))
         (set (array-get phases (+ channel-i (* out.channels prt-i))) phs))))
@@ -785,3 +783,66 @@
   (sp-plot-spectrum->file a a-size path)
   (sp-plot-spectrum-file path)
   (free path))
+
+(define (sp-triangle t a b) (sp-sample-t sp-count-t sp-count-t sp-count-t)
+  "return a sample for a triangular wave with center offsets a left and b right.
+   creates sawtooth waves if either a or b is 0"
+  (declare remainder sp-count-t)
+  (set remainder (modulo t (+ a b)))
+  (return
+    (if* (< remainder a) (* remainder (/ 1 (convert-type a sp-sample-t)))
+      (*
+        (- (convert-type b sp-sample-t) (- remainder (convert-type a sp-sample-t)))
+        (/ 1 (convert-type b sp-sample-t))))))
+
+(define (sp-triangle-96 t) (sp-sample-t sp-count-t) (return (sp-triangle t 48000 48000)))
+
+(define (sp-square-96 t) (sp-sample-t sp-count-t)
+  (return
+    (if* (< (modulo (* 2 t) (* 2 96000)) 96000) -1
+      1)))
+
+(pre-define
+  (double-from-uint64 a)
+  (begin
+    "guarantees that all dyadic rationals of the form (k / 2**−53) will be equally likely. this conversion prefers the high bits of x.
+    from http://xoshiro.di.unimi.it/"
+    (* (bit-shift-right a 11) (/ 1.0 (bit-shift-left (UINT64_C 1) 53))))
+  (rotl x k) (bit-or (bit-shift-left x k) (bit-shift-right x (- 64 k))))
+
+(define (sp-random-state-new seed) (sp-random-state-t uint64-t)
+  "use the given uint64 as a seed and set state with splitmix64 results.
+  the same seed will to the same series of random numbers from sp-random"
+  (declare
+    i uint8-t
+    z uint64-t
+    result sp-random-state-t)
+  (for ((set i 0) (< i 4) (set i (+ 1 i)))
+    (set
+      seed (+ seed (UINT64_C 11400714819323198485))
+      z seed
+      z (* (bit-xor z (bit-shift-right z 30)) (UINT64_C 13787848793156543929))
+      z (* (bit-xor z (bit-shift-right z 27)) (UINT64_C 10723151780598845931))
+      (array-get result.data i) (bit-xor z (bit-shift-right z 31))))
+  (return result))
+
+(define (sp-random state size out) (sp-random-state-t sp-random-state-t sp-count-t sp-sample-t*)
+  "return uniformly distributed random real numbers in the range -1 to 1.
+   implements xoshiro256plus from http://xoshiro.di.unimi.it/
+   referenced by https://nullprogram.com/blog/2017/09/21/"
+  (declare
+    result-plus uint64-t
+    i sp-count-t
+    t uint64-t)
+  (for ((set i 0) (< i size) (set i (+ 1 i)))
+    (set
+      result-plus (+ (array-get state.data 0) (array-get state.data 3))
+      t (bit-shift-left (array-get state.data 1) 17)
+      (array-get state.data 2) (bit-xor (array-get state.data 2) (array-get state.data 0))
+      (array-get state.data 3) (bit-xor (array-get state.data 3) (array-get state.data 1))
+      (array-get state.data 1) (bit-xor (array-get state.data 1) (array-get state.data 2))
+      (array-get state.data 0) (bit-xor (array-get state.data 0) (array-get state.data 3))
+      (array-get state.data 2) (bit-xor (array-get state.data 2) t)
+      (array-get state.data 3) (rotl (array-get state.data 3) 45)
+      (array-get out i) (- (* 2 (double-from-uint64 result-plus)) 1.0)))
+  (return state))
