@@ -1,6 +1,7 @@
 #include <byteswap.h>
 #include <math.h>
 #include <inttypes.h>
+#include <string.h>
 #ifndef sp_config_is_set
 #define sp_channel_count_t uint8_t
 #define sp_file_format (SF_FORMAT_WAV | SF_FORMAT_FLOAT)
@@ -18,6 +19,8 @@
 #define sp_synth_partial_limit 64
 #define sp_config_is_set 1
 #endif
+#define spline_path_time_t sp_count_t
+#define spline_path_value_t sp_sample_t
 #define boolean uint8_t
 #define sp_file_bit_input 1
 #define sp_file_bit_output 2
@@ -92,79 +95,233 @@ typedef struct {
   status_id_t id;
   uint8_t* group;
 } status_t;
-/* "iteration array" - an array with variable length content that makes iteration easier to code.
-  saves the size argument that usually has to be passed with arrays and saves the declaration of index counter variables.
-  the data structure consists of only 4 pointers in a struct.
-  most bindings are generic macros that will work on any i-array type. i-array-add and i-array-forward go from left to right.
-  examples:
-    i_array_declare_type(my_type, int);
-    my_type a;
-    if(i_array_allocate_my_type(4, &a)) {
-      // memory allocation error
-    }
-    i_array_add(a, 1);
-    i_array_add(a, 2);
-    while(i_array_in_range(a)) {
-      i_array_get(a);
-      i_array_forward(a);
-    }
-    i_array_free(a); */
+/* * spline-path creates discrete 2d paths interpolated between some given points
+  * maps from one independent discrete value to one dependent continuous value
+  * only the dependent value is returned
+  * kept minimal (only 2d, only selected interpolators, limited segment count) to be extremely fast
+  * multidimensional interpolation can be archieved with multiple configs and calls
+  * a copy of segments is made internally and only the copy is used
+  * uses points as structs because pre-defined size arrays can not be used in structs
+  * segments-len must be greater than zero
+  * segments must be a valid spline-path segment configuration
+  * interpolators are called with path-relative start/end inside segment and with out positioned at the segment output
+  * all segment types have a fixed number of points. line: 1, bezier: 3, move: 1, constant: 0, path: 0
+  * negative x values not supported
+  * internally all segments start at (0 0) and no gaps are between segments
+  * assumes that bit 0 is spline-path-value-t zero
+  * segments draw to the endpoint inclusive, start point exclusive */
+#include <inttypes.h>
+#include <strings.h>
 #include <stdlib.h>
-/** .current: to avoid having to write for-loops. this would correspond to the index variable in loops
-     .unused: to have variable length content in a fixed length array. points outside the memory area after the last element has been added
-     .end: start + max-length. (last-index + 1) of the allocated array
-     .start: the beginning of the allocated array and used for rewind and free */
-#define i_array_declare_type(name, element_type) \
-  typedef struct { \
-    element_type* current; \
-    element_type* unused; \
-    element_type* end; \
-    element_type* start; \
-  } name; \
-  uint8_t i_array_allocate_custom_##name(size_t length, void* (*alloc)(size_t), name* a) { \
-    element_type* start; \
-    start = alloc((length * sizeof(element_type))); \
-    if (!start) { \
-      return (1); \
-    }; \
-    a->start = start; \
-    a->current = start; \
-    a->unused = start; \
-    a->end = (length + start); \
-    return (0); \
-  }; \
-  uint8_t i_array_allocate_##name(size_t length, name* a) { return ((i_array_allocate_custom_##name(length, malloc, a))); }
-/** define so that in-range is false, length is zero and free doesnt fail */
-#define i_array_declare(a, type) type a = { 0, 0, 0, 0 }
-#define i_array_add(a, value) \
-  *(a.unused) = value; \
-  a.unused = (1 + a.unused)
-/** set so that in-range is false, length is zero and free doesnt fail */
-#define i_array_set_null(a) \
-  a.start = 0; \
-  a.unused = 0
-#define i_array_in_range(a) (a.current < a.unused)
-#define i_array_get_at(a, index) (a.start)[index]
-#define i_array_get(a) *(a.current)
-#define i_array_forward(a) a.current = (1 + a.current)
-#define i_array_rewind(a) a.current = a.start
-#define i_array_clear(a) a.unused = a.start
-#define i_array_remove(a) a.unused = (a.unused - 1)
-#define i_array_length(a) (a.unused - a.start)
-#define i_array_max_length(a) (a.end - a.start)
-#define i_array_free(a) free((a.start))
-/** create an i-array from a standard array.
-     sets source as data array to use, with the first count number of slots used.
-     source will not be copied but used as is, and will i-array-free frees is.
-     # example
-     int other_array[4] = {1, 2, 0, 0};
-     my_type a;
-     i_array_take(a, other_array, 4 2); */
-#define i_array_take(a, source, size, count) \
-  a->start = source; \
-  a->current = source; \
-  a->unused = (count + source); \
-  a->end = (size + source)
+#ifndef spline_path_time_t
+#define spline_path_time_t uint32_t
+#endif
+#ifndef spline_path_value_t
+#define spline_path_value_t double
+#endif
+#ifndef spline_path_point_count_t
+#define spline_path_point_count_t uint8_t
+#endif
+#ifndef spline_path_segment_count_t
+#define spline_path_segment_count_t uint16_t
+#endif
+#ifndef spline_path_time_max
+#define spline_path_time_max UINT32_MAX
+#endif
+#define spline_path_point_limit 3
+#define spline_path_interpolator_points_len(a) ((spline_path_i_bezier == a) ? 3 : 1)
+typedef struct {
+  spline_path_time_t x;
+  spline_path_value_t y;
+} spline_path_point_t;
+typedef void (*spline_path_interpolator_t)(spline_path_time_t, spline_path_time_t, spline_path_point_t, spline_path_point_t*, void*, spline_path_value_t*);
+typedef struct {
+  spline_path_point_t _start;
+  spline_path_point_count_t _points_len;
+  spline_path_point_t points[spline_path_point_limit];
+  spline_path_interpolator_t interpolator;
+  void* options;
+} spline_path_segment_t;
+typedef struct {
+  spline_path_segment_count_t segments_len;
+  spline_path_segment_t* segments;
+} spline_path_t;
+/** p-rest length 1 */
+void spline_path_i_move(spline_path_time_t start, spline_path_time_t end, spline_path_point_t p_start, spline_path_point_t* p_rest, void* options, spline_path_value_t* out) { memset(out, 0, (sizeof(spline_path_value_t) * (end - start))); };
+/** p-rest length 0 */
+void spline_path_i_constant(spline_path_time_t start, spline_path_time_t end, spline_path_point_t p_start, spline_path_point_t* p_rest, void* options, spline_path_value_t* out) {
+  spline_path_time_t i;
+  for (i = start; (i < end); i = (1 + i)) {
+    out[(i - start)] = p_start.y;
+  };
+};
+#include <stdio.h>
+/** p-rest length 1 */
+void spline_path_i_line(spline_path_time_t start, spline_path_time_t end, spline_path_point_t p_start, spline_path_point_t* p_rest, void* options, spline_path_value_t* out) {
+  spline_path_time_t i;
+  spline_path_point_t p_end;
+  spline_path_value_t s_size;
+  spline_path_value_t t;
+  p_end = p_rest[0];
+  s_size = (p_end.x - p_start.x);
+  for (i = start; (i < end); i = (1 + i)) {
+    t = ((i - p_start.x) / s_size);
+    out[(i - start)] = ((p_end.y * t) + (p_start.y * (1 - t)));
+  };
+};
+/** p-rest length 3 */
+void spline_path_i_bezier(spline_path_time_t start, spline_path_time_t end, spline_path_point_t p_start, spline_path_point_t* p_rest, void* options, spline_path_value_t* out) {
+  spline_path_time_t i;
+  spline_path_value_t mt;
+  spline_path_point_t p_end;
+  spline_path_value_t s_size;
+  spline_path_value_t t;
+  p_end = p_rest[2];
+  s_size = (p_end.x - p_start.x);
+  for (i = start; (i < end); i = (1 + i)) {
+    t = ((i - p_start.x) / s_size);
+    mt = (1 - t);
+    out[(i - start)] = ((p_start.y * mt * mt * mt) + ((p_rest[0]).y * 3 * mt * mt * t) + ((p_rest[1]).y * 3 * mt * t * t) + (p_end.y * t * t * t));
+  };
+};
+/** get values on path between start (inclusive) and end (exclusive).
+  since x values are integers, a path from (0 0) to (10 20) for example will have reached 20 only at the 11th point.
+  out memory is managed by the caller. the size required for out is end minus start */
+void spline_path_get(spline_path_t path, spline_path_time_t start, spline_path_time_t end, spline_path_value_t* out) {
+  /* find all segments that overlap with requested range */
+  spline_path_segment_count_t i;
+  spline_path_segment_t s;
+  spline_path_time_t s_start;
+  spline_path_time_t s_end;
+  spline_path_time_t out_start;
+  for (i = 0; (i < path.segments_len); i = (1 + i)) {
+    s = (path.segments)[i];
+    s_start = s._start.x;
+    s_end = ((s.points)[(s._points_len - 1)]).x;
+    if (s_start > end) {
+      break;
+    };
+    if (s_end < start) {
+      continue;
+    };
+    out_start = ((s_start > start) ? (s_start - start) : 0);
+    s_start = ((s_start > start) ? s_start : start);
+    s_end = ((s_end < end) ? s_end : end);
+    (s.interpolator)(s_start, s_end, (s._start), (s.points), (s.options), (out_start + out));
+  };
+  /* outside points zero. set the last segment point which would be set by a following segment.
+can only be true for the last segment */
+  if (end > s_end) {
+    out[s_end] = ((s.points)[(s._points_len - 1)]).y;
+    s_end = (1 + s_end);
+    if (end > s_end) {
+      memset((s_end + out), 0, ((end - s_end) * sizeof(spline_path_value_t)));
+    };
+  };
+};
+/** p-rest length 0. options is one spline-path-t */
+void spline_path_i_path(spline_path_time_t start, spline_path_time_t end, spline_path_point_t p_start, spline_path_point_t* p_rest, void* options, spline_path_value_t* out) { spline_path_get((*((spline_path_t*)(options))), (start - p_start.x), (end - p_start.x), out); };
+spline_path_point_t spline_path_start(spline_path_t path) {
+  spline_path_point_t p;
+  spline_path_segment_t s;
+  s = (path.segments)[0];
+  if (spline_path_i_move == s.interpolator) {
+    p = (s.points)[0];
+  } else {
+    p.x = 0;
+    p.y = 0;
+  };
+  return (p);
+};
+spline_path_point_t spline_path_end(spline_path_t path) {
+  spline_path_segment_t s;
+  s = (path.segments)[(path.segments_len - 1)];
+  if (spline_path_i_constant == s.interpolator) {
+    s = (path.segments)[(path.segments_len - 2)];
+  };
+  return (((s.points)[(s._points_len - 1)]));
+};
+uint8_t spline_path_new(spline_path_segment_count_t segments_len, spline_path_segment_t* segments, spline_path_t* out_path) {
+  spline_path_segment_count_t i;
+  spline_path_t path;
+  spline_path_segment_t s;
+  spline_path_point_t start;
+  start.x = 0;
+  start.y = 0;
+  path.segments = malloc((segments_len * sizeof(spline_path_segment_t)));
+  if (!path.segments) {
+    return (1);
+  };
+  memcpy((path.segments), segments, (segments_len * sizeof(spline_path_segment_t)));
+  for (i = 0; (i < segments_len); i = (1 + i)) {
+    ((path.segments)[i])._start = start;
+    s = (path.segments)[i];
+    s._points_len = spline_path_interpolator_points_len((s.interpolator));
+    if ((spline_path_i_path == s.interpolator)) {
+      start = spline_path_end((*((spline_path_t*)(s.options))));
+      *(s.points) = start;
+    } else if ((spline_path_i_constant == s.interpolator)) {
+      *(s.points) = start;
+      (s.points)->x = spline_path_time_max;
+    } else {
+      start = (s.points)[(s._points_len - 1)];
+    };
+    (path.segments)[i] = s;
+  };
+  path.segments_len = segments_len;
+  *out_path = path;
+  return (0);
+};
+void spline_path_free(spline_path_t a) { free((a.segments)); };
+/** create a path array immediately from segments without creating a path object */
+uint8_t spline_path_new_get(spline_path_segment_count_t segments_len, spline_path_segment_t* segments, spline_path_time_t start, spline_path_time_t end, spline_path_value_t* out) {
+  spline_path_t path;
+  if (spline_path_new(segments_len, segments, (&path))) {
+    return (1);
+  };
+  spline_path_get(path, start, end, out);
+  spline_path_free(path);
+  return (0);
+};
+/** returns a move segment for the specified point */
+spline_path_segment_t spline_path_move(spline_path_time_t x, spline_path_value_t y) {
+  spline_path_segment_t s;
+  s.interpolator = spline_path_i_move;
+  (s.points)->x = x;
+  (s.points)->y = y;
+  return (s);
+};
+spline_path_segment_t spline_path_line(spline_path_time_t x, spline_path_value_t y) {
+  spline_path_segment_t s;
+  s.interpolator = spline_path_i_line;
+  (s.points)->x = x;
+  (s.points)->y = y;
+  return (s);
+};
+spline_path_segment_t spline_path_bezier(spline_path_time_t x1, spline_path_value_t y1, spline_path_time_t x2, spline_path_value_t y2, spline_path_time_t x3, spline_path_value_t y3) {
+  spline_path_segment_t s;
+  s.interpolator = spline_path_i_bezier;
+  (s.points)->x = x1;
+  (s.points)->y = y1;
+  (1 + s.points)->x = x2;
+  (1 + s.points)->y = y2;
+  (2 + s.points)->x = x3;
+  (2 + s.points)->y = y3;
+  return (s);
+};
+spline_path_segment_t spline_path_constant() {
+  spline_path_segment_t s;
+  s.interpolator = spline_path_i_constant;
+  return (s);
+};
+/** return a segment that is another spline-path. length is the full length of the path.
+  the path does not necessarily connect and is drawn as it would be on its own starting from the preceding segment */
+spline_path_segment_t spline_path_path(spline_path_t* path) {
+  spline_path_segment_t s;
+  s.interpolator = spline_path_i_path;
+  s.options = path;
+  return (s);
+};
 enum { sp_status_id_file_channel_mismatch,
   sp_status_id_file_encoding,
   sp_status_id_file_header,
@@ -257,7 +414,6 @@ void sp_state_variable_filter_bp(sp_sample_t* out, sp_sample_t* in, sp_float_t i
 void sp_state_variable_filter_br(sp_sample_t* out, sp_sample_t* in, sp_float_t in_count, sp_float_t cutoff, sp_count_t q_factor, sp_sample_t* state);
 void sp_state_variable_filter_peak(sp_sample_t* out, sp_sample_t* in, sp_float_t in_count, sp_float_t cutoff, sp_count_t q_factor, sp_sample_t* state);
 void sp_state_variable_filter_all(sp_sample_t* out, sp_sample_t* in, sp_float_t in_count, sp_float_t cutoff, sp_count_t q_factor, sp_sample_t* state);
-#define sp_events_new i_array_allocate_sp_events_t
 struct sp_event_t;
 typedef struct sp_event_t {
   void* state;
@@ -271,12 +427,13 @@ typedef struct {
   sp_synth_partial_t config[sp_synth_partial_limit];
   sp_count_t* state;
 } sp_synth_event_state_t;
-i_array_declare_type(sp_events_t, sp_event_t);
-void sp_seq_events_prepare(sp_events_t a);
-void sp_seq(sp_count_t time, sp_count_t offset, sp_count_t size, sp_block_t output, sp_events_t events);
+void sp_seq_events_prepare(sp_event_t* a, sp_count_t a_size);
+void sp_seq(sp_count_t start, sp_count_t end, sp_block_t out, sp_count_t out_start, sp_event_t* events, sp_count_t events_size);
 status_t sp_synth_event(sp_count_t start, sp_count_t end, sp_count_t channel_count, sp_count_t config_len, sp_synth_partial_t* config, sp_event_t* out_event);
 void sp_plot_samples(sp_sample_t* a, sp_count_t a_size);
+void sp_plot_counts(sp_count_t* a, sp_count_t a_size);
 void sp_plot_samples_to_file(sp_sample_t* a, sp_count_t a_size, uint8_t* path);
+void sp_plot_counts_to_file(sp_count_t* a, sp_count_t a_size, uint8_t* path);
 void sp_plot_samples_file(uint8_t* path, uint8_t use_steps);
 void sp_plot_spectrum_to_file(sp_sample_t* a, sp_count_t a_size, uint8_t* path);
 void sp_plot_spectrum_file(uint8_t* path);
@@ -289,3 +446,7 @@ typedef struct {
 } sp_random_state_t;
 sp_random_state_t sp_random(sp_random_state_t state, sp_count_t size, sp_sample_t* out);
 sp_random_state_t sp_random_state_new(uint64_t seed);
+status_t sp_samples_new(sp_count_t size, sp_sample_t** out);
+status_t sp_counts_new(sp_count_t size, sp_count_t** out);
+sp_synth_partial_t sp_synth_partial_1(sp_count_t start, sp_count_t end, sp_synth_count_t modifies, sp_sample_t* amp, sp_count_t* wvl, sp_count_t phs);
+sp_synth_partial_t sp_synth_partial_2(sp_count_t start, sp_count_t end, sp_synth_count_t modifies, sp_sample_t* amp1, sp_sample_t* amp2, sp_count_t* wvl1, sp_count_t* wvl2, sp_count_t phs1, sp_count_t phs2);

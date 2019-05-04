@@ -322,36 +322,27 @@ exit:
 #define sp_seq_half_duration (sp_seq_duration / 2)
 status_t test_sp_seq() {
   status_declare;
-  sp_events_t events;
+  sp_event_t events[10];
   sp_count_t* state;
   sp_block_t out;
-  sp_synth_partial_t prt;
   sp_synth_partial_t config[1];
   sp_count_t wvl[sp_seq_duration];
   sp_sample_t amp[sp_seq_duration];
   sp_count_t i;
-  sp_event_t e;
   for (i = 0; (i < sp_seq_duration); i = (1 + i)) {
     wvl[i] = 5;
     amp[i] = 0.5;
   };
-  prt.modifies = 0;
-  prt.start = 0;
-  prt.end = sp_seq_duration;
-  (prt.amp)[0] = amp;
-  (prt.wvl)[0] = wvl;
-  (prt.phs)[0] = 0;
-  config[0] = prt;
-  status_id_require((i_array_allocate_sp_events_t(2, (&events))));
-  status_require((sp_synth_event(0, sp_seq_half_duration, 1, 1, config, (&e))));
-  i_array_add(events, e);
-  status_require((sp_synth_event((2 + sp_seq_half_duration), (sp_seq_duration - 2), 1, 1, config, (&e))));
-  i_array_add(events, e);
-  sp_seq_events_prepare(events);
+  config[0] = sp_synth_partial_1(0, sp_seq_duration, 0, amp, wvl, 0);
+  status_require((sp_synth_event(0, sp_seq_half_duration, 1, 1, config, (0 + events))));
+  status_require((sp_synth_event((2 + sp_seq_half_duration), (sp_seq_duration - 2), 1, 1, config, (1 + events))));
+  sp_seq_events_prepare(events, 2);
   status_require((sp_block_new(1, sp_seq_duration, (&out))));
-  sp_seq(0, 0, sp_seq_half_duration, out, events);
-  sp_seq(sp_seq_half_duration, sp_seq_half_duration, sp_seq_half_duration, out, events);
-  sp_plot_samples((*(out.samples)), (out.size));
+  sp_seq(0, sp_seq_half_duration, out, 0, events, 2);
+  sp_seq(sp_seq_half_duration, sp_seq_duration, out, sp_seq_half_duration, events, 2);
+  for (i = 0; (i < sp_seq_duration); i = (1 + i)) {
+    printf("%f ", ((*(out.samples))[i]));
+  };
 exit:
   return (status);
 };
@@ -403,6 +394,8 @@ exit:
 int main() {
   status_declare;
   sp_initialise();
+  test_helper_test_one(test_sp_seq);
+  goto exit;
   test_helper_test_one(test_sp_random);
   test_helper_test_one(test_sp_triangle_square);
   test_helper_test_one(test_synth);

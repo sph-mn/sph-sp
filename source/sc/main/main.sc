@@ -7,7 +7,6 @@
   "../foreign/sph/float.c"
   "../foreign/sph/helper.c"
   "../foreign/sph/memreg.c"
-  "../foreign/sph/spline-path.c"
   "../foreign/sph/quicksort.c"
   "../foreign/sph/queue.c" "../foreign/sph/thread-pool.c" "../foreign/sph/futures.c")
 
@@ -95,24 +94,29 @@
   (for ((set i 0) (< i a.channels) (set i (+ 1 i)))
     (free (array-get a.samples i))))
 
-(define (sp-block-new channel-count sample-count out-block)
-  (status-t sp-channel-count-t sp-count-t sp-block-t*)
+(define (sp-block-new channels size out) (status-t sp-channel-count-t sp-count-t sp-block-t*)
   "return a newly allocated array for channels with data arrays for each channel"
   status-declare
-  (memreg-init channel-count)
+  (memreg-init channels)
   (declare
     channel sp-sample-t*
     i sp-count-t)
-  (for ((set i 0) (< i channel-count) (set i (+ 1 i)))
-    (status-require (sph-helper-calloc (* sample-count (sizeof sp-sample-t)) &channel))
+  (for ((set i 0) (< i channels) (set i (+ 1 i)))
+    (status-require (sph-helper-calloc (* size (sizeof sp-sample-t)) &channel))
     (memreg-add channel)
-    (set (array-get out-block:samples i) channel))
+    (set (array-get out:samples i) channel))
   (set
-    out-block:size sample-count
-    out-block:channels channel-count)
+    out:size size
+    out:channels channels)
   (label exit
     (if status-is-failure memreg-free)
     (return status)))
+
+(define (sp-samples-new size out) (status-t sp-count-t sp-sample-t**)
+  (return (sph-helper-calloc (* size (sizeof sp-sample-t)) out)))
+
+(define (sp-counts-new size out) (status-t sp-count-t sp-count-t**)
+  (return (sph-helper-calloc (* size (sizeof sp-count-t)) out)))
 
 (define (sp-sin-lq a) (sp-sample-t sp-float-t)
   "lower precision version of sin() that should be faster"
@@ -632,55 +636,115 @@
 (define (sp-event-sort-less? a b) (uint8-t void* void*)
   (return (< (: (convert-type a sp-event-t*) start) (: (convert-type b sp-event-t*) start))))
 
-(define (sp-seq-events-prepare a) (void sp-events-t)
-  (quicksort sp-event-sort-less? sp-event-sort-swap (sizeof sp-event-t) a.start (i-array-length a)))
+(define (sp-seq-events-prepare a size) (void sp-event-t* sp-count-t)
+  (quicksort sp-event-sort-less? sp-event-sort-swap (sizeof sp-event-t) a size))
 
-(define (sp-block-at-offset a offset) (void sp-block-t* sp-count-t)
-  "add offset to the all channel sample arrays in block. modifies the block object"
+(define (sp-block-with-offset a offset) (sp-block-t sp-block-t sp-count-t)
+  "add offset to the all channel sample arrays in block"
   (declare i sp-count-t)
-  (for ((set i 0) (< i a:channels) (set i (+ 1 i)))
-    (set (array-get a:samples i) (+ offset (array-get a:samples i)))))
+  (for ((set i 0) (< i a.channels) (set i (+ 1 i)))
+    (set (array-get a.samples i) (+ offset (array-get a.samples i))))
+  (return a))
 
-(define (sp-seq time offset size out events)
-  (void sp-count-t sp-count-t sp-count-t sp-block-t sp-events-t)
+(define (sp-seq start end out out-start events events-size)
+  (void sp-count-t sp-count-t sp-block-t sp-count-t sp-event-t* sp-count-t)
   "event arrays must have been prepared/sorted with sp-seq-event-prepare for seq to work correctly"
   (declare
-    e-offset-right sp-count-t
-    e-offset sp-count-t
+    e-out-start sp-count-t
     e sp-event-t
-    e-time sp-count-t
-    i sp-count-t
-    time-end sp-count-t)
-  (set time-end (+ time size))
-  (for ((set i 0) (< i (i-array-length events)) (set i (+ 1 i)))
-    (set e (array-get events.start i))
+    e-start sp-count-t
+    e-end sp-count-t
+    i sp-count-t)
+  (if out-start (set out (sp-block-with-offset out out-start)))
+  (for ((set i 0) (< i events-size) (set i (+ 1 i)))
+    (set e (array-get events i))
     (cond
-      ((<= time-end e.start) break)
-      ((<= e.end time) continue)
+      ((<= e.end start) continue)
+      ((<= end e.start) break)
       (else
-        (printf "from %lu to %lu time %lu\n" e.start e.end time)
         (set
-          e-time
-          (if* (< e.start time) (- time e.start)
+          e-out-start
+          (if* (> e.start start) (- e.start start)
             0)
-          e-offset
-          (if* (> e.start time) (- e.start time)
+          e-start
+          (if* (> start e.start) (- start e.start)
             0)
-          e-offset-right
-          (if* (> e.end time-end) 0
-            (- time-end e.end)))
-        (if (+ offset e-offset) (sp-block-at-offset &out (+ offset e-offset)))
-        (e.f e-time (- size e-offset e-offset-right) out &e)))))
+          e-end
+          (-
+            (if* (< e.end end) e.end
+              end)
+            e.start))
+        (e.f
+          e-start e-end
+          (if* e-out-start (sp-block-with-offset out e-out-start)
+            out)
+          &e)))))
 
-(define (sp-synth-event-f time size out event) (void sp-count-t sp-count-t sp-block-t sp-event-t*)
-  (declare state sp-synth-event-state-t*)
-  (set state event:state)
-  (if (not size) (printf "size %lu at time %lu\n" size time))
-  (sp-synth out time size state:config-len state:config state:state))
+#;(define (sp-seq-parallel time offset size output events)
+  (void sp-count-t sp-count-t sp-count-t sp-block-t sp-events-t)
+  (define (merge results rest-events)
+    (let
+      loop
+      ((results results) (events null))
+      (if (null? results) (append (reverse events) rest-events)
+        (apply
+          (l
+            (offset event-output-size event-output event)
+            (each
+              (l
+                (output event-output)
+                (each-integer
+                  event-output-size
+                  (l
+                    (sample-index)
+                    (sp-samples-set!
+                      output
+                      (+ offset sample-index)
+                      (float-sum
+                        (sp-samples-ref output (+ offset sample-index))
+                        (sp-samples-ref event-output sample-index))))))
+              output event-output)
+            (loop (tail results) (pair event events)))
+          (touch (first results))))))
+  (let
+    ((time-end (+ time size)) (channels (length output)))
+    (let
+      loop
+      ((results null) (rest events))
+      (if (null? rest) (merge results rest)
+        (let*
+          ( (event (first rest))
+            (data (seq-event-data event))
+            (start (seq-event-data-start data)) (end (seq-event-data-end data)))
+          (if (< time-end start) (merge results rest)
+            (if (> time end) (loop results (tail rest))
+              (loop
+                (pair
+                  (future
+                    (seq-event-f-arguments
+                      time
+                      time-end
+                      start
+                      end
+                      offset
+                      size
+                      (l
+                        (time offset size)
+                        (let
+                          (output (sp-block-new channels size))
+                          (list
+                            offset
+                            size output ((seq-event-data-f data) time offset size output event))))))
+                  results)
+                (tail rest)))))))))
+
+(define (sp-synth-event-f start end out event) (void sp-count-t sp-count-t sp-block-t sp-event-t*)
+  (define s sp-synth-event-state-t* event:state)
+  (sp-synth out start (- end start) s:config-len s:config s:state))
 
 (define (sp-synth-event start end channel-count config-len config out-event)
   (status-t sp-count-t sp-count-t sp-count-t sp-count-t sp-synth-partial-t* sp-event-t*)
-  "memory for event.state is allocated and owned by the caller.
+  "memory for event.state will be allocated and then owned by the caller.
   config is copied into event.state"
   status-declare
   (declare
@@ -699,6 +763,38 @@
   (label exit
     (return status)))
 
+(pre-define (sp-synth-partial-set-channel prt channel amp-array wvl-array phs-array)
+  (set
+    (array-get prt.amp channel) amp-array
+    (array-get prt.wvl channel) wvl-array
+    (array-get prt.phs channel) phs-array))
+
+(define (sp-synth-partial-1 start end modifies amp wvl phs)
+  (sp-synth-partial-t sp-count-t sp-count-t sp-synth-count-t sp-sample-t* sp-count-t* sp-count-t)
+  "setup a synth partial with one channel"
+  (declare prt sp-synth-partial-t)
+  (set
+    prt.start start
+    prt.end end
+    prt.modifies modifies)
+  (sp-synth-partial-set-channel prt 0 amp wvl phs)
+  (return prt))
+
+(define (sp-synth-partial-2 start end modifies amp1 amp2 wvl1 wvl2 phs1 phs2)
+  (sp-synth-partial-t
+    sp-count-t
+    sp-count-t
+    sp-synth-count-t sp-sample-t* sp-sample-t* sp-count-t* sp-count-t* sp-count-t sp-count-t)
+  "setup a synth partial with two channels"
+  (declare prt sp-synth-partial-t)
+  (set
+    prt.start start
+    prt.end end
+    prt.modifies modifies)
+  (sp-synth-partial-set-channel prt 0 amp1 wvl1 phs1)
+  (sp-synth-partial-set-channel prt 1 amp2 wvl2 phs2)
+  (return prt))
+
 (define sp-plot-temp-file-index uint32-t 0)
 
 (pre-define
@@ -716,6 +812,15 @@
   (set file (fopen path "w"))
   (for ((set i 0) (< i a-size) (set i (+ 1 i)))
     (fprintf file "%.3f\n" (array-get a i)))
+  (fclose file))
+
+(define (sp-plot-counts->file a a-size path) (void sp-count-t* sp-count-t uint8-t*)
+  (declare
+    file FILE*
+    i sp-count-t)
+  (set file (fopen path "w"))
+  (for ((set i 0) (< i a-size) (set i (+ 1 i)))
+    (fprintf file "%lu\n" (array-get a i)))
   (fclose file))
 
 (define (sp-plot-samples-file path use-steps) (void uint8-t* uint8-t)
@@ -741,7 +846,17 @@
   (snprintf path path-size "%s-%lu" sp-plot-temp-path sp-plot-temp-file-index)
   (set sp-plot-temp-file-index (+ 1 sp-plot-temp-file-index))
   (sp-plot-samples->file a a-size path)
-  (sp-plot-samples-file path #f)
+  (sp-plot-samples-file path #t)
+  (free path))
+
+(define (sp-plot-counts a a-size) (void sp-count-t* sp-count-t)
+  (define path-size uint8-t (+ 1 sp-plot-temp-file-index-maxlength (strlen sp-plot-temp-path)))
+  (define path uint8-t* (calloc path-size 1))
+  (if (not path) return)
+  (snprintf path path-size "%s-%lu" sp-plot-temp-path sp-plot-temp-file-index)
+  (set sp-plot-temp-file-index (+ 1 sp-plot-temp-file-index))
+  (sp-plot-counts->file a a-size path)
+  (sp-plot-samples-file path #t)
   (free path))
 
 (define (sp-plot-spectrum->file a a-size path) (void sp-sample-t* sp-count-t uint8-t*)
@@ -812,7 +927,7 @@
 
 (define (sp-random-state-new seed) (sp-random-state-t uint64-t)
   "use the given uint64 as a seed and set state with splitmix64 results.
-  the same seed will to the same series of random numbers from sp-random"
+  the same seed will lead to the same series of random numbers from sp-random"
   (declare
     i uint8-t
     z uint64-t

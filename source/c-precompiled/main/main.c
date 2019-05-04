@@ -6,7 +6,6 @@
 #include "../foreign/sph/float.c"
 #include "../foreign/sph/helper.c"
 #include "../foreign/sph/memreg.c"
-#include "../foreign/sph/spline-path.c"
 #include "../foreign/sph/quicksort.c"
 #include "../foreign/sph/queue.c"
 #include "../foreign/sph/thread-pool.c"
@@ -107,24 +106,26 @@ void sp_block_free(sp_block_t a) {
   };
 };
 /** return a newly allocated array for channels with data arrays for each channel */
-status_t sp_block_new(sp_channel_count_t channel_count, sp_count_t sample_count, sp_block_t* out_block) {
+status_t sp_block_new(sp_channel_count_t channels, sp_count_t size, sp_block_t* out) {
   status_declare;
-  memreg_init(channel_count);
+  memreg_init(channels);
   sp_sample_t* channel;
   sp_count_t i;
-  for (i = 0; (i < channel_count); i = (1 + i)) {
-    status_require((sph_helper_calloc((sample_count * sizeof(sp_sample_t)), (&channel))));
+  for (i = 0; (i < channels); i = (1 + i)) {
+    status_require((sph_helper_calloc((size * sizeof(sp_sample_t)), (&channel))));
     memreg_add(channel);
-    (out_block->samples)[i] = channel;
+    (out->samples)[i] = channel;
   };
-  out_block->size = sample_count;
-  out_block->channels = channel_count;
+  out->size = size;
+  out->channels = channels;
 exit:
   if (status_is_failure) {
     memreg_free;
   };
   return (status);
 };
+status_t sp_samples_new(sp_count_t size, sp_sample_t** out) { return ((sph_helper_calloc((size * sizeof(sp_sample_t)), out))); };
+status_t sp_counts_new(sp_count_t size, sp_count_t** out) { return ((sph_helper_calloc((size * sizeof(sp_count_t)), out))); };
 /** lower precision version of sin() that should be faster */
 sp_sample_t sp_sin_lq(sp_float_t a) {
   sp_sample_t b;
@@ -554,50 +555,44 @@ void sp_event_sort_swap(void* a, void* b) {
   *((sp_event_t*)(b)) = c;
 };
 uint8_t sp_event_sort_less_p(void* a, void* b) { return ((((sp_event_t*)(a))->start < ((sp_event_t*)(b))->start)); };
-void sp_seq_events_prepare(sp_events_t a) { quicksort(sp_event_sort_less_p, sp_event_sort_swap, (sizeof(sp_event_t)), (a.start), (i_array_length(a))); };
-/** add offset to the all channel sample arrays in block. modifies the block object */
-void sp_block_at_offset(sp_block_t* a, sp_count_t offset) {
+void sp_seq_events_prepare(sp_event_t* a, sp_count_t size) { quicksort(sp_event_sort_less_p, sp_event_sort_swap, (sizeof(sp_event_t)), a, size); };
+/** add offset to the all channel sample arrays in block */
+sp_block_t sp_block_with_offset(sp_block_t a, sp_count_t offset) {
   sp_count_t i;
-  for (i = 0; (i < a->channels); i = (1 + i)) {
-    (a->samples)[i] = (offset + (a->samples)[i]);
+  for (i = 0; (i < a.channels); i = (1 + i)) {
+    (a.samples)[i] = (offset + (a.samples)[i]);
   };
+  return (a);
 };
 /** event arrays must have been prepared/sorted with sp-seq-event-prepare for seq to work correctly */
-void sp_seq(sp_count_t time, sp_count_t offset, sp_count_t size, sp_block_t out, sp_events_t events) {
-  sp_count_t e_offset_right;
-  sp_count_t e_offset;
+void sp_seq(sp_count_t start, sp_count_t end, sp_block_t out, sp_count_t out_start, sp_event_t* events, sp_count_t events_size) {
+  sp_count_t e_out_start;
   sp_event_t e;
-  sp_count_t e_time;
+  sp_count_t e_start;
+  sp_count_t e_end;
   sp_count_t i;
-  sp_count_t time_end;
-  time_end = (time + size);
-  for (i = 0; (i < i_array_length(events)); i = (1 + i)) {
-    e = (events.start)[i];
-    if (time_end <= e.start) {
-      break;
-    } else if (e.end <= time) {
+  if (out_start) {
+    out = sp_block_with_offset(out, out_start);
+  };
+  for (i = 0; (i < events_size); i = (1 + i)) {
+    e = events[i];
+    if (e.end <= start) {
       continue;
+    } else if (end <= e.start) {
+      break;
     } else {
-      printf("from %lu to %lu time %lu\n", (e.start), (e.end), time);
-      e_time = ((e.start < time) ? (time - e.start) : 0);
-      e_offset = ((e.start > time) ? (e.start - time) : 0);
-      e_offset_right = ((e.end > time_end) ? 0 : (time_end - e.end));
-      if (offset + e_offset) {
-        sp_block_at_offset((&out), (offset + e_offset));
-      };
-      (e.f)(e_time, (size - e_offset - e_offset_right), out, (&e));
+      e_out_start = ((e.start > start) ? (e.start - start) : 0);
+      e_start = ((start > e.start) ? (start - e.start) : 0);
+      e_end = (((e.end < end) ? e.end : end) - e.start);
+      (e.f)(e_start, e_end, (e_out_start ? sp_block_with_offset(out, e_out_start) : out), (&e));
     };
   };
 };
-void sp_synth_event_f(sp_count_t time, sp_count_t size, sp_block_t out, sp_event_t* event) {
-  sp_synth_event_state_t* state;
-  state = event->state;
-  if (!size) {
-    printf("size %lu at time %lu\n", size, time);
-  };
-  sp_synth(out, time, size, (state->config_len), (state->config), (state->state));
+void sp_synth_event_f(sp_count_t start, sp_count_t end, sp_block_t out, sp_event_t* event) {
+  sp_synth_event_state_t* s = event->state;
+  sp_synth(out, start, (end - start), (s->config_len), (s->config), (s->state));
 };
-/** memory for event.state is allocated and owned by the caller.
+/** memory for event.state will be allocated and then owned by the caller.
   config is copied into event.state */
 status_t sp_synth_event(sp_count_t start, sp_count_t end, sp_count_t channel_count, sp_count_t config_len, sp_synth_partial_t* config, sp_event_t* out_event) {
   status_declare;
@@ -615,6 +610,29 @@ status_t sp_synth_event(sp_count_t start, sp_count_t end, sp_count_t channel_cou
 exit:
   return (status);
 };
+#define sp_synth_partial_set_channel(prt, channel, amp_array, wvl_array, phs_array) \
+  (prt.amp)[channel] = amp_array; \
+  (prt.wvl)[channel] = wvl_array; \
+  (prt.phs)[channel] = phs_array
+/** setup a synth partial with one channel */
+sp_synth_partial_t sp_synth_partial_1(sp_count_t start, sp_count_t end, sp_synth_count_t modifies, sp_sample_t* amp, sp_count_t* wvl, sp_count_t phs) {
+  sp_synth_partial_t prt;
+  prt.start = start;
+  prt.end = end;
+  prt.modifies = modifies;
+  sp_synth_partial_set_channel(prt, 0, amp, wvl, phs);
+  return (prt);
+};
+/** setup a synth partial with two channels */
+sp_synth_partial_t sp_synth_partial_2(sp_count_t start, sp_count_t end, sp_synth_count_t modifies, sp_sample_t* amp1, sp_sample_t* amp2, sp_count_t* wvl1, sp_count_t* wvl2, sp_count_t phs1, sp_count_t phs2) {
+  sp_synth_partial_t prt;
+  prt.start = start;
+  prt.end = end;
+  prt.modifies = modifies;
+  sp_synth_partial_set_channel(prt, 0, amp1, wvl1, phs1);
+  sp_synth_partial_set_channel(prt, 1, amp2, wvl2, phs2);
+  return (prt);
+};
 uint32_t sp_plot_temp_file_index = 0;
 #define sp_plot_temp_path "/tmp/sp-plot"
 #define sp_plot_temp_file_index_maxlength 10
@@ -626,6 +644,15 @@ void sp_plot_samples_to_file(sp_sample_t* a, sp_count_t a_size, uint8_t* path) {
   file = fopen(path, "w");
   for (i = 0; (i < a_size); i = (1 + i)) {
     fprintf(file, ("%.3f\n"), (a[i]));
+  };
+  fclose(file);
+};
+void sp_plot_counts_to_file(sp_count_t* a, sp_count_t a_size, uint8_t* path) {
+  FILE* file;
+  sp_count_t i;
+  file = fopen(path, "w");
+  for (i = 0; (i < a_size); i = (1 + i)) {
+    fprintf(file, "%lu\n", (a[i]));
   };
   fclose(file);
 };
@@ -652,7 +679,19 @@ void sp_plot_samples(sp_sample_t* a, sp_count_t a_size) {
   snprintf(path, path_size, "%s-%lu", sp_plot_temp_path, sp_plot_temp_file_index);
   sp_plot_temp_file_index = (1 + sp_plot_temp_file_index);
   sp_plot_samples_to_file(a, a_size, path);
-  sp_plot_samples_file(path, 0);
+  sp_plot_samples_file(path, 1);
+  free(path);
+};
+void sp_plot_counts(sp_count_t* a, sp_count_t a_size) {
+  uint8_t path_size = (1 + sp_plot_temp_file_index_maxlength + strlen(sp_plot_temp_path));
+  uint8_t* path = calloc(path_size, 1);
+  if (!path) {
+    return;
+  };
+  snprintf(path, path_size, "%s-%lu", sp_plot_temp_path, sp_plot_temp_file_index);
+  sp_plot_temp_file_index = (1 + sp_plot_temp_file_index);
+  sp_plot_counts_to_file(a, a_size, path);
+  sp_plot_samples_file(path, 1);
   free(path);
 };
 /** take the fft for given samples, convert complex values to magnitudes and write plot data to file */
@@ -708,7 +747,7 @@ sp_sample_t sp_square_96(sp_count_t t) { return (((((2 * t) % (2 * 96000)) < 960
 #define double_from_uint64(a) ((a >> 11) * (1.0 / (UINT64_C(1) << 53)))
 #define rotl(x, k) ((x << k) | (x >> (64 - k)))
 /** use the given uint64 as a seed and set state with splitmix64 results.
-  the same seed will to the same series of random numbers from sp-random */
+  the same seed will lead to the same series of random numbers from sp-random */
 sp_random_state_t sp_random_state_new(uint64_t seed) {
   uint8_t i;
   uint64_t z;

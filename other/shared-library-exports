@@ -18,6 +18,8 @@ exports {
     sp_file_read;
     sp_file_write;
     sp_synth;
+    sp_synth_partial_1;
+    sp_synth_partial_2;
     sp_synth_state_new;
     sp_initialise;
     sp_moving_average;
@@ -34,6 +36,8 @@ exports {
     sp_synth_event;
     sp_plot_samples;
     sp_plot_samples_to_file;
+    sp_plot_counts;
+    sp_plot_counts_to_file;
     sp_plot_samples_file;
     sp_plot_spectrum;
     sp_plot_spectrum_file;
@@ -51,6 +55,8 @@ exports {
     sp_triangle_96;
     sp_square_96;
     sp_sin_lq;
+    sp_counts_new;
+    sp_samples_new;
     sp_spectral_inversion_ir;
     sp_spectral_reversal_ir;
     sp_state_variable_filter_all;

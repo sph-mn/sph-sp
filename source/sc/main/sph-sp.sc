@@ -1,4 +1,4 @@
-(pre-include "byteswap.h" "math.h" "inttypes.h")
+(pre-include "byteswap.h" "math.h" "inttypes.h" "string.h")
 
 (pre-if-not-defined
   sp-config-is-set
@@ -32,6 +32,8 @@
     sp-config-is-set #t))
 
 (pre-define
+  spline-path-time-t sp-count-t
+  spline-path-value-t sp-sample-t
   boolean uint8-t
   sp-file-bit-input 1
   sp-file-bit-output 2
@@ -58,7 +60,7 @@
   (sp-cheap-ceiling-positive a) (+ (convert-type a sp-count-t) (< (convert-type a sp-count-t) a))
   (sp-block-set-null a) (set a.channels 0))
 
-(sc-include "../foreign/sph" "../foreign/sph/status" "../foreign/sph/i-array")
+(sc-include "../foreign/sph" "../foreign/sph/status" "../foreign/sph/spline-path")
 
 (enum
   (sp-status-id-file-channel-mismatch
@@ -190,8 +192,6 @@
   (sp-state-variable-filter-all out in in-count cutoff q-factor state)
   (void sp-sample-t* sp-sample-t* sp-float-t sp-float-t sp-count-t sp-sample-t*))
 
-(pre-define sp-events-new i-array-allocate-sp-events-t)
-
 (declare
   sp-event-t struct
   sp-event-t
@@ -213,16 +213,16 @@
       (config (array sp-synth-partial-t sp-synth-partial-limit))
       (state sp-count-t*))))
 
-(i-array-declare-type sp-events-t sp-event-t)
-
 (declare
-  (sp-seq-events-prepare a) (void sp-events-t)
-  (sp-seq time offset size output events)
-  (void sp-count-t sp-count-t sp-count-t sp-block-t sp-events-t)
+  (sp-seq-events-prepare a a-size) (void sp-event-t* sp-count-t)
+  (sp-seq start end out out-start events events-size)
+  (void sp-count-t sp-count-t sp-block-t sp-count-t sp-event-t* sp-count-t)
   (sp-synth-event start end channel-count config-len config out-event)
   (status-t sp-count-t sp-count-t sp-count-t sp-count-t sp-synth-partial-t* sp-event-t*)
   (sp-plot-samples a a-size) (void sp-sample-t* sp-count-t)
+  (sp-plot-counts a a-size) (void sp-count-t* sp-count-t)
   (sp-plot-samples->file a a-size path) (void sp-sample-t* sp-count-t uint8-t*)
+  (sp-plot-counts->file a a-size path) (void sp-count-t* sp-count-t uint8-t*)
   (sp-plot-samples-file path use-steps) (void uint8-t* uint8-t)
   (sp-plot-spectrum->file a a-size path) (void sp-sample-t* sp-count-t uint8-t*)
   (sp-plot-spectrum-file path) (void uint8-t*)
@@ -235,4 +235,13 @@
     (struct
       (data (array uint64-t 4))))
   (sp-random state size out) (sp-random-state-t sp-random-state-t sp-count-t sp-sample-t*)
-  (sp-random-state-new seed) (sp-random-state-t uint64-t))
+  (sp-random-state-new seed) (sp-random-state-t uint64-t)
+  (sp-samples-new size out) (status-t sp-count-t sp-sample-t**)
+  (sp-counts-new size out) (status-t sp-count-t sp-count-t**)
+  (sp-synth-partial-1 start end modifies amp wvl phs)
+  (sp-synth-partial-t sp-count-t sp-count-t sp-synth-count-t sp-sample-t* sp-count-t* sp-count-t)
+  (sp-synth-partial-2 start end modifies amp1 amp2 wvl1 wvl2 phs1 phs2)
+  (sp-synth-partial-t
+    sp-count-t
+    sp-count-t
+    sp-synth-count-t sp-sample-t* sp-sample-t* sp-count-t* sp-count-t* sp-count-t sp-count-t))

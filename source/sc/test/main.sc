@@ -362,39 +362,28 @@
 (define (test-sp-seq) status-t
   status-declare
   (declare
-    events sp-events-t
+    events (array sp-event-t 10)
     state sp-count-t*
     out sp-block-t
-    prt sp-synth-partial-t
     config (array sp-synth-partial-t 1)
     wvl (array sp-count-t sp-seq-duration)
     amp (array sp-sample-t sp-seq-duration)
-    i sp-count-t
-    e sp-event-t)
+    i sp-count-t)
   (for ((set i 0) (< i sp-seq-duration) (set i (+ 1 i)))
     (set
       (array-get wvl i) 5
       (array-get amp i) 0.5))
-  (set
-    prt.modifies 0
-    prt.start 0
-    prt.end sp-seq-duration
-    (array-get prt.amp 0) amp
-    (array-get prt.wvl 0) wvl
-    (array-get prt.phs 0) 0
-    (array-get config 0) prt)
-  (status-id-require (i-array-allocate-sp-events-t 2 &events))
-  (status-require (sp-synth-event 0 sp-seq-half-duration 1 1 config &e))
-  (i-array-add events e)
-  (status-require (sp-synth-event (+ 2 sp-seq-half-duration) (- sp-seq-duration 2) 1 1 config &e))
-  (i-array-add events e)
-  (sp-seq-events-prepare events)
+  (set (array-get config 0) (sp-synth-partial-1 0 sp-seq-duration 0 amp wvl 0))
+  (status-require (sp-synth-event 0 sp-seq-half-duration 1 1 config (+ 0 events)))
+  (status-require
+    (sp-synth-event (+ 2 sp-seq-half-duration) (- sp-seq-duration 2) 1 1 config (+ 1 events)))
+  (sp-seq-events-prepare events 2)
   (status-require (sp-block-new 1 sp-seq-duration &out))
-  (sp-seq 0 0 sp-seq-half-duration out events)
-  (sp-seq sp-seq-half-duration sp-seq-half-duration sp-seq-half-duration out events)
-  #;(for ((set i 0) (< i sp-seq-duration) (set i (+ 1 i)))
-    (printf "%f " (array-get (array-get *out.samples i))))
-  (sp-plot-samples *out.samples out.size)
+  (sp-seq 0 sp-seq-half-duration out 0 events 2)
+  (sp-seq sp-seq-half-duration sp-seq-duration out sp-seq-half-duration events 2)
+  (for ((set i 0) (< i sp-seq-duration) (set i (+ 1 i)))
+    (printf "%f " (array-get *out.samples i)))
+  ;(sp-plot-samples *out.samples out.size)
   (label exit
     (return status)))
 
@@ -451,7 +440,8 @@
 (define (main) int
   status-declare
   (sp-initialise)
-  ;(test-helper-test-one test-sp-seq)
+  (test-helper-test-one test-sp-seq)
+  (goto exit)
   (test-helper-test-one test-sp-random)
   (test-helper-test-one test-sp-triangle-square)
   (test-helper-test-one test-synth)
