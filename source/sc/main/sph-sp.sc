@@ -23,9 +23,9 @@
   sp-sf-read sf-readf-double
   sp-sf-write sf-writef-double
   sp-synth-count-t uint16-t
+  sp-channel-limit 2
   sp-synth-sine sp-sine-96
-  sp-synth-channel-limit 16
-  sp-synth-partial-limit 128)
+  sp-synth-partial-limit 64)
 
 (pre-define
   spline-path-time-t sp-count-t
@@ -71,8 +71,6 @@
     sp-status-id-not-implemented
     sp-status-id-file-closed sp-status-id-file-position sp-status-id-file-type sp-status-id-undefined))
 
-(pre-define sp-channel-limit 2)
-
 (declare
   sp-block-t
   (type
@@ -105,9 +103,9 @@
       (start sp-count-t)
       (end sp-count-t)
       (modifies sp-synth-count-t)
-      (amp (array sp-sample-t* sp-synth-channel-limit))
-      (wvl (array sp-count-t* sp-synth-channel-limit))
-      (phs (array sp-count-t sp-synth-channel-limit))))
+      (amp (array sp-sample-t* sp-channel-limit))
+      (wvl (array sp-count-t* sp-channel-limit))
+      (phs (array sp-count-t sp-channel-limit))))
   (sp-file-read file sample-count result-block result-sample-count)
   (status-t sp-file-t* sp-count-t sp-sample-t** sp-count-t*)
   (sp-file-write file block sample-count result-sample-count)
@@ -232,6 +230,7 @@
   (type
     (struct
       (data (array uint64-t 4))))
+  sp-default-random-state sp-random-state-t
   (sp-random state size out) (sp-random-state-t sp-random-state-t sp-count-t sp-sample-t*)
   (sp-random-state-new seed) (sp-random-state-t uint64-t)
   (sp-samples-new size out) (status-t sp-count-t sp-sample-t**)
@@ -242,4 +241,12 @@
   (sp-synth-partial-t
     sp-count-t
     sp-count-t
-    sp-synth-count-t sp-sample-t* sp-sample-t* sp-count-t* sp-count-t* sp-count-t sp-count-t))
+    sp-synth-count-t sp-sample-t* sp-sample-t* sp-count-t* sp-count-t* sp-count-t sp-count-t)
+  (sp-noise-event start end amp cut-l cut-h trn-l trn-h is-reject resolution random-state out-event)
+  (status-t
+    sp-count-t
+    sp-count-t
+    sp-sample-t**
+    sp-sample-t*
+    sp-sample-t* sp-sample-t* sp-sample-t* uint8-t sp-count-t sp-random-state-t sp-event-t*)
+  (sp-noise-event-free a) (void sp-event-t*))

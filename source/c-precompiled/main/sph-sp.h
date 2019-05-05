@@ -32,14 +32,14 @@
 #ifndef sp_synth_count_t
 #define sp_synth_count_t uint16_t
 #endif
+#ifndef sp_channel_limit
+#define sp_channel_limit 2
+#endif
 #ifndef sp_synth_sine
 #define sp_synth_sine sp_sine_96
 #endif
-#ifndef sp_synth_channel_limit
-#define sp_synth_channel_limit 16
-#endif
 #ifndef sp_synth_partial_limit
-#define sp_synth_partial_limit 128
+#define sp_synth_partial_limit 64
 #endif
 #define spline_path_time_t sp_count_t
 #define spline_path_value_t sp_sample_t
@@ -358,7 +358,6 @@ enum { sp_status_id_file_channel_mismatch,
   sp_status_id_file_position,
   sp_status_id_file_type,
   sp_status_id_undefined };
-#define sp_channel_limit 2
 typedef struct {
   sp_channel_count_t channels;
   sp_count_t size;
@@ -385,9 +384,9 @@ typedef struct {
   sp_count_t start;
   sp_count_t end;
   sp_synth_count_t modifies;
-  sp_sample_t* amp[sp_synth_channel_limit];
-  sp_count_t* wvl[sp_synth_channel_limit];
-  sp_count_t phs[sp_synth_channel_limit];
+  sp_sample_t* amp[sp_channel_limit];
+  sp_count_t* wvl[sp_channel_limit];
+  sp_count_t phs[sp_channel_limit];
 } sp_synth_partial_t;
 status_t sp_file_read(sp_file_t* file, sp_count_t sample_count, sp_sample_t** result_block, sp_count_t* result_sample_count);
 status_t sp_file_write(sp_file_t* file, sp_sample_t** block, sp_count_t sample_count, sp_count_t* result_sample_count);
@@ -467,9 +466,12 @@ sp_sample_t sp_triangle_96(sp_count_t t);
 typedef struct {
   uint64_t data[4];
 } sp_random_state_t;
+sp_random_state_t sp_default_random_state;
 sp_random_state_t sp_random(sp_random_state_t state, sp_count_t size, sp_sample_t* out);
 sp_random_state_t sp_random_state_new(uint64_t seed);
 status_t sp_samples_new(sp_count_t size, sp_sample_t** out);
 status_t sp_counts_new(sp_count_t size, sp_count_t** out);
 sp_synth_partial_t sp_synth_partial_1(sp_count_t start, sp_count_t end, sp_synth_count_t modifies, sp_sample_t* amp, sp_count_t* wvl, sp_count_t phs);
 sp_synth_partial_t sp_synth_partial_2(sp_count_t start, sp_count_t end, sp_synth_count_t modifies, sp_sample_t* amp1, sp_sample_t* amp2, sp_count_t* wvl1, sp_count_t* wvl2, sp_count_t phs1, sp_count_t phs2);
+status_t sp_noise_event(sp_count_t start, sp_count_t end, sp_sample_t** amp, sp_sample_t* cut_l, sp_sample_t* cut_h, sp_sample_t* trn_l, sp_sample_t* trn_h, uint8_t is_reject, sp_count_t resolution, sp_random_state_t random_state, sp_event_t* out_event);
+void sp_noise_event_free(sp_event_t* a);

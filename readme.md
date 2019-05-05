@@ -5,7 +5,7 @@ c code and shared library for sound file input/output and example implementation
 * basics
   * file input/output with many supported file [formats](http://www.mega-nerd.com/libsndfile/)
   * 64 bit float sample format by default, other formats possible for many processors
-  * processing of non-interleaved sample arrays with one array per channel. channel count and sample rate mostly unlimited
+  * processing of non-interleaved sample arrays with one array per channel. number of channels and sample rate can be custom set
   * fast fourier transform (fft) and inverse fast fourier transform (ifft)
   * plotting of samples and sound spectra using gnuplot
 * processors that can work on blocks of continuous data streams
@@ -54,6 +54,7 @@ the file `source/c-precompiled/main/sph-sp.h` can be edited before compilation t
 |sp-channel-count-t|uint8-t|data type for numbers of channels|
 |sp-file-format|(SF-FORMAT-WAV \| SF-FORMAT-DOUBLE)|soundfile file format. a combination of file and sample format soundfile constants, for example (SF-FORMAT-AU \| SF-FORMAT-DOUBLE). conversion is done automatically as necessary|
 |sp-float-t|double|data type for floating point values other than samples|
+|sp-channel-limit|2|maximum number of channels|
 |sp-count-t|size-t|data type for numbers of samples|
 |sp-sample-rate-t|uint32-t|data type for sample rates|
 |sp-sample-sum|f64-sum|function (sp-sample-t* size-t -> sp-sample-t) that sums samples, by default with kahan error compensation|
@@ -62,7 +63,6 @@ the file `source/c-precompiled/main/sph-sp.h` can be edited before compilation t
 |sp-sf-write|sf-writef-double|libsndfile file writer function to use|
 |sp-synth-count-t|uint16-t|the datatype for the number of partials for sp-synth|
 |sp-synth-sine|sp-sine-96||
-|sp-synth-channel-limit|16|maximum number of channels sp-synth will be able to process|
 |sp-synth-partial-limit|128|maximum number of partials sp-synth will be able to process|
 
 # c usage

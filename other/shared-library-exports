@@ -67,6 +67,7 @@ exports {
     sp_state_variable_filter_peak;
     sp_status_description;
     sp_status_name;
+    sp_default_random_state;
     sp_window_blackman;
     sp_windowed_sinc_bp_br;
     sp_windowed_sinc_bp_br_ir;
@@ -77,5 +78,7 @@ exports {
     sp_random;
     sp_random_state_new;
     sp_windowed_sinc_lp_hp_ir_length;
+    sp_noise_event;
+    sp_noise_event_free;
   local: *;
 };

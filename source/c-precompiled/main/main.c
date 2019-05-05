@@ -99,12 +99,6 @@ uint8_t* sp_status_name(status_t a) {
   };
   return (b);
 };
-void sp_block_free(sp_block_t a) {
-  sp_count_t i;
-  for (i = 0; (i < a.channels); i = (1 + i)) {
-    free(((a.samples)[i]));
-  };
-};
 /** return a newly allocated array for channels with data arrays for each channel */
 status_t sp_block_new(sp_channel_count_t channels, sp_count_t size, sp_block_t* out) {
   status_declare;
@@ -123,6 +117,20 @@ exit:
     memreg_free;
   };
   return (status);
+};
+void sp_block_free(sp_block_t a) {
+  sp_count_t i;
+  for (i = 0; (i < a.channels); i = (1 + i)) {
+    free(((a.samples)[i]));
+  };
+};
+/** add offset to the all channel sample arrays in block */
+sp_block_t sp_block_with_offset(sp_block_t a, sp_count_t offset) {
+  sp_count_t i;
+  for (i = 0; (i < a.channels); i = (1 + i)) {
+    (a.samples)[i] = (offset + (a.samples)[i]);
+  };
+  return (a);
 };
 status_t sp_samples_new(sp_count_t size, sp_sample_t** out) { return ((sph_helper_calloc((size * sizeof(sp_sample_t)), out))); };
 status_t sp_counts_new(sp_count_t size, sp_count_t** out) { return ((sph_helper_calloc((size * sizeof(sp_count_t)), out))); };
@@ -436,6 +444,7 @@ status_t sp_initialise(uint16_t cpu_count) {
   if (status.id) {
     return (status);
   };
+  sp_default_random_state = sp_random_state_new(1557083953);
   return ((sp_sine_table_new((&sp_sine_96_table), 96000)));
 };
 /** accumulate an integer phase and reset it after cycles.
@@ -487,7 +496,7 @@ status_t sp_synth(sp_block_t out, sp_count_t start, sp_count_t duration, sp_synt
   sp_count_t end;
   sp_count_t i;
   sp_sample_t modulated_wvl;
-  sp_sample_t* modulation_index[sp_synth_partial_limit][sp_synth_channel_limit];
+  sp_sample_t* modulation_index[sp_synth_partial_limit][sp_channel_limit];
   sp_sample_t* modulation;
   sp_count_t phs;
   sp_count_t prt_duration;
@@ -553,142 +562,6 @@ exit:
   memreg_free;
   return (status);
 };
-#include "../main/windowed-sinc.c"
-#include "../main/io.c"
-void sp_event_sort_swap(void* a, void* b) {
-  sp_event_t c;
-  c = *((sp_event_t*)(a));
-  *((sp_event_t*)(b)) = *((sp_event_t*)(a));
-  *((sp_event_t*)(b)) = c;
-};
-uint8_t sp_event_sort_less_p(void* a, void* b) { return ((((sp_event_t*)(a))->start < ((sp_event_t*)(b))->start)); };
-void sp_seq_events_prepare(sp_event_t* a, sp_count_t size) { quicksort(sp_event_sort_less_p, sp_event_sort_swap, (sizeof(sp_event_t)), a, size); };
-/** add offset to the all channel sample arrays in block */
-sp_block_t sp_block_with_offset(sp_block_t a, sp_count_t offset) {
-  sp_count_t i;
-  for (i = 0; (i < a.channels); i = (1 + i)) {
-    (a.samples)[i] = (offset + (a.samples)[i]);
-  };
-  return (a);
-};
-/** event arrays must have been prepared/sorted with sp-seq-event-prepare for seq to work correctly */
-void sp_seq(sp_count_t start, sp_count_t end, sp_block_t out, sp_count_t out_start, sp_event_t* events, sp_count_t events_size) {
-  sp_count_t e_out_start;
-  sp_event_t e;
-  sp_count_t e_start;
-  sp_count_t e_end;
-  sp_count_t i;
-  if (out_start) {
-    out = sp_block_with_offset(out, out_start);
-  };
-  for (i = 0; (i < events_size); i = (1 + i)) {
-    e = events[i];
-    if (e.end <= start) {
-      continue;
-    } else if (end <= e.start) {
-      break;
-    } else {
-      e_out_start = ((e.start > start) ? (e.start - start) : 0);
-      e_start = ((start > e.start) ? (start - e.start) : 0);
-      e_end = (((e.end < end) ? e.end : end) - e.start);
-      (e.f)(e_start, e_end, (e_out_start ? sp_block_with_offset(out, e_out_start) : out), (&e));
-    };
-  };
-};
-typedef struct {
-  sp_count_t start;
-  sp_count_t end;
-  sp_count_t out_start;
-  sp_block_t out;
-  sp_event_t* event;
-  future_t future;
-} sp_seq_future_t;
-void* sp_seq_parallel_future_f(void* data) {
-  sp_seq_future_t* a = data;
-  (a->event->f)((a->start), (a->end), (a->out), (a->event));
-  return (data);
-};
-/** like sp-seq but evaluates events in parallel */
-status_t sp_seq_parallel(sp_count_t start, sp_count_t end, sp_block_t out, sp_count_t out_start, sp_event_t* events, sp_count_t events_size) {
-  status_declare;
-  sp_count_t e_out_start;
-  sp_event_t e;
-  sp_count_t e_start;
-  sp_count_t e_end;
-  sp_channel_count_t channel_i;
-  sp_count_t events_start;
-  sp_count_t events_count;
-  sp_seq_future_t* seq_futures;
-  sp_seq_future_t* sf;
-  sp_count_t i;
-  sp_count_t e_i;
-  seq_futures = 0;
-  if (out_start) {
-    out = sp_block_with_offset(out, out_start);
-  };
-  /* select active events */
-  for (i = 0, events_start = 0, events_count = 0; (i < events_size); i = (1 + i)) {
-    e = events[i];
-    if (e.end <= start) {
-      events_start = (1 + events_start);
-    } else if (end <= e.start) {
-      break;
-    } else {
-      events_count = (1 + events_count);
-    };
-  };
-  status_require((sph_helper_malloc((events_count * sizeof(sp_seq_future_t)), (&seq_futures))));
-  /* parallelise */
-  for (i = 0; (i < events_count); i = (1 + i)) {
-    e = events[(events_start + i)];
-    sf = (i + seq_futures);
-    e_out_start = ((e.start > start) ? (e.start - start) : 0);
-    e_start = ((start > e.start) ? (start - e.start) : 0);
-    e_end = (((e.end < end) ? e.end : end) - e.start);
-    status_require((sp_block_new((out.channels), (e_end - e_start), (&(sf->out)))));
-    sf->start = e_start;
-    sf->end = e_end;
-    sf->out_start = e_out_start;
-    sf->event = (events_start + i + events);
-    future_new(sp_seq_parallel_future_f, sf, (&(sf->future)));
-  };
-  /* merge */
-  for (e_i = 0; (e_i < events_count); e_i = (1 + e_i)) {
-    sf = (e_i + seq_futures);
-    touch((&(sf->future)));
-    for (channel_i = 0; (channel_i < out.channels); channel_i = (1 + channel_i)) {
-      for (i = 0; (i < sf->out.size); i = (1 + i)) {
-        ((out.samples)[channel_i])[(sf->out_start + i)] = (((out.samples)[channel_i])[(sf->out_start + i)] + ((sf->out.samples)[channel_i])[i]);
-      };
-    };
-    sp_block_free((sf->out));
-  };
-exit:
-  free(seq_futures);
-  return (status);
-};
-void sp_synth_event_f(sp_count_t start, sp_count_t end, sp_block_t out, sp_event_t* event) {
-  sp_synth_event_state_t* s = event->state;
-  sp_synth(out, start, (end - start), (s->config_len), (s->config), (s->state));
-};
-/** memory for event.state will be allocated and then owned by the caller.
-  config is copied into event.state */
-status_t sp_synth_event(sp_count_t start, sp_count_t end, sp_count_t channel_count, sp_count_t config_len, sp_synth_partial_t* config, sp_event_t* out_event) {
-  status_declare;
-  sp_event_t e;
-  sp_synth_event_state_t* state;
-  status_require((sph_helper_malloc((channel_count * sizeof(sp_synth_event_state_t)), (&state))));
-  status_require((sp_synth_state_new(channel_count, config_len, config, (&(state->state)))));
-  memcpy((state->config), config, (config_len * sizeof(sp_synth_partial_t)));
-  state->config_len = config_len;
-  e.start = start;
-  e.end = end;
-  e.f = sp_synth_event_f;
-  e.state = state;
-  *out_event = e;
-exit:
-  return (status);
-};
 #define sp_synth_partial_set_channel(prt, channel, amp_array, wvl_array, phs_array) \
   (prt.amp)[channel] = amp_array; \
   (prt.wvl)[channel] = wvl_array; \
@@ -711,106 +584,6 @@ sp_synth_partial_t sp_synth_partial_2(sp_count_t start, sp_count_t end, sp_synth
   sp_synth_partial_set_channel(prt, 0, amp1, wvl1, phs1);
   sp_synth_partial_set_channel(prt, 1, amp2, wvl2, phs2);
   return (prt);
-};
-uint32_t sp_plot_temp_file_index = 0;
-#define sp_plot_temp_path "/tmp/sp-plot"
-#define sp_plot_temp_file_index_maxlength 10
-#define sp_plot_command_pattern_lines "gnuplot --persist -e 'set key off; set size ratio 0.5; plot \"%s\" with lines lc rgb \"blue\"'"
-#define sp_plot_command_pattern_steps "gnuplot --persist -e 'set key off; set size ratio 0.5; plot \"%s\" with histeps lc rgb \"blue\"'"
-void sp_plot_samples_to_file(sp_sample_t* a, sp_count_t a_size, uint8_t* path) {
-  FILE* file;
-  sp_count_t i;
-  file = fopen(path, "w");
-  for (i = 0; (i < a_size); i = (1 + i)) {
-    fprintf(file, ("%.3f\n"), (a[i]));
-  };
-  fclose(file);
-};
-void sp_plot_counts_to_file(sp_count_t* a, sp_count_t a_size, uint8_t* path) {
-  FILE* file;
-  sp_count_t i;
-  file = fopen(path, "w");
-  for (i = 0; (i < a_size); i = (1 + i)) {
-    fprintf(file, "%lu\n", (a[i]));
-  };
-  fclose(file);
-};
-void sp_plot_samples_file(uint8_t* path, uint8_t use_steps) {
-  uint8_t* command;
-  uint8_t* command_pattern;
-  size_t command_size;
-  command_pattern = (use_steps ? sp_plot_command_pattern_steps : sp_plot_command_pattern_lines);
-  command_size = (strlen(path) + strlen(command_pattern));
-  command = malloc(command_size);
-  if (!command) {
-    return;
-  };
-  snprintf(command, command_size, command_pattern, path);
-  system(command);
-  free(command);
-};
-void sp_plot_samples(sp_sample_t* a, sp_count_t a_size) {
-  uint8_t path_size = (1 + sp_plot_temp_file_index_maxlength + strlen(sp_plot_temp_path));
-  uint8_t* path = calloc(path_size, 1);
-  if (!path) {
-    return;
-  };
-  snprintf(path, path_size, "%s-%lu", sp_plot_temp_path, sp_plot_temp_file_index);
-  sp_plot_temp_file_index = (1 + sp_plot_temp_file_index);
-  sp_plot_samples_to_file(a, a_size, path);
-  sp_plot_samples_file(path, 1);
-  free(path);
-};
-void sp_plot_counts(sp_count_t* a, sp_count_t a_size) {
-  uint8_t path_size = (1 + sp_plot_temp_file_index_maxlength + strlen(sp_plot_temp_path));
-  uint8_t* path = calloc(path_size, 1);
-  if (!path) {
-    return;
-  };
-  snprintf(path, path_size, "%s-%lu", sp_plot_temp_path, sp_plot_temp_file_index);
-  sp_plot_temp_file_index = (1 + sp_plot_temp_file_index);
-  sp_plot_counts_to_file(a, a_size, path);
-  sp_plot_samples_file(path, 1);
-  free(path);
-};
-/** take the fft for given samples, convert complex values to magnitudes and write plot data to file */
-void sp_plot_spectrum_to_file(sp_sample_t* a, sp_count_t a_size, uint8_t* path) {
-  FILE* file;
-  sp_count_t i;
-  double* imag;
-  double* real;
-  imag = calloc(a_size, (sizeof(sp_sample_t)));
-  if (!imag) {
-    return;
-  };
-  real = malloc((sizeof(sp_sample_t) * a_size));
-  if (!real) {
-    return;
-  };
-  memcpy(real, a, (sizeof(sp_sample_t) * a_size));
-  if (sp_fft(a_size, real, imag)) {
-    return;
-  };
-  file = fopen(path, "w");
-  for (i = 0; (i < a_size); i = (1 + i)) {
-    fprintf(file, ("%.3f\n"), (2 * (sqrt(((real[i] * real[i]) + (imag[i] * imag[i]))) / a_size)));
-  };
-  fclose(file);
-  free(imag);
-  free(real);
-};
-void sp_plot_spectrum_file(uint8_t* path) { sp_plot_samples_file(path, 1); };
-void sp_plot_spectrum(sp_sample_t* a, sp_count_t a_size) {
-  uint8_t path_size = (1 + sp_plot_temp_file_index_maxlength + strlen(sp_plot_temp_path));
-  uint8_t* path = calloc(path_size, 1);
-  if (!path) {
-    return;
-  };
-  snprintf(path, path_size, "%s-%lu", sp_plot_temp_path, sp_plot_temp_file_index);
-  sp_plot_temp_file_index = (1 + sp_plot_temp_file_index);
-  sp_plot_spectrum_to_file(a, a_size, path);
-  sp_plot_spectrum_file(path);
-  free(path);
 };
 /** return a sample for a triangular wave with center offsets a left and b right.
    creates sawtooth waves if either a or b is 0 */
@@ -860,3 +633,7 @@ sp_random_state_t sp_random(sp_random_state_t state, sp_count_t size, sp_sample_
   };
   return (state);
 };
+#include "../main/windowed-sinc.c"
+#include "../main/io.c"
+#include "../main/plot.c"
+#include "../main/seq.c"

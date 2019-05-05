@@ -390,6 +390,33 @@ status_t test_sp_random() {
 exit:
   return (status);
 };
+#define sp_noise_duration 20
+status_t test_sp_noise_event() {
+  status_declare;
+  sp_event_t events[1];
+  sp_block_t out;
+  sp_sample_t cut_l[sp_noise_duration];
+  sp_sample_t cut_h[sp_noise_duration];
+  sp_sample_t trn_l[sp_noise_duration];
+  sp_sample_t trn_h[sp_noise_duration];
+  sp_sample_t amp1[sp_noise_duration];
+  sp_sample_t* amp[sp_channel_limit];
+  sp_count_t i;
+  status_require((sp_block_new(1, sp_noise_duration, (&out))));
+  amp[0] = amp1;
+  for (i = 0; (i < sp_noise_duration); i = (1 + i)) {
+    cut_l[i] = ((i < (sp_noise_duration / 2)) ? 0.01 : 0.1);
+    cut_h[i] = 0.11;
+    trn_l[i] = 0.07;
+    trn_h[i] = 0.07;
+    amp1[i] = (i / sp_noise_duration);
+  };
+  status_require((sp_noise_event(0, sp_noise_duration, amp, cut_l, cut_h, trn_l, trn_h, 0, 9, sp_default_random_state, events)));
+  sp_seq(0, sp_noise_duration, out, 0, events, 1);
+  sp_block_free(out);
+exit:
+  return (status);
+};
 int main() {
   status_declare;
   sp_initialise(6);

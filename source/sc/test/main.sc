@@ -441,9 +441,47 @@
   (label exit
     (return status)))
 
+(pre-define sp-noise-duration 20)
+
+(define (test-sp-noise-event) status-t
+  status-declare
+  (declare
+    events (array sp-event-t 1)
+    out sp-block-t
+    cut-l (array sp-sample-t sp-noise-duration)
+    cut-h (array sp-sample-t sp-noise-duration)
+    trn-l (array sp-sample-t sp-noise-duration)
+    trn-h (array sp-sample-t sp-noise-duration)
+    amp1 (array sp-sample-t sp-noise-duration)
+    amp (array sp-sample-t* sp-channel-limit)
+    i sp-count-t)
+  (status-require (sp-block-new 1 sp-noise-duration &out))
+  (set (array-get amp 0) amp1)
+  (for ((set i 0) (< i sp-noise-duration) (set i (+ 1 i)))
+    (set
+      (array-get cut-l i)
+      (if* (< i (/ sp-noise-duration 2)) 0.01
+        0.1)
+      (array-get cut-h i) 0.11
+      (array-get trn-l i) 0.07
+      (array-get trn-h i) 0.07
+      (array-get amp1 i) (/ i sp-noise-duration)))
+  (status-require
+    (sp-noise-event
+      0 sp-noise-duration amp cut-l cut-h trn-l trn-h #f 9 sp-default-random-state events))
+  (sp-seq 0 sp-noise-duration out 0 events 1)
+  #;(for ((set i 0) (< i sp-seq-duration) (set i (+ 1 i)))
+    (printf "%f " (array-get *out.samples i)))
+  ;(sp-plot-samples *out.samples out.size)
+  (sp-block-free out)
+  (label exit
+    (return status)))
+
 (define (main) int
   status-declare
   (sp-initialise 6)
+  ;(test-helper-test-one test-sp-noise-event)
+  ;(goto exit)
   (test-helper-test-one test-sp-seq)
   (test-helper-test-one test-sp-random)
   (test-helper-test-one test-sp-triangle-square)
