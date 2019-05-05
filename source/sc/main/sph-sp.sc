@@ -1,25 +1,6 @@
 (pre-include "byteswap.h" "math.h" "inttypes.h" "string.h")
 
-(pre-if-not-defined
-  sp-config-is-set
-  (pre-define
-    sp-channel-count-t uint8-t
-    sp-file-format (bit-or SF-FORMAT-WAV SF-FORMAT-FLOAT)
-    sp-float-t double
-    sp-count-t uint32-t
-    sp-sample-count-max UINT32_MAX
-    sp-sample-rate-t uint32-t
-    sp-sample-sum f64-sum
-    sp-sample-t double
-    sp-sf-read sf-readf-double
-    sp-sf-write sf-writef-double
-    sp-synth-count-t uint16-t
-    sp-synth-sine sp-sine-96
-    sp-synth-channel-limit 16
-    sp-synth-partial-limit 64
-    sp-config-is-set #t)
-  ; f32
-  #;(pre-define
+#;(pre-define  ;f32 configuration
     sp-channel-count-t uint8-t
     sp-file-format (bit-or SF-FORMAT-WAV SF-FORMAT-FLOAT)
     sp-float-t float
@@ -29,7 +10,22 @@
     sp-sample-t float
     sp-sf-read sf-readf-float
     sp-sf-write sf-writef-float
-    sp-config-is-set #t))
+    sp-config-is-set #t)
+
+(pre-define-if-not-defined
+  sp-channel-count-t uint8-t
+  sp-file-format (bit-or SF-FORMAT-WAV SF-FORMAT-FLOAT)
+  sp-float-t double
+  sp-count-t uint32-t
+  sp-sample-rate-t uint32-t
+  sp-sample-sum f64-sum
+  sp-sample-t double
+  sp-sf-read sf-readf-double
+  sp-sf-write sf-writef-double
+  sp-synth-count-t uint16-t
+  sp-synth-sine sp-sine-96
+  sp-synth-channel-limit 16
+  sp-synth-partial-limit 128)
 
 (pre-define
   spline-path-time-t sp-count-t

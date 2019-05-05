@@ -2,22 +2,44 @@
 #include <math.h>
 #include <inttypes.h>
 #include <string.h>
-#ifndef sp_config_is_set
+#ifndef sp_channel_count_t
 #define sp_channel_count_t uint8_t
+#endif
+#ifndef sp_file_format
 #define sp_file_format (SF_FORMAT_WAV | SF_FORMAT_FLOAT)
+#endif
+#ifndef sp_float_t
 #define sp_float_t double
+#endif
+#ifndef sp_count_t
 #define sp_count_t uint32_t
-#define sp_sample_count_max UINT32_MAX
+#endif
+#ifndef sp_sample_rate_t
 #define sp_sample_rate_t uint32_t
+#endif
+#ifndef sp_sample_sum
 #define sp_sample_sum f64_sum
+#endif
+#ifndef sp_sample_t
 #define sp_sample_t double
+#endif
+#ifndef sp_sf_read
 #define sp_sf_read sf_readf_double
+#endif
+#ifndef sp_sf_write
 #define sp_sf_write sf_writef_double
+#endif
+#ifndef sp_synth_count_t
 #define sp_synth_count_t uint16_t
+#endif
+#ifndef sp_synth_sine
 #define sp_synth_sine sp_sine_96
+#endif
+#ifndef sp_synth_channel_limit
 #define sp_synth_channel_limit 16
+#endif
+#ifndef sp_synth_partial_limit
 #define sp_synth_partial_limit 64
-#define sp_config_is_set 1
 #endif
 #define spline_path_time_t sp_count_t
 #define spline_path_value_t sp_sample_t
