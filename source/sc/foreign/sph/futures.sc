@@ -40,19 +40,15 @@
     task:data (a:f task:data)
     a:finished #t))
 
-(define (future-new f data) (future-t* future-f-t void*)
-  "return a new futures object or zero if memory allocation failed.
+(define (future-new f data out) (void future-f-t void* future-t*)
+  "prepare a future in out and possibly start evaluation in parallel.
   the given function receives data as its sole argument"
-  (declare a future-t*)
-  (set a (malloc (sizeof future-t)))
-  (if (not a) (return 0))
   (set
-    a:finished #f
-    a:f f
-    a:task.f future-eval
-    a:task.data data)
-  (thread-pool-enqueue &sph-futures-pool &a:task)
-  (return a))
+    out:finished #f
+    out:f f
+    out:task.f future-eval
+    out:task.data data)
+  (thread-pool-enqueue &sph-futures-pool &out:task))
 
 (define (future-deinit) void
   "can be called to stop and free the main thread-pool.
@@ -62,13 +58,8 @@
 
 (define (touch a) (void* future-t*)
   "blocks until future is finished and returns its result"
-  (declare result void*)
   (label loop
-    (if a:finished
-      (begin
-        (set result a:task.data)
-        (free a)
-        (return result))
+    (if a:finished (return a:task.data)
       (begin
         (sc-comment "poll five times per second. maybe condition variables can be used here")
         (usleep 20000)

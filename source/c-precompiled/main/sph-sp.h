@@ -403,7 +403,7 @@ status_t sp_null_ir(sp_sample_t** out_ir, sp_count_t* out_len);
 status_t sp_passthrough_ir(sp_sample_t** out_ir, sp_count_t* out_len);
 status_t sp_sine_table_new(sp_sample_t** out, sp_count_t size);
 sp_sample_t* sp_sine_96_table;
-status_t sp_initialise();
+status_t sp_initialise(uint16_t cpu_count);
 sp_count_t sp_phase_96(sp_count_t current, sp_count_t change);
 sp_count_t sp_phase_96_float(sp_count_t current, double change);
 status_t sp_synth(sp_block_t out, sp_count_t start, sp_count_t duration, sp_synth_count_t config_len, sp_synth_partial_t* config, sp_count_t* phases);
@@ -429,6 +429,7 @@ typedef struct {
 } sp_synth_event_state_t;
 void sp_seq_events_prepare(sp_event_t* a, sp_count_t a_size);
 void sp_seq(sp_count_t start, sp_count_t end, sp_block_t out, sp_count_t out_start, sp_event_t* events, sp_count_t events_size);
+status_t sp_seq_parallel(sp_count_t start, sp_count_t end, sp_block_t out, sp_count_t out_start, sp_event_t* events, sp_count_t events_size);
 status_t sp_synth_event(sp_count_t start, sp_count_t end, sp_count_t channel_count, sp_count_t config_len, sp_synth_partial_t* config, sp_event_t* out_event);
 void sp_plot_samples(sp_sample_t* a, sp_count_t a_size);
 void sp_plot_counts(sp_count_t* a, sp_count_t a_size);

@@ -487,8 +487,11 @@
   (label exit
     (return status)))
 
-(define (sp-initialise) status-t
+(define (sp-initialise cpu-count) (status-t uint16-t)
   "fills the sine wave lookup table"
+  status-declare
+  (set status.id (future-init cpu-count))
+  (if status.id (return status))
   (return (sp-sine-table-new &sp-sine-96-table 96000)))
 
 (define (sp-phase-96 current change) (sp-count-t sp-count-t sp-count-t)
@@ -617,8 +620,9 @@
             (if* modulation (+ wvl (* wvl (array-get modulation (+ prt-offset i))))
               wvl)
             phs (sp-phase-96-float phs (/ 48000 modulated-wvl))
-            (array-get out.samples channel-i (+ prt-offset i))
-            (+ (array-get out.samples channel-i (+ prt-offset i)) (* amp (sp-sine-96 phs)))))
+            (array-get (array-get out.samples channel-i) (+ prt-offset i))
+            (+
+              (array-get (array-get out.samples channel-i) (+ prt-offset i)) (* amp (sp-sine-96 phs)))))
         (set (array-get phases (+ channel-i (* out.channels prt-i))) phs))))
   (label exit
     memreg-free
@@ -680,63 +684,89 @@
             out)
           &e)))))
 
-#;(define (sp-seq-parallel time offset size output events)
-  (void sp-count-t sp-count-t sp-count-t sp-block-t sp-events-t)
-  (define (merge results rest-events)
-    (let
-      loop
-      ((results results) (events null))
-      (if (null? results) (append (reverse events) rest-events)
-        (apply
-          (l
-            (offset event-output-size event-output event)
-            (each
-              (l
-                (output event-output)
-                (each-integer
-                  event-output-size
-                  (l
-                    (sample-index)
-                    (sp-samples-set!
-                      output
-                      (+ offset sample-index)
-                      (float-sum
-                        (sp-samples-ref output (+ offset sample-index))
-                        (sp-samples-ref event-output sample-index))))))
-              output event-output)
-            (loop (tail results) (pair event events)))
-          (touch (first results))))))
-  (let
-    ((time-end (+ time size)) (channels (length output)))
-    (let
-      loop
-      ((results null) (rest events))
-      (if (null? rest) (merge results rest)
-        (let*
-          ( (event (first rest))
-            (data (seq-event-data event))
-            (start (seq-event-data-start data)) (end (seq-event-data-end data)))
-          (if (< time-end start) (merge results rest)
-            (if (> time end) (loop results (tail rest))
-              (loop
-                (pair
-                  (future
-                    (seq-event-f-arguments
-                      time
-                      time-end
-                      start
-                      end
-                      offset
-                      size
-                      (l
-                        (time offset size)
-                        (let
-                          (output (sp-block-new channels size))
-                          (list
-                            offset
-                            size output ((seq-event-data-f data) time offset size output event))))))
-                  results)
-                (tail rest)))))))))
+(declare sp-seq-future-t
+  (type
+    (struct
+      (start sp-count-t)
+      (end sp-count-t)
+      (out-start sp-count-t)
+      (out sp-block-t)
+      (event sp-event-t*)
+      (future future-t))))
+
+(define (sp-seq-parallel-future-f data) (void* void*)
+  (define a sp-seq-future-t* data)
+  (a:event:f a:start a:end a:out a:event)
+  (return data))
+
+(define (sp-seq-parallel start end out out-start events events-size)
+  (status-t sp-count-t sp-count-t sp-block-t sp-count-t sp-event-t* sp-count-t)
+  "like sp-seq but evaluates events in parallel"
+  status-declare
+  (declare
+    e-out-start sp-count-t
+    e sp-event-t
+    e-start sp-count-t
+    e-end sp-count-t
+    channel-i sp-channel-count-t
+    events-start sp-count-t
+    events-count sp-count-t
+    seq-futures sp-seq-future-t*
+    sf sp-seq-future-t*
+    i sp-count-t
+    e-i sp-count-t)
+  (set seq-futures 0)
+  (if out-start (set out (sp-block-with-offset out out-start)))
+  (sc-comment "select active events")
+  (for
+    ( (set
+        i 0
+        events-start 0
+        events-count 0)
+      (< i events-size) (set i (+ 1 i)))
+    (set e (array-get events i))
+    (cond
+      ((<= e.end start) (set events-start (+ 1 events-start)))
+      ((<= end e.start) break) (else (set events-count (+ 1 events-count)))))
+  (status-require (sph-helper-malloc (* events-count (sizeof sp-seq-future-t)) &seq-futures))
+  (sc-comment "parallelise")
+  (for ((set i 0) (< i events-count) (set i (+ 1 i)))
+    (set
+      e (array-get events (+ events-start i))
+      sf (+ i seq-futures))
+    (set
+      e-out-start
+      (if* (> e.start start) (- e.start start)
+        0)
+      e-start
+      (if* (> start e.start) (- start e.start)
+        0)
+      e-end
+      (-
+        (if* (< e.end end) e.end
+          end)
+        e.start))
+    (status-require (sp-block-new out.channels (- e-end e-start) &sf:out))
+    (set
+      sf:start e-start
+      sf:end e-end
+      sf:out-start e-out-start
+      sf:event (+ events-start i events))
+    (future-new sp-seq-parallel-future-f sf &sf:future))
+  (sc-comment "merge")
+  (for ((set e-i 0) (< e-i events-count) (set e-i (+ 1 e-i)))
+    (set sf (+ e-i seq-futures))
+    (touch &sf:future)
+    (for ((set channel-i 0) (< channel-i out.channels) (set channel-i (+ 1 channel-i)))
+      (for ((set i 0) (< i sf:out.size) (set i (+ 1 i)))
+        (set (array-get (array-get out.samples channel-i) (+ sf:out-start i))
+          (+
+            (array-get (array-get out.samples channel-i) (+ sf:out-start i))
+            (array-get (array-get sf:out.samples channel-i) i)))))
+    (sp-block-free sf:out))
+  (label exit
+    (free seq-futures)
+    (return status)))
 
 (define (sp-synth-event-f start end out event) (void sp-count-t sp-count-t sp-block-t sp-event-t*)
   (define s sp-synth-event-state-t* event:state)

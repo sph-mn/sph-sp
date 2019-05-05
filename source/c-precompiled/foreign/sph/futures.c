@@ -38,20 +38,14 @@ void future_eval(thread_pool_task_t* task) {
   task->data = (a->f)((task->data));
   a->finished = 1;
 };
-/** return a new futures object or zero if memory allocation failed.
+/** prepare a future in out and possibly start evaluation in parallel.
   the given function receives data as its sole argument */
-future_t* future_new(future_f_t f, void* data) {
-  future_t* a;
-  a = malloc((sizeof(future_t)));
-  if (!a) {
-    return (0);
-  };
-  a->finished = 0;
-  a->f = f;
-  a->task.f = future_eval;
-  a->task.data = data;
-  thread_pool_enqueue((&sph_futures_pool), (&(a->task)));
-  return (a);
+void future_new(future_f_t f, void* data, future_t* out) {
+  out->finished = 0;
+  out->f = f;
+  out->task.f = future_eval;
+  out->task.data = data;
+  thread_pool_enqueue((&sph_futures_pool), (&(out->task)));
 };
 /** can be called to stop and free the main thread-pool.
   waits till all active futures are finished */
@@ -61,12 +55,9 @@ void future_deinit() {
 };
 /** blocks until future is finished and returns its result */
 void* touch(future_t* a) {
-  void* result;
 loop:
   if (a->finished) {
-    result = a->task.data;
-    free(a);
-    return (result);
+    return ((a->task.data));
   } else {
     /* poll five times per second. maybe condition variables can be used here */
     usleep(20000);

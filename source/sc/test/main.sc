@@ -381,9 +381,13 @@
   (status-require (sp-block-new 1 sp-seq-duration &out))
   (sp-seq 0 sp-seq-half-duration out 0 events 2)
   (sp-seq sp-seq-half-duration sp-seq-duration out sp-seq-half-duration events 2)
-  (for ((set i 0) (< i sp-seq-duration) (set i (+ 1 i)))
+  #;(for ((set i 0) (< i sp-seq-duration) (set i (+ 1 i)))
     (printf "%f " (array-get *out.samples i)))
   ;(sp-plot-samples *out.samples out.size)
+  (sc-comment "sp-seq-parallel")
+  (status-require (sp-seq-parallel 0 sp-seq-duration out 0 events 2))
+  #;(for ((set i 0) (< i sp-seq-duration) (set i (+ 1 i)))
+    (printf "%f " (array-get *out.samples i)))
   (label exit
     (return status)))
 
@@ -439,9 +443,8 @@
 
 (define (main) int
   status-declare
-  (sp-initialise)
+  (sp-initialise 6)
   (test-helper-test-one test-sp-seq)
-  (goto exit)
   (test-helper-test-one test-sp-random)
   (test-helper-test-one test-sp-triangle-square)
   (test-helper-test-one test-synth)

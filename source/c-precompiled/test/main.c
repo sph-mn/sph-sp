@@ -340,9 +340,8 @@ status_t test_sp_seq() {
   status_require((sp_block_new(1, sp_seq_duration, (&out))));
   sp_seq(0, sp_seq_half_duration, out, 0, events, 2);
   sp_seq(sp_seq_half_duration, sp_seq_duration, out, sp_seq_half_duration, events, 2);
-  for (i = 0; (i < sp_seq_duration); i = (1 + i)) {
-    printf("%f ", ((*(out.samples))[i]));
-  };
+  /* sp-seq-parallel */
+  status_require((sp_seq_parallel(0, sp_seq_duration, out, 0, events, 2)));
 exit:
   return (status);
 };
@@ -393,9 +392,8 @@ exit:
 };
 int main() {
   status_declare;
-  sp_initialise();
+  sp_initialise(6);
   test_helper_test_one(test_sp_seq);
-  goto exit;
   test_helper_test_one(test_sp_random);
   test_helper_test_one(test_sp_triangle_square);
   test_helper_test_one(test_synth);
