@@ -39,7 +39,7 @@
 #define sp_synth_channel_limit 16
 #endif
 #ifndef sp_synth_partial_limit
-#define sp_synth_partial_limit 64
+#define sp_synth_partial_limit 128
 #endif
 #define spline_path_time_t sp_count_t
 #define spline_path_value_t sp_sample_t
