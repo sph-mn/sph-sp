@@ -315,6 +315,8 @@ status_t test_synth() {
   status_require((sp_synth_state_new(channels, config_len, config, (&state))));
   status_require((sp_synth(out1, 0, duration, config_len, config, state)));
   status_require((sp_synth(out2, 0, duration, config_len, config, state)));
+  sp_block_free(out1);
+  sp_block_free(out2);
 exit:
   return (status);
 };
@@ -342,6 +344,8 @@ status_t test_sp_seq() {
   sp_seq(sp_seq_half_duration, sp_seq_duration, out, sp_seq_half_duration, events, 2);
   /* sp-seq-parallel */
   status_require((sp_seq_parallel(0, sp_seq_duration, out, 0, events, 2)));
+  sp_events_free(events, 2);
+  sp_block_free(out);
 exit:
   return (status);
 };
@@ -415,6 +419,31 @@ status_t test_sp_noise_event() {
   };
   status_require((sp_noise_event(0, sp_noise_duration, amp, cut_l, cut_h, trn_l, trn_h, 0, 30, sp_default_random_state, events)));
   sp_seq(0, sp_noise_duration, out, 0, events, 1);
+  sp_events_free(events, 1);
+  sp_block_free(out);
+exit:
+  return (status);
+};
+status_t test_sp_cheap_noise_event() {
+  status_declare;
+  sp_event_t events[1];
+  sp_block_t out;
+  sp_sample_t cut[sp_noise_duration];
+  sp_sample_t amp1[sp_noise_duration];
+  sp_sample_t* amp[sp_channel_limit];
+  sp_sample_t q_factor;
+  sp_count_t i;
+  status_require((sp_block_new(1, sp_noise_duration, (&out))));
+  amp[0] = amp1;
+  q_factor = 0;
+  for (i = 0; (i < sp_noise_duration); i = (1 + i)) {
+    cut[i] = ((i < (sp_noise_duration / 2)) ? 0.01 : 0.1);
+    cut[i] = 0.08;
+    amp1[i] = 1.0;
+  };
+  status_require((sp_cheap_noise_event(0, sp_noise_duration, amp, cut, 1, sp_state_variable_filter_lp, 0, 0, sp_default_random_state, events)));
+  sp_seq(0, sp_noise_duration, out, 0, events, 1);
+  sp_events_free(events, 1);
   sp_block_free(out);
 exit:
   return (status);
@@ -422,6 +451,7 @@ exit:
 int main() {
   status_declare;
   sp_initialise(6);
+  test_helper_test_one(test_sp_cheap_noise_event);
   test_helper_test_one(test_sp_noise_event);
   test_helper_test_one(test_sp_seq);
   test_helper_test_one(test_sp_random);

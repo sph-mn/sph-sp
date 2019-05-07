@@ -437,7 +437,7 @@
   (begin
     "samples real real pair [integer integer integer] -> state
     define a routine for a fast filter that supports multiple filter types in one.
-    state must hold two elements and is allocated and owned by the caller.
+    state must hold two elements and is to be allocated and owned by the caller.
     cutoff is as a fraction of the sample rate between 0 and 0.5.
     uses the state-variable filter described here:
     * http://www.cytomic.com/technical-papers
@@ -497,7 +497,7 @@
 (define (sp-initialise cpu-count) (status-t uint16-t)
   "fills the sine wave lookup table"
   status-declare
-  (set status.id (future-init cpu-count))
+  (if cpu-count (set status.id (future-init cpu-count)))
   (if status.id (return status))
   (set sp-default-random-state (sp-random-state-new 1557083953))
   (return (sp-sine-table-new &sp-sine-96-table 96000)))
@@ -519,7 +519,7 @@
 (define (sp-synth-state-new channel-count config-len config out-state)
   (status-t sp-count-t sp-synth-count-t sp-synth-partial-t* sp-count-t**)
   "contains the initial phase offsets per partial and channel
-  as a flat array"
+  as a flat array. should be freed with free"
   status-declare
   (declare
     i sp-count-t

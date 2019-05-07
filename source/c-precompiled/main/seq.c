@@ -30,6 +30,12 @@ void sp_seq(sp_count_t start, sp_count_t end, sp_block_t out, sp_count_t out_sta
     };
   };
 };
+void sp_events_free(sp_event_t* events, sp_count_t events_count) {
+  sp_count_t i;
+  for (i = 0; (i < events_count); i = (1 + i)) {
+    (events + i)->free;
+  };
+};
 typedef struct {
   sp_count_t start;
   sp_count_t end;
@@ -101,6 +107,10 @@ exit:
   free(seq_futures);
   return (status);
 };
+void sp_synth_event_free(sp_event_t* a) {
+  free((((sp_synth_event_state_t*)(a->state))->state));
+  free((a->state));
+};
 void sp_synth_event_f(sp_count_t start, sp_count_t end, sp_block_t out, sp_event_t* event) {
   sp_synth_event_state_t* s = event->state;
   sp_synth(out, start, (end - start), (s->config_len), (s->config), (s->state));
@@ -111,6 +121,7 @@ status_t sp_synth_event(sp_count_t start, sp_count_t end, sp_count_t channel_cou
   status_declare;
   sp_event_t e;
   sp_synth_event_state_t* state;
+  state = 0;
   status_require((sph_helper_malloc((channel_count * sizeof(sp_synth_event_state_t)), (&state))));
   status_require((sp_synth_state_new(channel_count, config_len, config, (&(state->state)))));
   memcpy((state->config), config, (config_len * sizeof(sp_synth_partial_t)));
@@ -118,9 +129,13 @@ status_t sp_synth_event(sp_count_t start, sp_count_t end, sp_count_t channel_cou
   e.start = start;
   e.end = end;
   e.f = sp_synth_event_f;
+  e.free = sp_synth_event_free;
   e.state = state;
   *out_event = e;
 exit:
+  if (status_is_failure) {
+    free(state);
+  };
   return (status);
 };
 typedef struct {
@@ -172,7 +187,9 @@ void sp_noise_event_free(sp_event_t* a) {
   sp_convolution_filter_state_free((s->filter_state));
   free((a->state));
 };
-/** memory for event.state will be allocated and then owned by the caller */
+/** an event for noise filtered by a windowed-sinc filter.
+  very processing intensive when parameters change with low resolution.
+  memory for event.state will be allocated and then owned by the caller */
 status_t sp_noise_event(sp_count_t start, sp_count_t end, sp_sample_t** amp, sp_sample_t* cut_l, sp_sample_t* cut_h, sp_sample_t* trn_l, sp_sample_t* trn_h, uint8_t is_reject, sp_count_t resolution, sp_random_state_t random_state, sp_event_t* out_event) {
   status_declare;
   sp_sample_t* temp;
@@ -180,7 +197,7 @@ status_t sp_noise_event(sp_count_t start, sp_count_t end, sp_sample_t** amp, sp_
   sp_count_t ir_len;
   sp_event_t e;
   sp_noise_event_state_t* s;
-  resolution = min(resolution, (end - start));
+  resolution = (resolution ? min(resolution, (end - start)) : 96);
   status_require((sph_helper_malloc((sizeof(sp_noise_event_state_t)), (&s))));
   status_require((sph_helper_malloc((resolution * sizeof(sp_sample_t)), (&(s->noise)))));
   status_require((sph_helper_malloc((resolution * sizeof(sp_sample_t)), (&(s->temp)))));
@@ -206,6 +223,84 @@ an added benefit is that the filter-state setup malloc is checked */
   e.start = start;
   e.end = end;
   e.f = sp_noise_event_f;
+  e.free = sp_noise_event_free;
+  e.state = s;
+  *out_event = e;
+exit:
+  return (status);
+};
+typedef struct {
+  sp_sample_t** amp;
+  sp_sample_t* cut;
+  sp_sample_t q_factor;
+  sp_count_t passes;
+  sp_sample_t filter_state[2];
+  sp_state_variable_filter_t filter;
+  sp_sample_t* noise;
+  sp_random_state_t random_state;
+  sp_count_t resolution;
+  sp_sample_t* temp;
+} sp_cheap_noise_event_state_t;
+void sp_cheap_noise_event_f(sp_count_t start, sp_count_t end, sp_block_t out, sp_event_t* event) {
+  sp_cheap_noise_event_state_t* s;
+  sp_count_t block_count;
+  sp_count_t i;
+  sp_count_t block_i;
+  sp_count_t channel_i;
+  sp_count_t t;
+  sp_count_t block_offset;
+  sp_count_t duration;
+  sp_count_t block_rest;
+  /* update filter arguments only every resolution number of samples */
+  s = event->state;
+  duration = (end - start);
+  block_count = ((duration == s->resolution) ? 1 : sp_cheap_floor_positive((duration / s->resolution)));
+  block_rest = (duration % s->resolution);
+  /* total block count is block-count plus rest-block */
+  for (block_i = 0; (block_i <= block_count); block_i = (1 + block_i)) {
+    block_offset = (s->resolution * block_i);
+    t = (start + block_offset);
+    duration = ((block_count == block_i) ? block_rest : s->resolution);
+    s->random_state = sp_random((s->random_state), duration, (s->noise));
+    (s->filter)((s->temp), (s->noise), duration, ((s->cut)[t]), (s->q_factor), (s->filter_state));
+    for (channel_i = 0; (channel_i < out.channels); channel_i = (1 + channel_i)) {
+      for (i = 0; (i < duration); i = (1 + i)) {
+        ((out.samples)[channel_i])[(block_offset + i)] = (((out.samples)[channel_i])[(block_offset + i)] + (((s->amp)[channel_i])[(block_offset + i)] * (s->temp)[i]));
+      };
+    };
+  };
+};
+void sp_cheap_noise_event_free(sp_event_t* a) {
+  sp_cheap_noise_event_state_t* s = a->state;
+  free((s->noise));
+  free((s->temp));
+  free((a->state));
+};
+/** an event for noise filtered by a state-variable filter. multiple passes currently not implemented.
+  lower processing costs even when parameters change with high resolution.
+  multiple passes almost multiply performance costs.
+  memory for event.state will be allocated and then owned by the caller */
+status_t sp_cheap_noise_event(sp_count_t start, sp_count_t end, sp_sample_t** amp, sp_sample_t* cut, sp_count_t passes, sp_state_variable_filter_t filter, sp_sample_t q_factor, sp_count_t resolution, sp_random_state_t random_state, sp_event_t* out_event) {
+  status_declare;
+  sp_event_t e;
+  sp_cheap_noise_event_state_t* s;
+  resolution = (resolution ? min(resolution, (end - start)) : 96);
+  status_require((sph_helper_malloc((sizeof(sp_cheap_noise_event_state_t)), (&s))));
+  status_require((sph_helper_malloc((resolution * sizeof(sp_sample_t)), (&(s->noise)))));
+  status_require((sph_helper_malloc((resolution * sizeof(sp_sample_t)), (&(s->temp)))));
+  (s->filter_state)[0] = 0;
+  (s->filter_state)[1] = 0;
+  s->cut = cut;
+  s->q_factor = q_factor;
+  s->passes = passes;
+  s->resolution = resolution;
+  s->random_state = random_state;
+  s->amp = amp;
+  s->filter = filter;
+  e.start = start;
+  e.end = end;
+  e.f = sp_cheap_noise_event_f;
+  e.free = sp_cheap_noise_event_free;
   e.state = s;
   *out_event = e;
 exit:

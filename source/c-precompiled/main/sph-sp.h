@@ -441,6 +441,7 @@ typedef struct sp_event_t {
   sp_count_t start;
   sp_count_t end;
   void (*f)(sp_count_t, sp_count_t, sp_block_t, struct sp_event_t*);
+  void (*free)(struct sp_event_t*);
 } sp_event_t;
 typedef void (*sp_event_f_t)(sp_count_t, sp_count_t, sp_block_t, sp_event_t*);
 typedef struct {
@@ -474,4 +475,6 @@ status_t sp_counts_new(sp_count_t size, sp_count_t** out);
 sp_synth_partial_t sp_synth_partial_1(sp_count_t start, sp_count_t end, sp_synth_count_t modifies, sp_sample_t* amp, sp_count_t* wvl, sp_count_t phs);
 sp_synth_partial_t sp_synth_partial_2(sp_count_t start, sp_count_t end, sp_synth_count_t modifies, sp_sample_t* amp1, sp_sample_t* amp2, sp_count_t* wvl1, sp_count_t* wvl2, sp_count_t phs1, sp_count_t phs2);
 status_t sp_noise_event(sp_count_t start, sp_count_t end, sp_sample_t** amp, sp_sample_t* cut_l, sp_sample_t* cut_h, sp_sample_t* trn_l, sp_sample_t* trn_h, uint8_t is_reject, sp_count_t resolution, sp_random_state_t random_state, sp_event_t* out_event);
-void sp_noise_event_free(sp_event_t* a);
+void sp_events_free(sp_event_t* events, sp_count_t events_count);
+typedef void (*sp_state_variable_filter_t)(sp_sample_t*, sp_sample_t*, sp_float_t, sp_float_t, sp_count_t, sp_sample_t*);
+status_t sp_cheap_noise_event(sp_count_t start, sp_count_t end, sp_sample_t** amp, sp_sample_t* cut, sp_count_t passes, sp_state_variable_filter_t filter, sp_sample_t q_factor, sp_count_t resolution, sp_random_state_t random_state, sp_event_t* out_event);

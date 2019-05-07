@@ -384,7 +384,7 @@ exit:
 };
 /** samples real real pair [integer integer integer] -> state
     define a routine for a fast filter that supports multiple filter types in one.
-    state must hold two elements and is allocated and owned by the caller.
+    state must hold two elements and is to be allocated and owned by the caller.
     cutoff is as a fraction of the sample rate between 0 and 0.5.
     uses the state-variable filter described here:
     * http://www.cytomic.com/technical-papers
@@ -440,7 +440,9 @@ exit:
 /** fills the sine wave lookup table */
 status_t sp_initialise(uint16_t cpu_count) {
   status_declare;
-  status.id = future_init(cpu_count);
+  if (cpu_count) {
+    status.id = future_init(cpu_count);
+  };
   if (status.id) {
     return (status);
   };
@@ -458,7 +460,7 @@ sp_count_t sp_phase_96(sp_count_t current, sp_count_t change) {
   change must be a positive value and is rounded to the next larger integer */
 sp_count_t sp_phase_96_float(sp_count_t current, double change) { return ((sp_phase_96(current, (sp_cheap_ceiling_positive(change))))); };
 /** contains the initial phase offsets per partial and channel
-  as a flat array */
+  as a flat array. should be freed with free */
 status_t sp_synth_state_new(sp_count_t channel_count, sp_synth_count_t config_len, sp_synth_partial_t* config, sp_count_t** out_state) {
   status_declare;
   sp_count_t i;

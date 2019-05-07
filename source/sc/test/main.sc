@@ -352,6 +352,8 @@
   (status-require (sp-synth-state-new channels config-len config &state))
   (status-require (sp-synth out1 0 duration config-len config state))
   (status-require (sp-synth out2 0 duration config-len config state))
+  (sp-block-free out1)
+  (sp-block-free out2)
   (label exit
     (return status)))
 
@@ -387,7 +389,9 @@
   (sc-comment "sp-seq-parallel")
   (status-require (sp-seq-parallel 0 sp-seq-duration out 0 events 2))
   #;(for ((set i 0) (< i sp-seq-duration) (set i (+ 1 i)))
-    (printf "%f " (array-get *out.samples i)))
+  (printf "%f " (array-get *out.samples i)))
+  (sp-events-free events 2)
+  (sp-block-free out)
   (label exit
     (return status)))
 
@@ -481,6 +485,40 @@
   #;(for ((set i 0) (< i sp-noise-duration) (set i (+ 1 i)))
     (printf "%f " (array-get *out.samples i)))
   ;(sp-plot-samples *out.samples out.size)
+  (sp-events-free events 1)
+  (sp-block-free out)
+  (label exit
+    (return status)))
+
+(define (test-sp-cheap-noise-event) status-t
+  status-declare
+  (declare
+    events (array sp-event-t 1)
+    out sp-block-t
+    cut (array sp-sample-t sp-noise-duration)
+    amp1 (array sp-sample-t sp-noise-duration)
+    amp (array sp-sample-t* sp-channel-limit)
+    q-factor sp-sample-t
+    i sp-count-t)
+  (status-require (sp-block-new 1 sp-noise-duration &out))
+  (set
+    (array-get amp 0) amp1
+    q-factor 0)
+  (for ((set i 0) (< i sp-noise-duration) (set i (+ 1 i)))
+    (set
+      (array-get cut i)
+      (if* (< i (/ sp-noise-duration 2)) 0.01
+        0.1)
+      (array-get cut i) 0.08
+      (array-get amp1 i) 1.0))
+  (status-require
+    (sp-cheap-noise-event
+      0 sp-noise-duration amp cut 1 sp-state-variable-filter-lp 0 #f sp-default-random-state events))
+  (sp-seq 0 sp-noise-duration out 0 events 1)
+  #;(for ((set i 0) (< i sp-noise-duration) (set i (+ 1 i)))
+    (printf "%f " (array-get *out.samples i)))
+  ;(sp-plot-samples *out.samples out.size)
+  (sp-events-free events 1)
   (sp-block-free out)
   (label exit
     (return status)))
@@ -488,6 +526,7 @@
 (define (main) int
   status-declare
   (sp-initialise 6)
+  (test-helper-test-one test-sp-cheap-noise-event)
   (test-helper-test-one test-sp-noise-event)
   (test-helper-test-one test-sp-seq)
   (test-helper-test-one test-sp-random)

@@ -198,6 +198,10 @@
       (f
         (function-pointer void sp-count-t sp-count-t sp-block-t
           (struct
+            sp-event-t*)))
+      (free
+        (function-pointer void
+          (struct
             sp-event-t*)))))
   sp-event-f-t (type (function-pointer void sp-count-t sp-count-t sp-block-t sp-event-t*))
   sp-synth-event-state-t
@@ -249,4 +253,14 @@
     sp-sample-t**
     sp-sample-t*
     sp-sample-t* sp-sample-t* sp-sample-t* uint8-t sp-count-t sp-random-state-t sp-event-t*)
-  (sp-noise-event-free a) (void sp-event-t*))
+  (sp-events-free events events-count) (void sp-event-t* sp-count-t)
+  sp-state-variable-filter-t
+  (type
+    (function-pointer void sp-sample-t* sp-sample-t* sp-float-t sp-float-t sp-count-t sp-sample-t*))
+  (sp-cheap-noise-event start end amp cut passes filter q-factor resolution random-state out-event)
+  (status-t
+    sp-count-t
+    sp-count-t
+    sp-sample-t**
+    sp-sample-t*
+    sp-count-t sp-state-variable-filter-t sp-sample-t sp-count-t sp-random-state-t sp-event-t*))
