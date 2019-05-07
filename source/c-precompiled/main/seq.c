@@ -137,9 +137,33 @@ typedef struct {
   sp_sample_t* trn_l;
 } sp_noise_event_state_t;
 void sp_noise_event_f(sp_count_t start, sp_count_t end, sp_block_t out, sp_event_t* event) {
-  sp_noise_event_state_t* s = event->state;
-  s->random_state = sp_random((s->random_state), (end - start), (s->noise));
-  sp_windowed_sinc_bp_br((s->noise), (s->resolution), (*(s->cut_l)), (*(s->cut_h)), (*(s->trn_l)), (*(s->trn_h)), (s->is_reject), (&(s->filter_state)), (s->temp));
+  sp_noise_event_state_t* s;
+  sp_count_t block_count;
+  sp_count_t i;
+  sp_count_t block_i;
+  sp_count_t channel_i;
+  sp_count_t t;
+  sp_count_t block_offset;
+  sp_count_t duration;
+  sp_count_t block_rest;
+  /* update filter arguments only every resolution number of samples */
+  s = event->state;
+  duration = (end - start);
+  block_count = ((duration == s->resolution) ? 1 : sp_cheap_floor_positive((duration / s->resolution)));
+  block_rest = (duration % s->resolution);
+  /* total block count is block-count plus rest-block */
+  for (block_i = 0; (block_i <= block_count); block_i = (1 + block_i)) {
+    block_offset = (s->resolution * block_i);
+    t = (start + block_offset);
+    duration = ((block_count == block_i) ? block_rest : s->resolution);
+    s->random_state = sp_random((s->random_state), duration, (s->noise));
+    sp_windowed_sinc_bp_br((s->noise), duration, ((s->cut_l)[t]), ((s->cut_h)[t]), ((s->trn_l)[t]), ((s->trn_h)[t]), (s->is_reject), (&(s->filter_state)), (s->temp));
+    for (channel_i = 0; (channel_i < out.channels); channel_i = (1 + channel_i)) {
+      for (i = 0; (i < duration); i = (1 + i)) {
+        ((out.samples)[channel_i])[(block_offset + i)] = (((out.samples)[channel_i])[(block_offset + i)] + (((s->amp)[channel_i])[(block_offset + i)] * (s->temp)[i]));
+      };
+    };
+  };
 };
 void sp_noise_event_free(sp_event_t* a) {
   sp_noise_event_state_t* s = a->state;
@@ -151,18 +175,32 @@ void sp_noise_event_free(sp_event_t* a) {
 /** memory for event.state will be allocated and then owned by the caller */
 status_t sp_noise_event(sp_count_t start, sp_count_t end, sp_sample_t** amp, sp_sample_t* cut_l, sp_sample_t* cut_h, sp_sample_t* trn_l, sp_sample_t* trn_h, uint8_t is_reject, sp_count_t resolution, sp_random_state_t random_state, sp_event_t* out_event) {
   status_declare;
+  sp_sample_t* temp;
+  sp_sample_t* temp_noise;
+  sp_count_t ir_len;
   sp_event_t e;
   sp_noise_event_state_t* s;
+  resolution = min(resolution, (end - start));
   status_require((sph_helper_malloc((sizeof(sp_noise_event_state_t)), (&s))));
   status_require((sph_helper_malloc((resolution * sizeof(sp_sample_t)), (&(s->noise)))));
   status_require((sph_helper_malloc((resolution * sizeof(sp_sample_t)), (&(s->temp)))));
+  /* the result shows a small delay, circa 40 samples for transition 0.07. the size seems to be related to ir-len.
+the state is initialised with one unused call to skip the delay.
+an added benefit is that the filter-state setup malloc is checked */
+  ir_len = sp_windowed_sinc_lp_hp_ir_length((min((*trn_l), (*trn_h))));
+  status_require((sph_helper_malloc((ir_len * sizeof(sp_sample_t)), (&temp))));
+  status_require((sph_helper_malloc((ir_len * sizeof(sp_sample_t)), (&temp_noise))));
+  random_state = sp_random(random_state, ir_len, temp_noise);
+  s->filter_state = 0;
+  status_require((sp_windowed_sinc_bp_br(temp_noise, ir_len, (*cut_l), (*cut_h), (*trn_l), (*trn_h), is_reject, (&(s->filter_state)), temp)));
+  free(temp);
+  free(temp_noise);
   s->cut_l = cut_l;
   s->cut_h = cut_h;
   s->trn_l = trn_l;
   s->trn_h = trn_h;
   s->is_reject = is_reject;
   s->resolution = resolution;
-  s->filter_state = 0;
   s->random_state = random_state;
   s->amp = amp;
   e.start = start;

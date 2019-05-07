@@ -169,11 +169,45 @@
       (trn-l sp-sample-t*))))
 
 (define (sp-noise-event-f start end out event) (void sp-count-t sp-count-t sp-block-t sp-event-t*)
-  (define s sp-noise-event-state-t* event:state)
-  (set s:random-state (sp-random s:random-state (- end start) s:noise))
-  ; todo: map with resolution, apply amps when copying into out
-  (sp-windowed-sinc-bp-br
-    s:noise s:resolution *s:cut-l *s:cut-h *s:trn-l *s:trn-h s:is-reject &s:filter-state s:temp))
+  (declare
+    s sp-noise-event-state-t*
+    block-count sp-count-t
+    i sp-count-t
+    block-i sp-count-t
+    channel-i sp-count-t
+    t sp-count-t
+    block-offset sp-count-t
+    duration sp-count-t
+    block-rest sp-count-t)
+  (sc-comment "update filter arguments only every resolution number of samples")
+  (set
+    s event:state
+    duration (- end start)
+    block-count
+    (if* (= duration s:resolution) 1
+      (sp-cheap-floor-positive (/ duration s:resolution)))
+    block-rest (modulo duration s:resolution))
+  (sc-comment "total block count is block-count plus rest-block")
+  (for ((set block-i 0) (<= block-i block-count) (set block-i (+ 1 block-i)))
+    (set
+      block-offset (* s:resolution block-i)
+      t (+ start block-offset)
+      duration
+      (if* (= block-count block-i) block-rest
+        s:resolution)
+      s:random-state (sp-random s:random-state duration s:noise))
+    (sp-windowed-sinc-bp-br
+      s:noise
+      duration
+      (array-get s:cut-l t)
+      (array-get s:cut-h t)
+      (array-get s:trn-l t) (array-get s:trn-h t) s:is-reject &s:filter-state s:temp)
+    (for ((set channel-i 0) (< channel-i out.channels) (set channel-i (+ 1 channel-i)))
+      (for ((set i 0) (< i duration) (set i (+ 1 i)))
+        (set (array-get (array-get out.samples channel-i) (+ block-offset i))
+          (+
+            (array-get (array-get out.samples channel-i) (+ block-offset i))
+            (* (array-get (array-get s:amp channel-i) (+ block-offset i)) (array-get s:temp i))))))))
 
 (define (sp-noise-event-free a) (void sp-event-t*)
   (define s sp-noise-event-state-t* a:state)
@@ -193,11 +227,30 @@
   "memory for event.state will be allocated and then owned by the caller"
   status-declare
   (declare
+    temp sp-sample-t*
+    temp-noise sp-sample-t*
+    ir-len sp-count-t
     e sp-event-t
     s sp-noise-event-state-t*)
+  (set resolution (min resolution (- end start)))
   (status-require (sph-helper-malloc (sizeof sp-noise-event-state-t) &s))
   (status-require (sph-helper-malloc (* resolution (sizeof sp-sample-t)) &s:noise))
   (status-require (sph-helper-malloc (* resolution (sizeof sp-sample-t)) &s:temp))
+  (sc-comment
+    "the result shows a small delay, circa 40 samples for transition 0.07. the size seems to be related to ir-len."
+    "the state is initialised with one unused call to skip the delay."
+    "an added benefit is that the filter-state setup malloc is checked")
+  (set ir-len (sp-windowed-sinc-lp-hp-ir-length (min *trn-l *trn-h)))
+  (status-require (sph-helper-malloc (* ir-len (sizeof sp-sample-t)) &temp))
+  (status-require (sph-helper-malloc (* ir-len (sizeof sp-sample-t)) &temp-noise))
+  (set
+    random-state (sp-random random-state ir-len temp-noise)
+    s:filter-state 0)
+  (status-require
+    (sp-windowed-sinc-bp-br
+      temp-noise ir-len *cut-l *cut-h *trn-l *trn-h is-reject &s:filter-state temp))
+  (free temp)
+  (free temp-noise)
   (set
     s:cut-l cut-l
     s:cut-h cut-h
@@ -205,7 +258,6 @@
     s:trn-h trn-h
     s:is-reject is-reject
     s:resolution resolution
-    s:filter-state 0
     s:random-state random-state
     s:amp amp
     e.start start

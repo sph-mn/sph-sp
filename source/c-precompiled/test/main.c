@@ -390,7 +390,9 @@ status_t test_sp_random() {
 exit:
   return (status);
 };
-#define sp_noise_duration 20
+#define max(a, b) ((a > b) ? a : b)
+#define min(a, b) ((a < b) ? a : b)
+#define sp_noise_duration 96
 status_t test_sp_noise_event() {
   status_declare;
   sp_event_t events[1];
@@ -409,9 +411,9 @@ status_t test_sp_noise_event() {
     cut_h[i] = 0.11;
     trn_l[i] = 0.07;
     trn_h[i] = 0.07;
-    amp1[i] = (i / sp_noise_duration);
+    amp1[i] = 1.0;
   };
-  status_require((sp_noise_event(0, sp_noise_duration, amp, cut_l, cut_h, trn_l, trn_h, 0, 9, sp_default_random_state, events)));
+  status_require((sp_noise_event(0, sp_noise_duration, amp, cut_l, cut_h, trn_l, trn_h, 0, 30, sp_default_random_state, events)));
   sp_seq(0, sp_noise_duration, out, 0, events, 1);
   sp_block_free(out);
 exit:
@@ -420,6 +422,7 @@ exit:
 int main() {
   status_declare;
   sp_initialise(6);
+  test_helper_test_one(test_sp_noise_event);
   test_helper_test_one(test_sp_seq);
   test_helper_test_one(test_sp_random);
   test_helper_test_one(test_sp_triangle_square);
