@@ -405,12 +405,11 @@
   (free a:in-temp)
   (free a:out-temp))
 
-(define (sp-cheap-filter in in-size type cutoff passes q-factor unity-gain state out)
+(define (sp-cheap-filter type in in-size cutoff passes q-factor unity-gain state out)
   (void
+    sp-state-variable-filter-t
     sp-sample-t*
-    sp-count-t
-    (function-pointer void sp-sample-t* sp-sample-t* sp-float-t sp-float-t sp-count-t sp-sample-t*)
-    sp-float-t sp-count-t sp-float-t uint8-t sp-cheap-filter-state-t* sp-sample-t*)
+    sp-count-t sp-float-t sp-count-t sp-float-t uint8-t sp-cheap-filter-state-t* sp-sample-t*)
   "the sph-sp default fast filter. caller has to manage the state object with sp-cheap-filter-state-new sp-cheap-filter-state-free"
   status-declare
   (declare

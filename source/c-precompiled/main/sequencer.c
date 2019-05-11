@@ -280,7 +280,7 @@ void sp_cheap_noise_event_free(sp_event_t* a) {
   lower processing costs even when parameters change with high resolution.
   multiple passes almost multiply performance costs.
   memory for event.state will be allocated and then owned by the caller */
-status_t sp_cheap_noise_event(sp_count_t start, sp_count_t end, sp_sample_t** amp, sp_sample_t* cut, sp_count_t passes, sp_state_variable_filter_t filter, sp_sample_t q_factor, sp_count_t resolution, sp_random_state_t random_state, sp_event_t* out_event) {
+status_t sp_cheap_noise_event(sp_count_t start, sp_count_t end, sp_sample_t** amp, sp_state_variable_filter_t filter, sp_sample_t* cut, sp_count_t passes, sp_sample_t q_factor, sp_count_t resolution, sp_random_state_t random_state, sp_event_t* out_event) {
   status_declare;
   sp_event_t e;
   sp_cheap_noise_event_state_t* s;

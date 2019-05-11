@@ -362,7 +362,7 @@ void sp_cheap_filter_state_free(sp_cheap_filter_state_t* a) {
   free((a->out_temp));
 };
 /** the sph-sp default fast filter. caller has to manage the state object with sp-cheap-filter-state-new sp-cheap-filter-state-free */
-void sp_cheap_filter(sp_sample_t* in, sp_count_t in_size, void (*type)(sp_sample_t*, sp_sample_t*, sp_float_t, sp_float_t, sp_count_t, sp_sample_t*), sp_float_t cutoff, sp_count_t passes, sp_float_t q_factor, uint8_t unity_gain, sp_cheap_filter_state_t* state, sp_sample_t* out) {
+void sp_cheap_filter(sp_state_variable_filter_t type, sp_sample_t* in, sp_count_t in_size, sp_float_t cutoff, sp_count_t passes, sp_float_t q_factor, uint8_t unity_gain, sp_cheap_filter_state_t* state, sp_sample_t* out) {
   status_declare;
   sp_sample_t* in_swap;
   sp_sample_t* in_temp;

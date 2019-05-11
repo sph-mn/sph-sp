@@ -112,18 +112,10 @@
   sp-filter-state-t sp-convolution-filter-state-t
   sp-filter-state-free sp-convolution-filter-state-free
   sp-cheap-filter-passes-limit 8
-  (sp-cheap-filter-lp in in-size cutoff passes q-factor unity-gain state out)
-  (sp-cheap-filter
-    in in-size sp-state-variable-filter-lp cutoff passes q-factor unity-gain state out)
-  (sp-cheap-filter-hp in in-size cutoff passes q-factor unity-gain state out)
-  (sp-cheap-filter
-    in in-size sp-state-variable-filter-hp cutoff passes q-factor unity-gain state out)
-  (sp-cheap-filter-bp in in-size cutoff passes q-factor unity-gain state out)
-  (sp-cheap-filter
-    in in-size sp-state-variable-filter-bp cutoff passes q-factor unity-gain state out)
-  (sp-cheap-filter-br in in-size cutoff passes q-factor unity-gain state out)
-  (sp-cheap-filter
-    in in-size sp-state-variable-filter-br cutoff passes q-factor unity-gain state out))
+  (sp-cheap-filter-lp ...) (sp-cheap-filter sp-state-variable-filter-lp __VA_ARGS__)
+  (sp-cheap-filter-hp ...) (sp-cheap-filter sp-state-variable-filter-hp __VA_ARGS__)
+  (sp-cheap-filter-bp ...) (sp-cheap-filter sp-state-variable-filter-bp __VA_ARGS__)
+  (sp-cheap-filter-br ...) (sp-cheap-filter sp-state-variable-filter-br __VA_ARGS__))
 
 (declare
   sp-convolution-filter-ir-f-t (type (function-pointer status-t void* sp-sample-t** sp-count-t*))
@@ -144,6 +136,9 @@
       (in-temp sp-sample-t*)
       (out-temp sp-sample-t*)
       (svf-state (array sp-sample-t ((* 2 sp-cheap-filter-passes-limit))))))
+  sp-state-variable-filter-t
+  (type
+    (function-pointer void sp-sample-t* sp-sample-t* sp-float-t sp-float-t sp-count-t sp-sample-t*))
   (sp-moving-average in in-end in-window in-window-end prev prev-end next next-end radius out)
   (status-t
     sp-sample-t*
@@ -191,22 +186,18 @@
   (void sp-sample-t* sp-sample-t* sp-float-t sp-float-t sp-count-t sp-sample-t*)
   (sp-state-variable-filter-all out in in-count cutoff q-factor state)
   (void sp-sample-t* sp-sample-t* sp-float-t sp-float-t sp-count-t sp-sample-t*)
-  (sp-cheap-filter in in-size type cutoff passes q-factor unity-gain state out)
+  (sp-cheap-filter type in in-size cutoff passes q-factor unity-gain state out)
   (void
+    sp-state-variable-filter-t
     sp-sample-t*
-    sp-count-t
-    (function-pointer void sp-sample-t* sp-sample-t* sp-float-t sp-float-t sp-count-t sp-sample-t*)
-    sp-float-t sp-count-t sp-float-t uint8-t sp-cheap-filter-state-t* sp-sample-t*)
+    sp-count-t sp-float-t sp-count-t sp-float-t uint8-t sp-cheap-filter-state-t* sp-sample-t*)
   (sp-cheap-filter-state-free a) (void sp-cheap-filter-state-t*)
   (sp-cheap-filter-state-new max-size max-passes out-state)
   (status-t sp-count-t sp-count-t sp-cheap-filter-state-t*)
   (sp-filter in in-size cutoff-l cutoff-h transition-l transition-h is-reject out-state out-samples)
   (status-t
     sp-sample-t*
-    sp-count-t sp-float-t sp-float-t sp-float-t sp-float-t boolean sp-filter-state-t** sp-sample-t*)
-  sp-state-variable-filter-t
-  (type
-    (function-pointer void sp-sample-t* sp-sample-t* sp-float-t sp-float-t sp-count-t sp-sample-t*)))
+    sp-count-t sp-float-t sp-float-t sp-float-t sp-float-t boolean sp-filter-state-t** sp-sample-t*))
 
 (sc-comment "plot")
 
@@ -258,6 +249,16 @@
 
 (sc-comment "sequencer")
 
+(pre-define
+  (sp-cheap-noise-event-lp start end amp ...)
+  (sp-cheap-noise-event start end amp sp-state-variable-filter-lp __VA_ARGS__)
+  (sp-cheap-noise-event-hp start end amp ...)
+  (sp-cheap-noise-event start end amp sp-state-variable-filter-hp __VA_ARGS__)
+  (sp-cheap-noise-event-bp start end amp ...)
+  (sp-cheap-noise-event start end amp sp-state-variable-filter-bp __VA_ARGS__)
+  (sp-cheap-noise-event-br start end amp ...)
+  (sp-cheap-noise-event start end amp sp-state-variable-filter-br __VA_ARGS__))
+
 (declare
   sp-event-t struct
   sp-event-t
@@ -297,10 +298,10 @@
     sp-sample-t*
     sp-sample-t* sp-sample-t* sp-sample-t* uint8-t sp-count-t sp-random-state-t sp-event-t*)
   (sp-events-free events events-count) (void sp-event-t* sp-count-t)
-  (sp-cheap-noise-event start end amp cut passes filter q-factor resolution random-state out-event)
+  (sp-cheap-noise-event start end amp type cut passes q-factor resolution random-state out-event)
   (status-t
     sp-count-t
     sp-count-t
     sp-sample-t**
-    sp-sample-t*
-    sp-count-t sp-state-variable-filter-t sp-sample-t sp-count-t sp-random-state-t sp-event-t*))
+    sp-state-variable-filter-t
+    sp-sample-t* sp-count-t sp-sample-t sp-count-t sp-random-state-t sp-event-t*))

@@ -407,10 +407,10 @@ status_t sp_counts_new(sp_count_t size, sp_count_t** out);
 #define sp_filter_state_t sp_convolution_filter_state_t
 #define sp_filter_state_free sp_convolution_filter_state_free
 #define sp_cheap_filter_passes_limit 8
-#define sp_cheap_filter_lp(in, in_size, cutoff, passes, q_factor, unity_gain, state, out) sp_cheap_filter(in, in_size, sp_state_variable_filter_lp, cutoff, passes, q_factor, unity_gain, state, out)
-#define sp_cheap_filter_hp(in, in_size, cutoff, passes, q_factor, unity_gain, state, out) sp_cheap_filter(in, in_size, sp_state_variable_filter_hp, cutoff, passes, q_factor, unity_gain, state, out)
-#define sp_cheap_filter_bp(in, in_size, cutoff, passes, q_factor, unity_gain, state, out) sp_cheap_filter(in, in_size, sp_state_variable_filter_bp, cutoff, passes, q_factor, unity_gain, state, out)
-#define sp_cheap_filter_br(in, in_size, cutoff, passes, q_factor, unity_gain, state, out) sp_cheap_filter(in, in_size, sp_state_variable_filter_br, cutoff, passes, q_factor, unity_gain, state, out)
+#define sp_cheap_filter_lp(...) sp_cheap_filter(sp_state_variable_filter_lp, __VA_ARGS__)
+#define sp_cheap_filter_hp(...) sp_cheap_filter(sp_state_variable_filter_hp, __VA_ARGS__)
+#define sp_cheap_filter_bp(...) sp_cheap_filter(sp_state_variable_filter_bp, __VA_ARGS__)
+#define sp_cheap_filter_br(...) sp_cheap_filter(sp_state_variable_filter_br, __VA_ARGS__)
 typedef status_t (*sp_convolution_filter_ir_f_t)(void*, sp_sample_t**, sp_count_t*);
 typedef struct {
   sp_sample_t* carryover;
@@ -427,6 +427,7 @@ typedef struct {
   sp_sample_t* out_temp;
   sp_sample_t svf_state[(2 * sp_cheap_filter_passes_limit)];
 } sp_cheap_filter_state_t;
+typedef void (*sp_state_variable_filter_t)(sp_sample_t*, sp_sample_t*, sp_float_t, sp_float_t, sp_count_t, sp_sample_t*);
 status_t sp_moving_average(sp_sample_t* in, sp_sample_t* in_end, sp_sample_t* in_window, sp_sample_t* in_window_end, sp_sample_t* prev, sp_sample_t* prev_end, sp_sample_t* next, sp_sample_t* next_end, sp_count_t radius, sp_sample_t* out);
 sp_count_t sp_windowed_sinc_lp_hp_ir_length(sp_float_t transition);
 status_t sp_windowed_sinc_ir(sp_float_t cutoff, sp_float_t transition, sp_count_t* result_len, sp_sample_t** result_ir);
@@ -446,11 +447,10 @@ void sp_state_variable_filter_bp(sp_sample_t* out, sp_sample_t* in, sp_float_t i
 void sp_state_variable_filter_br(sp_sample_t* out, sp_sample_t* in, sp_float_t in_count, sp_float_t cutoff, sp_count_t q_factor, sp_sample_t* state);
 void sp_state_variable_filter_peak(sp_sample_t* out, sp_sample_t* in, sp_float_t in_count, sp_float_t cutoff, sp_count_t q_factor, sp_sample_t* state);
 void sp_state_variable_filter_all(sp_sample_t* out, sp_sample_t* in, sp_float_t in_count, sp_float_t cutoff, sp_count_t q_factor, sp_sample_t* state);
-void sp_cheap_filter(sp_sample_t* in, sp_count_t in_size, void (*type)(sp_sample_t*, sp_sample_t*, sp_float_t, sp_float_t, sp_count_t, sp_sample_t*), sp_float_t cutoff, sp_count_t passes, sp_float_t q_factor, uint8_t unity_gain, sp_cheap_filter_state_t* state, sp_sample_t* out);
+void sp_cheap_filter(sp_state_variable_filter_t type, sp_sample_t* in, sp_count_t in_size, sp_float_t cutoff, sp_count_t passes, sp_float_t q_factor, uint8_t unity_gain, sp_cheap_filter_state_t* state, sp_sample_t* out);
 void sp_cheap_filter_state_free(sp_cheap_filter_state_t* a);
 status_t sp_cheap_filter_state_new(sp_count_t max_size, sp_count_t max_passes, sp_cheap_filter_state_t* out_state);
 status_t sp_filter(sp_sample_t* in, sp_count_t in_size, sp_float_t cutoff_l, sp_float_t cutoff_h, sp_float_t transition_l, sp_float_t transition_h, boolean is_reject, sp_filter_state_t** out_state, sp_sample_t* out_samples);
-typedef void (*sp_state_variable_filter_t)(sp_sample_t*, sp_sample_t*, sp_float_t, sp_float_t, sp_count_t, sp_sample_t*);
 /* plot */
 void sp_plot_samples(sp_sample_t* a, sp_count_t a_size);
 void sp_plot_counts(sp_count_t* a, sp_count_t a_size);
@@ -483,6 +483,10 @@ sp_sample_t sp_square_96(sp_count_t t);
 sp_sample_t sp_triangle(sp_count_t t, sp_count_t a, sp_count_t b);
 sp_sample_t sp_triangle_96(sp_count_t t);
 /* sequencer */
+#define sp_cheap_noise_event_lp(start, end, amp, ...) sp_cheap_noise_event(start, end, amp, sp_state_variable_filter_lp, __VA_ARGS__)
+#define sp_cheap_noise_event_hp(start, end, amp, ...) sp_cheap_noise_event(start, end, amp, sp_state_variable_filter_hp, __VA_ARGS__)
+#define sp_cheap_noise_event_bp(start, end, amp, ...) sp_cheap_noise_event(start, end, amp, sp_state_variable_filter_bp, __VA_ARGS__)
+#define sp_cheap_noise_event_br(start, end, amp, ...) sp_cheap_noise_event(start, end, amp, sp_state_variable_filter_br, __VA_ARGS__)
 struct sp_event_t;
 typedef struct sp_event_t {
   void* state;
@@ -503,4 +507,4 @@ status_t sp_seq_parallel(sp_count_t start, sp_count_t end, sp_block_t out, sp_co
 status_t sp_synth_event(sp_count_t start, sp_count_t end, sp_count_t channel_count, sp_count_t config_len, sp_synth_partial_t* config, sp_event_t* out_event);
 status_t sp_noise_event(sp_count_t start, sp_count_t end, sp_sample_t** amp, sp_sample_t* cut_l, sp_sample_t* cut_h, sp_sample_t* trn_l, sp_sample_t* trn_h, uint8_t is_reject, sp_count_t resolution, sp_random_state_t random_state, sp_event_t* out_event);
 void sp_events_free(sp_event_t* events, sp_count_t events_count);
-status_t sp_cheap_noise_event(sp_count_t start, sp_count_t end, sp_sample_t** amp, sp_sample_t* cut, sp_count_t passes, sp_state_variable_filter_t filter, sp_sample_t q_factor, sp_count_t resolution, sp_random_state_t random_state, sp_event_t* out_event);
+status_t sp_cheap_noise_event(sp_count_t start, sp_count_t end, sp_sample_t** amp, sp_state_variable_filter_t type, sp_sample_t* cut, sp_count_t passes, sp_sample_t q_factor, sp_count_t resolution, sp_random_state_t random_state, sp_event_t* out_event);

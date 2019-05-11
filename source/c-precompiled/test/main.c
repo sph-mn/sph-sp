@@ -458,7 +458,7 @@ status_t test_sp_cheap_noise_event() {
     cut[i] = 0.08;
     amp1[i] = 1.0;
   };
-  status_require((sp_cheap_noise_event(0, sp_noise_duration, amp, cut, 1, sp_state_variable_filter_lp, 0, 0, sp_default_random_state, events)));
+  status_require((sp_cheap_noise_event_lp(0, sp_noise_duration, amp, cut, 1, 0, 0, sp_default_random_state, events)));
   sp_seq(0, sp_noise_duration, out, 0, events, 1);
   sp_events_free(events, 1);
   sp_block_free(out);

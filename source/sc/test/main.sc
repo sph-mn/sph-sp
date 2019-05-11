@@ -531,8 +531,7 @@
       (array-get cut i) 0.08
       (array-get amp1 i) 1.0))
   (status-require
-    (sp-cheap-noise-event
-      0 sp-noise-duration amp cut 1 sp-state-variable-filter-lp 0 #f sp-default-random-state events))
+    (sp-cheap-noise-event-lp 0 sp-noise-duration amp cut 1 0 #f sp-default-random-state events))
   (sp-seq 0 sp-noise-duration out 0 events 1)
   #;(for ((set i 0) (< i sp-noise-duration) (set i (+ 1 i)))
     (printf "%f " (array-get *out.samples i)))
@@ -546,7 +545,6 @@
   status-declare
   (sp-initialise 6)
   (test-helper-test-one test-sp-cheap-noise-event)
-  ;(goto exit)
   (test-helper-test-one test-sp-cheap-filter)
   (test-helper-test-one test-sp-noise-event)
   (test-helper-test-one test-sp-seq)

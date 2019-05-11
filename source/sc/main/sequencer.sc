@@ -344,13 +344,13 @@
   (free a:state))
 
 (define
-  (sp-cheap-noise-event start end amp cut passes filter q-factor resolution random-state out-event)
+  (sp-cheap-noise-event start end amp filter cut passes q-factor resolution random-state out-event)
   (status-t
     sp-count-t
     sp-count-t
     sp-sample-t**
-    sp-sample-t*
-    sp-count-t sp-state-variable-filter-t sp-sample-t sp-count-t sp-random-state-t sp-event-t*)
+    sp-state-variable-filter-t
+    sp-sample-t* sp-count-t sp-sample-t sp-count-t sp-random-state-t sp-event-t*)
   "an event for noise filtered by a state-variable filter. multiple passes currently not implemented.
   lower processing costs even when parameters change with high resolution.
   multiple passes almost multiply performance costs.
