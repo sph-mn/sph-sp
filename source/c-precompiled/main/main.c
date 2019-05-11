@@ -4,6 +4,7 @@
 #include <sndfile.h>
 #include <foreign/nayuki-fft/fft.c>
 #include "../main/sph-sp.h"
+#include "../foreign/sph/spline-path.c"
 #include "../foreign/sph/float.c"
 #include "../foreign/sph/helper.c"
 #include "../foreign/sph/memreg.c"

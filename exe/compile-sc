@@ -19,7 +19,7 @@ copy_submodules() {
   cp --update --target-directory="$sc/foreign/sph" \
     "$scl/status.sc" "$scl/helper.sc" "$scl/memreg.sc" "$scl/float.sc" \
     "$scl/string.sc" "$scl/filesystem.sc" "$scl/quicksort.sc" "$scl/queue.sc" \
-    "$scl/thread-pool.sc" "$scl/futures.sc" "$scl/spline-path.sc"
+    "$scl/thread-pool.sc" "$scl/futures.sc" "$scl/spline-path-h.sc" "$scl/spline-path.sc"
 }
 
 compile_sc() {

@@ -6,6 +6,7 @@
   "sndfile.h"
   "foreign/nayuki-fft/fft.c"
   "../main/sph-sp.h"
+  "../foreign/sph/spline-path.c"
   "../foreign/sph/float.c"
   "../foreign/sph/helper.c"
   "../foreign/sph/memreg.c"

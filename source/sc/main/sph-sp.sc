@@ -18,7 +18,7 @@
   spline-path-time-t sp-count-t
   spline-path-value-t sp-sample-t)
 
-(sc-include "../foreign/sph/status" "../foreign/sph/spline-path")
+(sc-include "../foreign/sph/status" "../foreign/sph/spline-path-h")
 (sc-comment "main")
 
 (pre-define
