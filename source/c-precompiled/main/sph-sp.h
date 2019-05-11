@@ -48,14 +48,6 @@
 #ifndef spline_path_value_t
 #define spline_path_value_t sp_sample_t
 #endif
-#include <stdio.h>
-/** writes values with current routine name and line info to standard output.
-    example: (debug-log "%d" 1)
-    otherwise like printf */
-#define debug_log(format, ...) fprintf(stdout, "%s:%d " format "\n", __func__, __LINE__, __VA_ARGS__)
-/** display current function name and given number.
-    example call: (debug-trace 1) */
-#define debug_trace(n) fprintf(stdout, "%s %d\n", __func__, n)
 /* return status code and error handling. uses a local variable named "status" and a goto label named "exit".
       a status has an identifier and a group to discern between status identifiers of different libraries.
       status id 0 is success, everything else can be considered a failure or special case.

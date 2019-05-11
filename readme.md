@@ -84,12 +84,17 @@ status.id zero is success
 ```
 sp_block_free :: sp_block_t:a -> void
 sp_block_new :: sp_channel_count_t:channel_count sp_count_t:sample_count sp_block_t*:out_block -> status_t
+sp_cheap_filter :: sp_state_variable_filter_t:type sp_sample_t*:in sp_count_t:in_size sp_float_t:cutoff sp_count_t:passes sp_float_t:q_factor uint8_t:unity_gain sp_cheap_filter_state_t*:state sp_sample_t*:out -> void
+sp_cheap_filter_state_free :: sp_cheap_filter_state_t*:a -> void
+sp_cheap_filter_state_new :: sp_count_t:max_size sp_count_t:max_passes sp_cheap_filter_state_t*:out_state -> status_t
+sp_cheap_noise_event :: sp_count_t:start sp_count_t:end sp_sample_t**:amp sp_state_variable_filter_t:type sp_sample_t*:cut sp_count_t:passes sp_sample_t:q_factor sp_count_t:resolution sp_random_state_t:random_state sp_event_t*:out_event -> status_t
 sp_convolution_filter :: sp_sample_t*:in sp_count_t:in_len sp_convolution_filter_ir_f_t:ir_f void*:ir_f_arguments uint8_t:ir_f_arguments_len sp_convolution_filter_state_t**:out_state sp_sample_t*:out_samples -> status_t
 sp_convolution_filter_state_free :: sp_convolution_filter_state_t*:state -> void
 sp_convolution_filter_state_set :: sp_convolution_filter_ir_f_t:ir_f void*:ir_f_arguments uint8_t:ir_f_arguments_len sp_convolution_filter_state_t**:out_state -> status_t
 sp_convolve :: sp_sample_t*:a sp_count_t:a_len sp_sample_t*:b sp_count_t:b_len sp_count_t:result_carryover_len sp_sample_t*:result_carryover sp_sample_t*:result_samples -> void
 sp_convolve_one :: sp_sample_t*:a sp_count_t:a_len sp_sample_t*:b sp_count_t:b_len sp_sample_t*:result_samples -> void
 sp_counts_new :: sp_count_t:size sp_count_t**:out -> status_t
+sp_events_free :: sp_event_t*:events sp_count_t:events_count -> void
 sp_fft :: sp_count_t:input_len double*:input_or_output_real double*:input_or_output_imag -> status_id_t
 sp_ffti :: sp_count_t:input_len double*:input_or_output_real double*:input_or_output_imag -> status_id_t
 sp_file_close :: sp_file_t*:a -> status_t
@@ -98,8 +103,10 @@ sp_file_position :: sp_file_t*:file sp_count_t*:result_position -> status_t
 sp_file_position_set :: sp_file_t*:file sp_count_t:sample_offset -> status_t
 sp_file_read :: sp_file_t*:file sp_count_t:sample_count sp_sample_t**:result_block sp_count_t*:result_sample_count -> status_t
 sp_file_write :: sp_file_t*:file sp_sample_t**:block sp_count_t:sample_count sp_count_t*:result_sample_count -> status_t
+sp_filter :: sp_sample_t*:in sp_count_t:in_size sp_float_t:cutoff_l sp_float_t:cutoff_h sp_float_t:transition_l sp_float_t:transition_h boolean:is_reject sp_filter_state_t**:out_state sp_sample_t*:out_samples -> status_t
 sp_initialise :: uint16_t:cpu_count -> status_t
 sp_moving_average :: sp_sample_t*:in sp_sample_t*:in_end sp_sample_t*:in_window sp_sample_t*:in_window_end sp_sample_t*:prev sp_sample_t*:prev_end sp_sample_t*:next sp_sample_t*:next_end sp_count_t:radius sp_sample_t*:out -> status_t
+sp_noise_event :: sp_count_t:start sp_count_t:end sp_sample_t**:amp sp_sample_t*:cut_l sp_sample_t*:cut_h sp_sample_t*:trn_l sp_sample_t*:trn_h uint8_t:is_reject sp_count_t:resolution sp_random_state_t:random_state sp_event_t*:out_event -> status_t
 sp_null_ir :: sp_sample_t**:out_ir sp_count_t*:out_len -> status_t
 sp_passthrough_ir :: sp_sample_t**:out_ir sp_count_t*:out_len -> status_t
 sp_phase_96 :: sp_count_t:current sp_count_t:change -> sp_count_t
@@ -170,12 +177,18 @@ spline_path_start :: spline_path_t:path -> spline_path_point_t
 ## macros
 ```
 boolean
-debug_log(format, ...)
-debug_trace(n)
 sp_block_set_null(a)
-sp_channel_limit
 sp_cheap_ceiling_positive(a)
+sp_cheap_filter_bp(...)
+sp_cheap_filter_br(...)
+sp_cheap_filter_hp(...)
+sp_cheap_filter_lp(...)
+sp_cheap_filter_passes_limit
 sp_cheap_floor_positive(a)
+sp_cheap_noise_event_bp(start, end, amp, ...)
+sp_cheap_noise_event_br(start, end, amp, ...)
+sp_cheap_noise_event_hp(start, end, amp, ...)
+sp_cheap_noise_event_lp(start, end, amp, ...)
 sp_cheap_round_positive(a)
 sp_file_bit_closed
 sp_file_bit_input
@@ -184,6 +197,8 @@ sp_file_bit_position
 sp_file_mode_read
 sp_file_mode_read_write
 sp_file_mode_write
+sp_filter_state_free
+sp_filter_state_t
 sp_octets_to_samples(a)
 sp_samples_to_octets(a)
 sp_sine_96(t)
@@ -194,8 +209,6 @@ sp_status_group_sph
 sph_status
 spline_path_interpolator_points_len(a)
 spline_path_point_limit
-spline_path_time_t
-spline_path_value_t
 status_declare
 status_declare_group(group)
 status_goto
@@ -214,6 +227,7 @@ status_set_id_goto(status_id)
 
 ## variables
 ```
+sp_random_state_t sp_default_random_state
 sp_sample_t* sp_sine_96_table
 ```
 
@@ -222,11 +236,16 @@ sp_sample_t* sp_sine_96_table
 status_id_t: int32_t
 sp_convolution_filter_ir_f_t: void* sp_sample_t** sp_count_t* -> status_t
 sp_event_f_t: sp_count_t sp_count_t sp_block_t sp_event_t* -> void
+sp_state_variable_filter_t: sp_sample_t* sp_sample_t* sp_float_t sp_float_t sp_count_t sp_sample_t* -> void
 spline_path_interpolator_t: spline_path_time_t spline_path_time_t spline_path_point_t spline_path_point_t* void* spline_path_value_t* -> void
 sp_block_t: struct
   channels: sp_channel_count_t
   size: sp_count_t
   samples: array sp_sample_t* sp_channel_limit
+sp_cheap_filter_state_t: struct
+  in_temp: sp_sample_t*
+  out_temp: sp_sample_t*
+  svf_state: array sp_sample_t * 2 sp_cheap_filter_passes_limit
 sp_convolution_filter_state_t: struct
   carryover: sp_sample_t*
   carryover_len: sp_count_t
@@ -241,6 +260,7 @@ sp_event_t: struct sp_event_t
   start: sp_count_t
   end: sp_count_t
   f: function_pointer void sp_count_t sp_count_t sp_block_t struct sp_event_t*
+  free: function_pointer void struct sp_event_t*
 sp_file_t: struct
   flags: uint8_t
   sample_rate: sp_sample_rate_t
@@ -256,9 +276,9 @@ sp_synth_partial_t: struct
   start: sp_count_t
   end: sp_count_t
   modifies: sp_synth_count_t
-  amp: array sp_sample_t* sp_synth_channel_limit
-  wvl: array sp_count_t* sp_synth_channel_limit
-  phs: array sp_count_t sp_synth_channel_limit
+  amp: array sp_sample_t* sp_channel_limit
+  wvl: array sp_count_t* sp_channel_limit
+  phs: array sp_count_t sp_channel_limit
 spline_path_point_t: struct
   x: spline_path_time_t
   y: spline_path_value_t
@@ -295,8 +315,3 @@ sp_status_id_file_channel_mismatch sp_status_id_file_encoding sp_status_id_file_
 * [nayuki](https://www.nayuki.io/page/free-small-fft-in-multiple-languages) for the concise fft implementation that is currently used
 * [steve smith's dspguide](http://www.dspguide.com/) for information about dsp theory
 * [xoshiro.di.unimi.it](http://xoshiro.di.unimi.it/) for the pseudorandom number generator
-
-# other interesting projects
-* [yodel](https://github.com/rclement/yodel)
-* [soundpipe](https://github.com/PaulBatchelor/Soundpipe)
-* [ciglet](https://github.com/Sleepwalking/ciglet)
