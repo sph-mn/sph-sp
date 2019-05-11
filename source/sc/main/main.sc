@@ -1,3 +1,5 @@
+(sc-comment "this file contains basics and includes dependencies")
+
 (pre-include
   "stdio.h"
   "fcntl.h"
@@ -319,373 +321,6 @@
           (array-get result-carryover c-index)
           (+ (array-get result-carryover c-index) (* (array-get a a-index) (array-get b b-index))))))))
 
-(define (sp-convolution-filter-state-free state) (void sp-convolution-filter-state-t*)
-  (if (not state) return)
-  (free state:ir)
-  (free state:carryover)
-  (free state:ir-f-arguments)
-  (free state))
-
-(define (sp-convolution-filter-state-set ir-f ir-f-arguments ir-f-arguments-len out-state)
-  (status-t sp-convolution-filter-ir-f-t void* uint8-t sp-convolution-filter-state-t**)
-  "create or update a previously created state object.
-  impulse response array properties are calculated with ir-f using ir-f-arguments.
-  eventually frees state.ir.
-  the state object is used to store the impulse response, the parameters that where used to create it and
-  overlapping data that has to be carried over between calls.
-  ir-f-arguments can be stack allocated and will be copied to state on change"
-  status-declare
-  (declare
-    carryover sp-sample-t*
-    carryover-alloc-len sp-count-t
-    ir sp-sample-t*
-    ir-len sp-count-t
-    state sp-convolution-filter-state-t*)
-  (memreg-init 2)
-  (sc-comment
-    "create state if not exists. re-use if exists and return early if ir needs not be updated")
-  (if *out-state
-    (begin
-      (sc-comment "existing")
-      (set state *out-state)
-      (if
-        (and
-          (= state:ir-f ir-f)
-          (= ir-f-arguments-len state:ir-f-arguments-len)
-          (= 0 (memcmp state:ir-f-arguments ir-f-arguments ir-f-arguments-len)))
-        (begin
-          (sc-comment "unchanged")
-          (return status))
-        (begin
-          (sc-comment "changed")
-          (if (> ir-f-arguments-len state:ir-f-arguments-len)
-            (status-require (sph-helper-realloc ir-f-arguments-len &state:ir-f-arguments)))
-          (if state:ir (free state:ir)))))
-    (begin
-      (sc-comment "new")
-      (status-require (sph-helper-malloc (sizeof sp-convolution-filter-state-t) &state))
-      (status-require (sph-helper-malloc ir-f-arguments-len &state:ir-f-arguments))
-      (memreg-add state)
-      (memreg-add state:ir-f-arguments)
-      (set
-        state:carryover-alloc-len 0
-        state:carryover-len 0
-        state:carryover 0
-        state:ir-f ir-f
-        state:ir-f-arguments-len ir-f-arguments-len)))
-  (memcpy state:ir-f-arguments ir-f-arguments ir-f-arguments-len)
-  (status-require (ir-f ir-f-arguments &ir &ir-len))
-  (sc-comment
-    "eventually extend carryover array. the array is never shrunk."
-    "carryover-len is at least ir-len - 1."
-    "carryover-alloc-len is the length of the whole array."
-    "new and extended areas must be set to zero")
-  (set carryover-alloc-len (- ir-len 1))
-  (if state:carryover
-    (begin
-      (set carryover state:carryover)
-      (if (> ir-len state:ir-len)
-        (begin
-          (if (> carryover-alloc-len state:carryover-alloc-len)
-            (begin
-              (status-require
-                (sph-helper-realloc (* carryover-alloc-len (sizeof sp-sample-t)) &carryover))
-              (set state:carryover-alloc-len carryover-alloc-len)))
-          (sc-comment "in any case reset the extension area")
-          (memset
-            (+ (- state:ir-len 1) carryover) 0 (* (- ir-len state:ir-len) (sizeof sp-sample-t))))))
-    (begin
-      (status-require (sph-helper-calloc (* carryover-alloc-len (sizeof sp-sample-t)) &carryover))
-      (set state:carryover-alloc-len carryover-alloc-len)))
-  (set
-    state:carryover carryover
-    state:ir ir
-    state:ir-len ir-len
-    *out-state state)
-  (label exit
-    (if status-is-failure memreg-free)
-    (return status)))
-
-(define
-  (sp-convolution-filter in in-len ir-f ir-f-arguments ir-f-arguments-len out-state out-samples)
-  (status-t
-    sp-sample-t*
-    sp-count-t
-    sp-convolution-filter-ir-f-t void* uint8-t sp-convolution-filter-state-t** sp-sample-t*)
-  "convolute samples \"in\", which can be a segment of a continuous stream, with an impulse response
-  kernel created by ir-f with ir-f-arguments.
-  ir-f is only used when ir-f-arguments changed.
-  values that need to be carried over with calls are kept in out-state.
-  * out-state: if zero then state will be allocated. owned by caller
-  * out-samples: owned by the caller. length must be at least in-len and the number of output samples will be in-len"
-  status-declare
-  (declare carryover-len sp-count-t)
-  (set carryover-len
-    (if* *out-state (- (: *out-state ir-len) 1)
-      0))
-  (sc-comment "create/update the impulse response kernel")
-  (status-require
-    (sp-convolution-filter-state-set ir-f ir-f-arguments ir-f-arguments-len out-state))
-  (sc-comment "convolve")
-  (sp-convolve
-    in
-    in-len (: *out-state ir) (: *out-state ir-len) carryover-len (: *out-state carryover) out-samples)
-  (label exit
-    (return status)))
-
-(pre-define (define-sp-state-variable-filter suffix transfer)
-  (begin
-    "samples real real pair [integer integer integer] -> state
-    define a routine for a fast filter that supports multiple filter types in one.
-    state must hold two elements and is to be allocated and owned by the caller.
-    cutoff is as a fraction of the sample rate between 0 and 0.5.
-    uses the state-variable filter described here:
-    * http://www.cytomic.com/technical-papers
-    * http://www.earlevel.com/main/2016/02/21/filters-for-synths-starting-out/"
-    (define ((pre-concat sp-state-variable-filter_ suffix) out in in-count cutoff q-factor state)
-      (void sp-sample-t* sp-sample-t* sp-float-t sp-float-t sp-count-t sp-sample-t*)
-      (declare
-        a1 sp-sample-t
-        a2 sp-sample-t
-        g sp-sample-t
-        ic1eq sp-sample-t
-        ic2eq sp-sample-t
-        i sp-count-t
-        k sp-sample-t
-        v0 sp-sample-t
-        v1 sp-sample-t
-        v2 sp-sample-t)
-      (set
-        ic1eq (array-get state 0)
-        ic2eq (array-get state 1)
-        g (tan (* M_PI cutoff))
-        k (- 2 (* 2 q-factor))
-        a1 (/ 1 (+ 1 (* g (+ g k))))
-        a2 (* g a1))
-      (for ((set i 0) (< i in-count) (set i (+ 1 i)))
-        (set
-          v0 (array-get in i)
-          v1 (+ (* a1 ic1eq) (* a2 (- v0 ic2eq)))
-          v2 (+ ic2eq (* g v1))
-          ic1eq (- (* 2 v1) ic1eq)
-          ic2eq (- (* 2 v2) ic2eq)
-          (array-get out i) transfer))
-      (set
-        (array-get state 0) ic1eq
-        (array-get state 1) ic2eq))))
-
-(define-sp-state-variable-filter lp v2)
-(define-sp-state-variable-filter hp (- v0 (* k v1) v2))
-(define-sp-state-variable-filter bp v1)
-(define-sp-state-variable-filter br (- v0 (* k v1)))
-(define-sp-state-variable-filter peak (+ (- (* 2 v2) v0) (* k v1)))
-(define-sp-state-variable-filter all (- v0 (* 2 k v1)))
-
-(define (sp-sine-table-new out size) (status-t sp-sample-t** sp-count-t)
-  "writes a sine wave of size into out. can be used as a lookup table"
-  status-declare
-  (declare
-    i sp-count-t
-    out-array sp-sample-t*)
-  (status-require (sph-helper-malloc (* size (sizeof sp-sample-t*)) &out-array))
-  (for ((set i 0) (< i size) (set i (+ 1 i)))
-    (set (array-get out-array i) (sin (* i (/ M_PI (/ size 2))))))
-  (set *out out-array)
-  (label exit
-    (return status)))
-
-(define (sp-initialise cpu-count) (status-t uint16-t)
-  "fills the sine wave lookup table"
-  status-declare
-  (if cpu-count (set status.id (future-init cpu-count)))
-  (if status.id (return status))
-  (set sp-default-random-state (sp-random-state-new 1557083953))
-  (return (sp-sine-table-new &sp-sine-96-table 96000)))
-
-(define (sp-phase-96 current change) (sp-count-t sp-count-t sp-count-t)
-  "accumulate an integer phase and reset it after cycles.
-  float value phases would be harder to reset"
-  (declare result sp-count-t)
-  (set result (+ current change))
-  (return
-    (if* (<= 96000 result) (modulo result 96000)
-      result)))
-
-(define (sp-phase-96-float current change) (sp-count-t sp-count-t double)
-  "accumulate an integer phase with change given as a float value.
-  change must be a positive value and is rounded to the next larger integer"
-  (return (sp-phase-96 current (sp-cheap-ceiling-positive change))))
-
-(define (sp-synth-state-new channel-count config-len config out-state)
-  (status-t sp-count-t sp-synth-count-t sp-synth-partial-t* sp-count-t**)
-  "contains the initial phase offsets per partial and channel
-  as a flat array. should be freed with free"
-  status-declare
-  (declare
-    i sp-count-t
-    channel-i sp-count-t)
-  (status-require (sph-helper-calloc (* channel-count config-len (sizeof sp-count-t)) out-state))
-  (for ((set i 0) (< i config-len) (set i (+ 1 i)))
-    (for ((set channel-i 0) (< channel-i channel-count) (set channel-i (+ 1 channel-i)))
-      (set (array-get *out-state (+ channel-i (* channel-count i)))
-        (array-get (struct-get (array-get config i) phs) channel-i))))
-  (label exit
-    (return status)))
-
-(define (sp-synth out start duration config-len config phases)
-  (status-t sp-block-t sp-count-t sp-count-t sp-synth-count-t sp-synth-partial-t* sp-count-t*)
-  "create sines that start and end at specific times and can optionally modulate the frequency of others.
-  sp-synth output is summed into out.
-  amplitude and wavelength can be controlled by arrays separately for each partial and channel.
-  modulators can be modulated themselves in chains. state has to be allocated by the caller with sp-synth-state-new.
-  modulator amplitude is relative to carrier wavelength.
-  paths are relative to the start of partials.
-  # requirements
-  * modulators must come after carriers in config
-  * config-len must not change between calls with the same state
-  * all amplitude/wavelength arrays must be of sufficient size and available for all channels
-  * sp-initialise must have been called once before using sp-synth
-  # algorithm
-  * read config from the end to the start
-  * write modulator output to temporary buffers that are indexed by modified partial id
-  * apply modulator output from the buffers and sum to output for final carriers
-  * each partial has integer phases that are reset in cycles and kept in state between calls"
-  ; config is evaluated from last to first.
-  ; modulation is duration length, paths are samples relative to the partial start
-  status-declare
-  (declare
-    amp sp-sample-t
-    carrier sp-sample-t*
-    channel-i sp-count-t
-    end sp-count-t
-    i sp-count-t
-    modulated-wvl sp-sample-t
-    modulation-index (array sp-sample-t* (sp-synth-partial-limit sp-channel-limit))
-    modulation sp-sample-t*
-    phs sp-count-t
-    prt-duration sp-count-t
-    prt-i sp-synth-count-t
-    prt-offset-right sp-count-t
-    prt-offset sp-count-t
-    prt sp-synth-partial-t
-    prt-start sp-count-t
-    wvl sp-count-t)
-  (sc-comment
-    "modulation blocks (channel array + data. at least one is carrier and writes only to output)")
-  (memreg-init (* (- config-len 1) out.channels))
-  (memset modulation-index 0 (sizeof modulation-index))
-  (set
-    end (+ start duration)
-    prt-i config-len)
-  (while prt-i
-    (set
-      prt-i (- prt-i 1)
-      prt (array-get config prt-i))
-    (if (< end prt.start) break)
-    (if (<= prt.end start) continue)
-    (set
-      prt-start
-      (if* (< prt.start start) (- start prt.start)
-        0)
-      prt-offset
-      (if* (> prt.start start) (- prt.start start)
-        0)
-      prt-offset-right
-      (if* (> prt.end end) 0
-        (- end prt.end))
-      prt-duration (- duration prt-offset prt-offset-right))
-    (if prt.modifies
-      (for ((set channel-i 0) (< channel-i out.channels) (set channel-i (+ 1 channel-i)))
-        (set carrier (array-get modulation-index (- prt.modifies 1) channel-i))
-        (if (not carrier)
-          (begin
-            (status-require (sph-helper-calloc (* duration (sizeof sp-sample-t)) &carrier))
-            (memreg-add carrier)))
-        (set
-          phs (array-get phases (+ channel-i (* out.channels prt-i)))
-          modulation (array-get modulation-index prt-i channel-i))
-        (for ((set i 0) (< i prt-duration) (set i (+ 1 i)))
-          (set
-            amp (array-get prt.amp channel-i (+ prt-start i))
-            (array-get carrier (+ prt-offset i))
-            (+ (array-get carrier (+ prt-offset i)) (* amp (sp-sine-96 phs))) wvl
-            (array-get prt.wvl channel-i (+ prt-start i)) modulated-wvl
-            (if* modulation (+ wvl (* wvl (array-get modulation (+ prt-offset i))))
-              wvl)
-            phs (sp-phase-96-float phs (/ 48000 modulated-wvl))))
-        (set
-          (array-get phases (+ channel-i (* out.channels prt-i))) phs
-          (array-get modulation-index (- prt.modifies 1) channel-i) carrier))
-      (for ((set channel-i 0) (< channel-i out.channels) (set channel-i (+ 1 channel-i)))
-        (set
-          phs (array-get phases (+ channel-i (* out.channels prt-i)))
-          modulation (array-get modulation-index prt-i channel-i))
-        (for ((set i 0) (< i prt-duration) (set i (+ 1 i)))
-          (set
-            amp (array-get prt.amp channel-i (+ prt-start i))
-            wvl (array-get prt.wvl channel-i (+ prt-start i))
-            modulated-wvl
-            (if* modulation (+ wvl (* wvl (array-get modulation (+ prt-offset i))))
-              wvl)
-            phs (sp-phase-96-float phs (/ 48000 modulated-wvl))
-            (array-get (array-get out.samples channel-i) (+ prt-offset i))
-            (+
-              (array-get (array-get out.samples channel-i) (+ prt-offset i)) (* amp (sp-sine-96 phs)))))
-        (set (array-get phases (+ channel-i (* out.channels prt-i))) phs))))
-  (label exit
-    memreg-free
-    (return status)))
-
-(pre-define (sp-synth-partial-set-channel prt channel amp-array wvl-array phs-array)
-  (set
-    (array-get prt.amp channel) amp-array
-    (array-get prt.wvl channel) wvl-array
-    (array-get prt.phs channel) phs-array))
-
-(define (sp-synth-partial-1 start end modifies amp wvl phs)
-  (sp-synth-partial-t sp-count-t sp-count-t sp-synth-count-t sp-sample-t* sp-count-t* sp-count-t)
-  "setup a synth partial with one channel"
-  (declare prt sp-synth-partial-t)
-  (set
-    prt.start start
-    prt.end end
-    prt.modifies modifies)
-  (sp-synth-partial-set-channel prt 0 amp wvl phs)
-  (return prt))
-
-(define (sp-synth-partial-2 start end modifies amp1 amp2 wvl1 wvl2 phs1 phs2)
-  (sp-synth-partial-t
-    sp-count-t
-    sp-count-t
-    sp-synth-count-t sp-sample-t* sp-sample-t* sp-count-t* sp-count-t* sp-count-t sp-count-t)
-  "setup a synth partial with two channels"
-  (declare prt sp-synth-partial-t)
-  (set
-    prt.start start
-    prt.end end
-    prt.modifies modifies)
-  (sp-synth-partial-set-channel prt 0 amp1 wvl1 phs1)
-  (sp-synth-partial-set-channel prt 1 amp2 wvl2 phs2)
-  (return prt))
-
-(define (sp-triangle t a b) (sp-sample-t sp-count-t sp-count-t sp-count-t)
-  "return a sample for a triangular wave with center offsets a left and b right.
-   creates sawtooth waves if either a or b is 0"
-  (declare remainder sp-count-t)
-  (set remainder (modulo t (+ a b)))
-  (return
-    (if* (< remainder a) (* remainder (/ 1 (convert-type a sp-sample-t)))
-      (*
-        (- (convert-type b sp-sample-t) (- remainder (convert-type a sp-sample-t)))
-        (/ 1 (convert-type b sp-sample-t))))))
-
-(define (sp-triangle-96 t) (sp-sample-t sp-count-t) (return (sp-triangle t 48000 48000)))
-
-(define (sp-square-96 t) (sp-sample-t sp-count-t)
-  (return
-    (if* (< (modulo (* 2 t) (* 2 96000)) 96000) -1
-      1)))
-
 (pre-define
   (double-from-uint64 a)
   (begin
@@ -731,4 +366,51 @@
       (array-get out i) (- (* 2 (double-from-uint64 result-plus)) 1.0)))
   (return state))
 
-(pre-include "../main/windowed-sinc.c" "../main/io.c" "../main/plot.c" "../main/seq.c")
+(pre-define
+  (i-array-get-or-null a)
+  (if* (i-array-in-range a) (i-array-get a)
+    0)
+  (i-array-forward-if-possible a) (if* (i-array-in-range a) (i-array-forward a))
+  (sp-samples-zero a size) (memset a 0 (* size (sizeof sp-sample-t))))
+
+(define (sp-samples-absolute-max in in-size) (sp-sample-t sp-sample-t* sp-count-t)
+  "get the maximum value in samples array, disregarding sign"
+  (declare
+    result sp-sample-t
+    i sp-count-t)
+  (for
+    ( (set
+        i 0
+        result 0)
+      (< i in-size) (set i (+ 1 i)))
+    (if (> (fabs (array-get in i)) result) (set result (array-get in i))))
+  (return result))
+
+(define (sp-set-unity-gain in in-size out) (void sp-sample-t* sp-count-t sp-sample-t*)
+  "adjust amplitude of out to match the one of in"
+  (declare
+    i sp-count-t
+    in-max sp-sample-t
+    out-max sp-sample-t
+    difference sp-sample-t
+    correction sp-sample-t)
+  (set
+    in-max (sp-samples-absolute-max in in-size)
+    out-max (sp-samples-absolute-max out in-size))
+  (if (or (= 0 in-max) (= 0 out-max)) return)
+  (set
+    difference (/ out-max in-max)
+    correction (+ 1 (/ (- 1 difference) difference)))
+  (for ((set i 0) (< i in-size) (set i (+ 1 i)))
+    (set (array-get out i) (* correction (array-get out i)))))
+
+(pre-include
+  "../main/io.c" "../main/plot.c" "../main/filter.c" "../main/synthesiser.c" "../main/sequencer.c")
+
+(define (sp-initialise cpu-count) (status-t uint16-t)
+  "fills the sine wave lookup table"
+  status-declare
+  (if cpu-count (set status.id (future-init cpu-count)))
+  (if status.id (return status))
+  (set sp-default-random-state (sp-random-state-new 1557083953))
+  (return (sp-sine-table-new &sp-sine-96-table 96000)))

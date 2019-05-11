@@ -424,6 +424,23 @@ status_t test_sp_noise_event() {
 exit:
   return (status);
 };
+status_t test_sp_cheap_filter() {
+  status_declare;
+  sp_cheap_filter_state_t state;
+  sp_sample_t out[sp_noise_duration];
+  sp_sample_t in[sp_noise_duration];
+  sp_count_t i;
+  sp_random_state_t s;
+  s = sp_random_state_new(80);
+  s = sp_random(s, sp_noise_duration, in);
+  status_require((sp_cheap_filter_state_new(sp_noise_duration, sp_cheap_filter_passes_limit, (&state))));
+  sp_cheap_filter_lp(in, sp_noise_duration, (0.2), 1, 0, 1, (&state), out);
+  sp_cheap_filter_lp(in, sp_noise_duration, (0.2), sp_cheap_filter_passes_limit, 0, 1, (&state), out);
+  sp_cheap_filter_lp(in, sp_noise_duration, (0.2), sp_cheap_filter_passes_limit, 0, 1, (&state), out);
+  sp_cheap_filter_state_free((&state));
+exit:
+  return (status);
+};
 status_t test_sp_cheap_noise_event() {
   status_declare;
   sp_event_t events[1];
@@ -452,6 +469,7 @@ int main() {
   status_declare;
   sp_initialise(6);
   test_helper_test_one(test_sp_cheap_noise_event);
+  test_helper_test_one(test_sp_cheap_filter);
   test_helper_test_one(test_sp_noise_event);
   test_helper_test_one(test_sp_seq);
   test_helper_test_one(test_sp_random);

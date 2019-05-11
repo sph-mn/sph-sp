@@ -2,6 +2,7 @@
 #include <math.h>
 #include <inttypes.h>
 #include <string.h>
+/* configuration */
 #ifndef sp_channel_count_t
 #define sp_channel_count_t uint8_t
 #endif
@@ -41,29 +42,12 @@
 #ifndef sp_synth_partial_limit
 #define sp_synth_partial_limit 64
 #endif
+#ifndef spline_path_time_t
 #define spline_path_time_t sp_count_t
+#endif
+#ifndef spline_path_value_t
 #define spline_path_value_t sp_sample_t
-#define boolean uint8_t
-#define sp_file_bit_input 1
-#define sp_file_bit_output 2
-#define sp_file_bit_position 4
-#define sp_file_bit_closed 8
-#define sp_file_mode_read 1
-#define sp_file_mode_write 2
-#define sp_file_mode_read_write 3
-#define sp_status_group_libc "libc"
-#define sp_status_group_sndfile "sndfile"
-#define sp_status_group_sp "sp"
-#define sp_status_group_sph "sph"
-/** sample count to bit octets count */
-#define sp_octets_to_samples(a) (a / sizeof(sp_sample_t))
-#define sp_samples_to_octets(a) (a * sizeof(sp_sample_t))
-/** t must be between 0 and 95999 */
-#define sp_sine_96(t) sp_sine_96_table[t]
-#define sp_cheap_round_positive(a) ((sp_count_t)((0.5 + a)))
-#define sp_cheap_floor_positive(a) ((sp_count_t)(a))
-#define sp_cheap_ceiling_positive(a) (((sp_count_t)(a)) + (((sp_count_t)(a)) < a))
-#define sp_block_set_null(a) a.channels = 0
+#endif
 #include <stdio.h>
 /** writes values with current routine name and line info to standard output.
     example: (debug-log "%d" 1)
@@ -344,6 +328,26 @@ spline_path_segment_t spline_path_path(spline_path_t* path) {
   s.options = path;
   return (s);
 };
+/* main */
+#define boolean uint8_t
+#define sp_file_bit_input 1
+#define sp_file_bit_output 2
+#define sp_file_bit_position 4
+#define sp_file_bit_closed 8
+#define sp_file_mode_read 1
+#define sp_file_mode_write 2
+#define sp_file_mode_read_write 3
+#define sp_status_group_libc "libc"
+#define sp_status_group_sndfile "sndfile"
+#define sp_status_group_sp "sp"
+#define sp_status_group_sph "sph"
+/** sample count to bit octets count */
+#define sp_octets_to_samples(a) (a / sizeof(sp_sample_t))
+#define sp_samples_to_octets(a) (a * sizeof(sp_sample_t))
+#define sp_cheap_round_positive(a) ((sp_count_t)((0.5 + a)))
+#define sp_cheap_floor_positive(a) ((sp_count_t)(a))
+#define sp_cheap_ceiling_positive(a) (((sp_count_t)(a)) + (((sp_count_t)(a)) < a))
+#define sp_block_set_null(a) a.channels = 0
 enum { sp_status_id_file_channel_mismatch,
   sp_status_id_file_encoding,
   sp_status_id_file_header,
@@ -369,6 +373,44 @@ typedef struct {
   sp_channel_count_t channel_count;
   void* data;
 } sp_file_t;
+typedef struct {
+  uint64_t data[4];
+} sp_random_state_t;
+sp_random_state_t sp_default_random_state;
+status_t sp_file_read(sp_file_t* file, sp_count_t sample_count, sp_sample_t** result_block, sp_count_t* result_sample_count);
+status_t sp_file_write(sp_file_t* file, sp_sample_t** block, sp_count_t sample_count, sp_count_t* result_sample_count);
+status_t sp_file_position(sp_file_t* file, sp_count_t* result_position);
+status_t sp_file_position_set(sp_file_t* file, sp_count_t sample_offset);
+status_t sp_file_open(uint8_t* path, int mode, sp_channel_count_t channel_count, sp_sample_rate_t sample_rate, sp_file_t* result_file);
+status_t sp_file_close(sp_file_t* a);
+status_t sp_block_new(sp_channel_count_t channel_count, sp_count_t sample_count, sp_block_t* out_block);
+uint8_t* sp_status_description(status_t a);
+uint8_t* sp_status_name(status_t a);
+sp_sample_t sp_sin_lq(sp_float_t a);
+sp_float_t sp_sinc(sp_float_t a);
+sp_float_t sp_window_blackman(sp_float_t a, sp_count_t width);
+void sp_spectral_inversion_ir(sp_sample_t* a, sp_count_t a_len);
+void sp_spectral_reversal_ir(sp_sample_t* a, sp_count_t a_len);
+status_id_t sp_fft(sp_count_t input_len, double* input_or_output_real, double* input_or_output_imag);
+status_id_t sp_ffti(sp_count_t input_len, double* input_or_output_real, double* input_or_output_imag);
+void sp_convolve_one(sp_sample_t* a, sp_count_t a_len, sp_sample_t* b, sp_count_t b_len, sp_sample_t* result_samples);
+void sp_convolve(sp_sample_t* a, sp_count_t a_len, sp_sample_t* b, sp_count_t b_len, sp_count_t result_carryover_len, sp_sample_t* result_carryover, sp_sample_t* result_samples);
+void sp_block_free(sp_block_t a);
+status_t sp_null_ir(sp_sample_t** out_ir, sp_count_t* out_len);
+status_t sp_passthrough_ir(sp_sample_t** out_ir, sp_count_t* out_len);
+status_t sp_initialise(uint16_t cpu_count);
+sp_random_state_t sp_random(sp_random_state_t state, sp_count_t size, sp_sample_t* out);
+sp_random_state_t sp_random_state_new(uint64_t seed);
+status_t sp_samples_new(sp_count_t size, sp_sample_t** out);
+status_t sp_counts_new(sp_count_t size, sp_count_t** out);
+/* filter */
+#define sp_filter_state_t sp_convolution_filter_state_t
+#define sp_filter_state_free sp_convolution_filter_state_free
+#define sp_cheap_filter_passes_limit 8
+#define sp_cheap_filter_lp(in, in_size, cutoff, passes, q_factor, unity_gain, state, out) sp_cheap_filter(in, in_size, sp_state_variable_filter_lp, cutoff, passes, q_factor, unity_gain, state, out)
+#define sp_cheap_filter_hp(in, in_size, cutoff, passes, q_factor, unity_gain, state, out) sp_cheap_filter(in, in_size, sp_state_variable_filter_hp, cutoff, passes, q_factor, unity_gain, state, out)
+#define sp_cheap_filter_bp(in, in_size, cutoff, passes, q_factor, unity_gain, state, out) sp_cheap_filter(in, in_size, sp_state_variable_filter_bp, cutoff, passes, q_factor, unity_gain, state, out)
+#define sp_cheap_filter_br(in, in_size, cutoff, passes, q_factor, unity_gain, state, out) sp_cheap_filter(in, in_size, sp_state_variable_filter_br, cutoff, passes, q_factor, unity_gain, state, out)
 typedef status_t (*sp_convolution_filter_ir_f_t)(void*, sp_sample_t**, sp_count_t*);
 typedef struct {
   sp_sample_t* carryover;
@@ -381,24 +423,11 @@ typedef struct {
   sp_count_t ir_len;
 } sp_convolution_filter_state_t;
 typedef struct {
-  sp_count_t start;
-  sp_count_t end;
-  sp_synth_count_t modifies;
-  sp_sample_t* amp[sp_channel_limit];
-  sp_count_t* wvl[sp_channel_limit];
-  sp_count_t phs[sp_channel_limit];
-} sp_synth_partial_t;
-status_t sp_file_read(sp_file_t* file, sp_count_t sample_count, sp_sample_t** result_block, sp_count_t* result_sample_count);
-status_t sp_file_write(sp_file_t* file, sp_sample_t** block, sp_count_t sample_count, sp_count_t* result_sample_count);
-status_t sp_file_position(sp_file_t* file, sp_count_t* result_position);
-status_t sp_file_position_set(sp_file_t* file, sp_count_t sample_offset);
-status_t sp_file_open(uint8_t* path, int mode, sp_channel_count_t channel_count, sp_sample_rate_t sample_rate, sp_file_t* result_file);
-status_t sp_file_close(sp_file_t* a);
-status_t sp_block_new(sp_channel_count_t channel_count, sp_count_t sample_count, sp_block_t* out_block);
-uint8_t* sp_status_description(status_t a);
-uint8_t* sp_status_name(status_t a);
-sp_sample_t sp_sin_lq(sp_float_t a);
-sp_float_t sp_sinc(sp_float_t a);
+  sp_sample_t* in_temp;
+  sp_sample_t* out_temp;
+  sp_sample_t svf_state[(2 * sp_cheap_filter_passes_limit)];
+} sp_cheap_filter_state_t;
+status_t sp_moving_average(sp_sample_t* in, sp_sample_t* in_end, sp_sample_t* in_window, sp_sample_t* in_window_end, sp_sample_t* prev, sp_sample_t* prev_end, sp_sample_t* next, sp_sample_t* next_end, sp_count_t radius, sp_sample_t* out);
 sp_count_t sp_windowed_sinc_lp_hp_ir_length(sp_float_t transition);
 status_t sp_windowed_sinc_ir(sp_float_t cutoff, sp_float_t transition, sp_count_t* result_len, sp_sample_t** result_ir);
 void sp_convolution_filter_state_free(sp_convolution_filter_state_t* state);
@@ -410,31 +439,50 @@ status_t sp_windowed_sinc_lp_hp_ir_f(void* arguments, sp_sample_t** out_ir, sp_c
 status_t sp_windowed_sinc_bp_br_ir_f(void* arguments, sp_sample_t** out_ir, sp_count_t* out_len);
 status_t sp_windowed_sinc_lp_hp(sp_sample_t* in, sp_count_t in_len, sp_float_t cutoff, sp_float_t transition, boolean is_high_pass, sp_convolution_filter_state_t** out_state, sp_sample_t* out_samples);
 status_t sp_windowed_sinc_bp_br(sp_sample_t* in, sp_count_t in_len, sp_float_t cutoff_l, sp_float_t cutoff_h, sp_float_t transition_l, sp_float_t transition_h, boolean is_reject, sp_convolution_filter_state_t** out_state, sp_sample_t* out_samples);
-sp_float_t sp_window_blackman(sp_float_t a, sp_count_t width);
-void sp_spectral_inversion_ir(sp_sample_t* a, sp_count_t a_len);
-void sp_spectral_reversal_ir(sp_sample_t* a, sp_count_t a_len);
-status_id_t sp_fft(sp_count_t input_len, double* input_or_output_real, double* input_or_output_imag);
-status_id_t sp_ffti(sp_count_t input_len, double* input_or_output_real, double* input_or_output_imag);
-status_t sp_moving_average(sp_sample_t* in, sp_sample_t* in_end, sp_sample_t* in_window, sp_sample_t* in_window_end, sp_sample_t* prev, sp_sample_t* prev_end, sp_sample_t* next, sp_sample_t* next_end, sp_count_t radius, sp_sample_t* out);
-void sp_convolve_one(sp_sample_t* a, sp_count_t a_len, sp_sample_t* b, sp_count_t b_len, sp_sample_t* result_samples);
-void sp_convolve(sp_sample_t* a, sp_count_t a_len, sp_sample_t* b, sp_count_t b_len, sp_count_t result_carryover_len, sp_sample_t* result_carryover, sp_sample_t* result_samples);
-void sp_block_free(sp_block_t a);
 status_t sp_windowed_sinc_lp_hp_ir(sp_float_t cutoff, sp_float_t transition, boolean is_high_pass, sp_sample_t** out_ir, sp_count_t* out_len);
-status_t sp_null_ir(sp_sample_t** out_ir, sp_count_t* out_len);
-status_t sp_passthrough_ir(sp_sample_t** out_ir, sp_count_t* out_len);
-status_t sp_sine_table_new(sp_sample_t** out, sp_count_t size);
-sp_sample_t* sp_sine_96_table;
-status_t sp_initialise(uint16_t cpu_count);
-sp_count_t sp_phase_96(sp_count_t current, sp_count_t change);
-sp_count_t sp_phase_96_float(sp_count_t current, double change);
-status_t sp_synth(sp_block_t out, sp_count_t start, sp_count_t duration, sp_synth_count_t config_len, sp_synth_partial_t* config, sp_count_t* phases);
-status_t sp_synth_state_new(sp_count_t channel_count, sp_synth_count_t config_len, sp_synth_partial_t* config, sp_count_t** out_state);
 void sp_state_variable_filter_lp(sp_sample_t* out, sp_sample_t* in, sp_float_t in_count, sp_float_t cutoff, sp_count_t q_factor, sp_sample_t* state);
 void sp_state_variable_filter_hp(sp_sample_t* out, sp_sample_t* in, sp_float_t in_count, sp_float_t cutoff, sp_count_t q_factor, sp_sample_t* state);
 void sp_state_variable_filter_bp(sp_sample_t* out, sp_sample_t* in, sp_float_t in_count, sp_float_t cutoff, sp_count_t q_factor, sp_sample_t* state);
 void sp_state_variable_filter_br(sp_sample_t* out, sp_sample_t* in, sp_float_t in_count, sp_float_t cutoff, sp_count_t q_factor, sp_sample_t* state);
 void sp_state_variable_filter_peak(sp_sample_t* out, sp_sample_t* in, sp_float_t in_count, sp_float_t cutoff, sp_count_t q_factor, sp_sample_t* state);
 void sp_state_variable_filter_all(sp_sample_t* out, sp_sample_t* in, sp_float_t in_count, sp_float_t cutoff, sp_count_t q_factor, sp_sample_t* state);
+void sp_cheap_filter(sp_sample_t* in, sp_count_t in_size, void (*type)(sp_sample_t*, sp_sample_t*, sp_float_t, sp_float_t, sp_count_t, sp_sample_t*), sp_float_t cutoff, sp_count_t passes, sp_float_t q_factor, uint8_t unity_gain, sp_cheap_filter_state_t* state, sp_sample_t* out);
+void sp_cheap_filter_state_free(sp_cheap_filter_state_t* a);
+status_t sp_cheap_filter_state_new(sp_count_t max_size, sp_count_t max_passes, sp_cheap_filter_state_t* out_state);
+status_t sp_filter(sp_sample_t* in, sp_count_t in_size, sp_float_t cutoff_l, sp_float_t cutoff_h, sp_float_t transition_l, sp_float_t transition_h, boolean is_reject, sp_filter_state_t** out_state, sp_sample_t* out_samples);
+typedef void (*sp_state_variable_filter_t)(sp_sample_t*, sp_sample_t*, sp_float_t, sp_float_t, sp_count_t, sp_sample_t*);
+/* plot */
+void sp_plot_samples(sp_sample_t* a, sp_count_t a_size);
+void sp_plot_counts(sp_count_t* a, sp_count_t a_size);
+void sp_plot_samples_to_file(sp_sample_t* a, sp_count_t a_size, uint8_t* path);
+void sp_plot_counts_to_file(sp_count_t* a, sp_count_t a_size, uint8_t* path);
+void sp_plot_samples_file(uint8_t* path, uint8_t use_steps);
+void sp_plot_spectrum_to_file(sp_sample_t* a, sp_count_t a_size, uint8_t* path);
+void sp_plot_spectrum_file(uint8_t* path);
+void sp_plot_spectrum(sp_sample_t* a, sp_count_t a_size);
+/* synthesiser */
+/** t must be between 0 and 95999 */
+#define sp_sine_96(t) sp_sine_96_table[t]
+typedef struct {
+  sp_count_t start;
+  sp_count_t end;
+  sp_synth_count_t modifies;
+  sp_sample_t* amp[sp_channel_limit];
+  sp_count_t* wvl[sp_channel_limit];
+  sp_count_t phs[sp_channel_limit];
+} sp_synth_partial_t;
+sp_sample_t* sp_sine_96_table;
+status_t sp_sine_table_new(sp_sample_t** out, sp_count_t size);
+sp_count_t sp_phase_96(sp_count_t current, sp_count_t change);
+sp_count_t sp_phase_96_float(sp_count_t current, double change);
+status_t sp_synth(sp_block_t out, sp_count_t start, sp_count_t duration, sp_synth_count_t config_len, sp_synth_partial_t* config, sp_count_t* phases);
+status_t sp_synth_state_new(sp_count_t channel_count, sp_synth_count_t config_len, sp_synth_partial_t* config, sp_count_t** out_state);
+sp_synth_partial_t sp_synth_partial_1(sp_count_t start, sp_count_t end, sp_synth_count_t modifies, sp_sample_t* amp, sp_count_t* wvl, sp_count_t phs);
+sp_synth_partial_t sp_synth_partial_2(sp_count_t start, sp_count_t end, sp_synth_count_t modifies, sp_sample_t* amp1, sp_sample_t* amp2, sp_count_t* wvl1, sp_count_t* wvl2, sp_count_t phs1, sp_count_t phs2);
+sp_sample_t sp_square_96(sp_count_t t);
+sp_sample_t sp_triangle(sp_count_t t, sp_count_t a, sp_count_t b);
+sp_sample_t sp_triangle_96(sp_count_t t);
+/* sequencer */
 struct sp_event_t;
 typedef struct sp_event_t {
   void* state;
@@ -453,28 +501,6 @@ void sp_seq_events_prepare(sp_event_t* a, sp_count_t a_size);
 void sp_seq(sp_count_t start, sp_count_t end, sp_block_t out, sp_count_t out_start, sp_event_t* events, sp_count_t events_size);
 status_t sp_seq_parallel(sp_count_t start, sp_count_t end, sp_block_t out, sp_count_t out_start, sp_event_t* events, sp_count_t events_size);
 status_t sp_synth_event(sp_count_t start, sp_count_t end, sp_count_t channel_count, sp_count_t config_len, sp_synth_partial_t* config, sp_event_t* out_event);
-void sp_plot_samples(sp_sample_t* a, sp_count_t a_size);
-void sp_plot_counts(sp_count_t* a, sp_count_t a_size);
-void sp_plot_samples_to_file(sp_sample_t* a, sp_count_t a_size, uint8_t* path);
-void sp_plot_counts_to_file(sp_count_t* a, sp_count_t a_size, uint8_t* path);
-void sp_plot_samples_file(uint8_t* path, uint8_t use_steps);
-void sp_plot_spectrum_to_file(sp_sample_t* a, sp_count_t a_size, uint8_t* path);
-void sp_plot_spectrum_file(uint8_t* path);
-void sp_plot_spectrum(sp_sample_t* a, sp_count_t a_size);
-sp_sample_t sp_square_96(sp_count_t t);
-sp_sample_t sp_triangle(sp_count_t t, sp_count_t a, sp_count_t b);
-sp_sample_t sp_triangle_96(sp_count_t t);
-typedef struct {
-  uint64_t data[4];
-} sp_random_state_t;
-sp_random_state_t sp_default_random_state;
-sp_random_state_t sp_random(sp_random_state_t state, sp_count_t size, sp_sample_t* out);
-sp_random_state_t sp_random_state_new(uint64_t seed);
-status_t sp_samples_new(sp_count_t size, sp_sample_t** out);
-status_t sp_counts_new(sp_count_t size, sp_count_t** out);
-sp_synth_partial_t sp_synth_partial_1(sp_count_t start, sp_count_t end, sp_synth_count_t modifies, sp_sample_t* amp, sp_count_t* wvl, sp_count_t phs);
-sp_synth_partial_t sp_synth_partial_2(sp_count_t start, sp_count_t end, sp_synth_count_t modifies, sp_sample_t* amp1, sp_sample_t* amp2, sp_count_t* wvl1, sp_count_t* wvl2, sp_count_t phs1, sp_count_t phs2);
 status_t sp_noise_event(sp_count_t start, sp_count_t end, sp_sample_t** amp, sp_sample_t* cut_l, sp_sample_t* cut_h, sp_sample_t* trn_l, sp_sample_t* trn_h, uint8_t is_reject, sp_count_t resolution, sp_random_state_t random_state, sp_event_t* out_event);
 void sp_events_free(sp_event_t* events, sp_count_t events_count);
-typedef void (*sp_state_variable_filter_t)(sp_sample_t*, sp_sample_t*, sp_float_t, sp_float_t, sp_count_t, sp_sample_t*);
 status_t sp_cheap_noise_event(sp_count_t start, sp_count_t end, sp_sample_t** amp, sp_sample_t* cut, sp_count_t passes, sp_state_variable_filter_t filter, sp_sample_t q_factor, sp_count_t resolution, sp_random_state_t random_state, sp_event_t* out_event);

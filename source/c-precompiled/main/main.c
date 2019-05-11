@@ -1,3 +1,4 @@
+/* this file contains basics and includes dependencies */
 #include <stdio.h>
 #include <fcntl.h>
 #include <sndfile.h>
@@ -283,319 +284,6 @@ first process values that dont lead to carryover */
     };
   };
 };
-void sp_convolution_filter_state_free(sp_convolution_filter_state_t* state) {
-  if (!state) {
-    return;
-  };
-  free((state->ir));
-  free((state->carryover));
-  free((state->ir_f_arguments));
-  free(state);
-};
-/** create or update a previously created state object.
-  impulse response array properties are calculated with ir-f using ir-f-arguments.
-  eventually frees state.ir.
-  the state object is used to store the impulse response, the parameters that where used to create it and
-  overlapping data that has to be carried over between calls.
-  ir-f-arguments can be stack allocated and will be copied to state on change */
-status_t sp_convolution_filter_state_set(sp_convolution_filter_ir_f_t ir_f, void* ir_f_arguments, uint8_t ir_f_arguments_len, sp_convolution_filter_state_t** out_state) {
-  status_declare;
-  sp_sample_t* carryover;
-  sp_count_t carryover_alloc_len;
-  sp_sample_t* ir;
-  sp_count_t ir_len;
-  sp_convolution_filter_state_t* state;
-  memreg_init(2);
-  /* create state if not exists. re-use if exists and return early if ir needs not be updated */
-  if (*out_state) {
-    /* existing */
-    state = *out_state;
-    if ((state->ir_f == ir_f) && (ir_f_arguments_len == state->ir_f_arguments_len) && (0 == memcmp((state->ir_f_arguments), ir_f_arguments, ir_f_arguments_len))) {
-      /* unchanged */
-      return (status);
-    } else {
-      /* changed */
-      if (ir_f_arguments_len > state->ir_f_arguments_len) {
-        status_require((sph_helper_realloc(ir_f_arguments_len, (&(state->ir_f_arguments)))));
-      };
-      if (state->ir) {
-        free((state->ir));
-      };
-    };
-  } else {
-    /* new */
-    status_require((sph_helper_malloc((sizeof(sp_convolution_filter_state_t)), (&state))));
-    status_require((sph_helper_malloc(ir_f_arguments_len, (&(state->ir_f_arguments)))));
-    memreg_add(state);
-    memreg_add((state->ir_f_arguments));
-    state->carryover_alloc_len = 0;
-    state->carryover_len = 0;
-    state->carryover = 0;
-    state->ir_f = ir_f;
-    state->ir_f_arguments_len = ir_f_arguments_len;
-  };
-  memcpy((state->ir_f_arguments), ir_f_arguments, ir_f_arguments_len);
-  status_require((ir_f(ir_f_arguments, (&ir), (&ir_len))));
-  /* eventually extend carryover array. the array is never shrunk.
-carryover-len is at least ir-len - 1.
-carryover-alloc-len is the length of the whole array.
-new and extended areas must be set to zero */
-  carryover_alloc_len = (ir_len - 1);
-  if (state->carryover) {
-    carryover = state->carryover;
-    if (ir_len > state->ir_len) {
-      if (carryover_alloc_len > state->carryover_alloc_len) {
-        status_require((sph_helper_realloc((carryover_alloc_len * sizeof(sp_sample_t)), (&carryover))));
-        state->carryover_alloc_len = carryover_alloc_len;
-      };
-      /* in any case reset the extension area */
-      memset(((state->ir_len - 1) + carryover), 0, ((ir_len - state->ir_len) * sizeof(sp_sample_t)));
-    };
-  } else {
-    status_require((sph_helper_calloc((carryover_alloc_len * sizeof(sp_sample_t)), (&carryover))));
-    state->carryover_alloc_len = carryover_alloc_len;
-  };
-  state->carryover = carryover;
-  state->ir = ir;
-  state->ir_len = ir_len;
-  *out_state = state;
-exit:
-  if (status_is_failure) {
-    memreg_free;
-  };
-  return (status);
-};
-/** convolute samples "in", which can be a segment of a continuous stream, with an impulse response
-  kernel created by ir-f with ir-f-arguments.
-  ir-f is only used when ir-f-arguments changed.
-  values that need to be carried over with calls are kept in out-state.
-  * out-state: if zero then state will be allocated. owned by caller
-  * out-samples: owned by the caller. length must be at least in-len and the number of output samples will be in-len */
-status_t sp_convolution_filter(sp_sample_t* in, sp_count_t in_len, sp_convolution_filter_ir_f_t ir_f, void* ir_f_arguments, uint8_t ir_f_arguments_len, sp_convolution_filter_state_t** out_state, sp_sample_t* out_samples) {
-  status_declare;
-  sp_count_t carryover_len;
-  carryover_len = (*out_state ? ((*out_state)->ir_len - 1) : 0);
-  /* create/update the impulse response kernel */
-  status_require((sp_convolution_filter_state_set(ir_f, ir_f_arguments, ir_f_arguments_len, out_state)));
-  /* convolve */
-  sp_convolve(in, in_len, ((*out_state)->ir), ((*out_state)->ir_len), carryover_len, ((*out_state)->carryover), out_samples);
-exit:
-  return (status);
-};
-/** samples real real pair [integer integer integer] -> state
-    define a routine for a fast filter that supports multiple filter types in one.
-    state must hold two elements and is to be allocated and owned by the caller.
-    cutoff is as a fraction of the sample rate between 0 and 0.5.
-    uses the state-variable filter described here:
-    * http://www.cytomic.com/technical-papers
-    * http://www.earlevel.com/main/2016/02/21/filters-for-synths-starting-out/ */
-#define define_sp_state_variable_filter(suffix, transfer) \
-  void sp_state_variable_filter_##suffix(sp_sample_t* out, sp_sample_t* in, sp_float_t in_count, sp_float_t cutoff, sp_count_t q_factor, sp_sample_t* state) { \
-    sp_sample_t a1; \
-    sp_sample_t a2; \
-    sp_sample_t g; \
-    sp_sample_t ic1eq; \
-    sp_sample_t ic2eq; \
-    sp_count_t i; \
-    sp_sample_t k; \
-    sp_sample_t v0; \
-    sp_sample_t v1; \
-    sp_sample_t v2; \
-    ic1eq = state[0]; \
-    ic2eq = state[1]; \
-    g = tan((M_PI * cutoff)); \
-    k = (2 - (2 * q_factor)); \
-    a1 = (1 / (1 + (g * (g + k)))); \
-    a2 = (g * a1); \
-    for (i = 0; (i < in_count); i = (1 + i)) { \
-      v0 = in[i]; \
-      v1 = ((a1 * ic1eq) + (a2 * (v0 - ic2eq))); \
-      v2 = (ic2eq + (g * v1)); \
-      ic1eq = ((2 * v1) - ic1eq); \
-      ic2eq = ((2 * v2) - ic2eq); \
-      out[i] = transfer; \
-    }; \
-    state[0] = ic1eq; \
-    state[1] = ic2eq; \
-  }
-define_sp_state_variable_filter(lp, v2);
-define_sp_state_variable_filter(hp, (v0 - (k * v1) - v2));
-define_sp_state_variable_filter(bp, v1);
-define_sp_state_variable_filter(br, (v0 - (k * v1)));
-define_sp_state_variable_filter(peak, (((2 * v2) - v0) + (k * v1)));
-define_sp_state_variable_filter(all, (v0 - (2 * k * v1)));
-/** writes a sine wave of size into out. can be used as a lookup table */
-status_t sp_sine_table_new(sp_sample_t** out, sp_count_t size) {
-  status_declare;
-  sp_count_t i;
-  sp_sample_t* out_array;
-  status_require((sph_helper_malloc((size * sizeof(sp_sample_t*)), (&out_array))));
-  for (i = 0; (i < size); i = (1 + i)) {
-    out_array[i] = sin((i * (M_PI / (size / 2))));
-  };
-  *out = out_array;
-exit:
-  return (status);
-};
-/** fills the sine wave lookup table */
-status_t sp_initialise(uint16_t cpu_count) {
-  status_declare;
-  if (cpu_count) {
-    status.id = future_init(cpu_count);
-  };
-  if (status.id) {
-    return (status);
-  };
-  sp_default_random_state = sp_random_state_new(1557083953);
-  return ((sp_sine_table_new((&sp_sine_96_table), 96000)));
-};
-/** accumulate an integer phase and reset it after cycles.
-  float value phases would be harder to reset */
-sp_count_t sp_phase_96(sp_count_t current, sp_count_t change) {
-  sp_count_t result;
-  result = (current + change);
-  return (((96000 <= result) ? (result % 96000) : result));
-};
-/** accumulate an integer phase with change given as a float value.
-  change must be a positive value and is rounded to the next larger integer */
-sp_count_t sp_phase_96_float(sp_count_t current, double change) { return ((sp_phase_96(current, (sp_cheap_ceiling_positive(change))))); };
-/** contains the initial phase offsets per partial and channel
-  as a flat array. should be freed with free */
-status_t sp_synth_state_new(sp_count_t channel_count, sp_synth_count_t config_len, sp_synth_partial_t* config, sp_count_t** out_state) {
-  status_declare;
-  sp_count_t i;
-  sp_count_t channel_i;
-  status_require((sph_helper_calloc((channel_count * config_len * sizeof(sp_count_t)), out_state)));
-  for (i = 0; (i < config_len); i = (1 + i)) {
-    for (channel_i = 0; (channel_i < channel_count); channel_i = (1 + channel_i)) {
-      (*out_state)[(channel_i + (channel_count * i))] = ((config[i]).phs)[channel_i];
-    };
-  };
-exit:
-  return (status);
-};
-/** create sines that start and end at specific times and can optionally modulate the frequency of others.
-  sp-synth output is summed into out.
-  amplitude and wavelength can be controlled by arrays separately for each partial and channel.
-  modulators can be modulated themselves in chains. state has to be allocated by the caller with sp-synth-state-new.
-  modulator amplitude is relative to carrier wavelength.
-  paths are relative to the start of partials.
-  # requirements
-  * modulators must come after carriers in config
-  * config-len must not change between calls with the same state
-  * all amplitude/wavelength arrays must be of sufficient size and available for all channels
-  * sp-initialise must have been called once before using sp-synth
-  # algorithm
-  * read config from the end to the start
-  * write modulator output to temporary buffers that are indexed by modified partial id
-  * apply modulator output from the buffers and sum to output for final carriers
-  * each partial has integer phases that are reset in cycles and kept in state between calls */
-status_t sp_synth(sp_block_t out, sp_count_t start, sp_count_t duration, sp_synth_count_t config_len, sp_synth_partial_t* config, sp_count_t* phases) {
-  status_declare;
-  sp_sample_t amp;
-  sp_sample_t* carrier;
-  sp_count_t channel_i;
-  sp_count_t end;
-  sp_count_t i;
-  sp_sample_t modulated_wvl;
-  sp_sample_t* modulation_index[sp_synth_partial_limit][sp_channel_limit];
-  sp_sample_t* modulation;
-  sp_count_t phs;
-  sp_count_t prt_duration;
-  sp_synth_count_t prt_i;
-  sp_count_t prt_offset_right;
-  sp_count_t prt_offset;
-  sp_synth_partial_t prt;
-  sp_count_t prt_start;
-  sp_count_t wvl;
-  /* modulation blocks (channel array + data. at least one is carrier and writes only to output) */
-  memreg_init(((config_len - 1) * out.channels));
-  memset(modulation_index, 0, (sizeof(modulation_index)));
-  end = (start + duration);
-  prt_i = config_len;
-  while (prt_i) {
-    prt_i = (prt_i - 1);
-    prt = config[prt_i];
-    if (end < prt.start) {
-      break;
-    };
-    if (prt.end <= start) {
-      continue;
-    };
-    prt_start = ((prt.start < start) ? (start - prt.start) : 0);
-    prt_offset = ((prt.start > start) ? (prt.start - start) : 0);
-    prt_offset_right = ((prt.end > end) ? 0 : (end - prt.end));
-    prt_duration = (duration - prt_offset - prt_offset_right);
-    if (prt.modifies) {
-      for (channel_i = 0; (channel_i < out.channels); channel_i = (1 + channel_i)) {
-        carrier = modulation_index[(prt.modifies - 1)][channel_i];
-        if (!carrier) {
-          status_require((sph_helper_calloc((duration * sizeof(sp_sample_t)), (&carrier))));
-          memreg_add(carrier);
-        };
-        phs = phases[(channel_i + (out.channels * prt_i))];
-        modulation = modulation_index[prt_i][channel_i];
-        for (i = 0; (i < prt_duration); i = (1 + i)) {
-          amp = (prt.amp)[channel_i][(prt_start + i)];
-          carrier[(prt_offset + i)] = (carrier[(prt_offset + i)] + (amp * sp_sine_96(phs)));
-          wvl = (prt.wvl)[channel_i][(prt_start + i)];
-          modulated_wvl = (modulation ? (wvl + (wvl * modulation[(prt_offset + i)])) : wvl);
-          phs = sp_phase_96_float(phs, (48000 / modulated_wvl));
-        };
-        phases[(channel_i + (out.channels * prt_i))] = phs;
-        modulation_index[(prt.modifies - 1)][channel_i] = carrier;
-      };
-    } else {
-      for (channel_i = 0; (channel_i < out.channels); channel_i = (1 + channel_i)) {
-        phs = phases[(channel_i + (out.channels * prt_i))];
-        modulation = modulation_index[prt_i][channel_i];
-        for (i = 0; (i < prt_duration); i = (1 + i)) {
-          amp = (prt.amp)[channel_i][(prt_start + i)];
-          wvl = (prt.wvl)[channel_i][(prt_start + i)];
-          modulated_wvl = (modulation ? (wvl + (wvl * modulation[(prt_offset + i)])) : wvl);
-          phs = sp_phase_96_float(phs, (48000 / modulated_wvl));
-          ((out.samples)[channel_i])[(prt_offset + i)] = (((out.samples)[channel_i])[(prt_offset + i)] + (amp * sp_sine_96(phs)));
-        };
-        phases[(channel_i + (out.channels * prt_i))] = phs;
-      };
-    };
-  };
-exit:
-  memreg_free;
-  return (status);
-};
-#define sp_synth_partial_set_channel(prt, channel, amp_array, wvl_array, phs_array) \
-  (prt.amp)[channel] = amp_array; \
-  (prt.wvl)[channel] = wvl_array; \
-  (prt.phs)[channel] = phs_array
-/** setup a synth partial with one channel */
-sp_synth_partial_t sp_synth_partial_1(sp_count_t start, sp_count_t end, sp_synth_count_t modifies, sp_sample_t* amp, sp_count_t* wvl, sp_count_t phs) {
-  sp_synth_partial_t prt;
-  prt.start = start;
-  prt.end = end;
-  prt.modifies = modifies;
-  sp_synth_partial_set_channel(prt, 0, amp, wvl, phs);
-  return (prt);
-};
-/** setup a synth partial with two channels */
-sp_synth_partial_t sp_synth_partial_2(sp_count_t start, sp_count_t end, sp_synth_count_t modifies, sp_sample_t* amp1, sp_sample_t* amp2, sp_count_t* wvl1, sp_count_t* wvl2, sp_count_t phs1, sp_count_t phs2) {
-  sp_synth_partial_t prt;
-  prt.start = start;
-  prt.end = end;
-  prt.modifies = modifies;
-  sp_synth_partial_set_channel(prt, 0, amp1, wvl1, phs1);
-  sp_synth_partial_set_channel(prt, 1, amp2, wvl2, phs2);
-  return (prt);
-};
-/** return a sample for a triangular wave with center offsets a left and b right.
-   creates sawtooth waves if either a or b is 0 */
-sp_sample_t sp_triangle(sp_count_t t, sp_count_t a, sp_count_t b) {
-  sp_count_t remainder;
-  remainder = (t % (a + b));
-  return (((remainder < a) ? (remainder * (1 / ((sp_sample_t)(a)))) : ((((sp_sample_t)(b)) - (remainder - ((sp_sample_t)(a)))) * (1 / ((sp_sample_t)(b))))));
-};
-sp_sample_t sp_triangle_96(sp_count_t t) { return ((sp_triangle(t, 48000, 48000))); };
-sp_sample_t sp_square_96(sp_count_t t) { return (((((2 * t) % (2 * 96000)) < 96000) ? -1 : 1)); };
 /** guarantees that all dyadic rationals of the form (k / 2**−53) will be equally likely. this conversion prefers the high bits of x.
     from http://xoshiro.di.unimi.it/ */
 #define double_from_uint64(a) ((a >> 11) * (1.0 / (UINT64_C(1) << 53)))
@@ -635,7 +323,52 @@ sp_random_state_t sp_random(sp_random_state_t state, sp_count_t size, sp_sample_
   };
   return (state);
 };
-#include "../main/windowed-sinc.c"
+#define i_array_get_or_null(a) (i_array_in_range(a) ? i_array_get(a) : 0)
+#define i_array_forward_if_possible(a) (i_array_in_range(a) ? i_array_forward(a) : 0)
+#define sp_samples_zero(a, size) memset(a, 0, (size * sizeof(sp_sample_t)))
+/** get the maximum value in samples array, disregarding sign */
+sp_sample_t sp_samples_absolute_max(sp_sample_t* in, sp_count_t in_size) {
+  sp_sample_t result;
+  sp_count_t i;
+  for (i = 0, result = 0; (i < in_size); i = (1 + i)) {
+    if (fabs((in[i])) > result) {
+      result = in[i];
+    };
+  };
+  return (result);
+};
+/** adjust amplitude of out to match the one of in */
+void sp_set_unity_gain(sp_sample_t* in, sp_count_t in_size, sp_sample_t* out) {
+  sp_count_t i;
+  sp_sample_t in_max;
+  sp_sample_t out_max;
+  sp_sample_t difference;
+  sp_sample_t correction;
+  in_max = sp_samples_absolute_max(in, in_size);
+  out_max = sp_samples_absolute_max(out, in_size);
+  if ((0 == in_max) || (0 == out_max)) {
+    return;
+  };
+  difference = (out_max / in_max);
+  correction = (1 + ((1 - difference) / difference));
+  for (i = 0; (i < in_size); i = (1 + i)) {
+    out[i] = (correction * out[i]);
+  };
+};
 #include "../main/io.c"
 #include "../main/plot.c"
-#include "../main/seq.c"
+#include "../main/filter.c"
+#include "../main/synthesiser.c"
+#include "../main/sequencer.c"
+/** fills the sine wave lookup table */
+status_t sp_initialise(uint16_t cpu_count) {
+  status_declare;
+  if (cpu_count) {
+    status.id = future_init(cpu_count);
+  };
+  if (status.id) {
+    return (status);
+  };
+  sp_default_random_state = sp_random_state_new(1557083953);
+  return ((sp_sine_table_new((&sp_sine_96_table), 96000)));
+};

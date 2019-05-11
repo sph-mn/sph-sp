@@ -490,6 +490,25 @@
   (label exit
     (return status)))
 
+(define (test-sp-cheap-filter) status-t
+  status-declare
+  (declare
+    state sp-cheap-filter-state-t
+    out (array sp-sample-t sp-noise-duration)
+    in (array sp-sample-t sp-noise-duration)
+    i sp-count-t
+    s sp-random-state-t)
+  (set
+    s (sp-random-state-new 80)
+    s (sp-random s sp-noise-duration in))
+  (status-require (sp-cheap-filter-state-new sp-noise-duration sp-cheap-filter-passes-limit &state))
+  (sp-cheap-filter-lp in sp-noise-duration 0.2 1 0 1 &state out)
+  (sp-cheap-filter-lp in sp-noise-duration 0.2 sp-cheap-filter-passes-limit 0 1 &state out)
+  (sp-cheap-filter-lp in sp-noise-duration 0.2 sp-cheap-filter-passes-limit 0 1 &state out)
+  (sp-cheap-filter-state-free &state)
+  (label exit
+    (return status)))
+
 (define (test-sp-cheap-noise-event) status-t
   status-declare
   (declare
@@ -527,6 +546,8 @@
   status-declare
   (sp-initialise 6)
   (test-helper-test-one test-sp-cheap-noise-event)
+  ;(goto exit)
+  (test-helper-test-one test-sp-cheap-filter)
   (test-helper-test-one test-sp-noise-event)
   (test-helper-test-one test-sp-seq)
   (test-helper-test-one test-sp-random)
