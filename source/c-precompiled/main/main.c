@@ -330,10 +330,12 @@ sp_random_state_t sp_random(sp_random_state_t state, sp_count_t size, sp_sample_
 /** get the maximum value in samples array, disregarding sign */
 sp_sample_t sp_samples_absolute_max(sp_sample_t* in, sp_count_t in_size) {
   sp_sample_t result;
+  sp_sample_t a;
   sp_count_t i;
   for (i = 0, result = 0; (i < in_size); i = (1 + i)) {
-    if (fabs((in[i])) > result) {
-      result = in[i];
+    a = fabs((in[i]));
+    if (a > result) {
+      result = a;
     };
   };
   return (result);

@@ -2,7 +2,7 @@
   (declare c sp-event-t)
   (set
     c (pointer-get (convert-type a sp-event-t*))
-    (pointer-get (convert-type b sp-event-t*)) (pointer-get (convert-type a sp-event-t*))
+    (pointer-get (convert-type a sp-event-t*)) (pointer-get (convert-type b sp-event-t*))
     (pointer-get (convert-type b sp-event-t*)) c))
 
 (define (sp-event-sort-less? a b) (uint8-t void* void*)
@@ -229,8 +229,8 @@
       (cut sp-sample-t*)
       (q-factor sp-sample-t)
       (passes sp-count-t)
-      (filter-state (array sp-sample-t 2))
-      (filter sp-state-variable-filter-t)
+      (filter-state sp-cheap-filter-state-t)
+      (type sp-state-variable-filter-t)
       (noise sp-sample-t*)
       (random-state sp-random-state-t)
       (resolution sp-count-t)
@@ -256,13 +256,13 @@
     block-rest (modulo duration s:resolution))
   (sc-comment "total block count is block-count plus rest-block")
   (for ((set block-i 0) (<= block-i block-count) (set block-i (+ 1 block-i)))
-    ;(out in in-count cutoff q-factor state)
     (set
       block-offset (* s:resolution block-i)
       t (+ start block-offset)
       duration (if* (= block-count block-i) block-rest s:resolution)
       s:random-state (sp-random s:random-state duration s:noise))
-    (s:filter s:temp s:noise duration (array-get s:cut t) s:q-factor s:filter-state)
+    (sp-cheap-filter s:type s:noise
+      duration (array-get s:cut t) s:passes s:q-factor #t &s:filter-state s:temp)
     (for ((set channel-i 0) (< channel-i out.channels) (set channel-i (+ 1 channel-i)))
       (for ((set i 0) (< i duration) (set i (+ 1 i)))
         (set (array-get (array-get out.samples channel-i) (+ block-offset i))
@@ -273,10 +273,11 @@
   (define s sp-cheap-noise-event-state-t* a:state)
   (free s:noise)
   (free s:temp)
+  (sp-cheap-filter-state-free &s:filter-state)
   (free a:state))
 
 (define
-  (sp-cheap-noise-event start end amp filter cut passes q-factor resolution random-state out-event)
+  (sp-cheap-noise-event start end amp type cut passes q-factor resolution random-state out-event)
   (status-t sp-count-t sp-count-t
     sp-sample-t** sp-state-variable-filter-t sp-sample-t*
     sp-count-t sp-sample-t sp-count-t sp-random-state-t sp-event-t*)
@@ -290,16 +291,15 @@
   (status-require (sph-helper-malloc (sizeof sp-cheap-noise-event-state-t) &s))
   (status-require (sph-helper-malloc (* resolution (sizeof sp-sample-t)) &s:noise))
   (status-require (sph-helper-malloc (* resolution (sizeof sp-sample-t)) &s:temp))
+  (status-require (sp-cheap-filter-state-new resolution passes &s:filter-state))
   (set
-    (array-get s:filter-state 0) 0
-    (array-get s:filter-state 1) 0
     s:cut cut
     s:q-factor q-factor
     s:passes passes
     s:resolution resolution
     s:random-state random-state
     s:amp amp
-    s:filter filter
+    s:type type
     e.start start
     e.end end
     e.f sp-cheap-noise-event-f

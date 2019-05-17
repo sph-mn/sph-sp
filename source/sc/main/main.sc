@@ -300,9 +300,10 @@
 
 (define (sp-samples-absolute-max in in-size) (sp-sample-t sp-sample-t* sp-count-t)
   "get the maximum value in samples array, disregarding sign"
-  (declare result sp-sample-t i sp-count-t)
+  (declare  result sp-sample-t a sp-sample-t i sp-count-t)
   (for ((set i 0 result 0) (< i in-size) (set i (+ 1 i)))
-    (if (> (fabs (array-get in i)) result) (set result (array-get in i))))
+    (set a (fabs (array-get in i)))
+    (if (> a result) (set result a)))
   (return result))
 
 (define (sp-set-unity-gain in in-size out) (void sp-sample-t* sp-count-t sp-sample-t*)

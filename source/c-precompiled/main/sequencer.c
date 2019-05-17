@@ -1,7 +1,7 @@
 void sp_event_sort_swap(void* a, void* b) {
   sp_event_t c;
   c = *((sp_event_t*)(a));
-  *((sp_event_t*)(b)) = *((sp_event_t*)(a));
+  *((sp_event_t*)(a)) = *((sp_event_t*)(b));
   *((sp_event_t*)(b)) = c;
 };
 uint8_t sp_event_sort_less_p(void* a, void* b) { return ((((sp_event_t*)(a))->start < ((sp_event_t*)(b))->start)); };
@@ -234,8 +234,8 @@ typedef struct {
   sp_sample_t* cut;
   sp_sample_t q_factor;
   sp_count_t passes;
-  sp_sample_t filter_state[2];
-  sp_state_variable_filter_t filter;
+  sp_cheap_filter_state_t filter_state;
+  sp_state_variable_filter_t type;
   sp_sample_t* noise;
   sp_random_state_t random_state;
   sp_count_t resolution;
@@ -262,7 +262,7 @@ void sp_cheap_noise_event_f(sp_count_t start, sp_count_t end, sp_block_t out, sp
     t = (start + block_offset);
     duration = ((block_count == block_i) ? block_rest : s->resolution);
     s->random_state = sp_random((s->random_state), duration, (s->noise));
-    (s->filter)((s->temp), (s->noise), duration, ((s->cut)[t]), (s->q_factor), (s->filter_state));
+    sp_cheap_filter((s->type), (s->noise), duration, ((s->cut)[t]), (s->passes), (s->q_factor), 1, (&(s->filter_state)), (s->temp));
     for (channel_i = 0; (channel_i < out.channels); channel_i = (1 + channel_i)) {
       for (i = 0; (i < duration); i = (1 + i)) {
         ((out.samples)[channel_i])[(block_offset + i)] = (((out.samples)[channel_i])[(block_offset + i)] + (((s->amp)[channel_i])[(block_offset + i)] * (s->temp)[i]));
@@ -274,13 +274,14 @@ void sp_cheap_noise_event_free(sp_event_t* a) {
   sp_cheap_noise_event_state_t* s = a->state;
   free((s->noise));
   free((s->temp));
+  sp_cheap_filter_state_free((&(s->filter_state)));
   free((a->state));
 };
 /** an event for noise filtered by a state-variable filter. multiple passes currently not implemented.
   lower processing costs even when parameters change with high resolution.
   multiple passes almost multiply performance costs.
   memory for event.state will be allocated and then owned by the caller */
-status_t sp_cheap_noise_event(sp_count_t start, sp_count_t end, sp_sample_t** amp, sp_state_variable_filter_t filter, sp_sample_t* cut, sp_count_t passes, sp_sample_t q_factor, sp_count_t resolution, sp_random_state_t random_state, sp_event_t* out_event) {
+status_t sp_cheap_noise_event(sp_count_t start, sp_count_t end, sp_sample_t** amp, sp_state_variable_filter_t type, sp_sample_t* cut, sp_count_t passes, sp_sample_t q_factor, sp_count_t resolution, sp_random_state_t random_state, sp_event_t* out_event) {
   status_declare;
   sp_event_t e;
   sp_cheap_noise_event_state_t* s;
@@ -288,15 +289,14 @@ status_t sp_cheap_noise_event(sp_count_t start, sp_count_t end, sp_sample_t** am
   status_require((sph_helper_malloc((sizeof(sp_cheap_noise_event_state_t)), (&s))));
   status_require((sph_helper_malloc((resolution * sizeof(sp_sample_t)), (&(s->noise)))));
   status_require((sph_helper_malloc((resolution * sizeof(sp_sample_t)), (&(s->temp)))));
-  (s->filter_state)[0] = 0;
-  (s->filter_state)[1] = 0;
+  status_require((sp_cheap_filter_state_new(resolution, passes, (&(s->filter_state)))));
   s->cut = cut;
   s->q_factor = q_factor;
   s->passes = passes;
   s->resolution = resolution;
   s->random_state = random_state;
   s->amp = amp;
-  s->filter = filter;
+  s->type = type;
   e.start = start;
   e.end = end;
   e.f = sp_cheap_noise_event_f;
