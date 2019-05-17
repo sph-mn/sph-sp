@@ -2,6 +2,9 @@ exports {
   global:
     sp_block_free;
     sp_block_new;
+    sp_cheap_filter;
+    sp_cheap_filter_state_free;
+    sp_cheap_filter_state_new;
     sp_cheap_noise_event;
     sp_cheap_phase_96;
     sp_cheap_phase_96_float;
@@ -21,7 +24,24 @@ exports {
     sp_file_position_set;
     sp_file_read;
     sp_file_write;
+    sp_filter;
     sp_initialise;
+    spline_path_bezier;
+    spline_path_constant;
+    spline_path_end;
+    spline_path_free;
+    spline_path_get;
+    spline_path_i_bezier;
+    spline_path_i_constant;
+    spline_path_i_line;
+    spline_path_i_move;
+    spline_path_i_path;
+    spline_path_line;
+    spline_path_move;
+    spline_path_new;
+    spline_path_new_get;
+    spline_path_path;
+    spline_path_start;
     sp_moving_average;
     sp_noise_event;
     sp_noise_event_free;
@@ -46,10 +66,6 @@ exports {
     sp_plot_spectrum;
     sp_plot_spectrum_file;
     sp_plot_spectrum_to_file;
-    sp_filter;
-    sp_cheap_filter;
-    sp_cheap_filter_state_new;
-    sp_cheap_filter_state_free;
     sp_random;
     sp_random_state_new;
     sp_samples_new;

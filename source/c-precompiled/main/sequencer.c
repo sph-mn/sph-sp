@@ -242,15 +242,15 @@ typedef struct {
   sp_sample_t* temp;
 } sp_cheap_noise_event_state_t;
 void sp_cheap_noise_event_f(sp_count_t start, sp_count_t end, sp_block_t out, sp_event_t* event) {
-  sp_cheap_noise_event_state_t* s;
   sp_count_t block_count;
-  sp_count_t i;
   sp_count_t block_i;
-  sp_count_t channel_i;
-  sp_count_t t;
   sp_count_t block_offset;
-  sp_count_t duration;
   sp_count_t block_rest;
+  sp_count_t channel_i;
+  sp_count_t duration;
+  sp_count_t i;
+  sp_cheap_noise_event_state_t* s;
+  sp_count_t t;
   /* update filter arguments only every resolution number of samples */
   s = event->state;
   duration = (end - start);

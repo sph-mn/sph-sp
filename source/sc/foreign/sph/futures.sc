@@ -1,5 +1,4 @@
-(sc-comment
-  "fine-grain parallelism based on thread-pool.c."
+(sc-comment "fine-grain parallelism based on thread-pool.c."
   "provides task objects with functions executed in threads that can be waited for to get a result value."
   "manages the memory of thread-pool task objects." "thread-pool.c must be included beforehand")
 
@@ -10,12 +9,7 @@
 (declare
   sph-futures-pool thread-pool-t
   future-f-t (type (function-pointer void* void*))
-  future-t
-  (type
-    (struct
-      (task thread-pool-task-t)
-      (finished uint8-t)
-      (f future-f-t))))
+  future-t (type (struct (task thread-pool-task-t) (finished uint8-t) (f future-f-t))))
 
 (define (future-init thread-count) (int thread-pool-size-t)
   "call once to initialise the future thread pool that persists for
@@ -43,11 +37,7 @@
 (define (future-new f data out) (void future-f-t void* future-t*)
   "prepare a future in out and possibly start evaluation in parallel.
   the given function receives data as its sole argument"
-  (set
-    out:finished #f
-    out:f f
-    out:task.f future-eval
-    out:task.data data)
+  (set out:finished #f out:f f out:task.f future-eval out:task.data data)
   (thread-pool-enqueue &sph-futures-pool &out:task))
 
 (define (future-deinit) void

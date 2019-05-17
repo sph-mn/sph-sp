@@ -10,17 +10,13 @@
 (pre-define
   (memreg-init register-size)
   (begin
-    (declare
-      memreg-register (array void* (register-size))
-      memreg-index (unsigned int))
+    (declare memreg-register (array void* (register-size)) memreg-index (unsigned int))
     (set memreg-index 0))
   (memreg-add address)
   (begin
     "add a pointer to the register. memreg_init must have been called
      with sufficient size for all pointers to be added"
-    (set
-      (array-get memreg-register memreg-index) address
-      memreg-index (+ 1 memreg-index)))
+    (set (array-get memreg-register memreg-index) address memreg-index (+ 1 memreg-index)))
   memreg-free
   (while memreg-index
     (sc-comment "free all currently registered pointers")

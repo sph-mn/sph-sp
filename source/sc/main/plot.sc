@@ -9,32 +9,21 @@
   "gnuplot --persist -e 'set key off; set size ratio 0.5; plot \"%s\" with histeps lc rgb \"blue\"'")
 
 (define (sp-plot-samples->file a a-size path) (void sp-sample-t* sp-count-t uint8-t*)
-  (declare
-    file FILE*
-    i sp-count-t)
+  (declare file FILE* i sp-count-t)
   (set file (fopen path "w"))
-  (for ((set i 0) (< i a-size) (set i (+ 1 i)))
-    (fprintf file "%.3f\n" (array-get a i)))
+  (for ((set i 0) (< i a-size) (set i (+ 1 i))) (fprintf file "%.3f\n" (array-get a i)))
   (fclose file))
 
 (define (sp-plot-counts->file a a-size path) (void sp-count-t* sp-count-t uint8-t*)
-  (declare
-    file FILE*
-    i sp-count-t)
+  (declare file FILE* i sp-count-t)
   (set file (fopen path "w"))
-  (for ((set i 0) (< i a-size) (set i (+ 1 i)))
-    (fprintf file "%lu\n" (array-get a i)))
+  (for ((set i 0) (< i a-size) (set i (+ 1 i))) (fprintf file "%lu\n" (array-get a i)))
   (fclose file))
 
 (define (sp-plot-samples-file path use-steps) (void uint8-t* uint8-t)
-  (declare
-    command uint8-t*
-    command-pattern uint8-t*
-    command-size size-t)
+  (declare command uint8-t* command-pattern uint8-t* command-size size-t)
   (set
-    command-pattern
-    (if* use-steps sp-plot-command-pattern-steps
-      sp-plot-command-pattern-lines)
+    command-pattern (if* use-steps sp-plot-command-pattern-steps sp-plot-command-pattern-lines)
     command-size (+ (strlen path) (strlen command-pattern))
     command (malloc command-size))
   (if (not command) return)
@@ -64,11 +53,7 @@
 
 (define (sp-plot-spectrum->file a a-size path) (void sp-sample-t* sp-count-t uint8-t*)
   "take the fft for given samples, convert complex values to magnitudes and write plot data to file"
-  (declare
-    file FILE*
-    i sp-count-t
-    imag double*
-    real double*)
+  (declare file FILE* i sp-count-t imag double* real double*)
   (set imag (calloc a-size (sizeof sp-sample-t)))
   (if (not imag) return)
   (set real (malloc (* (sizeof sp-sample-t) a-size)))
@@ -77,11 +62,8 @@
   (if (sp-fft a-size real imag) return)
   (set file (fopen path "w"))
   (for ((set i 0) (< i a-size) (set i (+ 1 i)))
-    (fprintf
-      file
-      "%.3f\n"
-      (*
-        2
+    (fprintf file "%.3f\n"
+      (* 2
         (/
           (sqrt
             (+ (* (array-get real i) (array-get real i)) (* (array-get imag i) (array-get imag i))))

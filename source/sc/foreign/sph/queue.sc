@@ -24,42 +24,22 @@
 
 (declare
   queue-node-t struct
-  queue-node-t
-  (type
-    (struct
-      queue-node-t
-      (next
-        (struct
-          queue-node-t*))))
-  queue-t
-  (type
-    (struct
-      (size queue-size-t)
-      (first queue-node-t*)
-      (last queue-node-t*))))
+  queue-node-t (type (struct queue-node-t (next (struct queue-node-t*))))
+  queue-t (type (struct (size queue-size-t) (first queue-node-t*) (last queue-node-t*))))
 
 (define (queue-init a) (void queue-t*)
   "initialise a queue or remove all elements"
-  (set
-    a:first 0
-    a:last 0
-    a:size 0))
+  (set a:first 0 a:last 0 a:size 0))
 
 (define (queue-enq a node) (void queue-t* queue-node-t*)
   "enqueue a node. the node must not already be in the queue"
-  (if a:first (set a:last:next node)
-    (set a:first node))
-  (set
-    a:last node
-    node:next 0
-    a:size (+ 1 a:size)))
+  (if a:first (set a:last:next node) (set a:first node))
+  (set a:last node node:next 0 a:size (+ 1 a:size)))
 
 (define (queue-deq a) (queue-node-t* queue-t*)
   "queue must not be empty. a.size can be checked to see if the queue is empty"
   (declare n queue-node-t*)
   (set n a:first)
   (if (not n:next) (set a:last 0))
-  (set
-    a:first n:next
-    a:size (- a:size 1))
+  (set a:first n:next a:size (- a:size 1))
   (return n))

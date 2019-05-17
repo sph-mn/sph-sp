@@ -3,9 +3,7 @@
 (pre-define (define-float-sum prefix type)
   (define ((pre-concat prefix _sum) numbers len) (type type* size-t)
     ; "sum numbers with rounding error compensation using kahan summation with neumaier modification"
-    (declare
-      temp type
-      element type)
+    (declare temp type element type)
     (define correction type 0)
     (set len (- len 1))
     (define result type (array-get numbers len))
@@ -15,10 +13,8 @@
         element (array-get numbers len)
         temp (+ result element)
         correction
-        (+
-          correction
-          (if* (>= result element) (+ (- result temp) element)
-            (+ (- element temp) result)))
+        (+ correction
+          (if* (>= result element) (+ (- result temp) element) (+ (- element temp) result)))
         result temp))
     (return (+ correction result))))
 

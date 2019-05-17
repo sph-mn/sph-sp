@@ -49,10 +49,11 @@
 #define spline_path_value_t sp_sample_t
 #endif
 /* return status code and error handling. uses a local variable named "status" and a goto label named "exit".
-   a status has an identifier and a group to discern between status identifiers of different libraries.
-   status id 0 is success, everything else can be considered a failure or special case.
-   status ids are 32 bit signed integers for compatibility with error return codes from many other existing libraries.
-   group ids are strings to make it easier to create new groups that dont conflict with others compared to using numbers */
+      a status has an identifier and a group to discern between status identifiers of different libraries.
+      status id 0 is success, everything else can be considered a failure or special case.
+      status ids are 32 bit signed integers for compatibility with error return codes from many other existing libraries.
+      group ids are strings to make it easier to create new groups that dont conflict with others compared to using numbers */
+#define sph_status 1
 #define status_id_success 0
 #define status_group_undefined ""
 #define status_declare status_t status = { status_id_success, status_group_undefined }
@@ -336,3 +337,33 @@ status_t sp_synth_event(sp_count_t start, sp_count_t end, sp_count_t channel_cou
 status_t sp_noise_event(sp_count_t start, sp_count_t end, sp_sample_t** amp, sp_sample_t* cut_l, sp_sample_t* cut_h, sp_sample_t* trn_l, sp_sample_t* trn_h, uint8_t is_reject, sp_count_t resolution, sp_random_state_t random_state, sp_event_t* out_event);
 void sp_events_free(sp_event_t* events, sp_count_t events_count);
 status_t sp_cheap_noise_event(sp_count_t start, sp_count_t end, sp_sample_t** amp, sp_state_variable_filter_t type, sp_sample_t* cut, sp_count_t passes, sp_sample_t q_factor, sp_count_t resolution, sp_random_state_t random_state, sp_event_t* out_event);
+void sp_counts_from_samples(sp_sample_t* in, sp_count_t in_size, sp_count_t* out) {
+  sp_count_t i;
+  for (i = 0; (i < in_size); i = (1 + i)) {
+    out[i] = sp_cheap_round_positive((in[i]));
+  };
+};
+status_id_t spline_path_new_get_4(sp_sample_t* out, sp_count_t duration, spline_path_segment_t s1, spline_path_segment_t s2, spline_path_segment_t s3, spline_path_segment_t s4) {
+  spline_path_segment_t segments[4];
+  segments[0] = s1;
+  segments[1] = s2;
+  segments[2] = s3;
+  segments[3] = s4;
+  return ((spline_path_new_get(4, segments, 0, duration, out)));
+};
+status_id_t spline_path_new_get_2(sp_sample_t* out, sp_count_t duration, spline_path_segment_t s1, spline_path_segment_t s2) {
+  spline_path_segment_t segments[2];
+  segments[0] = s1;
+  segments[1] = s2;
+  return ((spline_path_new_get(2, segments, 0, duration, out)));
+};
+status_t sp_block_to_file(sp_block_t block, uint8_t* path, sp_count_t rate) {
+  status_declare;
+  sp_file_t file;
+  sp_count_t written;
+  status_require((sp_file_open(path, sp_file_mode_write, (block.channels), rate, (&file))));
+  status_require((sp_file_write((&file), (block.samples), (block.size), (&written))));
+  sp_file_close((&file));
+exit:
+  return (status);
+};

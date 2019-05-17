@@ -8,11 +8,7 @@
 (define (sp-file-open path mode channel-count sample-rate result-file)
   (status-t uint8-t* int sp-channel-count-t sp-sample-rate-t sp-file-t*)
   status-declare
-  (declare
-    info SF_INFO
-    file SNDFILE*
-    sf-mode int
-    flags uint8-t)
+  (declare info SF_INFO file SNDFILE* sf-mode int flags uint8-t)
   (case = mode
     (sp-file-mode-write
       (set
@@ -22,12 +18,7 @@
         info.channels channel-count
         info.samplerate sample-rate))
     (sp-file-mode-read
-      (set
-        sf-mode SFM-READ
-        flags sp-file-bit-input
-        info.format 0
-        info.channels 0
-        info.samplerate 0))
+      (set sf-mode SFM-READ flags sp-file-bit-input info.format 0 info.channels 0 info.samplerate 0))
     (sp-file-mode-read-write
       (set
         sf-mode SFM-RDWR
@@ -39,14 +30,11 @@
   (set file (sf-open path sf-mode &info))
   (if (not file) (status-set-both-goto sp-status-group-sndfile (sf-error file)))
   (set
-    result-file:flags
-    (if* info.seekable (bit-or sp-file-bit-position flags)
-      flags)
+    result-file:flags (if* info.seekable (bit-or sp-file-bit-position flags) flags)
     result-file:channel-count info.channels
     result-file:sample-rate info.samplerate
     result-file:data file)
-  (label exit
-    (return status)))
+  (label exit (return status)))
 
 (define (sp-file-write file channel-data sample-count result-sample-count)
   (status-t sp-file-t* sp-sample-t** sp-count-t sp-count-t*)
@@ -70,9 +58,7 @@
   (if (not (= sample-count frames-count))
     (status-set-both sp-status-group-sp sp-status-id-file-incomplete))
   (set *result-sample-count frames-count)
-  (label exit
-    memreg-free
-    (return status)))
+  (label exit memreg-free (return status)))
 
 (define (sp-file-read file sample-count result-channel-data result-sample-count)
   (status-t sp-file-t* sp-count-t sp-sample-t** sp-count-t*)
@@ -93,36 +79,24 @@
   (if frames-count (sp-deinterleave result-channel-data interleaved frames-count channel-count)
     (status-set-both sp-status-group-sp sp-status-id-eof))
   (set *result-sample-count frames-count)
-  (label exit
-    memreg-free
-    (return status)))
+  (label exit memreg-free (return status)))
 
 (define (sp-file-position-set file a) (status-t sp-file-t* sp-count-t)
   "seeks are defined in number of (multichannel) frames.
   therefore, a seek in a stereo file from the current position forward with an offset of 1 would skip forward by one sample of both channels"
   status-declare
-  (declare
-    snd_file SNDFILE*
-    count sf-count-t)
-  (set
-    snd_file file:data
-    count (sf-seek snd_file a SEEK-SET))
+  (declare snd_file SNDFILE* count sf-count-t)
+  (set snd_file file:data count (sf-seek snd_file a SEEK-SET))
   (if (= count -1) (status-set-both-goto sp-status-group-sndfile (sf-error snd_file)))
-  (label exit
-    (return status)))
+  (label exit (return status)))
 
 (define (sp-file-position file result-position) (status-t sp-file-t* sp-count-t*)
   status-declare
-  (declare
-    snd_file SNDFILE*
-    count sf-count-t)
-  (set
-    snd_file file:data
-    count (sf-seek snd_file 0 SEEK-CUR))
+  (declare snd_file SNDFILE* count sf-count-t)
+  (set snd_file file:data count (sf-seek snd_file 0 SEEK-CUR))
   (if (= count -1) (status-set-both-goto sp-status-group-sndfile (sf-error snd_file)))
   (set *result-position count)
-  (label exit
-    (return status)))
+  (label exit (return status)))
 
 (define (sp-file-input? a) (boolean sp-file-t*) (return (bit-and sp-file-bit-input a:flags)))
 (define (sp-file-output? a) (boolean sp-file-t*) (return (bit-and sp-file-bit-output a:flags)))

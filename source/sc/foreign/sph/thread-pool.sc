@@ -4,10 +4,7 @@
    queue.c must be included beforehand")
 
 (pre-include "inttypes.h" "pthread.h")
-
-(pre-define-if-not-defined
-  thread-pool-size-t uint8-t
-  thread-pool-thread-limit 128)
+(pre-define-if-not-defined thread-pool-size-t uint8-t thread-pool-thread-limit 128)
 
 (declare
   thread-pool-t
@@ -24,16 +21,9 @@
     (struct
       thread-pool-task-t
       (q queue-node-t)
-      (f
-        (function-pointer void
-          (struct
-            thread-pool-task-t*)))
+      (f (function-pointer void (struct thread-pool-task-t*)))
       (data void*)))
-  thread-pool-task-f-t
-  (type
-    (function-pointer void
-      (struct
-        thread-pool-task-t*))))
+  thread-pool-task-f-t (type (function-pointer void (struct thread-pool-task-t*))))
 
 (define (thread-pool-destroy a) (void thread-pool-t*)
   (pthread-cond-destroy &a:queue-not-empty)
@@ -59,11 +49,7 @@
   and it is unclear when it can be used to free some final resources.
   if discard_queue is true then the current queue is emptied, but note
   that if enqueued tasks free their task object these tasks wont get called anymore"
-  (declare
-    exit-value void*
-    i thread-pool-size-t
-    size thread-pool-size-t
-    task thread-pool-task-t*)
+  (declare exit-value void* i thread-pool-size-t size thread-pool-size-t task thread-pool-task-t*)
   (if discard-queue
     (begin
       (pthread-mutex-lock &a:queue-mutex)
@@ -78,9 +64,7 @@
   (if (not no-wait)
     (for ((set i 0) (< i size) (set i (+ 1 i)))
       (if (= 0 (pthread-join (array-get a:threads i) &exit-value))
-        (begin
-          (set a:size (- a:size 1))
-          (if (= 0 a:size) (thread-pool-destroy a))))))
+        (begin (set a:size (- a:size 1)) (if (= 0 a:size) (thread-pool-destroy a))))))
   (return 0))
 
 (define (thread-pool-worker a) (void* thread-pool-t*)
@@ -91,19 +75,14 @@
     (label wait
       (sc-comment "considers so-called spurious wakeups")
       (if a:queue.size (set task (queue-get (queue-deq &a:queue) thread-pool-task-t q))
-        (begin
-          (pthread-cond-wait &a:queue-not-empty &a:queue-mutex)
-          (goto wait))))
+        (begin (pthread-cond-wait &a:queue-not-empty &a:queue-mutex) (goto wait))))
     (pthread-mutex-unlock &a:queue-mutex)
     (task:f task)
     (goto get-task)))
 
 (define (thread-pool-new size a) (int thread-pool-size-t thread-pool-t*)
   "returns zero when successful and a non-zero pthread error code otherwise"
-  (declare
-    i thread-pool-size-t
-    attr pthread-attr-t
-    error int)
+  (declare i thread-pool-size-t attr pthread-attr-t error int)
   (set error 0)
   (queue-init &a:queue)
   (pthread-mutex-init &a:queue-mutex 0)
@@ -112,9 +91,8 @@
   (pthread-attr-setdetachstate &attr PTHREAD-CREATE-JOINABLE)
   (for ((set i 0) (< i size) (set i (+ 1 i)))
     (set error
-      (pthread-create
-        (+ i a:threads)
-        &attr (convert-type thread-pool-worker (function-pointer void* void*)) (convert-type a void*)))
+      (pthread-create (+ i a:threads) &attr
+        (convert-type thread-pool-worker (function-pointer void* void*)) (convert-type a void*)))
     (if error
       (begin
         (if (< 0 i)
@@ -124,6 +102,4 @@
             (thread-pool-finish a #t 0)))
         (goto exit))))
   (set a:size size)
-  (label exit
-    (pthread-attr-destroy &attr)
-    (return error)))
+  (label exit (pthread-attr-destroy &attr) (return error)))
