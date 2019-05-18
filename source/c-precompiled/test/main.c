@@ -324,27 +324,30 @@ exit:
 #define sp_seq_half_duration (sp_seq_duration / 2)
 status_t test_sp_seq() {
   status_declare;
-  sp_event_t events[10];
+  sp_events_t events;
+  sp_event_t events_data[10];
   sp_count_t* state;
   sp_block_t out;
   sp_synth_partial_t config[1];
   sp_count_t wvl[sp_seq_duration];
   sp_sample_t amp[sp_seq_duration];
   sp_count_t i;
+  events.data = events_data;
   for (i = 0; (i < sp_seq_duration); i = (1 + i)) {
     wvl[i] = 5;
     amp[i] = 0.5;
   };
   config[0] = sp_synth_partial_1(0, sp_seq_duration, 0, amp, wvl, 0);
-  status_require((sp_synth_event(0, sp_seq_half_duration, 1, 1, config, (0 + events))));
-  status_require((sp_synth_event((2 + sp_seq_half_duration), (sp_seq_duration - 2), 1, 1, config, (1 + events))));
-  sp_seq_events_prepare(events, 2);
+  status_require((sp_synth_event(0, sp_seq_half_duration, 1, 1, config, (0 + events.data))));
+  status_require((sp_synth_event((2 + sp_seq_half_duration), (sp_seq_duration - 2), 1, 1, config, (1 + events.data))));
+  events.size = 2;
+  sp_seq_events_prepare(events);
   status_require((sp_block_new(1, sp_seq_duration, (&out))));
-  sp_seq(0, sp_seq_half_duration, out, 0, events, 2);
-  sp_seq(sp_seq_half_duration, sp_seq_duration, out, sp_seq_half_duration, events, 2);
+  sp_seq(0, sp_seq_half_duration, out, events);
+  sp_seq(sp_seq_half_duration, sp_seq_duration, (sp_block_with_offset(out, sp_seq_half_duration)), events);
   /* sp-seq-parallel */
-  status_require((sp_seq_parallel(0, sp_seq_duration, out, 0, events, 2)));
-  sp_events_free(events, 2);
+  status_require((sp_seq_parallel(0, sp_seq_duration, out, events)));
+  sp_events_free(events);
   sp_block_free(out);
 exit:
   return (status);
@@ -399,7 +402,8 @@ exit:
 #define sp_noise_duration 96
 status_t test_sp_noise_event() {
   status_declare;
-  sp_event_t events[1];
+  sp_events_t events;
+  sp_event_t events_data[1];
   sp_block_t out;
   sp_sample_t cut_l[sp_noise_duration];
   sp_sample_t cut_h[sp_noise_duration];
@@ -408,6 +412,7 @@ status_t test_sp_noise_event() {
   sp_sample_t amp1[sp_noise_duration];
   sp_sample_t* amp[sp_channel_limit];
   sp_count_t i;
+  events.data = events_data;
   status_require((sp_block_new(1, sp_noise_duration, (&out))));
   amp[0] = amp1;
   for (i = 0; (i < sp_noise_duration); i = (1 + i)) {
@@ -417,9 +422,10 @@ status_t test_sp_noise_event() {
     trn_h[i] = 0.07;
     amp1[i] = 1.0;
   };
-  status_require((sp_noise_event(0, sp_noise_duration, amp, cut_l, cut_h, trn_l, trn_h, 0, 30, sp_default_random_state, events)));
-  sp_seq(0, sp_noise_duration, out, 0, events, 1);
-  sp_events_free(events, 1);
+  status_require((sp_noise_event(0, sp_noise_duration, amp, cut_l, cut_h, trn_l, trn_h, 0, 30, sp_default_random_state, (events.data))));
+  events.size = 1;
+  sp_seq(0, sp_noise_duration, out, events);
+  sp_events_free(events);
   sp_block_free(out);
 exit:
   return (status);
@@ -443,13 +449,15 @@ exit:
 };
 status_t test_sp_cheap_noise_event() {
   status_declare;
-  sp_event_t events[1];
+  sp_events_t events;
+  sp_event_t events_data[1];
   sp_block_t out;
   sp_sample_t cut[sp_noise_duration];
   sp_sample_t amp1[sp_noise_duration];
   sp_sample_t* amp[sp_channel_limit];
   sp_sample_t q_factor;
   sp_count_t i;
+  events.data = events_data;
   status_require((sp_block_new(1, sp_noise_duration, (&out))));
   amp[0] = amp1;
   q_factor = 0;
@@ -458,9 +466,10 @@ status_t test_sp_cheap_noise_event() {
     cut[i] = 0.08;
     amp1[i] = 1.0;
   };
-  status_require((sp_cheap_noise_event_lp(0, sp_noise_duration, amp, cut, 1, 0, 0, sp_default_random_state, events)));
-  sp_seq(0, sp_noise_duration, out, 0, events, 1);
-  sp_events_free(events, 1);
+  status_require((sp_cheap_noise_event_lp(0, sp_noise_duration, amp, cut, 1, 0, 0, sp_default_random_state, (events.data))));
+  events.size = 1;
+  sp_seq(0, sp_noise_duration, out, events);
+  sp_events_free(events);
   sp_block_free(out);
 exit:
   return (status);

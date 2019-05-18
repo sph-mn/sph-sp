@@ -1,11 +1,5 @@
-(sc-comment
-  "# compilation
-   scc sp.sc -- -o sp.bin -lsph-sp &&
-   chmod +x sp.bin &&
-   ./sp.bin")
-
 (pre-include "sph-sp.h")
-(pre-define song-duration 960000)
+(pre-define song-duration 9600)
 
 (define (wvl-path-new duration out) (status-t sp-count-t sp-count-t**)
   status-declare
@@ -34,7 +28,7 @@
   (status-require (sp-samples-new duration out))
   (status-id-require
     (spline-path-new-get-4 *out duration
-      (spline-path-move 0 1) (spline-path-line 24000 0.3) (spline-path-line duration 0)
+      (spline-path-move 0 0.3) (spline-path-line 24000 0.1) (spline-path-line duration 0)
       (spline-path-constant)))
   (label exit (return status)))
 
@@ -44,14 +38,6 @@
   (status-id-require
     (spline-path-new-get-2 *out duration (spline-path-move 0 value) (spline-path-constant)))
   (label exit (return status)))
-
-#;(define (noise) void
-    (set *amp amp1)
-  (status-require
-    (sp-noise-event
-      0 song-duration amp cut-l cut-h trn-l trn-h #f #f sp-default-random-state events))
-  (status-require
-    (sp-cheap-noise-event-lp 0 song-duration amp cut-l 2 0 0 sp-default-random-state events)))
 
 (define (main) int
   status-declare
@@ -73,6 +59,7 @@
     events (array sp-event-t 10)
     config (array sp-synth-partial-t 10)
     state sp-count-t*)
+  (set events-size 0)
   (sp-initialise 0)
   (status-require (wvl-path-new song-duration &wvl))
   (status-require (wvl2-path-new song-duration &wvl2))
@@ -87,10 +74,18 @@
     1 (sp-synth-partial-1 0 song-duration 1 amp2 wvl2 0))
   (status-require (sp-synth-event 0 song-duration 1 2 config events))
   (set events-size 1)
+  (set (array-get amp 0) cut-h)
+  (status-require
+    (sp-noise-event 0 song-duration
+      amp cut-l cut-h trn-l trn-h #f #f sp-default-random-state (+ events-size events)))
+  #;(status-require
+    (sp-cheap-noise-event-lp 0 song-duration
+      amp cut-h 1 0 0 sp-default-random-state (+ events-size events)))
+  (set events-size (+ 1 events-size))
   (sp-seq-events-prepare events events-size)
   (status-require (sp-block-new 1 song-duration &out))
   (sp-seq 0 song-duration out 0 events events-size)
-  ;(sp-plot-samples *out.samples song-duration)
-  (sp-block->file out "/tmp/sp.wav" 96000)
+  (sp-plot-samples *out.samples song-duration)
+  ;(sp-block->file out "/tmp/sp.wav" 96000)
   (sp-events-free events events-size)
   (label exit (return status.id)))

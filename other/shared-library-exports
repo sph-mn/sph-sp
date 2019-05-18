@@ -2,6 +2,7 @@ exports {
   global:
     sp_block_free;
     sp_block_new;
+    sp_block_with_offset;
     sp_cheap_filter;
     sp_cheap_filter_state_free;
     sp_cheap_filter_state_new;

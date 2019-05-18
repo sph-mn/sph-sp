@@ -86,6 +86,7 @@
   (sp-convolve a a-len b b-len result-carryover-len result-carryover result-samples)
   (void sp-sample-t* sp-count-t sp-sample-t* sp-count-t sp-count-t sp-sample-t* sp-sample-t*)
   (sp-block-free a) (void sp-block-t)
+  (sp-block-with-offset a offset) (sp-block-t sp-block-t sp-count-t)
   (sp-null-ir out-ir out-len) (status-t sp-sample-t** sp-count-t*)
   (sp-passthrough-ir out-ir out-len) (status-t sp-sample-t** sp-count-t*)
   (sp-initialise cpu-count) (status-t uint16-t)
@@ -243,24 +244,23 @@
       (f (function-pointer void sp-count-t sp-count-t sp-block-t (struct sp-event-t*)))
       (free (function-pointer void (struct sp-event-t*)))))
   sp-event-f-t (type (function-pointer void sp-count-t sp-count-t sp-block-t sp-event-t*))
+  sp-events-t (type (struct (size sp-count-t) (data sp-event-t*)))
   sp-synth-event-state-t
   (type
     (struct
       (config-len sp-synth-count-t)
       (config (array sp-synth-partial-t sp-synth-partial-limit))
       (state sp-count-t*)))
-  (sp-seq-events-prepare a a-size) (void sp-event-t* sp-count-t)
-  (sp-seq start end out out-start events events-size)
-  (void sp-count-t sp-count-t sp-block-t sp-count-t sp-event-t* sp-count-t)
-  (sp-seq-parallel start end out out-start events events-size)
-  (status-t sp-count-t sp-count-t sp-block-t sp-count-t sp-event-t* sp-count-t)
+  (sp-seq-events-prepare a) (void sp-events-t)
+  (sp-seq start end out events) (void sp-count-t sp-count-t sp-block-t sp-events-t)
+  (sp-seq-parallel start end out events) (status-t sp-count-t sp-count-t sp-block-t sp-events-t)
   (sp-synth-event start end channel-count config-len config out-event)
   (status-t sp-count-t sp-count-t sp-count-t sp-count-t sp-synth-partial-t* sp-event-t*)
   (sp-noise-event start end amp cut-l cut-h trn-l trn-h is-reject resolution random-state out-event)
   (status-t sp-count-t sp-count-t
     sp-sample-t** sp-sample-t* sp-sample-t*
     sp-sample-t* sp-sample-t* uint8-t sp-count-t sp-random-state-t sp-event-t*)
-  (sp-events-free events events-count) (void sp-event-t* sp-count-t)
+  (sp-events-free events) (void sp-events-t)
   (sp-cheap-noise-event start end amp type cut passes q-factor resolution random-state out-event)
   (status-t sp-count-t sp-count-t
     sp-sample-t** sp-state-variable-filter-t sp-sample-t*

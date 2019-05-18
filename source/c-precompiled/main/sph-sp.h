@@ -225,6 +225,7 @@ status_id_t sp_ffti(sp_count_t input_len, double* input_or_output_real, double* 
 void sp_convolve_one(sp_sample_t* a, sp_count_t a_len, sp_sample_t* b, sp_count_t b_len, sp_sample_t* result_samples);
 void sp_convolve(sp_sample_t* a, sp_count_t a_len, sp_sample_t* b, sp_count_t b_len, sp_count_t result_carryover_len, sp_sample_t* result_carryover, sp_sample_t* result_samples);
 void sp_block_free(sp_block_t a);
+sp_block_t sp_block_with_offset(sp_block_t a, sp_count_t offset);
 status_t sp_null_ir(sp_sample_t** out_ir, sp_count_t* out_len);
 status_t sp_passthrough_ir(sp_sample_t** out_ir, sp_count_t* out_len);
 status_t sp_initialise(uint16_t cpu_count);
@@ -326,16 +327,20 @@ typedef struct sp_event_t {
 } sp_event_t;
 typedef void (*sp_event_f_t)(sp_count_t, sp_count_t, sp_block_t, sp_event_t*);
 typedef struct {
+  sp_count_t size;
+  sp_event_t* data;
+} sp_events_t;
+typedef struct {
   sp_synth_count_t config_len;
   sp_synth_partial_t config[sp_synth_partial_limit];
   sp_count_t* state;
 } sp_synth_event_state_t;
-void sp_seq_events_prepare(sp_event_t* a, sp_count_t a_size);
-void sp_seq(sp_count_t start, sp_count_t end, sp_block_t out, sp_count_t out_start, sp_event_t* events, sp_count_t events_size);
-status_t sp_seq_parallel(sp_count_t start, sp_count_t end, sp_block_t out, sp_count_t out_start, sp_event_t* events, sp_count_t events_size);
+void sp_seq_events_prepare(sp_events_t a);
+void sp_seq(sp_count_t start, sp_count_t end, sp_block_t out, sp_events_t events);
+status_t sp_seq_parallel(sp_count_t start, sp_count_t end, sp_block_t out, sp_events_t events);
 status_t sp_synth_event(sp_count_t start, sp_count_t end, sp_count_t channel_count, sp_count_t config_len, sp_synth_partial_t* config, sp_event_t* out_event);
 status_t sp_noise_event(sp_count_t start, sp_count_t end, sp_sample_t** amp, sp_sample_t* cut_l, sp_sample_t* cut_h, sp_sample_t* trn_l, sp_sample_t* trn_h, uint8_t is_reject, sp_count_t resolution, sp_random_state_t random_state, sp_event_t* out_event);
-void sp_events_free(sp_event_t* events, sp_count_t events_count);
+void sp_events_free(sp_events_t events);
 status_t sp_cheap_noise_event(sp_count_t start, sp_count_t end, sp_sample_t** amp, sp_state_variable_filter_t type, sp_sample_t* cut, sp_count_t passes, sp_sample_t q_factor, sp_count_t resolution, sp_random_state_t random_state, sp_event_t* out_event);
 void sp_counts_from_samples(sp_sample_t* in, sp_count_t in_size, sp_count_t* out) {
   sp_count_t i;

@@ -17,48 +17,37 @@
   status-declare
   (test-helper-assert "input 0.5" (sp-sample-nearly-equal 0.63662 (sp-sinc 0.5) error-margin))
   (test-helper-assert "input 1" (sp-sample-nearly-equal 1.0 (sp-sinc 0) error-margin))
-  (test-helper-assert
-    "window-blackman 0 51" (sp-sample-nearly-equal 0 (sp-window-blackman 0 51) error-margin))
-  (test-helper-assert
-    "window-blackman 25 51" (sp-sample-nearly-equal 1 (sp-window-blackman 25 51) error-margin))
-  (label exit
-    (return status)))
+  (test-helper-assert "window-blackman 0 51"
+    (sp-sample-nearly-equal 0 (sp-window-blackman 0 51) error-margin))
+  (test-helper-assert "window-blackman 25 51"
+    (sp-sample-nearly-equal 1 (sp-window-blackman 25 51) error-margin))
+  (label exit (return status)))
 
 (define (test-spectral-inversion-ir) status-t
   status-declare
-  (declare
-    a-len sp-count-t
-    a (array sp-sample-t 5 0.1 -0.2 0.3 -0.2 0.1))
+  (declare a-len sp-count-t a (array sp-sample-t 5 0.1 -0.2 0.3 -0.2 0.1))
   (set a-len 5)
   (sp-spectral-inversion-ir a a-len)
-  (test-helper-assert
-    "result check"
-    (and
-      (sp-sample-nearly-equal -0.1 (array-get a 0) error-margin)
+  (test-helper-assert "result check"
+    (and (sp-sample-nearly-equal -0.1 (array-get a 0) error-margin)
       (sp-sample-nearly-equal 0.2 (array-get a 1) error-margin)
       (sp-sample-nearly-equal 0.7 (array-get a 2) error-margin)
       (sp-sample-nearly-equal 0.2 (array-get a 3) error-margin)
       (sp-sample-nearly-equal -0.1 (array-get a 4) error-margin)))
-  (label exit
-    (return status)))
+  (label exit (return status)))
 
 (define (test-spectral-reversal-ir) status-t
   status-declare
-  (declare
-    a-len sp-count-t
-    a (array sp-sample-t 5 0.1 -0.2 0.3 -0.2 0.1))
+  (declare a-len sp-count-t a (array sp-sample-t 5 0.1 -0.2 0.3 -0.2 0.1))
   (set a-len 5)
   (sp-spectral-reversal-ir a a-len)
-  (test-helper-assert
-    "result check"
-    (and
-      (sp-sample-nearly-equal 0.1 (array-get a 0) error-margin)
+  (test-helper-assert "result check"
+    (and (sp-sample-nearly-equal 0.1 (array-get a 0) error-margin)
       (sp-sample-nearly-equal 0.2 (array-get a 1) error-margin)
       (sp-sample-nearly-equal 0.3 (array-get a 2) error-margin)
       (sp-sample-nearly-equal 0.2 (array-get a 3) error-margin)
       (sp-sample-nearly-equal 0.1 (array-get a 4) error-margin)))
-  (label exit
-    (return status)))
+  (label exit (return status)))
 
 (define (test-convolve) status-t
   status-declare
@@ -75,12 +64,7 @@
     expected-result (array sp-sample-t (5) 2 7 16 22 28)
     expected-carryover (array sp-sample-t (3) 27 18 0))
   (memreg-init 4)
-  (set
-    sample-count 5
-    b-len 3
-    result-len sample-count
-    a-len sample-count
-    carryover-len b-len)
+  (set sample-count 5 b-len 3 result-len sample-count a-len sample-count carryover-len b-len)
   (status-require (sph-helper-calloc (* result-len (sizeof sp-sample-t)) &result))
   (memreg-add result)
   (status-require (sph-helper-calloc (* a-len (sizeof sp-sample-t)) &a))
@@ -95,28 +79,22 @@
   (array-set carryover 0 0 1 0 2 0)
   (sc-comment "test convolve first segment")
   (sp-convolve a a-len b b-len carryover-len carryover result)
-  (test-helper-assert
-    "first result"
+  (test-helper-assert "first result"
     (sp-sample-array-nearly-equal result result-len expected-result result-len error-margin))
-  (test-helper-assert
-    "first result carryover"
-    (sp-sample-array-nearly-equal
-      carryover carryover-len expected-carryover carryover-len error-margin))
+  (test-helper-assert "first result carryover"
+    (sp-sample-array-nearly-equal carryover carryover-len
+      expected-carryover carryover-len error-margin))
   (sc-comment "test convolve second segment")
   (array-set a 0 8 1 9 2 10 3 11 4 12)
   (array-set expected-result 0 35 1 43 2 52 3 58 4 64)
   (array-set expected-carryover 0 57 1 36 2 0)
   (sp-convolve a a-len b b-len carryover-len carryover result)
-  (test-helper-assert
-    "second result"
+  (test-helper-assert "second result"
     (sp-sample-array-nearly-equal result result-len expected-result result-len error-margin))
-  (test-helper-assert
-    "second result carryover"
-    (sp-sample-array-nearly-equal
-      carryover carryover-len expected-carryover carryover-len error-margin))
-  (label exit
-    memreg-free
-    (return status)))
+  (test-helper-assert "second result carryover"
+    (sp-sample-array-nearly-equal carryover carryover-len
+      expected-carryover carryover-len error-margin))
+  (label exit memreg-free (return status)))
 
 (define (test-moving-average) status-t
   status-declare
@@ -142,28 +120,27 @@
     (sp-moving-average in in-end in-window in-window-end prev prev-end next next-end radius out))
   (sc-comment "first run with prev and next and only index 1 to 3 inclusively processed")
   ;(debug-display-sample-array out 3)
-  (test-helper-assert
-    "moving-average 1.1" (sp-sample-nearly-equal 6.142857142857143 (array-get out 0) error-margin))
-  (test-helper-assert
-    "moving-average 1.2" (sp-sample-nearly-equal 6.571428571428571 (array-get out 1) error-margin))
-  (test-helper-assert
-    "moving-average 1.2" (sp-sample-nearly-equal 7 (array-get out 2) error-margin))
+  (test-helper-assert "moving-average 1.1"
+    (sp-sample-nearly-equal 6.142857142857143 (array-get out 0) error-margin))
+  (test-helper-assert "moving-average 1.2"
+    (sp-sample-nearly-equal 6.571428571428571 (array-get out 1) error-margin))
+  (test-helper-assert "moving-average 1.2"
+    (sp-sample-nearly-equal 7 (array-get out 2) error-margin))
   (sc-comment "second run. result number series will be symmetric")
   (array-set out 0 0 1 0 2 0 3 0 4 0)
   (array-set in 0 2 1 2 2 2 3 2 4 2)
   (status-require (sp-moving-average in in-end in in-end 0 0 0 0 1 out))
-  (test-helper-assert
-    "moving-average 2.1" (sp-sample-nearly-equal 1.3 (array-get out 0) error-margin))
-  (test-helper-assert
-    "moving-average 2.2" (sp-sample-nearly-equal 2 (array-get out 1) error-margin))
-  (test-helper-assert
-    "moving-average 2.3" (sp-sample-nearly-equal 2 (array-get out 2) error-margin))
-  (test-helper-assert
-    "moving-average 2.4" (sp-sample-nearly-equal 2 (array-get out 3) error-margin))
-  (test-helper-assert
-    "moving-average 2.5" (sp-sample-nearly-equal 1.3 (array-get out 4) error-margin))
-  (label exit
-    (return status)))
+  (test-helper-assert "moving-average 2.1"
+    (sp-sample-nearly-equal 1.3 (array-get out 0) error-margin))
+  (test-helper-assert "moving-average 2.2"
+    (sp-sample-nearly-equal 2 (array-get out 1) error-margin))
+  (test-helper-assert "moving-average 2.3"
+    (sp-sample-nearly-equal 2 (array-get out 2) error-margin))
+  (test-helper-assert "moving-average 2.4"
+    (sp-sample-nearly-equal 2 (array-get out 3) error-margin))
+  (test-helper-assert "moving-average 2.5"
+    (sp-sample-nearly-equal 1.3 (array-get out 4) error-margin))
+  (label exit (return status)))
 
 (define (test-windowed-sinc) status-t
   status-declare
@@ -175,10 +152,7 @@
     state sp-convolution-filter-state-t*
     source (array sp-sample-t 10 3 4 5 6 7 8 9 0 1 2)
     result (array sp-sample-t 10 0 0 0 0 0 0 0 0 0 0))
-  (set
-    state 0
-    cutoff 0.1
-    transition 0.08)
+  (set state 0 cutoff 0.1 transition 0.08)
   (sc-comment "ir functions")
   (status-require (sp-windowed-sinc-lp-hp-ir cutoff transition #f &ir &ir-len))
   (test-helper-assert "ir" (sp-sample-nearly-equal 0.0952 (array-get ir 28) error-margin))
@@ -197,8 +171,7 @@
   (set state 0)
   (status-require (sp-windowed-sinc-bp-br source 10 0.1 0.4 0.08 0.08 #t &state result))
   (sp-convolution-filter-state-free state)
-  (label exit
-    (return status)))
+  (label exit (return status)))
 
 (define (test-file) status-t
   status-declare
@@ -215,24 +188,14 @@
     sample-rate sp-sample-rate-t
     unequal int8-t)
   (if (file-exists test-file-path) (unlink test-file-path))
-  (set
-    channel-count 2
-    sample-rate 8000
-    sample-count 5
-    position 0
-    channel channel-count)
+  (set channel-count 2 sample-rate 8000 sample-count 5 position 0 channel channel-count)
   (sp-block-set-null block)
   (sp-block-set-null block-2)
   (status-require (sp-block-new channel-count sample-count &block))
   (status-require (sp-block-new channel-count sample-count &block-2))
   (while channel
-    (set
-      channel (- channel 1)
-      len sample-count)
-    (while len
-      (set
-        len (- len 1)
-        (array-get (array-get block.samples channel) len) len)))
+    (set channel (- channel 1) len sample-count)
+    (while len (set len (- len 1) (array-get (array-get block.samples channel) len) len)))
   (goto exit)
   (sc-comment "test create")
   (status-require
@@ -245,17 +208,14 @@
   (status-require (sp-file-position-set &file 0))
   (status-require (sp-file-read &file sample-count block-2.samples &result-sample-count))
   (sc-comment "compare read result with output data")
-  (set
-    len channel-count
-    unequal 0)
+  (set len channel-count unequal 0)
   (while (and len (not unequal))
     (set
       len (- len 1)
       unequal
       (not
-        (sp-sample-array-nearly-equal
-          (array-get block.samples len)
-          sample-count (array-get block-2.samples len) sample-count error-margin))))
+        (sp-sample-array-nearly-equal (array-get block.samples len) sample-count
+          (array-get block-2.samples len) sample-count error-margin))))
   (test-helper-assert "sp-file-read new file result" (not unequal))
   (status-require (sp-file-close &file))
   (printf "  write\n")
@@ -266,24 +226,18 @@
   (status-require (sp-file-position-set &file 0))
   (sp-file-read &file sample-count block-2.samples &result-sample-count)
   (sc-comment "compare read result with output data")
-  (set
-    unequal 0
-    len channel-count)
+  (set unequal 0 len channel-count)
   (while (and len (not unequal))
     (set
       len (- len 1)
       unequal
       (not
-        (sp-sample-array-nearly-equal
-          (array-get block.samples len)
-          sample-count (array-get block-2.samples len) sample-count error-margin))))
+        (sp-sample-array-nearly-equal (array-get block.samples len) sample-count
+          (array-get block-2.samples len) sample-count error-margin))))
   (test-helper-assert "sp-file-read existing result" (not unequal))
   (status-require (sp-file-close &file))
   (printf "  open\n")
-  (label exit
-    (sp-block-free block)
-    (sp-block-free block-2)
-    (return status)))
+  (label exit (sp-block-free block) (sp-block-free block-2) (return status)))
 
 (define (test-fft) status-t
   status-declare
@@ -294,8 +248,7 @@
   (set a-len 6)
   (status-id-require (sp-fft a-len a-real a-imag))
   (status-id-require (sp-ffti a-len a-real a-imag))
-  (label exit
-    (return status)))
+  (label exit (return status)))
 
 (define (test-synth) status-t
   status-declare
@@ -354,46 +307,44 @@
   (status-require (sp-synth out2 0 duration config-len config state))
   (sp-block-free out1)
   (sp-block-free out2)
-  (label exit
-    (return status)))
+  (label exit (return status)))
 
-(pre-define
-  sp-seq-duration 20
-  sp-seq-half-duration (/ sp-seq-duration 2))
+(pre-define sp-seq-duration 20 sp-seq-half-duration (/ sp-seq-duration 2))
 
 (define (test-sp-seq) status-t
   status-declare
   (declare
-    events (array sp-event-t 10)
+    events sp-events-t
+    events-data (array sp-event-t 10)
     state sp-count-t*
     out sp-block-t
     config (array sp-synth-partial-t 1)
     wvl (array sp-count-t sp-seq-duration)
     amp (array sp-sample-t sp-seq-duration)
     i sp-count-t)
+  (set events.data events-data)
   (for ((set i 0) (< i sp-seq-duration) (set i (+ 1 i)))
-    (set
-      (array-get wvl i) 5
-      (array-get amp i) 0.5))
+    (set (array-get wvl i) 5 (array-get amp i) 0.5))
   (set (array-get config 0) (sp-synth-partial-1 0 sp-seq-duration 0 amp wvl 0))
-  (status-require (sp-synth-event 0 sp-seq-half-duration 1 1 config (+ 0 events)))
+  (status-require (sp-synth-event 0 sp-seq-half-duration 1 1 config (+ 0 events.data)))
   (status-require
-    (sp-synth-event (+ 2 sp-seq-half-duration) (- sp-seq-duration 2) 1 1 config (+ 1 events)))
-  (sp-seq-events-prepare events 2)
+    (sp-synth-event (+ 2 sp-seq-half-duration) (- sp-seq-duration 2) 1 1 config (+ 1 events.data)))
+  (set events.size 2)
+  (sp-seq-events-prepare events)
   (status-require (sp-block-new 1 sp-seq-duration &out))
-  (sp-seq 0 sp-seq-half-duration out 0 events 2)
-  (sp-seq sp-seq-half-duration sp-seq-duration out sp-seq-half-duration events 2)
+  (sp-seq 0 sp-seq-half-duration out events)
+  (sp-seq sp-seq-half-duration sp-seq-duration
+    (sp-block-with-offset out sp-seq-half-duration) events)
   #;(for ((set i 0) (< i sp-seq-duration) (set i (+ 1 i)))
     (printf "%f " (array-get *out.samples i)))
   ;(sp-plot-samples *out.samples out.size)
   (sc-comment "sp-seq-parallel")
-  (status-require (sp-seq-parallel 0 sp-seq-duration out 0 events 2))
+  (status-require (sp-seq-parallel 0 sp-seq-duration out events))
   #;(for ((set i 0) (< i sp-seq-duration) (set i (+ 1 i)))
   (printf "%f " (array-get *out.samples i)))
-  (sp-events-free events 2)
+  (sp-events-free events)
   (sp-block-free out)
-  (label exit
-    (return status)))
+  (label exit (return status)))
 
 (define (test-sp-plot) status-t
   "better test separately as it opens gnuplot windows"
@@ -401,21 +352,15 @@
   (declare a (array sp-sample-t 9 0.1 -0.2 0.1 -0.4 0.3 -0.4 0.2 -0.2 0.1))
   (sp-plot-samples a 9)
   (sp-plot-spectrum a 9)
-  (label exit
-    (return status)))
+  (label exit (return status)))
 
 (define (test-sp-triangle-square) status-t
   status-declare
-  (declare
-    i sp-count-t
-    out-t sp-sample-t*
-    out-s sp-sample-t*)
+  (declare i sp-count-t out-t sp-sample-t* out-s sp-sample-t*)
   (status-require (sph-helper-calloc (* 96000 (sizeof sp-sample-t*)) &out-t))
   (status-require (sph-helper-calloc (* 96000 (sizeof sp-sample-t*)) &out-s))
   (for ((set i 0) (< i 96000) (set i (+ 1 i)))
-    (set
-      (array-get out-t i) (sp-triangle-96 i)
-      (array-get out-s i) (sp-square-96 i)))
+    (set (array-get out-t i) (sp-triangle-96 i) (array-get out-s i) (sp-square-96 i)))
   (test-helper-assert "triangle 0" (= 0 (array-get out-t 0)))
   (test-helper-assert "triangle 1/2" (= 1 (array-get out-t 48000)))
   (test-helper-assert "triangle 1" (f64-nearly-equal 0 (array-get out-t 95999) error-margin))
@@ -427,38 +372,25 @@
   (test-helper-assert "square 1" (= 1 (array-get out-s 95999)))
   (free out-t)
   (free out-s)
-  (label exit
-    (return status)))
+  (label exit (return status)))
 
 (define (test-sp-random) status-t
   status-declare
-  (declare
-    s sp-random-state-t
-    out (array sp-sample-t 20))
-  (set
-    s (sp-random-state-new 80)
-    s (sp-random s 10 out)
-    s (sp-random s 10 (+ 10 out)))
+  (declare s sp-random-state-t out (array sp-sample-t 20))
+  (set s (sp-random-state-new 80) s (sp-random s 10 out) s (sp-random s 10 (+ 10 out)))
   (test-helper-assert "last value" (f64-nearly-equal 0.355602 (array-get out 19) error-margin))
   #;(for ((define i sp-count-t 0) (< i 20) (set i (+ 1 i)))
     (printf "%f " (array-get out i)))
-  (label exit
-    (return status)))
+  (label exit (return status)))
 
-(pre-define
-  (max a b)
-  (if* (> a b) a
-    b)
-  (min a b)
-  (if* (< a b) a
-    b))
-
+(pre-define (max a b) (if* (> a b) a b) (min a b) (if* (< a b) a b))
 (pre-define sp-noise-duration 96)
 
 (define (test-sp-noise-event) status-t
   status-declare
   (declare
-    events (array sp-event-t 1)
+    events sp-events-t
+    events-data (array sp-event-t 1)
     out sp-block-t
     cut-l (array sp-sample-t sp-noise-duration)
     cut-h (array sp-sample-t sp-noise-duration)
@@ -467,28 +399,27 @@
     amp1 (array sp-sample-t sp-noise-duration)
     amp (array sp-sample-t* sp-channel-limit)
     i sp-count-t)
+  (set events.data events-data)
   (status-require (sp-block-new 1 sp-noise-duration &out))
   (set (array-get amp 0) amp1)
   (for ((set i 0) (< i sp-noise-duration) (set i (+ 1 i)))
     (set
-      (array-get cut-l i)
-      (if* (< i (/ sp-noise-duration 2)) 0.01
-        0.1)
+      (array-get cut-l i) (if* (< i (/ sp-noise-duration 2)) 0.01 0.1)
       (array-get cut-h i) 0.11
       (array-get trn-l i) 0.07
       (array-get trn-h i) 0.07
       (array-get amp1 i) 1.0))
   (status-require
-    (sp-noise-event
-      0 sp-noise-duration amp cut-l cut-h trn-l trn-h #f 30 sp-default-random-state events))
-  (sp-seq 0 sp-noise-duration out 0 events 1)
+    (sp-noise-event 0 sp-noise-duration
+      amp cut-l cut-h trn-l trn-h #f 30 sp-default-random-state events.data))
+  (set events.size 1)
+  (sp-seq 0 sp-noise-duration out events)
   #;(for ((set i 0) (< i sp-noise-duration) (set i (+ 1 i)))
     (printf "%f " (array-get *out.samples i)))
   ;(sp-plot-samples *out.samples out.size)
-  (sp-events-free events 1)
+  (sp-events-free events)
   (sp-block-free out)
-  (label exit
-    (return status)))
+  (label exit (return status)))
 
 (define (test-sp-cheap-filter) status-t
   status-declare
@@ -498,48 +429,43 @@
     in (array sp-sample-t sp-noise-duration)
     i sp-count-t
     s sp-random-state-t)
-  (set
-    s (sp-random-state-new 80)
-    s (sp-random s sp-noise-duration in))
+  (set s (sp-random-state-new 80) s (sp-random s sp-noise-duration in))
   (status-require (sp-cheap-filter-state-new sp-noise-duration sp-cheap-filter-passes-limit &state))
   (sp-cheap-filter-lp in sp-noise-duration 0.2 1 0 1 &state out)
   (sp-cheap-filter-lp in sp-noise-duration 0.2 sp-cheap-filter-passes-limit 0 1 &state out)
   (sp-cheap-filter-lp in sp-noise-duration 0.2 sp-cheap-filter-passes-limit 0 1 &state out)
   (sp-cheap-filter-state-free &state)
-  (label exit
-    (return status)))
+  (label exit (return status)))
 
 (define (test-sp-cheap-noise-event) status-t
   status-declare
   (declare
-    events (array sp-event-t 1)
+    events sp-events-t
+    events-data (array sp-event-t 1)
     out sp-block-t
     cut (array sp-sample-t sp-noise-duration)
     amp1 (array sp-sample-t sp-noise-duration)
     amp (array sp-sample-t* sp-channel-limit)
     q-factor sp-sample-t
     i sp-count-t)
+  (set events.data events-data)
   (status-require (sp-block-new 1 sp-noise-duration &out))
-  (set
-    (array-get amp 0) amp1
-    q-factor 0)
+  (set (array-get amp 0) amp1 q-factor 0)
   (for ((set i 0) (< i sp-noise-duration) (set i (+ 1 i)))
     (set
-      (array-get cut i)
-      (if* (< i (/ sp-noise-duration 2)) 0.01
-        0.1)
+      (array-get cut i) (if* (< i (/ sp-noise-duration 2)) 0.01 0.1)
       (array-get cut i) 0.08
       (array-get amp1 i) 1.0))
   (status-require
-    (sp-cheap-noise-event-lp 0 sp-noise-duration amp cut 1 0 #f sp-default-random-state events))
-  (sp-seq 0 sp-noise-duration out 0 events 1)
+    (sp-cheap-noise-event-lp 0 sp-noise-duration amp cut 1 0 #f sp-default-random-state events.data))
+  (set events.size 1)
+  (sp-seq 0 sp-noise-duration out events)
   #;(for ((set i 0) (< i sp-noise-duration) (set i (+ 1 i)))
     (printf "%f " (array-get *out.samples i)))
   ;(sp-plot-samples *out.samples out.size)
-  (sp-events-free events 1)
+  (sp-events-free events)
   (sp-block-free out)
-  (label exit
-    (return status)))
+  (label exit (return status)))
 
 (define (main) int
   status-declare
@@ -559,6 +485,4 @@
   (test-helper-test-one test-convolve)
   (test-helper-test-one test-file)
   (test-helper-test-one test-windowed-sinc)
-  (label exit
-    (test-helper-display-summary)
-    (return status.id)))
+  (label exit (test-helper-display-summary) (return status.id)))
