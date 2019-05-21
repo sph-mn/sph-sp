@@ -15,6 +15,9 @@
 #ifndef sp_count_t
 #define sp_count_t uint32_t
 #endif
+#ifndef sp_count_max
+#define sp_count_max UINT32_MAX
+#endif
 #ifndef sp_sample_rate_t
 #define sp_sample_rate_t uint32_t
 #endif
@@ -159,6 +162,7 @@ spline_path_segment_t spline_path_constant();
 spline_path_segment_t spline_path_path(spline_path_t* path);
 /* main */
 #define boolean uint8_t
+#define f64 double
 #define sp_file_bit_input 1
 #define sp_file_bit_output 2
 #define sp_file_bit_position 4
@@ -229,7 +233,8 @@ sp_block_t sp_block_with_offset(sp_block_t a, sp_count_t offset);
 status_t sp_null_ir(sp_sample_t** out_ir, sp_count_t* out_len);
 status_t sp_passthrough_ir(sp_sample_t** out_ir, sp_count_t* out_len);
 status_t sp_initialise(uint16_t cpu_count);
-sp_random_state_t sp_random(sp_random_state_t state, sp_count_t size, sp_sample_t* out);
+sp_random_state_t sp_random(sp_random_state_t state, sp_count_t size, f64* out);
+sp_random_state_t sp_random_samples(sp_random_state_t state, sp_count_t size, sp_sample_t* out);
 sp_random_state_t sp_random_state_new(uint64_t seed);
 status_t sp_samples_new(sp_count_t size, sp_sample_t** out);
 status_t sp_counts_new(sp_count_t size, sp_count_t** out);

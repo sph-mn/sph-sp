@@ -1,11 +1,11 @@
-void sp_event_sort_swap(void* a, void* b) {
-  sp_event_t c;
-  c = *((sp_event_t*)(a));
-  *((sp_event_t*)(a)) = *((sp_event_t*)(b));
-  *((sp_event_t*)(b)) = c;
+void sp_event_sort_swap(void* a, size_t b, size_t c) {
+  sp_event_t d;
+  d = ((sp_event_t*)(a))[b];
+  ((sp_event_t*)(a))[b] = ((sp_event_t*)(a))[c];
+  ((sp_event_t*)(a))[c] = d;
 };
-uint8_t sp_event_sort_less_p(void* a, void* b) { return ((((sp_event_t*)(a))->start < ((sp_event_t*)(b))->start)); };
-void sp_seq_events_prepare(sp_events_t a) { quicksort(sp_event_sort_less_p, sp_event_sort_swap, (sizeof(sp_event_t)), (a.data), (a.size)); };
+uint8_t sp_event_sort_less_p(void* a, size_t b, size_t c) { return (((((sp_event_t*)(a))[b]).start < (((sp_event_t*)(a))[c]).start)); };
+void sp_seq_events_prepare(sp_events_t a) { quicksort(sp_event_sort_less_p, sp_event_sort_swap, (a.data), (a.size), 0); };
 /** event arrays must have been prepared/sorted with sp-seq-event-prepare for seq to work correctly */
 void sp_seq(sp_count_t start, sp_count_t end, sp_block_t out, sp_events_t events) {
   sp_count_t e_out_start;
@@ -165,7 +165,7 @@ void sp_noise_event_f(sp_count_t start, sp_count_t end, sp_block_t out, sp_event
     block_offset = (s->resolution * block_i);
     t = (start + block_offset);
     duration = ((block_count == block_i) ? block_rest : s->resolution);
-    s->random_state = sp_random((s->random_state), duration, (s->noise));
+    s->random_state = sp_random_samples((s->random_state), duration, (s->noise));
     sp_windowed_sinc_bp_br((s->noise), duration, ((s->cut_l)[t]), ((s->cut_h)[t]), ((s->trn_l)[t]), ((s->trn_h)[t]), (s->is_reject), (&(s->filter_state)), (s->temp));
     for (channel_i = 0; (channel_i < out.channels); channel_i = (1 + channel_i)) {
       for (i = 0; (i < duration); i = (1 + i)) {
@@ -201,7 +201,7 @@ an added benefit is that the filter-state setup malloc is checked */
   ir_len = sp_windowed_sinc_lp_hp_ir_length((min((*trn_l), (*trn_h))));
   status_require((sph_helper_malloc((ir_len * sizeof(sp_sample_t)), (&temp))));
   status_require((sph_helper_malloc((ir_len * sizeof(sp_sample_t)), (&temp_noise))));
-  random_state = sp_random(random_state, ir_len, temp_noise);
+  random_state = sp_random_samples(random_state, ir_len, temp_noise);
   s->filter_state = 0;
   status_require((sp_windowed_sinc_bp_br(temp_noise, ir_len, (*cut_l), (*cut_h), (*trn_l), (*trn_h), is_reject, (&(s->filter_state)), temp)));
   free(temp);
@@ -255,7 +255,7 @@ void sp_cheap_noise_event_f(sp_count_t start, sp_count_t end, sp_block_t out, sp
     block_offset = (s->resolution * block_i);
     t = (start + block_offset);
     duration = ((block_count == block_i) ? block_rest : s->resolution);
-    s->random_state = sp_random((s->random_state), duration, (s->noise));
+    s->random_state = sp_random_samples((s->random_state), duration, (s->noise));
     sp_cheap_filter((s->type), (s->noise), duration, ((s->cut)[t]), (s->passes), (s->q_factor), 1, (&(s->filter_state)), (s->temp));
     for (channel_i = 0; (channel_i < out.channels); channel_i = (1 + channel_i)) {
       for (i = 0; (i < duration); i = (1 + i)) {

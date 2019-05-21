@@ -1,15 +1,17 @@
-(define (sp-event-sort-swap a b) (void void* void*)
-  (declare c sp-event-t)
+(define (sp-event-sort-swap a b c) (void void* size-t size-t)
+  (declare d sp-event-t)
   (set
-    c (pointer-get (convert-type a sp-event-t*))
-    (pointer-get (convert-type a sp-event-t*)) (pointer-get (convert-type b sp-event-t*))
-    (pointer-get (convert-type b sp-event-t*)) c))
+    d (array-get (convert-type a sp-event-t*) b)
+    (array-get (convert-type a sp-event-t*) b) (array-get (convert-type a sp-event-t*) c)
+    (array-get (convert-type a sp-event-t*) c) d))
 
-(define (sp-event-sort-less? a b) (uint8-t void* void*)
-  (return (< (: (convert-type a sp-event-t*) start) (: (convert-type b sp-event-t*) start))))
+(define (sp-event-sort-less? a b c) (uint8-t void* size-t size-t)
+  (return
+    (< (struct-get (array-get (convert-type a sp-event-t*) b) start)
+      (struct-get (array-get (convert-type a sp-event-t*) c) start))))
 
 (define (sp-seq-events-prepare a) (void sp-events-t)
-  (quicksort sp-event-sort-less? sp-event-sort-swap (sizeof sp-event-t) a.data a.size))
+  (quicksort sp-event-sort-less? sp-event-sort-swap a.data a.size 0))
 
 (define (sp-seq start end out events) (void sp-count-t sp-count-t sp-block-t sp-events-t)
   "event arrays must have been prepared/sorted with sp-seq-event-prepare for seq to work correctly"
@@ -157,7 +159,7 @@
       block-offset (* s:resolution block-i)
       t (+ start block-offset)
       duration (if* (= block-count block-i) block-rest s:resolution)
-      s:random-state (sp-random s:random-state duration s:noise))
+      s:random-state (sp-random-samples s:random-state duration s:noise))
     (sp-windowed-sinc-bp-br s:noise duration
       (array-get s:cut-l t) (array-get s:cut-h t) (array-get s:trn-l t)
       (array-get s:trn-h t) s:is-reject &s:filter-state s:temp)
@@ -200,7 +202,7 @@
   (set ir-len (sp-windowed-sinc-lp-hp-ir-length (min *trn-l *trn-h)))
   (status-require (sph-helper-malloc (* ir-len (sizeof sp-sample-t)) &temp))
   (status-require (sph-helper-malloc (* ir-len (sizeof sp-sample-t)) &temp-noise))
-  (set random-state (sp-random random-state ir-len temp-noise) s:filter-state 0)
+  (set random-state (sp-random-samples random-state ir-len temp-noise) s:filter-state 0)
   (status-require
     (sp-windowed-sinc-bp-br temp-noise ir-len
       *cut-l *cut-h *trn-l *trn-h is-reject &s:filter-state temp))
@@ -261,7 +263,7 @@
       block-offset (* s:resolution block-i)
       t (+ start block-offset)
       duration (if* (= block-count block-i) block-rest s:resolution)
-      s:random-state (sp-random s:random-state duration s:noise))
+      s:random-state (sp-random-samples s:random-state duration s:noise))
     (sp-cheap-filter s:type s:noise
       duration (array-get s:cut t) s:passes s:q-factor #t &s:filter-state s:temp)
     (for ((set channel-i 0) (< channel-i out.channels) (set channel-i (+ 1 channel-i)))

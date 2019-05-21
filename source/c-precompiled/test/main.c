@@ -391,8 +391,8 @@ status_t test_sp_random() {
   sp_random_state_t s;
   sp_sample_t out[20];
   s = sp_random_state_new(80);
-  s = sp_random(s, 10, out);
-  s = sp_random(s, 10, (10 + out));
+  s = sp_random_samples(s, 10, out);
+  s = sp_random_samples(s, 10, (10 + out));
   test_helper_assert("last value", (f64_nearly_equal((0.355602), (out[19]), error_margin)));
 exit:
   return (status);

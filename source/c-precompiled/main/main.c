@@ -287,7 +287,7 @@ first process values that dont lead to carryover */
 };
 /** guarantees that all dyadic rationals of the form (k / 2**−53) will be equally likely. this conversion prefers the high bits of x.
     from http://xoshiro.di.unimi.it/ */
-#define double_from_uint64(a) ((a >> 11) * (1.0 / (UINT64_C(1) << 53)))
+#define f64_from_uint64(a) ((a >> 11) * (1.0 / (UINT64_C(1) << 53)))
 #define rotl(x, k) ((x << k) | (x >> (64 - k)))
 /** use the given uint64 as a seed and set state with splitmix64 results.
   the same seed will lead to the same series of random numbers from sp-random */
@@ -304,26 +304,29 @@ sp_random_state_t sp_random_state_new(uint64_t seed) {
   };
   return (result);
 };
-/** return uniformly distributed random real numbers in the range -1 to 1.
-   implements xoshiro256plus from http://xoshiro.di.unimi.it/
-   referenced by https://nullprogram.com/blog/2017/09/21/ */
-sp_random_state_t sp_random(sp_random_state_t state, sp_count_t size, sp_sample_t* out) {
-  uint64_t result_plus;
-  sp_count_t i;
-  uint64_t t;
-  for (i = 0; (i < size); i = (1 + i)) {
-    result_plus = ((state.data)[0] + (state.data)[3]);
-    t = ((state.data)[1] << 17);
-    (state.data)[2] = ((state.data)[2] ^ (state.data)[0]);
-    (state.data)[3] = ((state.data)[3] ^ (state.data)[1]);
-    (state.data)[1] = ((state.data)[1] ^ (state.data)[2]);
-    (state.data)[0] = ((state.data)[0] ^ (state.data)[3]);
-    (state.data)[2] = ((state.data)[2] ^ t);
-    (state.data)[3] = rotl(((state.data)[3]), 45);
-    out[i] = ((2 * double_from_uint64(result_plus)) - 1.0);
-  };
-  return (state);
-};
+#define define_sp_random(name, type, transfer) \
+  /** return uniformly distributed random real numbers in the range -1 to 1. \
+      implements xoshiro256plus from http://xoshiro.di.unimi.it/ \
+      referenced by https://nullprogram.com/blog/2017/09/21/ */ \
+  sp_random_state_t name(sp_random_state_t state, sp_count_t size, type* out) { \
+    uint64_t result_plus; \
+    sp_count_t i; \
+    uint64_t t; \
+    for (i = 0; (i < size); i = (1 + i)) { \
+      result_plus = ((state.data)[0] + (state.data)[3]); \
+      t = ((state.data)[1] << 17); \
+      (state.data)[2] = ((state.data)[2] ^ (state.data)[0]); \
+      (state.data)[3] = ((state.data)[3] ^ (state.data)[1]); \
+      (state.data)[1] = ((state.data)[1] ^ (state.data)[2]); \
+      (state.data)[0] = ((state.data)[0] ^ (state.data)[3]); \
+      (state.data)[2] = ((state.data)[2] ^ t); \
+      (state.data)[3] = rotl(((state.data)[3]), 45); \
+      out[i] = transfer; \
+    }; \
+    return (state); \
+  }
+define_sp_random(sp_random, f64, (f64_from_uint64(result_plus)));
+define_sp_random(sp_random_samples, sp_sample_t, ((2 * f64_from_uint64(result_plus)) - 1.0));
 #define i_array_get_or_null(a) (i_array_in_range(a) ? i_array_get(a) : 0)
 #define i_array_forward_if_possible(a) (i_array_in_range(a) ? i_array_forward(a) : 0)
 #define sp_samples_zero(a, size) memset(a, 0, (size * sizeof(sp_sample_t)))

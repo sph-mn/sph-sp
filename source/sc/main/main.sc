@@ -255,7 +255,7 @@
           (+ (array-get result-carryover c-index) (* (array-get a a-index) (array-get b b-index))))))))
 
 (pre-define
-  (double-from-uint64 a)
+  (f64-from-uint64 a)
   (begin
     "guarantees that all dyadic rationals of the form (k / 2**−53) will be equally likely. this conversion prefers the high bits of x.
     from http://xoshiro.di.unimi.it/"
@@ -275,23 +275,27 @@
       (array-get result.data i) (bit-xor z (bit-shift-right z 31))))
   (return result))
 
-(define (sp-random state size out) (sp-random-state-t sp-random-state-t sp-count-t sp-sample-t*)
-  "return uniformly distributed random real numbers in the range -1 to 1.
-   implements xoshiro256plus from http://xoshiro.di.unimi.it/
-   referenced by https://nullprogram.com/blog/2017/09/21/"
-  (declare result-plus uint64-t i sp-count-t t uint64-t)
-  (for ((set i 0) (< i size) (set i (+ 1 i)))
-    (set
-      result-plus (+ (array-get state.data 0) (array-get state.data 3))
-      t (bit-shift-left (array-get state.data 1) 17)
-      (array-get state.data 2) (bit-xor (array-get state.data 2) (array-get state.data 0))
-      (array-get state.data 3) (bit-xor (array-get state.data 3) (array-get state.data 1))
-      (array-get state.data 1) (bit-xor (array-get state.data 1) (array-get state.data 2))
-      (array-get state.data 0) (bit-xor (array-get state.data 0) (array-get state.data 3))
-      (array-get state.data 2) (bit-xor (array-get state.data 2) t)
-      (array-get state.data 3) (rotl (array-get state.data 3) 45)
-      (array-get out i) (- (* 2 (double-from-uint64 result-plus)) 1.0)))
-  (return state))
+(pre-define (define-sp-random name type transfer)
+  (define (name state size out) (sp-random-state-t sp-random-state-t sp-count-t type*)
+    "return uniformly distributed random real numbers in the range -1 to 1.
+    implements xoshiro256plus from http://xoshiro.di.unimi.it/
+    referenced by https://nullprogram.com/blog/2017/09/21/"
+    (declare result-plus uint64-t i sp-count-t t uint64-t)
+    (for ((set i 0) (< i size) (set i (+ 1 i)))
+      (set
+        result-plus (+ (array-get state.data 0) (array-get state.data 3))
+        t (bit-shift-left (array-get state.data 1) 17)
+        (array-get state.data 2) (bit-xor (array-get state.data 2) (array-get state.data 0))
+        (array-get state.data 3) (bit-xor (array-get state.data 3) (array-get state.data 1))
+        (array-get state.data 1) (bit-xor (array-get state.data 1) (array-get state.data 2))
+        (array-get state.data 0) (bit-xor (array-get state.data 0) (array-get state.data 3))
+        (array-get state.data 2) (bit-xor (array-get state.data 2) t)
+        (array-get state.data 3) (rotl (array-get state.data 3) 45)
+        (array-get out i) transfer))
+    (return state)))
+
+(define-sp-random sp-random f64 (f64-from-uint64 result-plus))
+(define-sp-random sp-random-samples sp-sample-t (- (* 2 (f64-from-uint64 result-plus)) 1.0))
 
 (pre-define
   (i-array-get-or-null a) (if* (i-array-in-range a) (i-array-get a) 0)
@@ -300,7 +304,7 @@
 
 (define (sp-samples-absolute-max in in-size) (sp-sample-t sp-sample-t* sp-count-t)
   "get the maximum value in samples array, disregarding sign"
-  (declare  result sp-sample-t a sp-sample-t i sp-count-t)
+  (declare result sp-sample-t a sp-sample-t i sp-count-t)
   (for ((set i 0 result 0) (< i in-size) (set i (+ 1 i)))
     (set a (fabs (array-get in i)))
     (if (> a result) (set result a)))

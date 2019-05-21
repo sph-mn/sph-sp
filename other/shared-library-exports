@@ -68,6 +68,7 @@ exports {
     sp_plot_spectrum_file;
     sp_plot_spectrum_to_file;
     sp_random;
+    sp_random_samples;
     sp_random_state_new;
     sp_samples_new;
     sp_seq;

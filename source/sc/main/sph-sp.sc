@@ -6,6 +6,7 @@
   sp-file-format (bit-or SF-FORMAT-WAV SF-FORMAT-FLOAT)
   sp-float-t double
   sp-count-t uint32-t
+  sp-count-max UINT32_MAX
   sp-sample-rate-t uint32-t
   sp-sample-sum f64-sum
   sp-sample-t double
@@ -23,6 +24,7 @@
 
 (pre-define
   boolean uint8-t
+  f64 double
   sp-file-bit-input 1
   sp-file-bit-output 2
   sp-file-bit-position 4
@@ -90,7 +92,8 @@
   (sp-null-ir out-ir out-len) (status-t sp-sample-t** sp-count-t*)
   (sp-passthrough-ir out-ir out-len) (status-t sp-sample-t** sp-count-t*)
   (sp-initialise cpu-count) (status-t uint16-t)
-  (sp-random state size out) (sp-random-state-t sp-random-state-t sp-count-t sp-sample-t*)
+  (sp-random state size out) (sp-random-state-t sp-random-state-t sp-count-t f64*)
+  (sp-random-samples state size out) (sp-random-state-t sp-random-state-t sp-count-t sp-sample-t*)
   (sp-random-state-new seed) (sp-random-state-t uint64-t)
   (sp-samples-new size out) (status-t sp-count-t sp-sample-t**)
   (sp-counts-new size out) (status-t sp-count-t sp-count-t**))
