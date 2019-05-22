@@ -1,11 +1,11 @@
-void sp_event_sort_swap(void* a, size_t b, size_t c) {
+void sp_event_sort_swap(void* a, ssize_t b, ssize_t c) {
   sp_event_t d;
   d = ((sp_event_t*)(a))[b];
   ((sp_event_t*)(a))[b] = ((sp_event_t*)(a))[c];
   ((sp_event_t*)(a))[c] = d;
 };
-uint8_t sp_event_sort_less_p(void* a, size_t b, size_t c) { return (((((sp_event_t*)(a))[b]).start < (((sp_event_t*)(a))[c]).start)); };
-void sp_seq_events_prepare(sp_events_t a) { quicksort(sp_event_sort_less_p, sp_event_sort_swap, (a.data), (a.size), 0); };
+uint8_t sp_event_sort_less_p(void* a, ssize_t b, ssize_t c) { return (((((sp_event_t*)(a))[b]).start < (((sp_event_t*)(a))[c]).start)); };
+void sp_seq_events_prepare(sp_events_t a) { quicksort(sp_event_sort_less_p, sp_event_sort_swap, (a.data), 0, (a.size - 1)); };
 /** event arrays must have been prepared/sorted with sp-seq-event-prepare for seq to work correctly */
 void sp_seq(sp_count_t start, sp_count_t end, sp_block_t out, sp_events_t events) {
   sp_count_t e_out_start;

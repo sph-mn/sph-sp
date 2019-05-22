@@ -1,17 +1,17 @@
-(define (sp-event-sort-swap a b c) (void void* size-t size-t)
+(define (sp-event-sort-swap a b c) (void void* ssize-t ssize-t)
   (declare d sp-event-t)
   (set
     d (array-get (convert-type a sp-event-t*) b)
     (array-get (convert-type a sp-event-t*) b) (array-get (convert-type a sp-event-t*) c)
     (array-get (convert-type a sp-event-t*) c) d))
 
-(define (sp-event-sort-less? a b c) (uint8-t void* size-t size-t)
+(define (sp-event-sort-less? a b c) (uint8-t void* ssize-t ssize-t)
   (return
     (< (struct-get (array-get (convert-type a sp-event-t*) b) start)
       (struct-get (array-get (convert-type a sp-event-t*) c) start))))
 
 (define (sp-seq-events-prepare a) (void sp-events-t)
-  (quicksort sp-event-sort-less? sp-event-sort-swap a.data a.size 0))
+  (quicksort sp-event-sort-less? sp-event-sort-swap a.data 0 (- a.size 1)))
 
 (define (sp-seq start end out events) (void sp-count-t sp-count-t sp-block-t sp-events-t)
   "event arrays must have been prepared/sorted with sp-seq-event-prepare for seq to work correctly"

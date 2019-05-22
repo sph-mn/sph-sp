@@ -1,32 +1,33 @@
-/* a generic quicksort implementation.
-based on the public domain implementation from http://alienryderflex.com/quicksort/ */
-/** less should return true if the first argument is < than the second.
-   swap should exchange the values of the two arguments it receives */
-void quicksort(uint8_t (*less_p)(void*, size_t, size_t), void (*swap)(void*, size_t, size_t), void* array, size_t size, size_t offset) {
-  size_t pivot;
-  size_t a;
-  size_t i;
-  size_t j;
-  if (size < 2) {
+/** a generic quicksort implementation that works with any array type.
+   less should return true if the first argument is < than the second.
+   swap should exchange the values of the two arguments it receives.
+   quicksort(less, swap, array, 0, array-size - 1) */
+void quicksort(uint8_t (*less_p)(void*, ssize_t, ssize_t), void (*swap)(void*, ssize_t, ssize_t), void* array, ssize_t left, ssize_t right) {
+  if (right <= left) {
     return;
   };
-  pivot = (offset + (size / 2));
-  i = 0;
-  j = (size - 1);
+  ssize_t pivot = (left + ((right - left) / 2));
+  ssize_t l = left;
+  ssize_t r = right;
   while (1) {
-    while (less_p(array, (offset + i), pivot)) {
-      i = (1 + i);
+    while (less_p(array, l, pivot)) {
+      l = (1 + l);
     };
-    while (less_p(array, pivot, (offset + j))) {
-      j = (j - 1);
+    while (less_p(array, pivot, r)) {
+      r = (r - 1);
     };
-    if (i >= j) {
+    if (l > r) {
       break;
     };
-    swap(array, (offset + i), (offset + j));
-    i = (1 + i);
-    j = (j - 1);
+    if (pivot == l) {
+      pivot = r;
+    } else if (pivot == r) {
+      pivot = l;
+    };
+    swap(array, l, r);
+    l = (1 + l);
+    r = (r - 1);
   };
-  quicksort(less_p, swap, array, i, offset);
-  quicksort(less_p, swap, array, (size - i), (offset + i));
+  quicksort(less_p, swap, array, left, r);
+  quicksort(less_p, swap, array, l, right);
 };
