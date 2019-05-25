@@ -4,10 +4,12 @@
   "sndfile.h" "foreign/nayuki-fft/fft.c" "../main/sph-sp.h"
   "../foreign/sph/spline-path.c" "../foreign/sph/float.c" "../foreign/sph/helper.c"
   "../foreign/sph/memreg.c" "../foreign/sph/quicksort.c" "../foreign/sph/queue.c"
-  "../foreign/sph/thread-pool.c" "../foreign/sph/futures.c")
+  "../foreign/sph/thread-pool.c" "../foreign/sph/futures.c" "../foreign/sph/random.c")
 
 (pre-define
   sp-status-declare (status-declare-group sp-status-group-sp)
+  (max a b) (if* (> a b) a b)
+  (min a b) (if* (< a b) a b)
   (sp-libc-status-require-id id) (if (< id 0) (status-set-both-goto sp-status-group-libc id))
   (sp-libc-status-require expression)
   (begin
@@ -30,6 +32,8 @@
 
 (define-sp-interleave sp-deinterleave sp-sample-t
   (compound-statement (set (array-get (array-get a channel) a-size) (array-get b b-size))))
+
+(define-sph-random sp-random-samples sp-count-t sp-sample-t (- (* 2 (f64-from-u64 result-plus)) 1.0))
 
 (define (debug-display-sample-array a len) (void sp-sample-t* sp-count-t)
   "display a sample array in one line"
@@ -122,8 +126,6 @@
   output-length = input-length
   output is allocated and owned by the caller"
   (return (not (= 1 (Fft_inverseTransform input/output-real input/output-imag input-len)))))
-
-(pre-define (max a b) (if* (> a b) a b) (min a b) (if* (< a b) a b))
 
 (define
   (sp-moving-average in in-end in-window in-window-end prev prev-end next next-end radius out)
@@ -253,54 +255,6 @@
           c-index (- c-index a-len)
           (array-get result-carryover c-index)
           (+ (array-get result-carryover c-index) (* (array-get a a-index) (array-get b b-index))))))))
-
-(pre-define
-  (f64-from-uint64 a)
-  (begin
-    "guarantees that all dyadic rationals of the form (k / 2**−53) will be equally likely. this conversion prefers the high bits of x.
-    from http://xoshiro.di.unimi.it/"
-    (* (bit-shift-right a 11) (/ 1.0 (bit-shift-left (UINT64_C 1) 53))))
-  (rotl x k) (bit-or (bit-shift-left x k) (bit-shift-right x (- 64 k))))
-
-(define (sp-random-state-new seed) (sp-random-state-t uint64-t)
-  "use the given uint64 as a seed and set state with splitmix64 results.
-  the same seed will lead to the same series of random numbers from sp-random"
-  (declare i uint8-t z uint64-t result sp-random-state-t)
-  (for ((set i 0) (< i 4) (set i (+ 1 i)))
-    (set
-      seed (+ seed (UINT64_C 11400714819323198485))
-      z seed
-      z (* (bit-xor z (bit-shift-right z 30)) (UINT64_C 13787848793156543929))
-      z (* (bit-xor z (bit-shift-right z 27)) (UINT64_C 10723151780598845931))
-      (array-get result.data i) (bit-xor z (bit-shift-right z 31))))
-  (return result))
-
-(pre-define (define-sp-random name type transfer)
-  (define (name state size out) (sp-random-state-t sp-random-state-t sp-count-t type*)
-    "return uniformly distributed random real numbers in the range -1 to 1.
-    implements xoshiro256plus from http://xoshiro.di.unimi.it/
-    referenced by https://nullprogram.com/blog/2017/09/21/"
-    (declare result-plus uint64-t i sp-count-t t uint64-t)
-    (for ((set i 0) (< i size) (set i (+ 1 i)))
-      (set
-        result-plus (+ (array-get state.data 0) (array-get state.data 3))
-        t (bit-shift-left (array-get state.data 1) 17)
-        (array-get state.data 2) (bit-xor (array-get state.data 2) (array-get state.data 0))
-        (array-get state.data 3) (bit-xor (array-get state.data 3) (array-get state.data 1))
-        (array-get state.data 1) (bit-xor (array-get state.data 1) (array-get state.data 2))
-        (array-get state.data 0) (bit-xor (array-get state.data 0) (array-get state.data 3))
-        (array-get state.data 2) (bit-xor (array-get state.data 2) t)
-        (array-get state.data 3) (rotl (array-get state.data 3) 45)
-        (array-get out i) transfer))
-    (return state)))
-
-(define-sp-random sp-random f64 (f64-from-uint64 result-plus))
-(define-sp-random sp-random-samples sp-sample-t (- (* 2 (f64-from-uint64 result-plus)) 1.0))
-
-(pre-define
-  (i-array-get-or-null a) (if* (i-array-in-range a) (i-array-get a) 0)
-  (i-array-forward-if-possible a) (if* (i-array-in-range a) (i-array-forward a))
-  (sp-samples-zero a size) (memset a 0 (* size (sizeof sp-sample-t))))
 
 (define (sp-samples-absolute-max in in-size) (sp-sample-t sp-sample-t* sp-count-t)
   "get the maximum value in samples array, disregarding sign"

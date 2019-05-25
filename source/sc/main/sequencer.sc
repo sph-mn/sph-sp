@@ -158,8 +158,8 @@
     (set
       block-offset (* s:resolution block-i)
       t (+ start block-offset)
-      duration (if* (= block-count block-i) block-rest s:resolution)
-      s:random-state (sp-random-samples s:random-state duration s:noise))
+      duration (if* (= block-count block-i) block-rest s:resolution))
+    (sp-random-samples &s:random-state duration s:noise)
     (sp-windowed-sinc-bp-br s:noise duration
       (array-get s:cut-l t) (array-get s:cut-h t) (array-get s:trn-l t)
       (array-get s:trn-h t) s:is-reject &s:filter-state s:temp)
@@ -199,10 +199,10 @@
     "the result shows a small delay, circa 40 samples for transition 0.07. the size seems to be related to ir-len."
     "the state is initialised with one unused call to skip the delay."
     "an added benefit is that the filter-state setup malloc is checked")
-  (set ir-len (sp-windowed-sinc-lp-hp-ir-length (min *trn-l *trn-h)))
+  (set ir-len (sp-windowed-sinc-lp-hp-ir-length (min *trn-l *trn-h)) s:filter-state 0)
   (status-require (sph-helper-malloc (* ir-len (sizeof sp-sample-t)) &temp))
   (status-require (sph-helper-malloc (* ir-len (sizeof sp-sample-t)) &temp-noise))
-  (set random-state (sp-random-samples random-state ir-len temp-noise) s:filter-state 0)
+  (sp-random-samples &random-state ir-len temp-noise)
   (status-require
     (sp-windowed-sinc-bp-br temp-noise ir-len
       *cut-l *cut-h *trn-l *trn-h is-reject &s:filter-state temp))
@@ -262,8 +262,8 @@
     (set
       block-offset (* s:resolution block-i)
       t (+ start block-offset)
-      duration (if* (= block-count block-i) block-rest s:resolution)
-      s:random-state (sp-random-samples s:random-state duration s:noise))
+      duration (if* (= block-count block-i) block-rest s:resolution))
+    (sp-random-samples &s:random-state duration s:noise)
     (sp-cheap-filter s:type s:noise
       duration (array-get s:cut t) s:passes s:q-factor #t &s:filter-state s:temp)
     (for ((set channel-i 0) (< channel-i out.channels) (set channel-i (+ 1 channel-i)))

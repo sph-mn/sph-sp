@@ -160,6 +160,67 @@ spline_path_segment_t spline_path_line(spline_path_time_t x, spline_path_value_t
 spline_path_segment_t spline_path_bezier(spline_path_time_t x1, spline_path_value_t y1, spline_path_time_t x2, spline_path_value_t y2, spline_path_time_t x3, spline_path_value_t y3);
 spline_path_segment_t spline_path_constant();
 spline_path_segment_t spline_path_path(spline_path_t* path);
+/* shorter type names derived from inttypes.h */
+#include <inttypes.h>
+#define boolean uint8_t
+#define i8 int8_t
+#define i16 int16_t
+#define i32 int32_t
+#define i64 int64_t
+#define i8_least int_least8_t
+#define i16_least int_least16_t
+#define i32_least int_least32_t
+#define i64_least int_least64_t
+#define i8_fast int_fast8_t
+#define i16_fast int_fast16_t
+#define i32_fast int_fast32_t
+#define i64_fast int_fast64_t
+#define u8 uint8_t
+#define u16 uint16_t
+#define u32 uint32_t
+#define u64 uint64_t
+#define u8_least uint_least8_t
+#define u16_least uint_least16_t
+#define u32_least uint_least32_t
+#define u64_least uint_least64_t
+#define u8_fast uint_fast8_t
+#define u16_fast uint_fast16_t
+#define u32_fast uint_fast32_t
+#define u64_fast uint_fast64_t
+#define f32 float
+#define f64 double
+/* depends on types.c. have to use sph- prefix because standard lib uses random */
+/** guarantees that all dyadic rationals of the form (k / 2**−53) will be equally likely. this conversion prefers the high bits of x.
+     from http://xoshiro.di.unimi.it/ */
+#define f64_from_u64(a) ((a >> 11) * (1.0 / (UINT64_C(1) << 53)))
+#define define_sph_random(name, size_type, data_type, transfer) \
+  /** return uniformly distributed random real numbers in the range -1 to 1. \
+       implements xoshiro256plus from http://xoshiro.di.unimi.it/ \
+       referenced by https://nullprogram.com/blog/2017/09/21/ */ \
+  void name(sph_random_state_t* state, size_type size, data_type* out) { \
+    u64 result_plus; \
+    size_type i; \
+    u64 t; \
+    sph_random_state_t s; \
+    s = *state; \
+    for (i = 0; (i < size); i = (1 + i)) { \
+      result_plus = ((s.data)[0] + (s.data)[3]); \
+      t = ((s.data)[1] << 17); \
+      (s.data)[2] = ((s.data)[2] ^ (s.data)[0]); \
+      (s.data)[3] = ((s.data)[3] ^ (s.data)[1]); \
+      (s.data)[1] = ((s.data)[1] ^ (s.data)[2]); \
+      (s.data)[0] = ((s.data)[0] ^ (s.data)[3]); \
+      (s.data)[2] = ((s.data)[2] ^ t); \
+      (s.data)[3] = rotl(((s.data)[3]), 45); \
+      out[i] = transfer; \
+    }; \
+    *state = s; \
+  }
+typedef struct {
+  u64 data[4];
+} sph_random_state_t;
+sph_random_state_t sph_random_state_new(u64 seed);
+void sph_random(sph_random_state_t* state, u32 size, f64* out);
 /* main */
 #define boolean uint8_t
 #define f64 double
@@ -174,6 +235,9 @@ spline_path_segment_t spline_path_path(spline_path_t* path);
 #define sp_status_group_sndfile "sndfile"
 #define sp_status_group_sp "sp"
 #define sp_status_group_sph "sph"
+#define sp_random sph_random
+#define sp_random_state_t sph_random_state_t
+#define sp_random_state_new sph_random_state_new
 /** sample count to bit octets count */
 #define sp_octets_to_samples(a) (a / sizeof(sp_sample_t))
 #define sp_samples_to_octets(a) (a * sizeof(sp_sample_t))
@@ -206,9 +270,6 @@ typedef struct {
   sp_channel_count_t channel_count;
   void* data;
 } sp_file_t;
-typedef struct {
-  uint64_t data[4];
-} sp_random_state_t;
 sp_random_state_t sp_default_random_state;
 status_t sp_file_read(sp_file_t* file, sp_count_t sample_count, sp_sample_t** result_block, sp_count_t* result_sample_count);
 status_t sp_file_write(sp_file_t* file, sp_sample_t** block, sp_count_t sample_count, sp_count_t* result_sample_count);
@@ -233,9 +294,7 @@ sp_block_t sp_block_with_offset(sp_block_t a, sp_count_t offset);
 status_t sp_null_ir(sp_sample_t** out_ir, sp_count_t* out_len);
 status_t sp_passthrough_ir(sp_sample_t** out_ir, sp_count_t* out_len);
 status_t sp_initialise(uint16_t cpu_count);
-sp_random_state_t sp_random(sp_random_state_t state, sp_count_t size, f64* out);
-sp_random_state_t sp_random_samples(sp_random_state_t state, sp_count_t size, sp_sample_t* out);
-sp_random_state_t sp_random_state_new(uint64_t seed);
+void sp_random_samples(sp_random_state_t* state, sp_count_t size, sp_sample_t* out);
 status_t sp_samples_new(sp_count_t size, sp_sample_t** out);
 status_t sp_counts_new(sp_count_t size, sp_count_t** out);
 /* filter */
@@ -377,3 +436,4 @@ status_t sp_block_to_file(sp_block_t block, uint8_t* path, sp_count_t rate) {
 exit:
   return (status);
 };
+#define sp_samples_zero(a, size) memset(a, 0, (size * sizeof(sp_sample_t)))

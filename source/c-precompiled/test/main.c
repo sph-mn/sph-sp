@@ -391,8 +391,8 @@ status_t test_sp_random() {
   sp_random_state_t s;
   sp_sample_t out[20];
   s = sp_random_state_new(80);
-  s = sp_random_samples(s, 10, out);
-  s = sp_random_samples(s, 10, (10 + out));
+  sp_random_samples((&s), 10, out);
+  sp_random_samples((&s), 10, (10 + out));
   test_helper_assert("last value", (f64_nearly_equal((0.355602), (out[19]), error_margin)));
 exit:
   return (status);
@@ -438,7 +438,7 @@ status_t test_sp_cheap_filter() {
   sp_count_t i;
   sp_random_state_t s;
   s = sp_random_state_new(80);
-  s = sp_random(s, sp_noise_duration, in);
+  sp_random((&s), sp_noise_duration, in);
   status_require((sp_cheap_filter_state_new(sp_noise_duration, sp_cheap_filter_passes_limit, (&state))));
   sp_cheap_filter_lp(in, sp_noise_duration, (0.2), 1, 0, 1, (&state), out);
   sp_cheap_filter_lp(in, sp_noise_duration, (0.2), sp_cheap_filter_passes_limit, 0, 1, (&state), out);

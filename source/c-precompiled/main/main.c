@@ -12,7 +12,10 @@
 #include "../foreign/sph/queue.c"
 #include "../foreign/sph/thread-pool.c"
 #include "../foreign/sph/futures.c"
+#include "../foreign/sph/random.c"
 #define sp_status_declare status_declare_group(sp_status_group_sp)
+#define max(a, b) ((a > b) ? a : b)
+#define min(a, b) ((a < b) ? a : b)
 #define sp_libc_status_require_id(id) \
   if (id < 0) { \
     status_set_both_goto(sp_status_group_libc, id); \
@@ -44,6 +47,7 @@
   }
 define_sp_interleave(sp_interleave, sp_sample_t, ({ b[b_size] = (a[channel])[a_size]; }));
 define_sp_interleave(sp_deinterleave, sp_sample_t, ({ (a[channel])[a_size] = b[b_size]; }));
+define_sph_random(sp_random_samples, sp_count_t, sp_sample_t, ((2 * f64_from_u64(result_plus)) - 1.0));
 /** display a sample array in one line */
 void debug_display_sample_array(sp_sample_t* a, sp_count_t len) {
   sp_count_t i;
@@ -153,8 +157,6 @@ status_id_t sp_fft(sp_count_t input_len, double* input_or_output_real, double* i
   output-length = input-length
   output is allocated and owned by the caller */
 status_id_t sp_ffti(sp_count_t input_len, double* input_or_output_real, double* input_or_output_imag) { return ((!(1 == Fft_inverseTransform(input_or_output_real, input_or_output_imag, input_len)))); };
-#define max(a, b) ((a > b) ? a : b)
-#define min(a, b) ((a < b) ? a : b)
 /** apply a centered moving average filter to samples between in-window and in-window-end inclusively and write to out.
    removes high frequencies and smoothes data with little distortion in the time domain but the frequency response has large ripples.
    all memory is managed by the caller.
@@ -285,51 +287,6 @@ first process values that dont lead to carryover */
     };
   };
 };
-/** guarantees that all dyadic rationals of the form (k / 2**−53) will be equally likely. this conversion prefers the high bits of x.
-    from http://xoshiro.di.unimi.it/ */
-#define f64_from_uint64(a) ((a >> 11) * (1.0 / (UINT64_C(1) << 53)))
-#define rotl(x, k) ((x << k) | (x >> (64 - k)))
-/** use the given uint64 as a seed and set state with splitmix64 results.
-  the same seed will lead to the same series of random numbers from sp-random */
-sp_random_state_t sp_random_state_new(uint64_t seed) {
-  uint8_t i;
-  uint64_t z;
-  sp_random_state_t result;
-  for (i = 0; (i < 4); i = (1 + i)) {
-    seed = (seed + UINT64_C(11400714819323198485));
-    z = seed;
-    z = ((z ^ (z >> 30)) * UINT64_C(13787848793156543929));
-    z = ((z ^ (z >> 27)) * UINT64_C(10723151780598845931));
-    (result.data)[i] = (z ^ (z >> 31));
-  };
-  return (result);
-};
-#define define_sp_random(name, type, transfer) \
-  /** return uniformly distributed random real numbers in the range -1 to 1. \
-      implements xoshiro256plus from http://xoshiro.di.unimi.it/ \
-      referenced by https://nullprogram.com/blog/2017/09/21/ */ \
-  sp_random_state_t name(sp_random_state_t state, sp_count_t size, type* out) { \
-    uint64_t result_plus; \
-    sp_count_t i; \
-    uint64_t t; \
-    for (i = 0; (i < size); i = (1 + i)) { \
-      result_plus = ((state.data)[0] + (state.data)[3]); \
-      t = ((state.data)[1] << 17); \
-      (state.data)[2] = ((state.data)[2] ^ (state.data)[0]); \
-      (state.data)[3] = ((state.data)[3] ^ (state.data)[1]); \
-      (state.data)[1] = ((state.data)[1] ^ (state.data)[2]); \
-      (state.data)[0] = ((state.data)[0] ^ (state.data)[3]); \
-      (state.data)[2] = ((state.data)[2] ^ t); \
-      (state.data)[3] = rotl(((state.data)[3]), 45); \
-      out[i] = transfer; \
-    }; \
-    return (state); \
-  }
-define_sp_random(sp_random, f64, (f64_from_uint64(result_plus)));
-define_sp_random(sp_random_samples, sp_sample_t, ((2 * f64_from_uint64(result_plus)) - 1.0));
-#define i_array_get_or_null(a) (i_array_in_range(a) ? i_array_get(a) : 0)
-#define i_array_forward_if_possible(a) (i_array_in_range(a) ? i_array_forward(a) : 0)
-#define sp_samples_zero(a, size) memset(a, 0, (size * sizeof(sp_sample_t)))
 /** get the maximum value in samples array, disregarding sign */
 sp_sample_t sp_samples_absolute_max(sp_sample_t* in, sp_count_t in_size) {
   sp_sample_t result;

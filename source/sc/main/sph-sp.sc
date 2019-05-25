@@ -19,7 +19,9 @@
   spline-path-time-t sp-count-t
   spline-path-value-t sp-sample-t)
 
-(sc-include "../foreign/sph/status" "../foreign/sph/spline-path-h")
+(sc-include "../foreign/sph/status" "../foreign/sph/spline-path-h"
+  "../foreign/sph/types" "../foreign/sph/random-h")
+
 (sc-comment "main")
 
 (pre-define
@@ -36,6 +38,9 @@
   sp-status-group-sndfile "sndfile"
   sp-status-group-sp "sp"
   sp-status-group-sph "sph"
+  sp-random sph-random
+  sp-random-state-t sph-random-state-t
+  sp-random-state-new sph-random-state-new
   (sp-octets->samples a) (begin "sample count to bit octets count" (/ a (sizeof sp-sample-t)))
   (sp-samples->octets a) (* a (sizeof sp-sample-t))
   (sp-cheap-round-positive a) (convert-type (+ 0.5 a) sp-count-t)
@@ -64,7 +69,6 @@
       (sample-rate sp-sample-rate-t)
       (channel-count sp-channel-count-t)
       (data void*)))
-  sp-random-state-t (type (struct (data (array uint64-t 4))))
   sp-default-random-state sp-random-state-t
   (sp-file-read file sample-count result-block result-sample-count)
   (status-t sp-file-t* sp-count-t sp-sample-t** sp-count-t*)
@@ -92,9 +96,7 @@
   (sp-null-ir out-ir out-len) (status-t sp-sample-t** sp-count-t*)
   (sp-passthrough-ir out-ir out-len) (status-t sp-sample-t** sp-count-t*)
   (sp-initialise cpu-count) (status-t uint16-t)
-  (sp-random state size out) (sp-random-state-t sp-random-state-t sp-count-t f64*)
-  (sp-random-samples state size out) (sp-random-state-t sp-random-state-t sp-count-t sp-sample-t*)
-  (sp-random-state-new seed) (sp-random-state-t uint64-t)
+  (sp-random-samples state size out) (void sp-random-state-t* sp-count-t sp-sample-t*)
   (sp-samples-new size out) (status-t sp-count-t sp-sample-t**)
   (sp-counts-new size out) (status-t sp-count-t sp-count-t**))
 
@@ -294,3 +296,5 @@
   (status-require (sp-file-write &file block.samples block.size &written))
   (sp-file-close &file)
   (label exit (return status)))
+
+(pre-define (sp-samples-zero a size) (memset a 0 (* size (sizeof sp-sample-t))))

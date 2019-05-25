@@ -165,7 +165,7 @@ void sp_noise_event_f(sp_count_t start, sp_count_t end, sp_block_t out, sp_event
     block_offset = (s->resolution * block_i);
     t = (start + block_offset);
     duration = ((block_count == block_i) ? block_rest : s->resolution);
-    s->random_state = sp_random_samples((s->random_state), duration, (s->noise));
+    sp_random_samples((&(s->random_state)), duration, (s->noise));
     sp_windowed_sinc_bp_br((s->noise), duration, ((s->cut_l)[t]), ((s->cut_h)[t]), ((s->trn_l)[t]), ((s->trn_h)[t]), (s->is_reject), (&(s->filter_state)), (s->temp));
     for (channel_i = 0; (channel_i < out.channels); channel_i = (1 + channel_i)) {
       for (i = 0; (i < duration); i = (1 + i)) {
@@ -199,10 +199,10 @@ status_t sp_noise_event(sp_count_t start, sp_count_t end, sp_sample_t** amp, sp_
 the state is initialised with one unused call to skip the delay.
 an added benefit is that the filter-state setup malloc is checked */
   ir_len = sp_windowed_sinc_lp_hp_ir_length((min((*trn_l), (*trn_h))));
+  s->filter_state = 0;
   status_require((sph_helper_malloc((ir_len * sizeof(sp_sample_t)), (&temp))));
   status_require((sph_helper_malloc((ir_len * sizeof(sp_sample_t)), (&temp_noise))));
-  random_state = sp_random_samples(random_state, ir_len, temp_noise);
-  s->filter_state = 0;
+  sp_random_samples((&random_state), ir_len, temp_noise);
   status_require((sp_windowed_sinc_bp_br(temp_noise, ir_len, (*cut_l), (*cut_h), (*trn_l), (*trn_h), is_reject, (&(s->filter_state)), temp)));
   free(temp);
   free(temp_noise);
@@ -255,7 +255,7 @@ void sp_cheap_noise_event_f(sp_count_t start, sp_count_t end, sp_block_t out, sp
     block_offset = (s->resolution * block_i);
     t = (start + block_offset);
     duration = ((block_count == block_i) ? block_rest : s->resolution);
-    s->random_state = sp_random_samples((s->random_state), duration, (s->noise));
+    sp_random_samples((&(s->random_state)), duration, (s->noise));
     sp_cheap_filter((s->type), (s->noise), duration, ((s->cut)[t]), (s->passes), (s->q_factor), 1, (&(s->filter_state)), (s->temp));
     for (channel_i = 0; (channel_i < out.channels); channel_i = (1 + channel_i)) {
       for (i = 0; (i < duration); i = (1 + i)) {
