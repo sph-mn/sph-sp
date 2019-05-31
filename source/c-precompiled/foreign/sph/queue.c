@@ -31,7 +31,7 @@ void queue_init(queue_t* a) {
   a->first = 0;
   a->last = 0;
   a->size = 0;
-};
+}
 /** enqueue a node. the node must not already be in the queue */
 void queue_enq(queue_t* a, queue_node_t* node) {
   if (a->first) {
@@ -42,7 +42,7 @@ void queue_enq(queue_t* a, queue_node_t* node) {
   a->last = node;
   node->next = 0;
   a->size = (1 + a->size);
-};
+}
 /** queue must not be empty. a.size can be checked to see if the queue is empty */
 queue_node_t* queue_deq(queue_t* a) {
   queue_node_t* n;
@@ -53,4 +53,4 @@ queue_node_t* queue_deq(queue_t* a) {
   a->first = n->next;
   a->size = (a->size - 1);
   return (n);
-};
+}

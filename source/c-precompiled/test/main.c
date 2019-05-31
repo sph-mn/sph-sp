@@ -16,7 +16,7 @@ status_t test_base() {
   test_helper_assert("window-blackman 25 51", (sp_sample_nearly_equal(1, (sp_window_blackman(25, 51)), error_margin)));
 exit:
   return (status);
-};
+}
 status_t test_spectral_inversion_ir() {
   status_declare;
   sp_count_t a_len;
@@ -26,7 +26,7 @@ status_t test_spectral_inversion_ir() {
   test_helper_assert("result check", (sp_sample_nearly_equal((-0.1), (a[0]), error_margin) && sp_sample_nearly_equal((0.2), (a[1]), error_margin) && sp_sample_nearly_equal((0.7), (a[2]), error_margin) && sp_sample_nearly_equal((0.2), (a[3]), error_margin) && sp_sample_nearly_equal((-0.1), (a[4]), error_margin)));
 exit:
   return (status);
-};
+}
 status_t test_spectral_reversal_ir() {
   status_declare;
   sp_count_t a_len;
@@ -36,7 +36,7 @@ status_t test_spectral_reversal_ir() {
   test_helper_assert("result check", (sp_sample_nearly_equal((0.1), (a[0]), error_margin) && sp_sample_nearly_equal((0.2), (a[1]), error_margin) && sp_sample_nearly_equal((0.3), (a[2]), error_margin) && sp_sample_nearly_equal((0.2), (a[3]), error_margin) && sp_sample_nearly_equal((0.1), (a[4]), error_margin)));
 exit:
   return (status);
-};
+}
 status_t test_convolve() {
   status_declare;
   sp_sample_t* a;
@@ -100,7 +100,7 @@ status_t test_convolve() {
 exit:
   memreg_free;
   return (status);
-};
+}
 status_t test_moving_average() {
   status_declare;
   sp_count_t radius;
@@ -143,7 +143,7 @@ status_t test_moving_average() {
   test_helper_assert(("moving-average 2.5"), (sp_sample_nearly_equal((1.3), (out[4]), error_margin)));
 exit:
   return (status);
-};
+}
 status_t test_windowed_sinc() {
   status_declare;
   sp_float_t transition;
@@ -176,7 +176,7 @@ status_t test_windowed_sinc() {
   sp_convolution_filter_state_free(state);
 exit:
   return (status);
-};
+}
 status_t test_file() {
   status_declare;
   sp_count_t channel;
@@ -250,7 +250,7 @@ exit:
   sp_block_free(block);
   sp_block_free(block_2);
   return (status);
-};
+}
 status_t test_fft() {
   status_declare;
   sp_sample_t a_real[6] = { -0.6, 0.1, 0.4, 0.8, 0, 0 };
@@ -261,7 +261,7 @@ status_t test_fft() {
   status_id_require((sp_ffti(a_len, a_real, a_imag)));
 exit:
   return (status);
-};
+}
 status_t test_synth() {
   status_declare;
   sp_count_t* state;
@@ -319,7 +319,7 @@ status_t test_synth() {
   sp_block_free(out2);
 exit:
   return (status);
-};
+}
 #define sp_seq_duration 20
 #define sp_seq_half_duration (sp_seq_duration / 2)
 status_t test_sp_seq() {
@@ -351,7 +351,7 @@ status_t test_sp_seq() {
   sp_block_free(out);
 exit:
   return (status);
-};
+}
 /** better test separately as it opens gnuplot windows */
 status_t test_sp_plot() {
   status_declare;
@@ -360,7 +360,7 @@ status_t test_sp_plot() {
   sp_plot_spectrum(a, 9);
 exit:
   return (status);
-};
+}
 status_t test_sp_triangle_square() {
   status_declare;
   sp_count_t i;
@@ -385,7 +385,7 @@ status_t test_sp_triangle_square() {
   free(out_s);
 exit:
   return (status);
-};
+}
 status_t test_sp_random() {
   status_declare;
   sp_random_state_t s;
@@ -396,7 +396,7 @@ status_t test_sp_random() {
   test_helper_assert("last value", (f64_nearly_equal((0.355602), (out[19]), error_margin)));
 exit:
   return (status);
-};
+}
 #define max(a, b) ((a > b) ? a : b)
 #define min(a, b) ((a < b) ? a : b)
 #define sp_noise_duration 96
@@ -429,7 +429,7 @@ status_t test_sp_noise_event() {
   sp_block_free(out);
 exit:
   return (status);
-};
+}
 status_t test_sp_cheap_filter() {
   status_declare;
   sp_cheap_filter_state_t state;
@@ -446,7 +446,7 @@ status_t test_sp_cheap_filter() {
   sp_cheap_filter_state_free((&state));
 exit:
   return (status);
-};
+}
 status_t test_sp_cheap_noise_event() {
   status_declare;
   sp_events_t events;
@@ -473,7 +473,7 @@ status_t test_sp_cheap_noise_event() {
   sp_block_free(out);
 exit:
   return (status);
-};
+}
 int main() {
   status_declare;
   sp_initialise(6);
@@ -495,4 +495,4 @@ int main() {
 exit:
   test_helper_display_summary();
   return ((status.id));
-};
+}

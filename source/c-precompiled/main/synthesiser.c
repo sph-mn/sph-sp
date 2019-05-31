@@ -4,10 +4,10 @@ sp_count_t sp_phase_96(sp_count_t current, sp_count_t change) {
   sp_count_t result;
   result = (current + change);
   return (((96000 <= result) ? (result % 96000) : result));
-};
+}
 /** accumulate an integer phase with change given as a float value.
   change must be a positive value and is rounded to the next larger integer */
-sp_count_t sp_phase_96_float(sp_count_t current, double change) { return ((sp_phase_96(current, (sp_cheap_ceiling_positive(change))))); };
+sp_count_t sp_phase_96_float(sp_count_t current, double change) { return ((sp_phase_96(current, (sp_cheap_ceiling_positive(change))))); }
 /** contains the initial phase offsets per partial and channel
   as a flat array. should be freed with free */
 status_t sp_synth_state_new(sp_count_t channel_count, sp_synth_count_t config_len, sp_synth_partial_t* config, sp_count_t** out_state) {
@@ -22,7 +22,7 @@ status_t sp_synth_state_new(sp_count_t channel_count, sp_synth_count_t config_le
   };
 exit:
   return (status);
-};
+}
 /** create sines that start and end at specific times and can optionally modulate the frequency of others.
   sp-synth output is summed into out.
   amplitude and wavelength can be controlled by arrays separately for each partial and channel.
@@ -112,7 +112,7 @@ status_t sp_synth(sp_block_t out, sp_count_t start, sp_count_t duration, sp_synt
 exit:
   memreg_free;
   return (status);
-};
+}
 #define sp_synth_partial_set_channel(prt, channel, amp_array, wvl_array, phs_array) \
   (prt.amp)[channel] = amp_array; \
   (prt.wvl)[channel] = wvl_array; \
@@ -125,7 +125,7 @@ sp_synth_partial_t sp_synth_partial_1(sp_count_t start, sp_count_t end, sp_synth
   prt.modifies = modifies;
   sp_synth_partial_set_channel(prt, 0, amp, wvl, phs);
   return (prt);
-};
+}
 /** setup a synth partial with two channels */
 sp_synth_partial_t sp_synth_partial_2(sp_count_t start, sp_count_t end, sp_synth_count_t modifies, sp_sample_t* amp1, sp_sample_t* amp2, sp_count_t* wvl1, sp_count_t* wvl2, sp_count_t phs1, sp_count_t phs2) {
   sp_synth_partial_t prt;
@@ -135,16 +135,16 @@ sp_synth_partial_t sp_synth_partial_2(sp_count_t start, sp_count_t end, sp_synth
   sp_synth_partial_set_channel(prt, 0, amp1, wvl1, phs1);
   sp_synth_partial_set_channel(prt, 1, amp2, wvl2, phs2);
   return (prt);
-};
+}
 /** return a sample for a triangular wave with center offsets a left and b right.
    creates sawtooth waves if either a or b is 0 */
 sp_sample_t sp_triangle(sp_count_t t, sp_count_t a, sp_count_t b) {
   sp_count_t remainder;
   remainder = (t % (a + b));
   return (((remainder < a) ? (remainder * (1 / ((sp_sample_t)(a)))) : ((((sp_sample_t)(b)) - (remainder - ((sp_sample_t)(a)))) * (1 / ((sp_sample_t)(b))))));
-};
-sp_sample_t sp_triangle_96(sp_count_t t) { return ((sp_triangle(t, 48000, 48000))); };
-sp_sample_t sp_square_96(sp_count_t t) { return (((((2 * t) % (2 * 96000)) < 96000) ? -1 : 1)); };
+}
+sp_sample_t sp_triangle_96(sp_count_t t) { return ((sp_triangle(t, 48000, 48000))); }
+sp_sample_t sp_square_96(sp_count_t t) { return (((((2 * t) % (2 * 96000)) < 96000) ? -1 : 1)); }
 /** writes a sine wave of size into out. can be used as a lookup table */
 status_t sp_sine_table_new(sp_sample_t** out, sp_count_t size) {
   status_declare;
@@ -157,4 +157,4 @@ status_t sp_sine_table_new(sp_sample_t** out, sp_count_t size) {
   *out = out_array;
 exit:
   return (status);
-};
+}

@@ -8,7 +8,7 @@
 (pre-define
   sph-status #t
   status-id-success 0
-  status-group-undefined ""
+  status-group-undefined (convert-type "" uint8-t*)
   status-declare (define status status-t (struct-literal status-id-success status-group-undefined))
   status-reset (status-set-both status-group-undefined status-id-success)
   status-is-success (= status-id-success status.id)
@@ -18,15 +18,16 @@
   (begin
     "like status declare but with a default group"
     (define status status-t (struct-literal status-id-success group)))
-  (status-set-both group-id status-id) (set status.group group-id status.id status-id)
-  (status-require expression)
+  (status-set-both group-id status-id)
+  (set status.group (convert-type group-id uint8-t*) status.id status-id) (status-require expression)
   (begin
     "update status with the result of expression and goto error on failure"
     (set status expression)
     (if status-is-failure status-goto))
   (status-set-id-goto status-id)
   (begin "set the status id and goto error" (set status.id status-id) status-goto)
-  (status-set-group-goto group-id) (begin (set status.group group-id) status-goto)
+  (status-set-group-goto group-id)
+  (begin (set status.group (convert-type group-id uint8-t*)) status-goto)
   (status-set-both-goto group-id status-id) (begin (status-set-both group-id status-id) status-goto)
   (status-id-require expression)
   (begin

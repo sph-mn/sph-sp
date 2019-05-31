@@ -11,7 +11,7 @@ void sp_plot_samples_to_file(sp_sample_t* a, sp_count_t a_size, uint8_t* path) {
     fprintf(file, ("%.3f\n"), (a[i]));
   };
   fclose(file);
-};
+}
 void sp_plot_counts_to_file(sp_count_t* a, sp_count_t a_size, uint8_t* path) {
   FILE* file;
   sp_count_t i;
@@ -20,7 +20,7 @@ void sp_plot_counts_to_file(sp_count_t* a, sp_count_t a_size, uint8_t* path) {
     fprintf(file, "%lu\n", (a[i]));
   };
   fclose(file);
-};
+}
 void sp_plot_samples_file(uint8_t* path, uint8_t use_steps) {
   uint8_t* command;
   uint8_t* command_pattern;
@@ -34,7 +34,7 @@ void sp_plot_samples_file(uint8_t* path, uint8_t use_steps) {
   snprintf(command, command_size, command_pattern, path);
   system(command);
   free(command);
-};
+}
 void sp_plot_samples(sp_sample_t* a, sp_count_t a_size) {
   uint8_t path_size = (1 + sp_plot_temp_file_index_maxlength + strlen(sp_plot_temp_path));
   uint8_t* path = calloc(path_size, 1);
@@ -46,7 +46,7 @@ void sp_plot_samples(sp_sample_t* a, sp_count_t a_size) {
   sp_plot_samples_to_file(a, a_size, path);
   sp_plot_samples_file(path, 1);
   free(path);
-};
+}
 void sp_plot_counts(sp_count_t* a, sp_count_t a_size) {
   uint8_t path_size = (1 + sp_plot_temp_file_index_maxlength + strlen(sp_plot_temp_path));
   uint8_t* path = calloc(path_size, 1);
@@ -58,7 +58,7 @@ void sp_plot_counts(sp_count_t* a, sp_count_t a_size) {
   sp_plot_counts_to_file(a, a_size, path);
   sp_plot_samples_file(path, 1);
   free(path);
-};
+}
 /** take the fft for given samples, convert complex values to magnitudes and write plot data to file */
 void sp_plot_spectrum_to_file(sp_sample_t* a, sp_count_t a_size, uint8_t* path) {
   FILE* file;
@@ -84,8 +84,8 @@ void sp_plot_spectrum_to_file(sp_sample_t* a, sp_count_t a_size, uint8_t* path) 
   fclose(file);
   free(imag);
   free(real);
-};
-void sp_plot_spectrum_file(uint8_t* path) { sp_plot_samples_file(path, 1); };
+}
+void sp_plot_spectrum_file(uint8_t* path) { sp_plot_samples_file(path, 1); }
 void sp_plot_spectrum(sp_sample_t* a, sp_count_t a_size) {
   uint8_t path_size = (1 + sp_plot_temp_file_index_maxlength + strlen(sp_plot_temp_path));
   uint8_t* path = calloc(path_size, 1);
@@ -97,4 +97,4 @@ void sp_plot_spectrum(sp_sample_t* a, sp_count_t a_size) {
   sp_plot_spectrum_to_file(a, a_size, path);
   sp_plot_spectrum_file(path);
   free(path);
-};
+}

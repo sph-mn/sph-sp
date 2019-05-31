@@ -1,9 +1,10 @@
 /* fine-grain parallelism based on thread-pool.c.
 provides task objects with functions executed in threads that can be waited for to get a result value.
 manages the memory of thread-pool task objects.
-thread-pool.c must be included beforehand */
-/* for usleep */
-#include <unistd.h>
+thread-pool.c must be included beforehand
+to include nanosleep from gcc __USE_POSIX199309 must be defined */
+/* for nanosleep */
+#include <time.h>
 uint8_t sph_futures_pool_is_initialised = 0;
 thread_pool_t sph_futures_pool;
 typedef void* (*future_f_t)(void*);
@@ -27,17 +28,17 @@ int future_init(thread_pool_size_t thread_count) {
     };
     return (status);
   };
-};
+}
 /** internal future worker.
   a->f returns because modifying data likely needs extra type conversions inside a->f.
   thread-pool does not have a finished field by default so that tasks can themselves free
   their object when they finish */
 void future_eval(thread_pool_task_t* task) {
   future_t* a;
-  a = ((future_t*)((((char*)(task)) - offsetof(future_t, task))));
+  a = ((future_t*)((((uint8_t*)(task)) - offsetof(future_t, task))));
   task->data = (a->f)((task->data));
   a->finished = 1;
-};
+}
 /** prepare a future in out and possibly start evaluation in parallel.
   the given function receives data as its sole argument */
 void future_new(future_f_t f, void* data, future_t* out) {
@@ -46,13 +47,14 @@ void future_new(future_f_t f, void* data, future_t* out) {
   out->task.f = future_eval;
   out->task.data = data;
   thread_pool_enqueue((&sph_futures_pool), (&(out->task)));
-};
+}
 /** can be called to stop and free the main thread-pool.
   waits till all active futures are finished */
 void future_deinit() {
   thread_pool_finish((&sph_futures_pool), 0, 0);
   thread_pool_destroy((&sph_futures_pool));
-};
+}
+const struct timespec sleep_time = { 0, 200000000 };
 /** blocks until future is finished and returns its result */
 void* touch(future_t* a) {
 loop:
@@ -60,7 +62,7 @@ loop:
     return ((a->task.data));
   } else {
     /* poll five times per second. maybe condition variables can be used here */
-    usleep(20000);
+    nanosleep((&sleep_time), 0);
     goto loop;
   };
-};
+}

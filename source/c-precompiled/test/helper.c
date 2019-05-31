@@ -32,4 +32,4 @@ void debug_display_sample_array(sp_sample_t* a, sp_count_t len) {
     printf((" %.17g"), (a[i]));
   };
   printf("\n");
-};
+}

@@ -1,4 +1,5 @@
-(pre-include "byteswap.h" "math.h" "inttypes.h" "string.h")
+(pre-define-if-not-defined __USE_POSIX199309)
+(pre-include "byteswap.h" "inttypes.h" "string.h")
 (sc-comment "configuration")
 
 (pre-define-if-not-defined

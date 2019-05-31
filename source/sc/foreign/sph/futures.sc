@@ -1,9 +1,10 @@
 (sc-comment "fine-grain parallelism based on thread-pool.c."
   "provides task objects with functions executed in threads that can be waited for to get a result value."
-  "manages the memory of thread-pool task objects." "thread-pool.c must be included beforehand")
+  "manages the memory of thread-pool task objects." "thread-pool.c must be included beforehand"
+  "to include nanosleep from gcc __USE_POSIX199309 must be defined")
 
-(sc-comment "for usleep")
-(pre-include "unistd.h")
+(sc-comment "for nanosleep")
+(pre-include "time.h")
 (define sph-futures-pool-is-initialised uint8-t #f)
 
 (declare
@@ -30,7 +31,7 @@
   their object when they finish"
   (declare a future-t*)
   (set
-    a (convert-type (- (convert-type task char*) (offsetof future-t task)) future-t*)
+    a (convert-type (- (convert-type task uint8-t*) (offsetof future-t task)) future-t*)
     task:data (a:f task:data)
     a:finished #t))
 
@@ -46,11 +47,13 @@
   (thread-pool-finish &sph-futures-pool 0 0)
   (thread-pool-destroy &sph-futures-pool))
 
+(define sleep-time (const struct timespec) (struct-literal 0 200000000))
+
 (define (touch a) (void* future-t*)
   "blocks until future is finished and returns its result"
   (label loop
     (if a:finished (return a:task.data)
       (begin
         (sc-comment "poll five times per second. maybe condition variables can be used here")
-        (usleep 20000)
+        (nanosleep &sleep-time 0)
         (goto loop)))))

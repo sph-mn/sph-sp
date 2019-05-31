@@ -1,4 +1,5 @@
 /* this file contains basics and includes dependencies */
+#define M_PI 3.141592653589793
 #include <stdio.h>
 #include <fcntl.h>
 #include <sndfile.h>
@@ -45,21 +46,21 @@
       }; \
     }; \
   }
-define_sp_interleave(sp_interleave, sp_sample_t, ({ b[b_size] = (a[channel])[a_size]; }));
-define_sp_interleave(sp_deinterleave, sp_sample_t, ({ (a[channel])[a_size] = b[b_size]; }));
-define_sph_random(sp_random_samples, sp_count_t, sp_sample_t, ((2 * f64_from_u64(result_plus)) - 1.0));
-/** display a sample array in one line */
-void debug_display_sample_array(sp_sample_t* a, sp_count_t len) {
+define_sp_interleave(sp_interleave, sp_sample_t, (b[b_size] = (a[channel])[a_size]))
+  define_sp_interleave(sp_deinterleave, sp_sample_t, ((a[channel])[a_size] = b[b_size]))
+    define_sph_random(sp_random_samples, sp_count_t, sp_sample_t, ((2 * f64_from_u64(result_plus)) - 1.0))
+  /** display a sample array in one line */
+  void debug_display_sample_array(sp_sample_t* a, sp_count_t len) {
   sp_count_t i;
   printf(("%.17g"), (a[0]));
   for (i = 1; (i < len); i = (1 + i)) {
     printf((" %.17g"), (a[i]));
   };
   printf("\n");
-};
+}
 /** get a string description for a status id in a status-t */
 uint8_t* sp_status_description(status_t a) {
-  char* b;
+  uint8_t* b;
   if (!strcmp(sp_status_group_sp, (a.group))) {
     if (sp_status_id_eof == a.id) {
       b = "end of file";
@@ -77,17 +78,17 @@ uint8_t* sp_status_description(status_t a) {
       b = "";
     };
   } else if (!strcmp(sp_status_group_sndfile, (a.group))) {
-    b = ((char*)(sf_error_number((a.id))));
+    b = ((uint8_t*)(sf_error_number((a.id))));
   } else if (!strcmp(sp_status_group_sph, (a.group))) {
     b = sph_helper_status_description(a);
   } else {
     b = "";
   };
   return (b);
-};
+}
 /** get a single word identifier for a status id in a status-t */
 uint8_t* sp_status_name(status_t a) {
-  char* b;
+  uint8_t* b;
   if (0 == strcmp(sp_status_group_sp, (a.group))) {
     if (sp_status_id_input_type == a.id) {
       b = "input-type";
@@ -104,7 +105,7 @@ uint8_t* sp_status_name(status_t a) {
     b = "unknown";
   };
   return (b);
-};
+}
 /** return a newly allocated array for channels with data arrays for each channel */
 status_t sp_block_new(sp_channel_count_t channels, sp_count_t size, sp_block_t* out) {
   status_declare;
@@ -123,13 +124,13 @@ exit:
     memreg_free;
   };
   return (status);
-};
+}
 void sp_block_free(sp_block_t a) {
   sp_count_t i;
   for (i = 0; (i < a.channels); i = (1 + i)) {
     free(((a.samples)[i]));
   };
-};
+}
 /** add offset to the all channel sample arrays in block */
 sp_block_t sp_block_with_offset(sp_block_t a, sp_count_t offset) {
   sp_count_t i;
@@ -137,9 +138,9 @@ sp_block_t sp_block_with_offset(sp_block_t a, sp_count_t offset) {
     (a.samples)[i] = (offset + (a.samples)[i]);
   };
   return (a);
-};
-status_t sp_samples_new(sp_count_t size, sp_sample_t** out) { return ((sph_helper_calloc((size * sizeof(sp_sample_t)), out))); };
-status_t sp_counts_new(sp_count_t size, sp_count_t** out) { return ((sph_helper_calloc((size * sizeof(sp_count_t)), out))); };
+}
+status_t sp_samples_new(sp_count_t size, sp_sample_t** out) { return ((sph_helper_calloc((size * sizeof(sp_sample_t)), out))); }
+status_t sp_counts_new(sp_count_t size, sp_count_t** out) { return ((sph_helper_calloc((size * sizeof(sp_count_t)), out))); }
 /** lower precision version of sin() that should be faster */
 sp_sample_t sp_sin_lq(sp_float_t a) {
   sp_sample_t b;
@@ -147,16 +148,16 @@ sp_sample_t sp_sin_lq(sp_float_t a) {
   b = (4 / M_PI);
   c = (-4 / (M_PI * M_PI));
   return ((((b * a) + (c * a * abs(a)))));
-};
+}
 /** the normalised sinc function */
-sp_float_t sp_sinc(sp_float_t a) { return (((0 == a) ? 1 : (sin((M_PI * a)) / (M_PI * a)))); };
+sp_float_t sp_sinc(sp_float_t a) { return (((0 == a) ? 1 : (sin((M_PI * a)) / (M_PI * a)))); }
 /** all arrays should be input-len and are managed by the caller */
-status_id_t sp_fft(sp_count_t input_len, double* input_or_output_real, double* input_or_output_imag) { return ((!Fft_transform(input_or_output_real, input_or_output_imag, input_len))); };
+status_id_t sp_fft(sp_count_t input_len, double* input_or_output_real, double* input_or_output_imag) { return ((!Fft_transform(input_or_output_real, input_or_output_imag, input_len))); }
 /** [[real, imaginary], ...]:complex-numbers -> real-numbers
   input-length > 0
   output-length = input-length
   output is allocated and owned by the caller */
-status_id_t sp_ffti(sp_count_t input_len, double* input_or_output_real, double* input_or_output_imag) { return ((!(1 == Fft_inverseTransform(input_or_output_real, input_or_output_imag, input_len)))); };
+status_id_t sp_ffti(sp_count_t input_len, double* input_or_output_real, double* input_or_output_imag) { return ((!(1 == Fft_inverseTransform(input_or_output_real, input_or_output_imag, input_len)))); }
 /** apply a centered moving average filter to samples between in-window and in-window-end inclusively and write to out.
    removes high frequencies and smoothes data with little distortion in the time domain but the frequency response has large ripples.
    all memory is managed by the caller.
@@ -197,7 +198,7 @@ status_t sp_moving_average(sp_sample_t* in, sp_sample_t* in_end, sp_sample_t* in
     in_window = (1 + in_window);
   };
   return (status);
-};
+}
 /** modify an impulse response kernel for spectral inversion.
    a-len must be odd and "a" must have left-right symmetry.
   flips the frequency response top to bottom */
@@ -209,7 +210,7 @@ void sp_spectral_inversion_ir(sp_sample_t* a, sp_count_t a_len) {
   };
   center = ((a_len - 1) / 2);
   a[center] = (1 + a[center]);
-};
+}
 /** inverts the sign for samples at odd indexes.
   a-len must be odd and "a" must have left-right symmetry.
   flips the frequency response left to right */
@@ -218,7 +219,7 @@ void sp_spectral_reversal_ir(sp_sample_t* a, sp_count_t a_len) {
     a_len = (a_len - 2);
     a[a_len] = (-1 * a[a_len]);
   };
-};
+}
 /** discrete linear convolution.
   result-samples must be all zeros, its length must be at least a-len + b-len - 1.
   result-samples is owned and allocated by the caller */
@@ -235,7 +236,7 @@ void sp_convolve_one(sp_sample_t* a, sp_count_t a_len, sp_sample_t* b, sp_count_
     b_index = 0;
     a_index = (1 + a_index);
   };
-};
+}
 /** discrete linear convolution for sample arrays, possibly of a continuous stream. maps segments (a, a-len) to result-samples
   using (b, b-len) as the impulse response. b-len must be greater than zero.
   all heap memory is owned and allocated by the caller.
@@ -286,7 +287,7 @@ first process values that dont lead to carryover */
       };
     };
   };
-};
+}
 /** get the maximum value in samples array, disregarding sign */
 sp_sample_t sp_samples_absolute_max(sp_sample_t* in, sp_count_t in_size) {
   sp_sample_t result;
@@ -299,7 +300,7 @@ sp_sample_t sp_samples_absolute_max(sp_sample_t* in, sp_count_t in_size) {
     };
   };
   return (result);
-};
+}
 /** adjust amplitude of out to match the one of in */
 void sp_set_unity_gain(sp_sample_t* in, sp_count_t in_size, sp_sample_t* out) {
   sp_count_t i;
@@ -317,7 +318,7 @@ void sp_set_unity_gain(sp_sample_t* in, sp_count_t in_size, sp_sample_t* out) {
   for (i = 0; (i < in_size); i = (1 + i)) {
     out[i] = (correction * out[i]);
   };
-};
+}
 #include "../main/io.c"
 #include "../main/plot.c"
 #include "../main/filter.c"
@@ -334,4 +335,4 @@ status_t sp_initialise(uint16_t cpu_count) {
   };
   sp_default_random_state = sp_random_state_new(1557083953);
   return ((sp_sine_table_new((&sp_sine_96_table), 96000)));
-};
+}

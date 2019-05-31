@@ -14,5 +14,5 @@ sph_random_state_t sph_random_state_new(u64 seed) {
     (result.data)[i] = (z ^ (z >> 31));
   };
   return (result);
-};
-define_sph_random(sph_random, u32, f64, (f64_from_u64(result_plus)));
+}
+define_sph_random(sph_random, u32, f64, (f64_from_u64(result_plus)))

@@ -3,9 +3,9 @@ void sp_event_sort_swap(void* a, ssize_t b, ssize_t c) {
   d = ((sp_event_t*)(a))[b];
   ((sp_event_t*)(a))[b] = ((sp_event_t*)(a))[c];
   ((sp_event_t*)(a))[c] = d;
-};
-uint8_t sp_event_sort_less_p(void* a, ssize_t b, ssize_t c) { return (((((sp_event_t*)(a))[b]).start < (((sp_event_t*)(a))[c]).start)); };
-void sp_seq_events_prepare(sp_events_t a) { quicksort(sp_event_sort_less_p, sp_event_sort_swap, (a.data), 0, (a.size - 1)); };
+}
+uint8_t sp_event_sort_less_p(void* a, ssize_t b, ssize_t c) { return (((((sp_event_t*)(a))[b]).start < (((sp_event_t*)(a))[c]).start)); }
+void sp_seq_events_prepare(sp_events_t a) { quicksort(sp_event_sort_less_p, sp_event_sort_swap, (a.data), 0, (a.size - 1)); }
 /** event arrays must have been prepared/sorted with sp-seq-event-prepare for seq to work correctly */
 void sp_seq(sp_count_t start, sp_count_t end, sp_block_t out, sp_events_t events) {
   sp_count_t e_out_start;
@@ -26,13 +26,13 @@ void sp_seq(sp_count_t start, sp_count_t end, sp_block_t out, sp_events_t events
       (e.f)(e_start, e_end, (e_out_start ? sp_block_with_offset(out, e_out_start) : out), (&e));
     };
   };
-};
+}
 void sp_events_free(sp_events_t events) {
   sp_count_t i;
   for (i = 0; (i < events.size); i = (1 + i)) {
     (events.data + i)->free;
   };
-};
+}
 typedef struct {
   sp_count_t start;
   sp_count_t end;
@@ -44,7 +44,7 @@ typedef struct {
 void* sp_seq_parallel_future_f(void* data) {
   sp_seq_future_t* a = data;
   (a->event->f)((a->start), (a->end), (a->out), (a->event));
-};
+}
 /** like sp_seq but evaluates events in parallel */
 status_t sp_seq_parallel(sp_count_t start, sp_count_t end, sp_block_t out, sp_events_t events) {
   status_declare;
@@ -100,15 +100,15 @@ status_t sp_seq_parallel(sp_count_t start, sp_count_t end, sp_block_t out, sp_ev
 exit:
   free(seq_futures);
   return (status);
-};
+}
 void sp_synth_event_free(sp_event_t* a) {
   free((((sp_synth_event_state_t*)(a->state))->state));
   free((a->state));
-};
+}
 void sp_synth_event_f(sp_count_t start, sp_count_t end, sp_block_t out, sp_event_t* event) {
   sp_synth_event_state_t* s = event->state;
   sp_synth(out, start, (end - start), (s->config_len), (s->config), (s->state));
-};
+}
 /** memory for event.state will be allocated and then owned by the caller.
   config is copied into event.state */
 status_t sp_synth_event(sp_count_t start, sp_count_t end, sp_count_t channel_count, sp_count_t config_len, sp_synth_partial_t* config, sp_event_t* out_event) {
@@ -131,7 +131,7 @@ exit:
     free(state);
   };
   return (status);
-};
+}
 typedef struct {
   sp_sample_t** amp;
   sp_sample_t* cut_h;
@@ -173,14 +173,14 @@ void sp_noise_event_f(sp_count_t start, sp_count_t end, sp_block_t out, sp_event
       };
     };
   };
-};
+}
 void sp_noise_event_free(sp_event_t* a) {
   sp_noise_event_state_t* s = a->state;
   free((s->noise));
   free((s->temp));
   sp_convolution_filter_state_free((s->filter_state));
   free((a->state));
-};
+}
 /** an event for noise filtered by a windowed-sinc filter.
   very processing intensive when parameters change with low resolution.
   memory for event.state will be allocated and then owned by the caller */
@@ -222,7 +222,7 @@ an added benefit is that the filter-state setup malloc is checked */
   *out_event = e;
 exit:
   return (status);
-};
+}
 typedef struct {
   sp_sample_t** amp;
   sp_sample_t* cut;
@@ -263,14 +263,14 @@ void sp_cheap_noise_event_f(sp_count_t start, sp_count_t end, sp_block_t out, sp
       };
     };
   };
-};
+}
 void sp_cheap_noise_event_free(sp_event_t* a) {
   sp_cheap_noise_event_state_t* s = a->state;
   free((s->noise));
   free((s->temp));
   sp_cheap_filter_state_free((&(s->filter_state)));
   free((a->state));
-};
+}
 /** an event for noise filtered by a state-variable filter. multiple passes currently not implemented.
   lower processing costs even when parameters change with high resolution.
   multiple passes almost multiply performance costs.
@@ -299,4 +299,4 @@ status_t sp_cheap_noise_event(sp_count_t start, sp_count_t end, sp_sample_t** am
   *out_event = e;
 exit:
   return (status);
-};
+}

@@ -14,4 +14,4 @@
       (array-get result.data i) (bit-xor z (bit-shift-right z 31))))
   (return result))
 
-(define-sph-random sph-random u32 f64 (f64-from-u64 result-plus))
+(sc-no-semicolon (define-sph-random sph-random u32 f64 (f64-from-u64 result-plus)))

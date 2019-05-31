@@ -1,4 +1,5 @@
 (sc-comment "this file contains basics and includes dependencies")
+(pre-define M_PI 3.141592653589793)
 
 (pre-include "stdio.h" "fcntl.h"
   "sndfile.h" "foreign/nayuki-fft/fft.c" "../main/sph-sp.h"
@@ -28,12 +29,14 @@
         (while channel (set channel (- channel 1) b-size (- b-size 1)) body)))))
 
 (define-sp-interleave sp-interleave sp-sample-t
-  (compound-statement (set (array-get b b-size) (array-get (array-get a channel) a-size))))
+  (set (array-get b b-size) (array-get (array-get a channel) a-size)))
 
 (define-sp-interleave sp-deinterleave sp-sample-t
-  (compound-statement (set (array-get (array-get a channel) a-size) (array-get b b-size))))
+  (set (array-get (array-get a channel) a-size) (array-get b b-size)))
 
-(define-sph-random sp-random-samples sp-count-t sp-sample-t (- (* 2 (f64-from-u64 result-plus)) 1.0))
+(sc-no-semicolon
+  (define-sph-random sp-random-samples sp-count-t
+    sp-sample-t (- (* 2 (f64-from-u64 result-plus)) 1.0)))
 
 (define (debug-display-sample-array a len) (void sp-sample-t* sp-count-t)
   "display a sample array in one line"
@@ -44,7 +47,7 @@
 
 (define (sp-status-description a) (uint8-t* status-t)
   "get a string description for a status id in a status-t"
-  (declare b char*)
+  (declare b uint8-t*)
   (cond
     ( (not (strcmp sp-status-group-sp a.group))
       (case = a.id
@@ -57,14 +60,14 @@
         (sp-status-id-file-incomplete (set b "incomplete write"))
         (else (set b ""))))
     ( (not (strcmp sp-status-group-sndfile a.group))
-      (set b (convert-type (sf-error-number a.id) char*)))
+      (set b (convert-type (sf-error-number a.id) uint8-t*)))
     ((not (strcmp sp-status-group-sph a.group)) (set b (sph-helper-status-description a)))
     (else (set b "")))
   (return b))
 
 (define (sp-status-name a) (uint8-t* status-t)
   "get a single word identifier for a status id in a status-t"
-  (declare b char*)
+  (declare b uint8-t*)
   (cond
     ( (= 0 (strcmp sp-status-group-sp a.group))
       (case = a.id

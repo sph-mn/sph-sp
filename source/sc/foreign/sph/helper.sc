@@ -2,7 +2,7 @@
 (pre-include "stdlib.h" "inttypes.h" "stdio.h")
 
 (pre-define
-  sph-helper-status-group "sph"
+  sph-helper-status-group (convert-type "sph" uint8-t*)
   (sph-helper-malloc size result)
   (begin
     "add explicit type cast to prevent compiler warning"
@@ -15,13 +15,13 @@
 (enum (sph-helper-status-id-memory))
 
 (define (sph-helper-status-description a) (uint8-t* status-t)
-  (declare b char*)
+  (declare b uint8-t*)
   (case = a.id
     (sph-helper-status-id-memory (set b "not enough memory or other memory allocation error"))
     (else (set b ""))))
 
 (define (sph-helper-status-name a) (uint8-t* status-t)
-  (declare b char*)
+  (declare b uint8-t*)
   (case = a.id (sph-helper-status-id-memory (set b "memory")) (else (set b "unknown"))))
 
 (define (sph-helper-primitive-malloc size result) (status-t size-t void**)

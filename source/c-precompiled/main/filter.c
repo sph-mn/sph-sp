@@ -9,7 +9,7 @@ void sp_convolution_filter_state_free(sp_convolution_filter_state_t* state) {
   free((state->carryover));
   free((state->ir_f_arguments));
   free(state);
-};
+}
 /** create or update a previously created state object.
   impulse response array properties are calculated with ir-f using ir-f-arguments.
   eventually frees state.ir.
@@ -82,7 +82,7 @@ exit:
     memreg_free;
   };
   return (status);
-};
+}
 /** convolute samples "in", which can be a segment of a continuous stream, with an impulse response
   kernel created by ir-f with ir-f-arguments. can be used for many types of convolution with dynamic impulse response.
   ir-f is only used when ir-f-arguments changed.
@@ -99,8 +99,8 @@ status_t sp_convolution_filter(sp_sample_t* in, sp_count_t in_len, sp_convolutio
   sp_convolve(in, in_len, ((*out_state)->ir), ((*out_state)->ir_len), carryover_len, ((*out_state)->carryover), out_samples);
 exit:
   return (status);
-};
-sp_float_t sp_window_blackman(sp_float_t a, sp_count_t width) { return (((0.42 - (0.5 * cos(((2 * M_PI * a) / (width - 1))))) + (0.08 * cos(((4 * M_PI * a) / (width - 1)))))); };
+}
+sp_float_t sp_window_blackman(sp_float_t a, sp_count_t width) { return (((0.42 - (0.5 * cos(((2 * M_PI * a) / (width - 1))))) + (0.08 * cos(((4 * M_PI * a) / (width - 1)))))); }
 /** approximate impulse response length for a transition factor and
   ensure that the length is odd */
 sp_count_t sp_windowed_sinc_lp_hp_ir_length(sp_float_t transition) {
@@ -110,11 +110,11 @@ sp_count_t sp_windowed_sinc_lp_hp_ir_length(sp_float_t transition) {
     a = (1 + a);
   };
   return (a);
-};
+}
 status_t sp_null_ir(sp_sample_t** out_ir, sp_count_t* out_len) {
   *out_len = 1;
   return ((sph_helper_calloc((sizeof(sp_sample_t)), out_ir)));
-};
+}
 status_t sp_passthrough_ir(sp_sample_t** out_ir, sp_count_t* out_len) {
   status_declare;
   status_require((sph_helper_malloc((sizeof(sp_sample_t)), out_ir)));
@@ -122,7 +122,7 @@ status_t sp_passthrough_ir(sp_sample_t** out_ir, sp_count_t* out_len) {
   *out_len = 1;
 exit:
   return (status);
-};
+}
 /** create an impulse response kernel for a windowed sinc low-pass or high-pass filter.
   uses a truncated blackman window.
   allocates out-ir, sets out-len.
@@ -154,7 +154,7 @@ nan can be set here if the freq and transition values are invalid */
   *out_len = len;
 exit:
   return (status);
-};
+}
 /** like sp-windowed-sinc-ir-lp but for a band-pass or band-reject filter.
   optimisation: if one cutoff is at or above maximum then create only either low-pass or high-pass */
 status_t sp_windowed_sinc_bp_br_ir(sp_float_t cutoff_l, sp_float_t cutoff_h, sp_float_t transition_l, sp_float_t transition_h, boolean is_reject, sp_sample_t** out_ir, sp_count_t* out_len) {
@@ -224,7 +224,7 @@ status_t sp_windowed_sinc_bp_br_ir(sp_float_t cutoff_l, sp_float_t cutoff_h, sp_
   };
 exit:
   return (status);
-};
+}
 /** maps arguments from the generic ir-f-arguments array.
   arguments is (sp-float-t:cutoff sp-float-t:transition boolean:is-high-pass) */
 status_t sp_windowed_sinc_lp_hp_ir_f(void* arguments, sp_sample_t** out_ir, sp_count_t* out_len) {
@@ -235,7 +235,7 @@ status_t sp_windowed_sinc_lp_hp_ir_f(void* arguments, sp_sample_t** out_ir, sp_c
   transition = *(1 + ((sp_float_t*)(arguments)));
   is_high_pass = *((boolean*)((2 + ((sp_float_t*)(arguments)))));
   return ((sp_windowed_sinc_lp_hp_ir(cutoff, transition, is_high_pass, out_ir, out_len)));
-};
+}
 /** maps arguments from the generic ir-f-arguments array.
   arguments is (sp-float-t:cutoff-l sp-float-t:cutoff-h sp-float-t:transition boolean:is-reject) */
 status_t sp_windowed_sinc_bp_br_ir_f(void* arguments, sp_sample_t** out_ir, sp_count_t* out_len) {
@@ -250,7 +250,7 @@ status_t sp_windowed_sinc_bp_br_ir_f(void* arguments, sp_sample_t** out_ir, sp_c
   transition_h = *(3 + ((sp_float_t*)(arguments)));
   is_reject = *((boolean*)((4 + ((sp_float_t*)(arguments)))));
   return ((sp_windowed_sinc_bp_br_ir(cutoff_l, cutoff_h, transition_l, transition_h, is_reject, out_ir, out_len)));
-};
+}
 /** a windowed sinc low-pass or high-pass filter for segments of continuous streams with
   variable sample-rate, frequency, transition and impulse response type per call.
   * cutoff: as a fraction of the sample rate, 0..0.5
@@ -271,7 +271,7 @@ status_t sp_windowed_sinc_lp_hp(sp_sample_t* in, sp_count_t in_len, sp_float_t c
   status_require((sp_convolution_filter(in, in_len, sp_windowed_sinc_lp_hp_ir_f, a, a_len, out_state, out_samples)));
 exit:
   return (status);
-};
+}
 /** like sp-windowed-sinc-lp-hp but for a band-pass or band-reject filter */
 status_t sp_windowed_sinc_bp_br(sp_sample_t* in, sp_count_t in_len, sp_float_t cutoff_l, sp_float_t cutoff_h, sp_float_t transition_l, sp_float_t transition_h, boolean is_reject, sp_convolution_filter_state_t** out_state, sp_sample_t* out_samples) {
   status_declare;
@@ -288,7 +288,7 @@ status_t sp_windowed_sinc_bp_br(sp_sample_t* in, sp_count_t in_len, sp_float_t c
   status_require((sp_convolution_filter(in, in_len, sp_windowed_sinc_bp_br_ir_f, a, a_len, out_state, out_samples)));
 exit:
   return (status);
-};
+}
 /** samples real real pair [integer integer integer] -> state
     define a routine for a fast filter that supports multiple filter types in one.
     state must hold two elements and is to be allocated and owned by the caller.
@@ -325,15 +325,15 @@ exit:
     state[0] = ic1eq; \
     state[1] = ic2eq; \
   }
-define_sp_state_variable_filter(lp, v2);
-define_sp_state_variable_filter(hp, (v0 - (k * v1) - v2));
-define_sp_state_variable_filter(bp, v1);
-define_sp_state_variable_filter(br, (v0 - (k * v1)));
-define_sp_state_variable_filter(peak, (((2 * v2) - v0) + (k * v1)));
-define_sp_state_variable_filter(all, (v0 - (2 * k * v1)));
-/** the sph-sp default precise filter. processing intensive if parameters are change frequently.
+define_sp_state_variable_filter(lp, v2)
+  define_sp_state_variable_filter(hp, (v0 - (k * v1) - v2))
+    define_sp_state_variable_filter(bp, v1)
+      define_sp_state_variable_filter(br, (v0 - (k * v1)))
+        define_sp_state_variable_filter(peak, (((2 * v2) - v0) + (k * v1)))
+          define_sp_state_variable_filter(all, (v0 - (2 * k * v1)))
+  /** the sph-sp default precise filter. processing intensive if parameters are change frequently.
   memory for out-state will be allocated and has to be freed with sp-filter-state-free */
-status_t sp_filter(sp_sample_t* in, sp_count_t in_size, sp_float_t cutoff_l, sp_float_t cutoff_h, sp_float_t transition_l, sp_float_t transition_h, boolean is_reject, sp_filter_state_t** out_state, sp_sample_t* out_samples) { sp_windowed_sinc_bp_br(in, in_size, cutoff_l, cutoff_h, transition_l, transition_h, is_reject, out_state, out_samples); };
+  status_t sp_filter(sp_sample_t* in, sp_count_t in_size, sp_float_t cutoff_l, sp_float_t cutoff_h, sp_float_t transition_l, sp_float_t transition_h, boolean is_reject, sp_filter_state_t** out_state, sp_sample_t* out_samples) { sp_windowed_sinc_bp_br(in, in_size, cutoff_l, cutoff_h, transition_l, transition_h, is_reject, out_state, out_samples); }
 status_t sp_cheap_filter_state_new(sp_count_t max_size, sp_count_t max_passes, sp_cheap_filter_state_t* out_state) {
   /* allocates and prepares memory and checks if max-passes doesnt exceed the limit
 heap memory is to be freed with sp-cheap-filter-state-free but only allocated if max-passes is greater than one */
@@ -356,11 +356,11 @@ exit:
     free(in_temp);
   };
   return (status);
-};
+}
 void sp_cheap_filter_state_free(sp_cheap_filter_state_t* a) {
   free((a->in_temp));
   free((a->out_temp));
-};
+}
 /** the sph-sp default fast filter. caller has to manage the state object with sp-cheap-filter-state-new sp-cheap-filter-state-free */
 void sp_cheap_filter(sp_state_variable_filter_t type, sp_sample_t* in, sp_count_t in_size, sp_float_t cutoff, sp_count_t passes, sp_float_t q_factor, uint8_t unity_gain, sp_cheap_filter_state_t* state, sp_sample_t* out) {
   status_declare;
@@ -394,4 +394,4 @@ void sp_cheap_filter(sp_state_variable_filter_t type, sp_sample_t* in, sp_count_
   if (unity_gain) {
     sp_set_unity_gain(in, in_size, out);
   };
-};
+}

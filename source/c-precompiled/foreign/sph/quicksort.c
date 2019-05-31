@@ -30,4 +30,4 @@ void quicksort(uint8_t (*less_p)(void*, ssize_t, ssize_t), void (*swap)(void*, s
   };
   quicksort(less_p, swap, array, left, r);
   quicksort(less_p, swap, array, l, right);
-};
+}

@@ -7,7 +7,7 @@ status_t sp_file_close(sp_file_t* file) {
     file->flags = (sp_file_bit_closed | file->flags);
   };
   return (status);
-};
+}
 status_t sp_file_open(uint8_t* path, int mode, sp_channel_count_t channel_count, sp_sample_rate_t sample_rate, sp_file_t* result_file) {
   status_declare;
   SF_INFO info;
@@ -45,7 +45,7 @@ status_t sp_file_open(uint8_t* path, int mode, sp_channel_count_t channel_count,
   result_file->data = file;
 exit:
   return (status);
-};
+}
 /** failure status if not all samples could be written (sp-status-id-file-incomplete) */
 status_t sp_file_write(sp_file_t* file, sp_sample_t** channel_data, sp_count_t sample_count, sp_count_t* result_sample_count) {
   status_declare;
@@ -69,7 +69,7 @@ status_t sp_file_write(sp_file_t* file, sp_sample_t** channel_data, sp_count_t s
 exit:
   memreg_free;
   return (status);
-};
+}
 /** failure status only if no results read (sp-status-id-eof) */
 status_t sp_file_read(sp_file_t* file, sp_count_t sample_count, sp_sample_t** result_channel_data, sp_count_t* result_sample_count) {
   status_declare;
@@ -92,7 +92,7 @@ status_t sp_file_read(sp_file_t* file, sp_count_t sample_count, sp_sample_t** re
 exit:
   memreg_free;
   return (status);
-};
+}
 /** seeks are defined in number of (multichannel) frames.
   therefore, a seek in a stereo file from the current position forward with an offset of 1 would skip forward by one sample of both channels */
 status_t sp_file_position_set(sp_file_t* file, sp_count_t a) {
@@ -106,7 +106,7 @@ status_t sp_file_position_set(sp_file_t* file, sp_count_t a) {
   };
 exit:
   return (status);
-};
+}
 status_t sp_file_position(sp_file_t* file, sp_count_t* result_position) {
   status_declare;
   SNDFILE* snd_file;
@@ -119,7 +119,7 @@ status_t sp_file_position(sp_file_t* file, sp_count_t* result_position) {
   *result_position = count;
 exit:
   return (status);
-};
-boolean sp_file_input_p(sp_file_t* a) { return ((sp_file_bit_input & a->flags)); };
-boolean sp_file_output_p(sp_file_t* a) { return ((sp_file_bit_output & a->flags)); };
-boolean sp_file_input_output_p(sp_file_t* a) { return (((sp_file_bit_input & a->flags) && (sp_file_bit_output & a->flags))); };
+}
+boolean sp_file_input_p(sp_file_t* a) { return ((sp_file_bit_input & a->flags)); }
+boolean sp_file_output_p(sp_file_t* a) { return ((sp_file_bit_output & a->flags)); }
+boolean sp_file_input_output_p(sp_file_t* a) { return (((sp_file_bit_input & a->flags) && (sp_file_bit_output & a->flags))); }
