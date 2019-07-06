@@ -1,7 +1,6 @@
 (sc-comment "fine-grain parallelism based on thread-pool.c."
   "provides task objects with functions executed in threads that can be waited for to get a result value."
-  "manages the memory of thread-pool task objects." "thread-pool.c must be included beforehand"
-  "to include nanosleep from gcc __USE_POSIX199309 must be defined")
+  "manages the memory of thread-pool task objects." "thread-pool.c must be included beforehand")
 
 (sc-comment "for nanosleep")
 (pre-include "time.h")
@@ -54,6 +53,7 @@
   (label loop
     (if a:finished (return a:task.data)
       (begin
-        (sc-comment "poll five times per second. maybe condition variables can be used here")
+        (sc-comment
+          "poll several times per second. maybe using condition variables would be more efficient")
         (nanosleep &sleep-time 0)
         (goto loop)))))

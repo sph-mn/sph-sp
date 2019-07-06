@@ -1,15 +1,15 @@
-status_t sp_file_close(sp_file_t* file) {
-  status_declare;
-  status.id = sf_close(((SNDFILE*)(file->data)));
-  if (status_is_success) {
-    status.group = sp_status_group_sndfile;
+s_t sp_file_close(sp_file_t* file) {
+  s_declare;
+  s_current.id = sf_close(((SNDFILE*)(file->data)));
+  if (s_is_success) {
+    s_current.group = sp_s_group_sndfile;
   } else {
     file->flags = (sp_file_bit_closed | file->flags);
   };
-  return (status);
+  s_return;
 }
-status_t sp_file_open(uint8_t* path, int mode, sp_channel_count_t channel_count, sp_sample_rate_t sample_rate, sp_file_t* result_file) {
-  status_declare;
+s_t sp_file_open(uint8_t* path, int mode, sp_channels_t channel_count, sp_sample_rate_t sample_rate, sp_file_t* result_file) {
+  s_declare;
   SF_INFO info;
   SNDFILE* file;
   int sf_mode;
@@ -33,92 +33,92 @@ status_t sp_file_open(uint8_t* path, int mode, sp_channel_count_t channel_count,
     info.channels = channel_count;
     info.samplerate = sample_rate;
   } else {
-    status_set_both_goto(sp_status_group_sp, sp_status_id_file_type);
+    s_set_goto(sp_s_group_sp, sp_s_id_file_type);
   };
   file = sf_open(path, sf_mode, (&info));
   if (!file) {
-    status_set_both_goto(sp_status_group_sndfile, (sf_error(file)));
+    s_set_goto(sp_s_group_sndfile, (sf_error(file)));
   };
   result_file->flags = (info.seekable ? (sp_file_bit_position | flags) : flags);
   result_file->channel_count = info.channels;
   result_file->sample_rate = info.samplerate;
   result_file->data = file;
 exit:
-  return (status);
+  s_return;
 }
-/** failure status if not all samples could be written (sp-status-id-file-incomplete) */
-status_t sp_file_write(sp_file_t* file, sp_sample_t** channel_data, sp_count_t sample_count, sp_count_t* result_sample_count) {
-  status_declare;
-  sp_channel_count_t channel_count;
+/** failure status if not all samples could be written (sp-s-id-file-incomplete) */
+s_t sp_file_write(sp_file_t* file, sp_sample_t** channel_data, sp_time_t sample_count, sp_time_t* result_sample_count) {
+  s_declare;
+  sp_channels_t channel_count;
   SNDFILE* snd_file;
   sp_sample_t* interleaved;
-  sp_count_t interleaved_size;
+  sp_time_t interleaved_size;
   sf_count_t frames_count;
   memreg_init(1);
   channel_count = file->channel_count;
   snd_file = file->data;
   interleaved_size = (channel_count * sample_count * sizeof(sp_sample_t));
-  status_require((sph_helper_malloc(interleaved_size, (&interleaved))));
+  s((sph_helper_malloc(interleaved_size, (&interleaved))));
   memreg_add(interleaved);
   sp_interleave(channel_data, interleaved, sample_count, channel_count);
   frames_count = sp_sf_write(snd_file, interleaved, sample_count);
   if (!(sample_count == frames_count)) {
-    status_set_both(sp_status_group_sp, sp_status_id_file_incomplete);
+    s_set(sp_s_group_sp, sp_s_id_file_incomplete);
   };
   *result_sample_count = frames_count;
 exit:
   memreg_free;
-  return (status);
+  s_return;
 }
-/** failure status only if no results read (sp-status-id-eof) */
-status_t sp_file_read(sp_file_t* file, sp_count_t sample_count, sp_sample_t** result_channel_data, sp_count_t* result_sample_count) {
-  status_declare;
-  sp_channel_count_t channel_count;
-  sp_count_t interleaved_size;
+/** failure status only if no results read (sp-s-id-eof) */
+s_t sp_file_read(sp_file_t* file, sp_time_t sample_count, sp_sample_t** result_channel_data, sp_time_t* result_sample_count) {
+  s_declare;
+  sp_channels_t channel_count;
+  sp_time_t interleaved_size;
   sp_sample_t* interleaved;
   sf_count_t frames_count;
   memreg_init(1);
   channel_count = file->channel_count;
   interleaved_size = (channel_count * sample_count * sizeof(sp_sample_t));
-  status_require((sph_helper_malloc(interleaved_size, (&interleaved))));
+  s((sph_helper_malloc(interleaved_size, (&interleaved))));
   memreg_add(interleaved);
   frames_count = sp_sf_read(((SNDFILE*)(file->data)), interleaved, sample_count);
   if (frames_count) {
     sp_deinterleave(result_channel_data, interleaved, frames_count, channel_count);
   } else {
-    status_set_both(sp_status_group_sp, sp_status_id_eof);
+    s_set(sp_s_group_sp, sp_s_id_eof);
   };
   *result_sample_count = frames_count;
 exit:
   memreg_free;
-  return (status);
+  s_return;
 }
 /** seeks are defined in number of (multichannel) frames.
   therefore, a seek in a stereo file from the current position forward with an offset of 1 would skip forward by one sample of both channels */
-status_t sp_file_position_set(sp_file_t* file, sp_count_t a) {
-  status_declare;
+s_t sp_file_position_set(sp_file_t* file, sp_time_t a) {
+  s_declare;
   SNDFILE* snd_file;
   sf_count_t count;
   snd_file = file->data;
   count = sf_seek(snd_file, a, SEEK_SET);
   if (count == -1) {
-    status_set_both_goto(sp_status_group_sndfile, (sf_error(snd_file)));
+    s_set_goto(sp_s_group_sndfile, (sf_error(snd_file)));
   };
 exit:
-  return (status);
+  s_return;
 }
-status_t sp_file_position(sp_file_t* file, sp_count_t* result_position) {
-  status_declare;
+s_t sp_file_position(sp_file_t* file, sp_time_t* result_position) {
+  s_declare;
   SNDFILE* snd_file;
   sf_count_t count;
   snd_file = file->data;
   count = sf_seek(snd_file, 0, SEEK_CUR);
   if (count == -1) {
-    status_set_both_goto(sp_status_group_sndfile, (sf_error(snd_file)));
+    s_set_goto(sp_s_group_sndfile, (sf_error(snd_file)));
   };
   *result_position = count;
 exit:
-  return (status);
+  s_return;
 }
 boolean sp_file_input_p(sp_file_t* a) { return ((sp_file_bit_input & a->flags)); }
 boolean sp_file_output_p(sp_file_t* a) { return ((sp_file_bit_output & a->flags)); }

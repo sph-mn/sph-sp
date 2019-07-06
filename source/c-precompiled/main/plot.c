@@ -3,18 +3,18 @@ uint32_t sp_plot_temp_file_index = 0;
 #define sp_plot_temp_file_index_maxlength 10
 #define sp_plot_command_pattern_lines "gnuplot --persist -e 'set key off; set size ratio 0.5; plot \"%s\" with lines lc rgb \"blue\"'"
 #define sp_plot_command_pattern_steps "gnuplot --persist -e 'set key off; set size ratio 0.5; plot \"%s\" with histeps lc rgb \"blue\"'"
-void sp_plot_samples_to_file(sp_sample_t* a, sp_count_t a_size, uint8_t* path) {
+void sp_plot_samples_to_file(sp_sample_t* a, sp_time_t a_size, uint8_t* path) {
   FILE* file;
-  sp_count_t i;
+  sp_time_t i;
   file = fopen(path, "w");
   for (i = 0; (i < a_size); i = (1 + i)) {
     fprintf(file, ("%.3f\n"), (a[i]));
   };
   fclose(file);
 }
-void sp_plot_counts_to_file(sp_count_t* a, sp_count_t a_size, uint8_t* path) {
+void sp_plot_counts_to_file(sp_time_t* a, sp_time_t a_size, uint8_t* path) {
   FILE* file;
-  sp_count_t i;
+  sp_time_t i;
   file = fopen(path, "w");
   for (i = 0; (i < a_size); i = (1 + i)) {
     fprintf(file, "%lu\n", (a[i]));
@@ -35,7 +35,7 @@ void sp_plot_samples_file(uint8_t* path, uint8_t use_steps) {
   system(command);
   free(command);
 }
-void sp_plot_samples(sp_sample_t* a, sp_count_t a_size) {
+void sp_plot_samples(sp_sample_t* a, sp_time_t a_size) {
   uint8_t path_size = (1 + sp_plot_temp_file_index_maxlength + strlen(sp_plot_temp_path));
   uint8_t* path = calloc(path_size, 1);
   if (!path) {
@@ -47,7 +47,7 @@ void sp_plot_samples(sp_sample_t* a, sp_count_t a_size) {
   sp_plot_samples_file(path, 1);
   free(path);
 }
-void sp_plot_counts(sp_count_t* a, sp_count_t a_size) {
+void sp_plot_counts(sp_time_t* a, sp_time_t a_size) {
   uint8_t path_size = (1 + sp_plot_temp_file_index_maxlength + strlen(sp_plot_temp_path));
   uint8_t* path = calloc(path_size, 1);
   if (!path) {
@@ -60,9 +60,9 @@ void sp_plot_counts(sp_count_t* a, sp_count_t a_size) {
   free(path);
 }
 /** take the fft for given samples, convert complex values to magnitudes and write plot data to file */
-void sp_plot_spectrum_to_file(sp_sample_t* a, sp_count_t a_size, uint8_t* path) {
+void sp_plot_spectrum_to_file(sp_sample_t* a, sp_time_t a_size, uint8_t* path) {
   FILE* file;
-  sp_count_t i;
+  sp_time_t i;
   double* imag;
   double* real;
   imag = calloc(a_size, (sizeof(sp_sample_t)));
@@ -86,7 +86,7 @@ void sp_plot_spectrum_to_file(sp_sample_t* a, sp_count_t a_size, uint8_t* path) 
   free(real);
 }
 void sp_plot_spectrum_file(uint8_t* path) { sp_plot_samples_file(path, 1); }
-void sp_plot_spectrum(sp_sample_t* a, sp_count_t a_size) {
+void sp_plot_spectrum(sp_sample_t* a, sp_time_t a_size) {
   uint8_t path_size = (1 + sp_plot_temp_file_index_maxlength + strlen(sp_plot_temp_path));
   uint8_t* path = calloc(path_size, 1);
   if (!path) {

@@ -14,47 +14,47 @@
 
 (enum (sph-helper-status-id-memory))
 
-(define (sph-helper-status-description a) (uint8-t* status-t)
+(define (sph-helper-status-description a) (uint8-t* s-t)
   (declare b uint8-t*)
   (case = a.id
     (sph-helper-status-id-memory (set b "not enough memory or other memory allocation error"))
     (else (set b ""))))
 
-(define (sph-helper-status-name a) (uint8-t* status-t)
+(define (sph-helper-status-name a) (uint8-t* s-t)
   (declare b uint8-t*)
   (case = a.id (sph-helper-status-id-memory (set b "memory")) (else (set b "unknown"))))
 
-(define (sph-helper-primitive-malloc size result) (status-t size-t void**)
-  status-declare
+(define (sph-helper-primitive-malloc size result) (s-t size-t void**)
+  s-declare
   (declare a void*)
   (set a (malloc size))
   (if a (set *result a)
-    (set status.group sph-helper-status-group status.id sph-helper-status-id-memory))
-  (return status))
+    (set s-current.group sph-helper-status-group s-current.id sph-helper-status-id-memory))
+  s-return)
 
-(define (sph-helper-primitive-malloc-string length result) (status-t size-t uint8-t**)
+(define (sph-helper-primitive-malloc-string length result) (s-t size-t uint8-t**)
   "like sph-helper-malloc but allocates one extra byte that is set to zero"
-  status-declare
+  s-declare
   (declare a uint8-t*)
-  (status-require (sph-helper-malloc (+ 1 length) &a))
+  (s (sph-helper-malloc (+ 1 length) &a))
   (set (array-get a length) 0 *result a)
-  (label exit (return status)))
+  (label exit s-return))
 
-(define (sph-helper-primitive-calloc size result) (status-t size-t void**)
-  status-declare
+(define (sph-helper-primitive-calloc size result) (s-t size-t void**)
+  s-declare
   (declare a void*)
   (set a (calloc size 1))
   (if a (set *result a)
-    (set status.group sph-helper-status-group status.id sph-helper-status-id-memory))
-  (return status))
+    (set s-current.group sph-helper-status-group s-current.id sph-helper-status-id-memory))
+  s-return)
 
-(define (sph-helper-primitive-realloc size block) (status-t size-t void**)
-  status-declare
+(define (sph-helper-primitive-realloc size block) (s-t size-t void**)
+  s-declare
   (declare a void*)
   (set a (realloc *block size))
   (if a (set *block a)
-    (set status.group sph-helper-status-group status.id sph-helper-status-id-memory))
-  (return status))
+    (set s-current.group sph-helper-status-group s-current.id sph-helper-status-id-memory))
+  s-return)
 
 (define (sph-helper-uint->string a result-len) (uint8-t* uintmax-t size-t*)
   "get a decimal string representation of an unsigned integer"

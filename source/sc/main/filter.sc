@@ -11,19 +11,19 @@
   (free state))
 
 (define (sp-convolution-filter-state-set ir-f ir-f-arguments ir-f-arguments-len out-state)
-  (status-t sp-convolution-filter-ir-f-t void* uint8-t sp-convolution-filter-state-t**)
+  (s-t sp-convolution-filter-ir-f-t void* uint8-t sp-convolution-filter-state-t**)
   "create or update a previously created state object.
   impulse response array properties are calculated with ir-f using ir-f-arguments.
   eventually frees state.ir.
   the state object is used to store the impulse response, the parameters that where used to create it and
   overlapping data that has to be carried over between calls.
   ir-f-arguments can be stack allocated and will be copied to state on change"
-  status-declare
+  s-declare
   (declare
     carryover sp-sample-t*
-    carryover-alloc-len sp-count-t
+    carryover-alloc-len sp-time-t
     ir sp-sample-t*
-    ir-len sp-count-t
+    ir-len sp-time-t
     state sp-convolution-filter-state-t*)
   (memreg-init 2)
   (sc-comment
@@ -35,16 +35,16 @@
       (if
         (and (= state:ir-f ir-f) (= ir-f-arguments-len state:ir-f-arguments-len)
           (= 0 (memcmp state:ir-f-arguments ir-f-arguments ir-f-arguments-len)))
-        (begin (sc-comment "unchanged") (return status))
+        (begin (sc-comment "unchanged") s-return)
         (begin
           (sc-comment "changed")
           (if (> ir-f-arguments-len state:ir-f-arguments-len)
-            (status-require (sph-helper-realloc ir-f-arguments-len &state:ir-f-arguments)))
+            (s (sph-helper-realloc ir-f-arguments-len &state:ir-f-arguments)))
           (if state:ir (free state:ir)))))
     (begin
       (sc-comment "new")
-      (status-require (sph-helper-malloc (sizeof sp-convolution-filter-state-t) &state))
-      (status-require (sph-helper-malloc ir-f-arguments-len &state:ir-f-arguments))
+      (s (sph-helper-malloc (sizeof sp-convolution-filter-state-t) &state))
+      (s (sph-helper-malloc ir-f-arguments-len &state:ir-f-arguments))
       (memreg-add state)
       (memreg-add state:ir-f-arguments)
       (set
@@ -54,7 +54,7 @@
         state:ir-f ir-f
         state:ir-f-arguments-len ir-f-arguments-len)))
   (memcpy state:ir-f-arguments ir-f-arguments ir-f-arguments-len)
-  (status-require (ir-f ir-f-arguments &ir &ir-len))
+  (s (ir-f ir-f-arguments &ir &ir-len))
   (sc-comment "eventually extend carryover array. the array is never shrunk."
     "carryover-len is at least ir-len - 1." "carryover-alloc-len is the length of the whole array."
     "new and extended areas must be set to zero")
@@ -66,21 +66,20 @@
         (begin
           (if (> carryover-alloc-len state:carryover-alloc-len)
             (begin
-              (status-require
-                (sph-helper-realloc (* carryover-alloc-len (sizeof sp-sample-t)) &carryover))
+              (s (sph-helper-realloc (* carryover-alloc-len (sizeof sp-sample-t)) &carryover))
               (set state:carryover-alloc-len carryover-alloc-len)))
           (sc-comment "in any case reset the extension area")
           (memset (+ (- state:ir-len 1) carryover) 0
             (* (- ir-len state:ir-len) (sizeof sp-sample-t))))))
     (begin
-      (status-require (sph-helper-calloc (* carryover-alloc-len (sizeof sp-sample-t)) &carryover))
+      (s (sph-helper-calloc (* carryover-alloc-len (sizeof sp-sample-t)) &carryover))
       (set state:carryover-alloc-len carryover-alloc-len)))
   (set state:carryover carryover state:ir ir state:ir-len ir-len *out-state state)
-  (label exit (if status-is-failure memreg-free) (return status)))
+  (label exit (if s-is-failure memreg-free) s-return))
 
 (define
   (sp-convolution-filter in in-len ir-f ir-f-arguments ir-f-arguments-len out-state out-samples)
-  (status-t sp-sample-t* sp-count-t
+  (s-t sp-sample-t* sp-time-t
     sp-convolution-filter-ir-f-t void* uint8-t sp-convolution-filter-state-t** sp-sample-t*)
   "convolute samples \"in\", which can be a segment of a continuous stream, with an impulse response
   kernel created by ir-f with ir-f-arguments. can be used for many types of convolution with dynamic impulse response.
@@ -88,50 +87,49 @@
   values that need to be carried over with calls are kept in out-state.
   * out-state: if zero then state will be allocated. owned by caller
   * out-samples: owned by the caller. length must be at least in-len and the number of output samples will be in-len"
-  status-declare
-  (declare carryover-len sp-count-t)
+  s-declare
+  (declare carryover-len sp-time-t)
   (set carryover-len (if* *out-state (- (: *out-state ir-len) 1) 0))
   (sc-comment "create/update the impulse response kernel")
-  (status-require
-    (sp-convolution-filter-state-set ir-f ir-f-arguments ir-f-arguments-len out-state))
+  (s (sp-convolution-filter-state-set ir-f ir-f-arguments ir-f-arguments-len out-state))
   (sc-comment "convolve")
   (sp-convolve in in-len
     (: *out-state ir) (: *out-state ir-len) carryover-len (: *out-state carryover) out-samples)
-  (label exit (return status)))
+  (label exit s-return))
 
-(define (sp-window-blackman a width) (sp-float-t sp-float-t sp-count-t)
+(define (sp-window-blackman a width) (sp-float-t sp-float-t sp-time-t)
   (return
     (+ (- 0.42 (* 0.5 (cos (/ (* 2 M_PI a) (- width 1)))))
       (* 0.08 (cos (/ (* 4 M_PI a) (- width 1)))))))
 
-(define (sp-windowed-sinc-lp-hp-ir-length transition) (sp-count-t sp-float-t)
+(define (sp-windowed-sinc-lp-hp-ir-length transition) (sp-time-t sp-float-t)
   "approximate impulse response length for a transition factor and
   ensure that the length is odd"
-  (declare a sp-count-t)
+  (declare a sp-time-t)
   (set a (ceil (/ 4 transition)))
   (if (not (modulo a 2)) (set a (+ 1 a)))
   (return a))
 
-(define (sp-null-ir out-ir out-len) (status-t sp-sample-t** sp-count-t*)
+(define (sp-null-ir out-ir out-len) (s-t sp-sample-t** sp-time-t*)
   (set *out-len 1)
   (return (sph-helper-calloc (sizeof sp-sample-t) out-ir)))
 
-(define (sp-passthrough-ir out-ir out-len) (status-t sp-sample-t** sp-count-t*)
-  status-declare
-  (status-require (sph-helper-malloc (sizeof sp-sample-t) out-ir))
+(define (sp-passthrough-ir out-ir out-len) (s-t sp-sample-t** sp-time-t*)
+  s-declare
+  (s (sph-helper-malloc (sizeof sp-sample-t) out-ir))
   (set **out-ir 1 *out-len 1)
-  (label exit (return status)))
+  (label exit s-return))
 
 (define (sp-windowed-sinc-lp-hp-ir cutoff transition is-high-pass out-ir out-len)
-  (status-t sp-float-t sp-float-t boolean sp-sample-t** sp-count-t*)
+  (s-t sp-float-t sp-float-t boolean sp-sample-t** sp-time-t*)
   "create an impulse response kernel for a windowed sinc low-pass or high-pass filter.
   uses a truncated blackman window.
   allocates out-ir, sets out-len.
   cutoff and transition are as fraction 0..0.5 of the sampling rate"
-  status-declare
-  (declare center-index sp-float-t i sp-count-t ir sp-sample-t* len sp-count-t sum sp-float-t)
+  s-declare
+  (declare center-index sp-float-t i sp-time-t ir sp-sample-t* len sp-time-t sum sp-float-t)
   (set len (sp-windowed-sinc-lp-hp-ir-length transition) center-index (/ (- len 1.0) 2.0))
-  (status-require (sph-helper-malloc (* len (sizeof sp-sample-t)) &ir))
+  (s (sph-helper-malloc (* len (sizeof sp-sample-t)) &ir))
   (sc-comment "set the windowed sinc"
     "nan can be set here if the freq and transition values are invalid")
   (for ((set i 0) (< i len) (set i (+ 1 i)))
@@ -141,22 +139,22 @@
   (for ((set i 0) (< i len) (set i (+ 1 i))) (set (array-get ir i) (/ (array-get ir i) sum)))
   (if is-high-pass (sp-spectral-inversion-ir ir len))
   (set *out-ir ir *out-len len)
-  (label exit (return status)))
+  (label exit s-return))
 
 (define
   (sp-windowed-sinc-bp-br-ir cutoff-l cutoff-h transition-l transition-h is-reject out-ir out-len)
-  (status-t sp-float-t sp-float-t sp-float-t sp-float-t boolean sp-sample-t** sp-count-t*)
+  (s-t sp-float-t sp-float-t sp-float-t sp-float-t boolean sp-sample-t** sp-time-t*)
   "like sp-windowed-sinc-ir-lp but for a band-pass or band-reject filter.
   optimisation: if one cutoff is at or above maximum then create only either low-pass or high-pass"
-  status-declare
+  s-declare
   (declare
     hp-ir sp-sample-t*
-    hp-len sp-count-t
+    hp-len sp-time-t
     lp-ir sp-sample-t*
-    lp-len sp-count-t
-    i sp-count-t
-    start sp-count-t
-    end sp-count-t
+    lp-len sp-time-t
+    i sp-time-t
+    start sp-time-t
+    end sp-time-t
     out sp-sample-t*
     over sp-sample-t*)
   (if is-reject
@@ -166,8 +164,8 @@
           (return (sp-windowed-sinc-lp-hp-ir cutoff-h transition-h #t out-ir out-len)))
         (if (<= 0.5 cutoff-h)
           (return (sp-windowed-sinc-lp-hp-ir cutoff-l transition-l #f out-ir out-len))))
-      (status-require (sp-windowed-sinc-lp-hp-ir cutoff-l transition-l #f &lp-ir &lp-len))
-      (status-require (sp-windowed-sinc-lp-hp-ir cutoff-h transition-h #t &hp-ir &hp-len))
+      (s (sp-windowed-sinc-lp-hp-ir cutoff-l transition-l #f &lp-ir &lp-len))
+      (s (sp-windowed-sinc-lp-hp-ir cutoff-h transition-h #t &hp-ir &hp-len))
       (sc-comment "prepare to add the shorter ir to the longer one center-aligned")
       (if (> lp-len hp-len)
         (set
@@ -194,16 +192,15 @@
           (return (sp-windowed-sinc-lp-hp-ir cutoff-h transition-h #f out-ir out-len)))
         (if (<= 0.5 cutoff-h)
           (return (sp-windowed-sinc-lp-hp-ir cutoff-l transition-l #t out-ir out-len))))
-      (status-require (sp-windowed-sinc-lp-hp-ir cutoff-l transition-l #t &hp-ir &hp-len))
-      (status-require (sp-windowed-sinc-lp-hp-ir cutoff-h transition-h #f &lp-ir &lp-len))
+      (s (sp-windowed-sinc-lp-hp-ir cutoff-l transition-l #t &hp-ir &hp-len))
+      (s (sp-windowed-sinc-lp-hp-ir cutoff-h transition-h #f &lp-ir &lp-len))
       (sc-comment "convolve lp and hp ir samples")
       (set *out-len (- (+ lp-len hp-len) 1))
-      (status-require (sph-helper-calloc (* *out-len (sizeof sp-sample-t)) out-ir))
+      (s (sph-helper-calloc (* *out-len (sizeof sp-sample-t)) out-ir))
       (sp-convolve-one lp-ir lp-len hp-ir hp-len *out-ir)))
-  (label exit (return status)))
+  (label exit s-return))
 
-(define (sp-windowed-sinc-lp-hp-ir-f arguments out-ir out-len)
-  (status-t void* sp-sample-t** sp-count-t*)
+(define (sp-windowed-sinc-lp-hp-ir-f arguments out-ir out-len) (s-t void* sp-sample-t** sp-time-t*)
   "maps arguments from the generic ir-f-arguments array.
   arguments is (sp-float-t:cutoff sp-float-t:transition boolean:is-high-pass)"
   (declare cutoff sp-float-t transition sp-float-t is-high-pass boolean)
@@ -213,8 +210,7 @@
     is-high-pass (pointer-get (convert-type (+ 2 (convert-type arguments sp-float-t*)) boolean*)))
   (return (sp-windowed-sinc-lp-hp-ir cutoff transition is-high-pass out-ir out-len)))
 
-(define (sp-windowed-sinc-bp-br-ir-f arguments out-ir out-len)
-  (status-t void* sp-sample-t** sp-count-t*)
+(define (sp-windowed-sinc-bp-br-ir-f arguments out-ir out-len) (s-t void* sp-sample-t** sp-time-t*)
   "maps arguments from the generic ir-f-arguments array.
   arguments is (sp-float-t:cutoff-l sp-float-t:cutoff-h sp-float-t:transition boolean:is-reject)"
   (declare
@@ -233,7 +229,7 @@
     (sp-windowed-sinc-bp-br-ir cutoff-l cutoff-h transition-l transition-h is-reject out-ir out-len)))
 
 (define (sp-windowed-sinc-lp-hp in in-len cutoff transition is-high-pass out-state out-samples)
-  (status-t sp-sample-t* sp-count-t
+  (s-t sp-sample-t* sp-time-t
     sp-float-t sp-float-t boolean sp-convolution-filter-state-t** sp-sample-t*)
   "a windowed sinc low-pass or high-pass filter for segments of continuous streams with
   variable sample-rate, frequency, transition and impulse response type per call.
@@ -242,7 +238,7 @@
   * is-high-pass: if true then it will reduce low frequencies
   * out-state: if zero then state will be allocated.
   * out-samples: owned by the caller. length must be at least in-len"
-  status-declare
+  s-declare
   (declare a (array uint8-t ((+ (sizeof boolean) (* 2 (sizeof sp-float-t))))) a-len uint8-t)
   (sc-comment "set arguments array for ir-f")
   (set
@@ -251,17 +247,16 @@
     (pointer-get (+ 1 (convert-type a sp-float-t*))) transition
     (pointer-get (convert-type (+ 2 (convert-type a sp-float-t*)) boolean*)) is-high-pass)
   (sc-comment "apply filter")
-  (status-require
-    (sp-convolution-filter in in-len sp-windowed-sinc-lp-hp-ir-f a a-len out-state out-samples))
-  (label exit (return status)))
+  (s (sp-convolution-filter in in-len sp-windowed-sinc-lp-hp-ir-f a a-len out-state out-samples))
+  (label exit s-return))
 
 (define
   (sp-windowed-sinc-bp-br in in-len
     cutoff-l cutoff-h transition-l transition-h is-reject out-state out-samples)
-  (status-t sp-sample-t* sp-count-t
+  (s-t sp-sample-t* sp-time-t
     sp-float-t sp-float-t sp-float-t sp-float-t boolean sp-convolution-filter-state-t** sp-sample-t*)
   "like sp-windowed-sinc-lp-hp but for a band-pass or band-reject filter"
-  status-declare
+  s-declare
   (declare a (array uint8-t ((+ (sizeof boolean) (* 3 (sizeof sp-float-t))))) a-len uint8-t)
   (sc-comment "set arguments array for ir-f")
   (set
@@ -272,9 +267,8 @@
     (pointer-get (+ 3 (convert-type a sp-float-t*))) transition-h
     (pointer-get (convert-type (+ 4 (convert-type a sp-float-t*)) boolean*)) is-reject)
   (sc-comment "apply filter")
-  (status-require
-    (sp-convolution-filter in in-len sp-windowed-sinc-bp-br-ir-f a a-len out-state out-samples))
-  (label exit (return status)))
+  (s (sp-convolution-filter in in-len sp-windowed-sinc-bp-br-ir-f a a-len out-state out-samples))
+  (label exit s-return))
 
 (pre-define (define-sp-state-variable-filter suffix transfer)
   (begin
@@ -286,14 +280,14 @@
     * http://www.cytomic.com/technical-papers
     * http://www.earlevel.com/main/2016/02/21/filters-for-synths-starting-out/"
     (define ((pre-concat sp-state-variable-filter_ suffix) out in in-count cutoff q-factor state)
-      (void sp-sample-t* sp-sample-t* sp-float-t sp-float-t sp-count-t sp-sample-t*)
+      (void sp-sample-t* sp-sample-t* sp-float-t sp-float-t sp-time-t sp-sample-t*)
       (declare
         a1 sp-sample-t
         a2 sp-sample-t
         g sp-sample-t
         ic1eq sp-sample-t
         ic2eq sp-sample-t
-        i sp-count-t
+        i sp-time-t
         k sp-sample-t
         v0 sp-sample-t
         v1 sp-sample-t
@@ -324,7 +318,7 @@
 
 (define
   (sp-filter in in-size cutoff-l cutoff-h transition-l transition-h is-reject out-state out-samples)
-  (status-t sp-sample-t* sp-count-t
+  (s-t sp-sample-t* sp-time-t
     sp-float-t sp-float-t sp-float-t sp-float-t boolean sp-filter-state-t** sp-sample-t*)
   "the sph-sp default precise filter. processing intensive if parameters are change frequently.
   memory for out-state will be allocated and has to be freed with sp-filter-state-free"
@@ -332,21 +326,21 @@
     cutoff-l cutoff-h transition-l transition-h is-reject out-state out-samples))
 
 (define (sp-cheap-filter-state-new max-size max-passes out-state)
-  (status-t sp-count-t sp-count-t sp-cheap-filter-state-t*)
+  (s-t sp-time-t sp-time-t sp-cheap-filter-state-t*)
   (sc-comment "allocates and prepares memory and checks if max-passes doesnt exceed the limit"
     "heap memory is to be freed with sp-cheap-filter-state-free but only allocated if max-passes is greater than one")
-  status-declare
+  s-declare
   (define in-temp sp-sample-t* 0)
   (define out-temp sp-sample-t* 0)
   (if (< 1 max-passes)
     (if (< sp-cheap-filter-passes-limit max-passes)
-      (status-set-both-goto sp-status-group-sp sp-status-id-not-implemented)
+      (s-set-goto sp-s-group-sp sp-s-id-not-implemented)
       (begin
-        (status-require (sp-samples-new max-size &in-temp))
-        (status-require (sp-samples-new max-size &out-temp)))))
+        (s (sp-sample-array-new max-size &in-temp))
+        (s (sp-sample-array-new max-size &out-temp)))))
   (set out-state:in-temp in-temp out-state:out-temp out-temp)
   (memset out-state:svf-state 0 (* (sizeof sp-sample-t) 2 sp-cheap-filter-passes-limit))
-  (label exit (if status-is-failure (free in-temp)) (return status)))
+  (label exit (if s-is-failure (free in-temp)) s-return))
 
 (define (sp-cheap-filter-state-free a) (void sp-cheap-filter-state-t*)
   (free a:in-temp)
@@ -354,9 +348,9 @@
 
 (define (sp-cheap-filter type in in-size cutoff passes q-factor unity-gain state out)
   (void sp-state-variable-filter-t sp-sample-t*
-    sp-count-t sp-float-t sp-count-t sp-float-t uint8-t sp-cheap-filter-state-t* sp-sample-t*)
+    sp-time-t sp-float-t sp-time-t sp-float-t uint8-t sp-cheap-filter-state-t* sp-sample-t*)
   "the sph-sp default fast filter. caller has to manage the state object with sp-cheap-filter-state-new sp-cheap-filter-state-free"
-  status-declare
+  s-declare
   (declare in-swap sp-sample-t* in-temp sp-sample-t* out-temp sp-sample-t*)
   (if (= 1 passes) (type out in in-size cutoff q-factor state:svf-state)
     (begin
@@ -366,7 +360,7 @@
         (if (< 1 passes)
           (begin
             (type out-temp in-temp in-size cutoff q-factor (+ passes state:svf-state))
-            (sp-samples-zero in-temp in-size)
+            (sp-sample-array-zero in-temp in-size)
             (set passes (- passes 1) in-swap in-temp in-temp out-temp out-temp in-swap)
             (goto loop))
           (type out in-temp in-size cutoff q-factor (+ passes state:svf-state))))))

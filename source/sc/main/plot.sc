@@ -8,14 +8,14 @@
   sp-plot-command-pattern-steps
   "gnuplot --persist -e 'set key off; set size ratio 0.5; plot \"%s\" with histeps lc rgb \"blue\"'")
 
-(define (sp-plot-samples->file a a-size path) (void sp-sample-t* sp-count-t uint8-t*)
-  (declare file FILE* i sp-count-t)
+(define (sp-plot-samples->file a a-size path) (void sp-sample-t* sp-time-t uint8-t*)
+  (declare file FILE* i sp-time-t)
   (set file (fopen path "w"))
   (for ((set i 0) (< i a-size) (set i (+ 1 i))) (fprintf file "%.3f\n" (array-get a i)))
   (fclose file))
 
-(define (sp-plot-counts->file a a-size path) (void sp-count-t* sp-count-t uint8-t*)
-  (declare file FILE* i sp-count-t)
+(define (sp-plot-counts->file a a-size path) (void sp-time-t* sp-time-t uint8-t*)
+  (declare file FILE* i sp-time-t)
   (set file (fopen path "w"))
   (for ((set i 0) (< i a-size) (set i (+ 1 i))) (fprintf file "%lu\n" (array-get a i)))
   (fclose file))
@@ -31,7 +31,7 @@
   (system command)
   (free command))
 
-(define (sp-plot-samples a a-size) (void sp-sample-t* sp-count-t)
+(define (sp-plot-samples a a-size) (void sp-sample-t* sp-time-t)
   (define path-size uint8-t (+ 1 sp-plot-temp-file-index-maxlength (strlen sp-plot-temp-path)))
   (define path uint8-t* (calloc path-size 1))
   (if (not path) return)
@@ -41,7 +41,7 @@
   (sp-plot-samples-file path #t)
   (free path))
 
-(define (sp-plot-counts a a-size) (void sp-count-t* sp-count-t)
+(define (sp-plot-counts a a-size) (void sp-time-t* sp-time-t)
   (define path-size uint8-t (+ 1 sp-plot-temp-file-index-maxlength (strlen sp-plot-temp-path)))
   (define path uint8-t* (calloc path-size 1))
   (if (not path) return)
@@ -51,9 +51,9 @@
   (sp-plot-samples-file path #t)
   (free path))
 
-(define (sp-plot-spectrum->file a a-size path) (void sp-sample-t* sp-count-t uint8-t*)
+(define (sp-plot-spectrum->file a a-size path) (void sp-sample-t* sp-time-t uint8-t*)
   "take the fft for given samples, convert complex values to magnitudes and write plot data to file"
-  (declare file FILE* i sp-count-t imag double* real double*)
+  (declare file FILE* i sp-time-t imag double* real double*)
   (set imag (calloc a-size (sizeof sp-sample-t)))
   (if (not imag) return)
   (set real (malloc (* (sizeof sp-sample-t) a-size)))
@@ -74,7 +74,7 @@
 
 (define (sp-plot-spectrum-file path) (void uint8-t*) (sp-plot-samples-file path #t))
 
-(define (sp-plot-spectrum a a-size) (void sp-sample-t* sp-count-t)
+(define (sp-plot-spectrum a a-size) (void sp-sample-t* sp-time-t)
   (define path-size uint8-t (+ 1 sp-plot-temp-file-index-maxlength (strlen sp-plot-temp-path)))
   (define path uint8-t* (calloc path-size 1))
   (if (not path) return)

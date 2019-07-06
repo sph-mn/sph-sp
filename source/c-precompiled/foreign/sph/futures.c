@@ -1,8 +1,7 @@
 /* fine-grain parallelism based on thread-pool.c.
 provides task objects with functions executed in threads that can be waited for to get a result value.
 manages the memory of thread-pool task objects.
-thread-pool.c must be included beforehand
-to include nanosleep from gcc __USE_POSIX199309 must be defined */
+thread-pool.c must be included beforehand */
 /* for nanosleep */
 #include <time.h>
 uint8_t sph_futures_pool_is_initialised = 0;
@@ -61,7 +60,7 @@ loop:
   if (a->finished) {
     return ((a->task.data));
   } else {
-    /* poll five times per second. maybe condition variables can be used here */
+    /* poll several times per second. maybe using condition variables would be more efficient */
     nanosleep((&sleep_time), 0);
     goto loop;
   };

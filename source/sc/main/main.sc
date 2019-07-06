@@ -8,21 +8,22 @@
   "../foreign/sph/thread-pool.c" "../foreign/sph/futures.c" "../foreign/sph/random.c")
 
 (pre-define
-  sp-status-declare (status-declare-group sp-status-group-sp)
+  sp-s-declare (s-declare-group sp-s-group-sp)
   (max a b) (if* (> a b) a b)
   (min a b) (if* (< a b) a b)
-  (sp-libc-status-require-id id) (if (< id 0) (status-set-both-goto sp-status-group-libc id))
-  (sp-libc-status-require expression)
+  (sp-libc-s-id id) (if (< id 0) (s-set-goto sp-s-group-libc id))
+  (sp-libc-s expression)
   (begin
-    (set status.id expression)
-    (if (< status.id 0) (status-set-group-goto sp-status-group-libc) status-reset))
+    (set s-current.id expression)
+    (if (< s-current.id 0) (begin (set s-current.group sp-s-group-libc) (goto exit))
+      (set s-current.id 0)))
   (define-sp-interleave name type body)
   (begin
     "define a deinterleave, interleave or similar routine.
     a: source
     b: target"
-    (define (name a b a-size channel-count) (void type** type* sp-count-t sp-channel-count-t)
-      (declare b-size sp-count-t channel sp-channel-count-t)
+    (define (name a b a-size channel-count) (void type** type* sp-time-t sp-channels-t)
+      (declare b-size sp-time-t channel sp-channels-t)
       (set b-size (* a-size channel-count))
       (while a-size
         (set a-size (- a-size 1) channel channel-count)
@@ -35,77 +36,77 @@
   (set (array-get (array-get a channel) a-size) (array-get b b-size)))
 
 (sc-no-semicolon
-  (define-sph-random sp-random-samples sp-count-t
+  (define-sph-random sp-random-samples sp-time-t
     sp-sample-t (- (* 2 (f64-from-u64 result-plus)) 1.0)))
 
-(define (debug-display-sample-array a len) (void sp-sample-t* sp-count-t)
+(define (display-samples a len) (void sp-sample-t* sp-time-t)
   "display a sample array in one line"
-  (declare i sp-count-t)
+  (declare i sp-time-t)
   (printf "%.17g" (array-get a 0))
   (for ((set i 1) (< i len) (set i (+ 1 i))) (printf " %.17g" (array-get a i)))
   (printf "\n"))
 
-(define (sp-status-description a) (uint8-t* status-t)
-  "get a string description for a status id in a status-t"
+(define (sp-status-description a) (uint8-t* s-t)
+  "get a string description for a status id in a s-t"
   (declare b uint8-t*)
   (cond
-    ( (not (strcmp sp-status-group-sp a.group))
+    ( (not (strcmp sp-s-group-sp a.group))
       (case = a.id
-        (sp-status-id-eof (set b "end of file"))
-        (sp-status-id-input-type (set b "input argument is of wrong type"))
-        (sp-status-id-not-implemented (set b "not implemented"))
-        (sp-status-id-memory (set b "memory allocation error"))
-        (sp-status-id-file-incompatible
+        (sp-s-id-eof (set b "end of file"))
+        (sp-s-id-input-type (set b "input argument is of wrong type"))
+        (sp-s-id-not-implemented (set b "not implemented"))
+        (sp-s-id-memory (set b "memory allocation error"))
+        (sp-s-id-file-incompatible
           (set b "file channel count or sample rate is different from what was requested"))
-        (sp-status-id-file-incomplete (set b "incomplete write"))
+        (sp-s-id-file-incomplete (set b "incomplete write"))
         (else (set b ""))))
-    ( (not (strcmp sp-status-group-sndfile a.group))
+    ( (not (strcmp sp-s-group-sndfile a.group))
       (set b (convert-type (sf-error-number a.id) uint8-t*)))
-    ((not (strcmp sp-status-group-sph a.group)) (set b (sph-helper-status-description a)))
+    ((not (strcmp sp-s-group-sph a.group)) (set b (sph-helper-status-description a)))
     (else (set b "")))
   (return b))
 
-(define (sp-status-name a) (uint8-t* status-t)
-  "get a single word identifier for a status id in a status-t"
+(define (sp-status-name a) (uint8-t* s-t)
+  "get a single word identifier for a status id in a s-t"
   (declare b uint8-t*)
   (cond
-    ( (= 0 (strcmp sp-status-group-sp a.group))
+    ( (= 0 (strcmp sp-s-group-sp a.group))
       (case = a.id
-        (sp-status-id-input-type (set b "input-type"))
-        (sp-status-id-not-implemented (set b "not-implemented"))
-        (sp-status-id-memory (set b "memory"))
+        (sp-s-id-input-type (set b "input-type"))
+        (sp-s-id-not-implemented (set b "not-implemented"))
+        (sp-s-id-memory (set b "memory"))
         (else (set b "unknown"))))
-    ((= 0 (strcmp sp-status-group-sndfile a.group)) (set b "sndfile")) (else (set b "unknown")))
+    ((= 0 (strcmp sp-s-group-sndfile a.group)) (set b "sndfile")) (else (set b "unknown")))
   (return b))
 
-(define (sp-block-new channels size out) (status-t sp-channel-count-t sp-count-t sp-block-t*)
+(define (sp-block-new channels size out) (s-t sp-channels-t sp-time-t sp-block-t*)
   "return a newly allocated array for channels with data arrays for each channel"
-  status-declare
+  s-declare
   (memreg-init channels)
-  (declare channel sp-sample-t* i sp-count-t)
+  (declare channel sp-sample-t* i sp-time-t)
   (for ((set i 0) (< i channels) (set i (+ 1 i)))
-    (status-require (sph-helper-calloc (* size (sizeof sp-sample-t)) &channel))
+    (s (sph-helper-calloc (* size (sizeof sp-sample-t)) &channel))
     (memreg-add channel)
     (set (array-get out:samples i) channel))
   (set out:size size out:channels channels)
-  (label exit (if status-is-failure memreg-free) (return status)))
+  (label exit (if s-is-failure memreg-free) s-return))
 
 (define (sp-block-free a) (void sp-block-t)
-  (declare i sp-count-t)
+  (declare i sp-time-t)
   (for ((set i 0) (< i a.channels) (set i (+ 1 i))) (free (array-get a.samples i))))
 
-(define (sp-block-with-offset a offset) (sp-block-t sp-block-t sp-count-t)
+(define (sp-block-with-offset a offset) (sp-block-t sp-block-t sp-time-t)
   "add offset to the all channel sample arrays in block"
-  (declare i sp-count-t)
+  (declare i sp-time-t)
   (for ((set i 0) (< i a.channels) (set i (+ 1 i)))
     (set (array-get a.samples i) (+ offset (array-get a.samples i))))
   (return a))
 
-(define (sp-samples-new size out) (status-t sp-count-t sp-sample-t**)
+(define (sp-sample-array-new size out) (s-t sp-time-t sp-sample-t**)
   (return (sph-helper-calloc (* size (sizeof sp-sample-t)) out)))
 
-(define (sp-counts-new size out) (status-t sp-count-t sp-count-t**)
-  (return (sph-helper-calloc (* size (sizeof sp-count-t)) out)))
+(define (sp-count-array-new size out) (s-t sp-time-t sp-time-t**)
+  (return (sph-helper-calloc (* size (sizeof sp-time-t)) out)))
 
 (define (sp-sin-lq a) (sp-sample-t sp-float-t)
   "lower precision version of sin() that should be faster"
@@ -117,13 +118,11 @@
   "the normalised sinc function"
   (return (if* (= 0 a) 1 (/ (sin (* M_PI a)) (* M_PI a)))))
 
-(define (sp-fft input-len input/output-real input/output-imag)
-  (status-id-t sp-count-t double* double*)
+(define (sp-fft input-len input/output-real input/output-imag) (int sp-time-t double* double*)
   "all arrays should be input-len and are managed by the caller"
   (return (not (Fft_transform input/output-real input/output-imag input-len))))
 
-(define (sp-ffti input-len input/output-real input/output-imag)
-  (status-id-t sp-count-t double* double*)
+(define (sp-ffti input-len input/output-real input/output-imag) (int sp-time-t double* double*)
   "[[real, imaginary], ...]:complex-numbers -> real-numbers
   input-length > 0
   output-length = input-length
@@ -132,24 +131,24 @@
 
 (define
   (sp-moving-average in in-end in-window in-window-end prev prev-end next next-end radius out)
-  (status-t sp-sample-t* sp-sample-t*
+  (s-t sp-sample-t* sp-sample-t*
     sp-sample-t* sp-sample-t* sp-sample-t*
-    sp-sample-t* sp-sample-t* sp-sample-t* sp-count-t sp-sample-t*)
+    sp-sample-t* sp-sample-t* sp-sample-t* sp-time-t sp-sample-t*)
   "apply a centered moving average filter to samples between in-window and in-window-end inclusively and write to out.
    removes high frequencies and smoothes data with little distortion in the time domain but the frequency response has large ripples.
    all memory is managed by the caller.
    * prev and next can be null pointers if not available
    * zero is used for unavailable values
    * rounding errors are kept low by using modified kahan neumaier summation"
-  status-declare
+  s-declare
   (declare
     in-left sp-sample-t*
     in-right sp-sample-t*
     outside sp-sample-t*
     sums (array sp-sample-t (3))
-    outside-count sp-count-t
-    in-missing sp-count-t
-    width sp-count-t)
+    outside-count sp-time-t
+    in-missing sp-time-t
+    width sp-time-t)
   (set width (+ 1 radius radius))
   (while (<= in-window in-window-end)
     (set
@@ -183,28 +182,28 @@
         ;(debug-display-sample-array outside outside-count)
         ))
     (set (pointer-get out) (/ (sp-sample-sum sums 3) width) out (+ 1 out) in-window (+ 1 in-window)))
-  (return status))
+  s-return)
 
-(define (sp-spectral-inversion-ir a a-len) (void sp-sample-t* sp-count-t)
+(define (sp-spectral-inversion-ir a a-len) (void sp-sample-t* sp-time-t)
   "modify an impulse response kernel for spectral inversion.
    a-len must be odd and \"a\" must have left-right symmetry.
   flips the frequency response top to bottom"
-  (declare center sp-count-t i sp-count-t)
+  (declare center sp-time-t i sp-time-t)
   (for ((set i 0) (< i a-len) (set i (+ 1 i))) (set (array-get a i) (* -1 (array-get a i))))
   (set center (/ (- a-len 1) 2) (array-get a center) (+ 1 (array-get a center))))
 
-(define (sp-spectral-reversal-ir a a-len) (void sp-sample-t* sp-count-t)
+(define (sp-spectral-reversal-ir a a-len) (void sp-sample-t* sp-time-t)
   "inverts the sign for samples at odd indexes.
   a-len must be odd and \"a\" must have left-right symmetry.
   flips the frequency response left to right"
   (while (> a-len 1) (set a-len (- a-len 2) (array-get a a-len) (* -1 (array-get a a-len)))))
 
 (define (sp-convolve-one a a-len b b-len result-samples)
-  (void sp-sample-t* sp-count-t sp-sample-t* sp-count-t sp-sample-t*)
+  (void sp-sample-t* sp-time-t sp-sample-t* sp-time-t sp-sample-t*)
   "discrete linear convolution.
   result-samples must be all zeros, its length must be at least a-len + b-len - 1.
   result-samples is owned and allocated by the caller"
-  (declare a-index sp-count-t b-index sp-count-t)
+  (declare a-index sp-time-t b-index sp-time-t)
   (set a-index 0 b-index 0)
   (while (< a-index a-len)
     (while (< b-index b-len)
@@ -216,7 +215,7 @@
     (set b-index 0 a-index (+ 1 a-index))))
 
 (define (sp-convolve a a-len b b-len carryover-len result-carryover result-samples)
-  (void sp-sample-t* sp-count-t sp-sample-t* sp-count-t sp-count-t sp-sample-t* sp-sample-t*)
+  (void sp-sample-t* sp-time-t sp-sample-t* sp-time-t sp-time-t sp-sample-t* sp-sample-t*)
   "discrete linear convolution for sample arrays, possibly of a continuous stream. maps segments (a, a-len) to result-samples
   using (b, b-len) as the impulse response. b-len must be greater than zero.
   all heap memory is owned and allocated by the caller.
@@ -228,7 +227,7 @@
   if b-len is one then there is no carryover.
   if a-len is smaller than b-len then, with the current implementation, additional performance costs ensue from shifting the carryover array each call.
   carryover is the extension of result-samples for generated values that dont fit"
-  (declare size sp-count-t a-index sp-count-t b-index sp-count-t c-index sp-count-t)
+  (declare size sp-time-t a-index sp-time-t b-index sp-time-t c-index sp-time-t)
   (if carryover-len
     (if (<= carryover-len a-len)
       (begin
@@ -259,18 +258,18 @@
           (array-get result-carryover c-index)
           (+ (array-get result-carryover c-index) (* (array-get a a-index) (array-get b b-index))))))))
 
-(define (sp-samples-absolute-max in in-size) (sp-sample-t sp-sample-t* sp-count-t)
+(define (sp-samples-absolute-max in in-size) (sp-sample-t sp-sample-t* sp-time-t)
   "get the maximum value in samples array, disregarding sign"
-  (declare result sp-sample-t a sp-sample-t i sp-count-t)
+  (declare result sp-sample-t a sp-sample-t i sp-time-t)
   (for ((set i 0 result 0) (< i in-size) (set i (+ 1 i)))
     (set a (fabs (array-get in i)))
     (if (> a result) (set result a)))
   (return result))
 
-(define (sp-set-unity-gain in in-size out) (void sp-sample-t* sp-count-t sp-sample-t*)
+(define (sp-set-unity-gain in in-size out) (void sp-sample-t* sp-time-t sp-sample-t*)
   "adjust amplitude of out to match the one of in"
   (declare
-    i sp-count-t
+    i sp-time-t
     in-max sp-sample-t
     out-max sp-sample-t
     difference sp-sample-t
@@ -284,10 +283,10 @@
 (pre-include "../main/io.c" "../main/plot.c"
   "../main/filter.c" "../main/synthesiser.c" "../main/sequencer.c")
 
-(define (sp-initialise cpu-count) (status-t uint16-t)
+(define (sp-initialise cpu-count) (s-t uint16-t)
   "fills the sine wave lookup table"
-  status-declare
-  (if cpu-count (set status.id (future-init cpu-count)))
-  (if status.id (return status))
+  s-declare
+  (if cpu-count (set s-current.id (future-init cpu-count)))
+  (if s-current.id s-return)
   (set sp-default-random-state (sp-random-state-new 1557083953))
   (return (sp-sine-table-new &sp-sine-96-table 96000)))
