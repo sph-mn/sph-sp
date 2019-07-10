@@ -312,34 +312,33 @@
 (define (test-sp-seq) s-t
   s-declare
   (declare
-    events sp-events-t
-    events-data (array sp-event-t 10)
+    events (array sp-event-t 10)
+    events-size sp-time-t
     state sp-time-t*
     out sp-block-t
     config (array sp-synth-partial-t 1)
     wvl (array sp-time-t sp-seq-duration)
     amp (array sp-sample-t sp-seq-duration)
     i sp-time-t)
-  (set events.data events-data)
   (for ((set i 0) (< i sp-seq-duration) (set i (+ 1 i)))
     (set (array-get wvl i) 5 (array-get amp i) 0.5))
   (set (array-get config 0) (sp-synth-partial-1 0 sp-seq-duration 0 amp wvl 0))
-  (s (sp-synth-event 0 sp-seq-half-duration 1 1 config (+ 0 events.data)))
-  (s (sp-synth-event (+ 2 sp-seq-half-duration) (- sp-seq-duration 2) 1 1 config (+ 1 events.data)))
-  (set events.size 2)
-  (sp-seq-events-prepare events)
+  (s (sp-synth-event 0 sp-seq-half-duration 1 1 config (+ 0 events)))
+  (s (sp-synth-event (+ 2 sp-seq-half-duration) (- sp-seq-duration 2) 1 1 config (+ 1 events)))
+  (set events-size 2)
+  (sp-seq-events-prepare events events-size)
   (s (sp-block-new 1 sp-seq-duration &out))
-  (sp-seq 0 sp-seq-half-duration out events)
+  (sp-seq 0 sp-seq-half-duration out events events-size)
   (sp-seq sp-seq-half-duration sp-seq-duration
-    (sp-block-with-offset out sp-seq-half-duration) events)
+    (sp-block-with-offset out sp-seq-half-duration) events events-size)
   #;(for ((set i 0) (< i sp-seq-duration) (set i (+ 1 i)))
     (printf "%f " (array-get *out.samples i)))
   ;(sp-plot-samples *out.samples out.size)
   (sc-comment "sp-seq-parallel")
-  (s (sp-seq-parallel 0 sp-seq-duration out events))
+  (s (sp-seq-parallel 0 sp-seq-duration out events events-size))
   #;(for ((set i 0) (< i sp-seq-duration) (set i (+ 1 i)))
   (printf "%f " (array-get *out.samples i)))
-  (sp-events-free events)
+  (sp-events-free events events-size)
   (sp-block-free out)
   (label exit s-return))
 
@@ -388,8 +387,8 @@
 (define (test-sp-noise-event) s-t
   s-declare
   (declare
-    events sp-events-t
-    events-data (array sp-event-t 1)
+    events (array sp-event-t 1)
+    events-size sp-time-t
     out sp-block-t
     cut-l (array sp-sample-t sp-noise-duration)
     cut-h (array sp-sample-t sp-noise-duration)
@@ -398,7 +397,6 @@
     amp1 (array sp-sample-t sp-noise-duration)
     amp (array sp-sample-t* sp-channel-limit)
     i sp-time-t)
-  (set events.data events-data)
   (s (sp-block-new 1 sp-noise-duration &out))
   (set (array-get amp 0) amp1)
   (for ((set i 0) (< i sp-noise-duration) (set i (+ 1 i)))
@@ -410,13 +408,13 @@
       (array-get amp1 i) 1.0))
   (s
     (sp-noise-event 0 sp-noise-duration
-      amp cut-l cut-h trn-l trn-h #f 30 sp-default-random-state events.data))
-  (set events.size 1)
-  (sp-seq 0 sp-noise-duration out events)
+      amp cut-l cut-h trn-l trn-h #f 30 sp-default-random-state events))
+  (set events-size 1)
+  (sp-seq 0 sp-noise-duration out events events-size)
   #;(for ((set i 0) (< i sp-noise-duration) (set i (+ 1 i)))
     (printf "%f " (array-get *out.samples i)))
   ;(sp-plot-samples *out.samples out.size)
-  (sp-events-free events)
+  (sp-events-free events events-size)
   (sp-block-free out)
   (label exit s-return))
 
@@ -440,15 +438,14 @@
 (define (test-sp-cheap-noise-event) s-t
   s-declare
   (declare
-    events sp-events-t
-    events-data (array sp-event-t 1)
+    events (array sp-event-t 1)
+    events-size sp-time-t
     out sp-block-t
     cut (array sp-sample-t sp-noise-duration)
     amp1 (array sp-sample-t sp-noise-duration)
     amp (array sp-sample-t* sp-channel-limit)
     q-factor sp-sample-t
     i sp-time-t)
-  (set events.data events-data)
   (s (sp-block-new 1 sp-noise-duration &out))
   (set (array-get amp 0) amp1 q-factor 0)
   (for ((set i 0) (< i sp-noise-duration) (set i (+ 1 i)))
@@ -456,14 +453,13 @@
       (array-get cut i) (if* (< i (/ sp-noise-duration 2)) 0.01 0.1)
       (array-get cut i) 0.08
       (array-get amp1 i) 1.0))
-  (s
-    (sp-cheap-noise-event-lp 0 sp-noise-duration amp cut 1 0 #f sp-default-random-state events.data))
-  (set events.size 1)
-  (sp-seq 0 sp-noise-duration out events)
+  (s (sp-cheap-noise-event-lp 0 sp-noise-duration amp cut 1 0 #f sp-default-random-state events))
+  (set events-size 1)
+  (sp-seq 0 sp-noise-duration out events events-size)
   #;(for ((set i 0) (< i sp-noise-duration) (set i (+ 1 i)))
     (printf "%f " (array-get *out.samples i)))
   ;(sp-plot-samples *out.samples out.size)
-  (sp-events-free events)
+  (sp-events-free events events-size)
   (sp-block-free out)
   (label exit s-return))
 

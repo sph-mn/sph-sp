@@ -250,23 +250,23 @@
       (f (function-pointer void sp-time-t sp-time-t sp-block-t (struct sp-event-t*)))
       (free (function-pointer void (struct sp-event-t*)))))
   sp-event-f-t (type (function-pointer void sp-time-t sp-time-t sp-block-t sp-event-t*))
-  sp-events-t (type (struct (size sp-time-t) (data sp-event-t*)))
   sp-synth-event-state-t
   (type
     (struct
       (config-len sp-synth-count-t)
       (config (array sp-synth-partial-t sp-synth-partial-limit))
       (state sp-time-t*)))
-  (sp-seq-events-prepare a) (void sp-events-t)
-  (sp-seq start end out events) (void sp-time-t sp-time-t sp-block-t sp-events-t)
-  (sp-seq-parallel start end out events) (s-t sp-time-t sp-time-t sp-block-t sp-events-t)
+  (sp-seq-events-prepare data size) (void sp-event-t* sp-time-t)
+  (sp-seq start end out events size) (void sp-time-t sp-time-t sp-block-t sp-event-t* sp-time-t)
+  (sp-seq-parallel start end out events size)
+  (s-t sp-time-t sp-time-t sp-block-t sp-event-t* sp-time-t)
   (sp-synth-event start end channel-count config-len config out-event)
   (s-t sp-time-t sp-time-t sp-time-t sp-time-t sp-synth-partial-t* sp-event-t*)
   (sp-noise-event start end amp cut-l cut-h trn-l trn-h is-reject resolution random-state out-event)
   (s-t sp-time-t sp-time-t
     sp-sample-t** sp-sample-t* sp-sample-t*
     sp-sample-t* sp-sample-t* uint8-t sp-time-t sp-random-state-t sp-event-t*)
-  (sp-events-free events) (void sp-events-t)
+  (sp-events-free events size) (void sp-event-t* sp-time-t)
   (sp-cheap-noise-event start end amp type cut passes q-factor resolution random-state out-event)
   (s-t sp-time-t sp-time-t
     sp-sample-t** sp-state-variable-filter-t sp-sample-t*

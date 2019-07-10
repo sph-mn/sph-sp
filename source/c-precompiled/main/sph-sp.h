@@ -379,20 +379,16 @@ typedef struct sp_event_t {
 } sp_event_t;
 typedef void (*sp_event_f_t)(sp_time_t, sp_time_t, sp_block_t, sp_event_t*);
 typedef struct {
-  sp_time_t size;
-  sp_event_t* data;
-} sp_events_t;
-typedef struct {
   sp_synth_count_t config_len;
   sp_synth_partial_t config[sp_synth_partial_limit];
   sp_time_t* state;
 } sp_synth_event_state_t;
-void sp_seq_events_prepare(sp_events_t a);
-void sp_seq(sp_time_t start, sp_time_t end, sp_block_t out, sp_events_t events);
-s_t sp_seq_parallel(sp_time_t start, sp_time_t end, sp_block_t out, sp_events_t events);
+void sp_seq_events_prepare(sp_event_t* data, sp_time_t size);
+void sp_seq(sp_time_t start, sp_time_t end, sp_block_t out, sp_event_t* events, sp_time_t size);
+s_t sp_seq_parallel(sp_time_t start, sp_time_t end, sp_block_t out, sp_event_t* events, sp_time_t size);
 s_t sp_synth_event(sp_time_t start, sp_time_t end, sp_time_t channel_count, sp_time_t config_len, sp_synth_partial_t* config, sp_event_t* out_event);
 s_t sp_noise_event(sp_time_t start, sp_time_t end, sp_sample_t** amp, sp_sample_t* cut_l, sp_sample_t* cut_h, sp_sample_t* trn_l, sp_sample_t* trn_h, uint8_t is_reject, sp_time_t resolution, sp_random_state_t random_state, sp_event_t* out_event);
-void sp_events_free(sp_events_t events);
+void sp_events_free(sp_event_t* events, sp_time_t size);
 s_t sp_cheap_noise_event(sp_time_t start, sp_time_t end, sp_sample_t** amp, sp_state_variable_filter_t type, sp_sample_t* cut, sp_time_t passes, sp_sample_t q_factor, sp_time_t resolution, sp_random_state_t random_state, sp_event_t* out_event);
 void sp_counts_from_samples(sp_sample_t* in, sp_time_t in_size, sp_time_t* out) {
   sp_time_t i;

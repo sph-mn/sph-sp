@@ -5,16 +5,16 @@ void sp_event_sort_swap(void* a, ssize_t b, ssize_t c) {
   ((sp_event_t*)(a))[c] = d;
 }
 uint8_t sp_event_sort_less_p(void* a, ssize_t b, ssize_t c) { return (((((sp_event_t*)(a))[b]).start < (((sp_event_t*)(a))[c]).start)); }
-void sp_seq_events_prepare(sp_events_t a) { quicksort(sp_event_sort_less_p, sp_event_sort_swap, (a.data), 0, (a.size - 1)); }
+void sp_seq_events_prepare(sp_event_t* data, sp_time_t size) { quicksort(sp_event_sort_less_p, sp_event_sort_swap, data, 0, (size - 1)); }
 /** event arrays must have been prepared/sorted with sp-seq-event-prepare for seq to work correctly */
-void sp_seq(sp_time_t start, sp_time_t end, sp_block_t out, sp_events_t events) {
+void sp_seq(sp_time_t start, sp_time_t end, sp_block_t out, sp_event_t* events, sp_time_t size) {
   sp_time_t e_out_start;
   sp_event_t e;
   sp_time_t e_start;
   sp_time_t e_end;
   sp_time_t i;
-  for (i = 0; (i < events.size); i = (1 + i)) {
-    e = (events.data)[i];
+  for (i = 0; (i < size); i = (1 + i)) {
+    e = events[i];
     if (e.end <= start) {
       continue;
     } else if (end <= e.start) {
@@ -27,10 +27,10 @@ void sp_seq(sp_time_t start, sp_time_t end, sp_block_t out, sp_events_t events) 
     };
   };
 }
-void sp_events_free(sp_events_t events) {
+void sp_events_free(sp_event_t* events, sp_time_t size) {
   sp_time_t i;
-  for (i = 0; (i < events.size); i = (1 + i)) {
-    (events.data + i)->free;
+  for (i = 0; (i < size); i = (1 + i)) {
+    (events + i)->free;
   };
 }
 typedef struct {
@@ -46,7 +46,7 @@ void* sp_seq_parallel_future_f(void* data) {
   (a->event->f)((a->start), (a->end), (a->out), (a->event));
 }
 /** like sp_seq but evaluates events in parallel */
-s_t sp_seq_parallel(sp_time_t start, sp_time_t end, sp_block_t out, sp_events_t events) {
+s_t sp_seq_parallel(sp_time_t start, sp_time_t end, sp_block_t out, sp_event_t* events, sp_time_t size) {
   s_declare;
   sp_time_t e_out_start;
   sp_event_t e;
@@ -61,8 +61,8 @@ s_t sp_seq_parallel(sp_time_t start, sp_time_t end, sp_block_t out, sp_events_t 
   sp_time_t e_i;
   seq_futures = 0;
   /* select active events */
-  for (i = 0, events_start = 0, events_count = 0; (i < events.size); i = (1 + i)) {
-    e = (events.data)[i];
+  for (i = 0, events_start = 0, events_count = 0; (i < size); i = (1 + i)) {
+    e = events[i];
     if (e.end <= start) {
       events_start = (1 + events_start);
     } else if (end <= e.start) {
@@ -74,7 +74,7 @@ s_t sp_seq_parallel(sp_time_t start, sp_time_t end, sp_block_t out, sp_events_t 
   s((sph_helper_malloc((events_count * sizeof(sp_seq_future_t)), (&seq_futures))));
   /* parallelise */
   for (i = 0; (i < events_count); i = (1 + i)) {
-    e = (events.data)[(events_start + i)];
+    e = events[(events_start + i)];
     sf = (i + seq_futures);
     e_out_start = ((e.start > start) ? (e.start - start) : 0);
     e_start = ((start > e.start) ? (start - e.start) : 0);
@@ -83,7 +83,7 @@ s_t sp_seq_parallel(sp_time_t start, sp_time_t end, sp_block_t out, sp_events_t 
     sf->start = e_start;
     sf->end = e_end;
     sf->out_start = e_out_start;
-    sf->event = (events_start + i + events.data);
+    sf->event = (events_start + i + events);
     future_new(sp_seq_parallel_future_f, sf, (&(sf->future)));
   };
   /* merge */

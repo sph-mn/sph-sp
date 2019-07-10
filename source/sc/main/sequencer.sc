@@ -10,14 +10,15 @@
     (< (struct-get (array-get (convert-type a sp-event-t*) b) start)
       (struct-get (array-get (convert-type a sp-event-t*) c) start))))
 
-(define (sp-seq-events-prepare a) (void sp-events-t)
-  (quicksort sp-event-sort-less? sp-event-sort-swap a.data 0 (- a.size 1)))
+(define (sp-seq-events-prepare data size) (void sp-event-t* sp-time-t)
+  (quicksort sp-event-sort-less? sp-event-sort-swap data 0 (- size 1)))
 
-(define (sp-seq start end out events) (void sp-time-t sp-time-t sp-block-t sp-events-t)
+(define (sp-seq start end out events size)
+  (void sp-time-t sp-time-t sp-block-t sp-event-t* sp-time-t)
   "event arrays must have been prepared/sorted with sp-seq-event-prepare for seq to work correctly"
   (declare e-out-start sp-time-t e sp-event-t e-start sp-time-t e-end sp-time-t i sp-time-t)
-  (for ((set i 0) (< i events.size) (set i (+ 1 i)))
-    (set e (array-get events.data i))
+  (for ((set i 0) (< i size) (set i (+ 1 i)))
+    (set e (array-get events i))
     (cond ((<= e.end start) continue) ((<= end e.start) break)
       (else
         (set
@@ -26,9 +27,9 @@
           e-end (- (if* (< e.end end) e.end end) e.start))
         (e.f e-start e-end (if* e-out-start (sp-block-with-offset out e-out-start) out) &e)))))
 
-(define (sp-events-free events) (void sp-events-t)
+(define (sp-events-free events size) (void sp-event-t* sp-time-t)
   (declare i sp-time-t)
-  (for ((set i 0) (< i events.size) (set i (+ 1 i))) (: (+ events.data i) free)))
+  (for ((set i 0) (< i size) (set i (+ 1 i))) (: (+ events i) free)))
 
 (declare sp-seq-future-t
   (type
@@ -44,8 +45,8 @@
   (define a sp-seq-future-t* data)
   (a:event:f a:start a:end a:out a:event))
 
-(define (sp-seq-parallel start end out events)
-  (s-t sp-time-t sp-time-t sp-block-t sp-events-t)
+(define (sp-seq-parallel start end out events size)
+  (s-t sp-time-t sp-time-t sp-block-t sp-event-t* sp-time-t)
   "like sp_seq but evaluates events in parallel"
   s-declare
   (declare
@@ -62,24 +63,20 @@
     e-i sp-time-t)
   (set seq-futures 0)
   (sc-comment "select active events")
-  (for ((set i 0 events-start 0 events-count 0) (< i events.size) (set i (+ 1 i)))
-    (set e (array-get events.data i))
+  (for ((set i 0 events-start 0 events-count 0) (< i size) (set i (+ 1 i)))
+    (set e (array-get events i))
     (cond ((<= e.end start) (set events-start (+ 1 events-start))) ((<= end e.start) break)
       (else (set events-count (+ 1 events-count)))))
   (s (sph-helper-malloc (* events-count (sizeof sp-seq-future-t)) &seq-futures))
   (sc-comment "parallelise")
   (for ((set i 0) (< i events-count) (set i (+ 1 i)))
-    (set e (array-get events.data (+ events-start i)) sf (+ i seq-futures))
+    (set e (array-get events (+ events-start i)) sf (+ i seq-futures))
     (set
       e-out-start (if* (> e.start start) (- e.start start) 0)
       e-start (if* (> start e.start) (- start e.start) 0)
       e-end (- (if* (< e.end end) e.end end) e.start))
     (s (sp-block-new out.channels (- e-end e-start) &sf:out))
-    (set
-      sf:start e-start
-      sf:end e-end
-      sf:out-start e-out-start
-      sf:event (+ events-start i events.data))
+    (set sf:start e-start sf:end e-end sf:out-start e-out-start sf:event (+ events-start i events))
     (future-new sp-seq-parallel-future-f sf &sf:future))
   (sc-comment "merge")
   (for ((set e-i 0) (< e-i events-count) (set e-i (+ 1 e-i)))
