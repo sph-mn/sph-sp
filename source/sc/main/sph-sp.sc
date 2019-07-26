@@ -272,7 +272,7 @@
     sp-sample-t** sp-state-variable-filter-t sp-sample-t*
     sp-time-t sp-sample-t sp-time-t sp-random-state-t sp-event-t*))
 
-(define (sp-counts-from-samples in in-size out) (void sp-sample-t* sp-time-t sp-time-t*)
+(define (sp-time-from-samples in in-size out) (void sp-sample-t* sp-time-t sp-time-t*)
   (declare i sp-time-t)
   (for ((set i 0) (< i in-size) (set i (+ 1 i)))
     (set (array-get out i) (sp-cheap-round-positive (array-get in i)))))
@@ -289,6 +289,12 @@
   (declare segments (array spline-path-segment-t 2))
   (array-set segments 0 s1 1 s2)
   (return (spline-path-new-get 2 segments 0 duration out)))
+
+(define (spline-path-new-get-3 out duration s1 s2 s3)
+  (int sp-sample-t* sp-time-t spline-path-segment-t spline-path-segment-t spline-path-segment-t)
+  (declare segments (array spline-path-segment-t 3))
+  (array-set segments 0 s1 1 s2 2 s3)
+  (return (spline-path-new-get 3 segments 0 duration out)))
 
 (define (sp-block->file block path rate) (s-t sp-block-t uint8-t* sp-time-t)
   s-declare
