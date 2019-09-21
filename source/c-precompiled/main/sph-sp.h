@@ -62,10 +62,10 @@ typedef struct {
   int id;
   uint8_t* group;
 } status_t;
-#define status_success 0
+#define status_id_success 0
 #define status_group_undefined ((uint8_t*)(""))
-#define status_declare status_t status = { status_success, status_group_undefined }
-#define status_is_success (status_success == status.id)
+#define status_declare status_t status = { status_id_success, status_group_undefined }
+#define status_is_success (status_id_success == status.id)
 #define status_is_failure !status_is_success
 #define status_return return (status)
 #define status_set(group_id, status_id) \

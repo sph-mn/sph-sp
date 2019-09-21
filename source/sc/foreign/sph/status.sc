@@ -7,10 +7,10 @@
 (declare status-t (type (struct (id int) (group uint8-t*))))
 
 (pre-define
-  status-success 0
+  status-id-success 0
   status-group-undefined (convert-type "" uint8-t*)
-  status-declare (define status status-t (struct-literal status-success status-group-undefined))
-  status-is-success (= status-success status.id)
+  status-declare (define status status-t (struct-literal status-id-success status-group-undefined))
+  status-is-success (= status-id-success status.id)
   status-is-failure (not status-is-success)
   status-return (return status)
   (status-set group-id status-id)
