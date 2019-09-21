@@ -14,20 +14,20 @@
 #include "../foreign/sph/thread-pool.c"
 #include "../foreign/sph/futures.c"
 #include "../foreign/sph/random.c"
-#define sp_s_declare s_declare_group(sp_s_group_sp)
+#define sp_status_declare status_declare_group(sp_s_group_sp)
 #define max(a, b) ((a > b) ? a : b)
 #define min(a, b) ((a < b) ? a : b)
 #define sp_libc_s_id(id) \
   if (id < 0) { \
-    s_set_goto(sp_s_group_libc, id); \
+    status_set_goto(sp_s_group_libc, id); \
   }
 #define sp_libc_s(expression) \
-  s_current.id = expression; \
-  if (s_current.id < 0) { \
-    s_current.group = sp_s_group_libc; \
+  status.id = expression; \
+  if (status.id < 0) { \
+    status.group = sp_s_group_libc; \
     goto exit; \
   } else { \
-    s_current.id = 0; \
+    status.id = 0; \
   }
 /** define a deinterleave, interleave or similar routine.
     a: source
@@ -59,8 +59,8 @@ define_sp_interleave(sp_interleave, sp_sample_t, (b[b_size] = (a[channel])[a_siz
   };
   printf("\n");
 }
-/** get a string description for a status id in a s-t */
-uint8_t* sp_status_description(s_t a) {
+/** get a string description for a status id in a status-t */
+uint8_t* sp_status_description(status_t a) {
   uint8_t* b;
   if (!strcmp(sp_s_group_sp, (a.group))) {
     if (sp_s_id_eof == a.id) {
@@ -87,8 +87,8 @@ uint8_t* sp_status_description(s_t a) {
   };
   return (b);
 }
-/** get a single word identifier for a status id in a s-t */
-uint8_t* sp_status_name(s_t a) {
+/** get a single word identifier for a status id in a status-t */
+uint8_t* sp_status_name(status_t a) {
   uint8_t* b;
   if (0 == strcmp(sp_s_group_sp, (a.group))) {
     if (sp_s_id_input_type == a.id) {
@@ -108,23 +108,23 @@ uint8_t* sp_status_name(s_t a) {
   return (b);
 }
 /** return a newly allocated array for channels with data arrays for each channel */
-s_t sp_block_new(sp_channels_t channels, sp_time_t size, sp_block_t* out) {
-  s_declare;
+status_t sp_block_new(sp_channels_t channels, sp_time_t size, sp_block_t* out) {
+  status_declare;
   memreg_init(channels);
   sp_sample_t* channel;
   sp_time_t i;
   for (i = 0; (i < channels); i = (1 + i)) {
-    s((sph_helper_calloc((size * sizeof(sp_sample_t)), (&channel))));
+    status_require((sph_helper_calloc((size * sizeof(sp_sample_t)), (&channel))));
     memreg_add(channel);
     (out->samples)[i] = channel;
   };
   out->size = size;
   out->channels = channels;
 exit:
-  if (s_is_failure) {
+  if (status_is_failure) {
     memreg_free;
   };
-  s_return;
+  status_return;
 }
 void sp_block_free(sp_block_t a) {
   sp_time_t i;
@@ -140,8 +140,8 @@ sp_block_t sp_block_with_offset(sp_block_t a, sp_time_t offset) {
   };
   return (a);
 }
-s_t sp_sample_array_new(sp_time_t size, sp_sample_t** out) { return ((sph_helper_calloc((size * sizeof(sp_sample_t)), out))); }
-s_t sp_count_array_new(sp_time_t size, sp_time_t** out) { return ((sph_helper_calloc((size * sizeof(sp_time_t)), out))); }
+status_t sp_sample_array_new(sp_time_t size, sp_sample_t** out) { return ((sph_helper_calloc((size * sizeof(sp_sample_t)), out))); }
+status_t sp_count_array_new(sp_time_t size, sp_time_t** out) { return ((sph_helper_calloc((size * sizeof(sp_time_t)), out))); }
 /** lower precision version of sin() that should be faster */
 sp_sample_t sp_sin_lq(sp_float_t a) {
   sp_sample_t b;
@@ -165,8 +165,8 @@ int sp_ffti(sp_time_t input_len, double* input_or_output_real, double* input_or_
    * prev and next can be null pointers if not available
    * zero is used for unavailable values
    * rounding errors are kept low by using modified kahan neumaier summation */
-s_t sp_moving_average(sp_sample_t* in, sp_sample_t* in_end, sp_sample_t* in_window, sp_sample_t* in_window_end, sp_sample_t* prev, sp_sample_t* prev_end, sp_sample_t* next, sp_sample_t* next_end, sp_time_t radius, sp_sample_t* out) {
-  s_declare;
+status_t sp_moving_average(sp_sample_t* in, sp_sample_t* in_end, sp_sample_t* in_window, sp_sample_t* in_window_end, sp_sample_t* prev, sp_sample_t* prev_end, sp_sample_t* next, sp_sample_t* next_end, sp_time_t radius, sp_sample_t* out) {
+  status_declare;
   sp_sample_t* in_left;
   sp_sample_t* in_right;
   sp_sample_t* outside;
@@ -198,7 +198,7 @@ s_t sp_moving_average(sp_sample_t* in, sp_sample_t* in_end, sp_sample_t* in_wind
     out = (1 + out);
     in_window = (1 + in_window);
   };
-  s_return;
+  status_return;
 }
 /** modify an impulse response kernel for spectral inversion.
    a-len must be odd and "a" must have left-right symmetry.
@@ -326,13 +326,13 @@ void sp_set_unity_gain(sp_sample_t* in, sp_time_t in_size, sp_sample_t* out) {
 #include "../main/synthesiser.c"
 #include "../main/sequencer.c"
 /** fills the sine wave lookup table */
-s_t sp_initialise(uint16_t cpu_count) {
-  s_declare;
+status_t sp_initialise(uint16_t cpu_count) {
+  status_declare;
   if (cpu_count) {
-    s_current.id = future_init(cpu_count);
+    status.id = future_init(cpu_count);
   };
-  if (s_current.id) {
-    s_return;
+  if (status.id) {
+    status_return;
   };
   sp_default_random_state = sp_random_state_new(1557083953);
   return ((sp_sine_table_new((&sp_sine_96_table), 96000)));

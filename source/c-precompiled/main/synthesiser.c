@@ -10,18 +10,18 @@ sp_time_t sp_phase_96(sp_time_t current, sp_time_t change) {
 sp_time_t sp_phase_96_float(sp_time_t current, double change) { return ((sp_phase_96(current, (sp_cheap_ceiling_positive(change))))); }
 /** contains the initial phase offsets per partial and channel
   as a flat array. should be freed with free */
-s_t sp_synth_state_new(sp_time_t channel_count, sp_synth_count_t config_len, sp_synth_partial_t* config, sp_time_t** out_state) {
-  s_declare;
+status_t sp_synth_state_new(sp_time_t channel_count, sp_synth_count_t config_len, sp_synth_partial_t* config, sp_time_t** out_state) {
+  status_declare;
   sp_time_t i;
   sp_time_t channel_i;
-  s((sph_helper_calloc((channel_count * config_len * sizeof(sp_time_t)), out_state)));
+  status_require((sph_helper_calloc((channel_count * config_len * sizeof(sp_time_t)), out_state)));
   for (i = 0; (i < config_len); i = (1 + i)) {
     for (channel_i = 0; (channel_i < channel_count); channel_i = (1 + channel_i)) {
       (*out_state)[(channel_i + (channel_count * i))] = ((config[i]).phs)[channel_i];
     };
   };
 exit:
-  s_return;
+  status_return;
 }
 /** create sines that start and end at specific times and can optionally modulate the frequency of others.
   sp-synth output is summed into out.
@@ -39,8 +39,8 @@ exit:
   * write modulator output to temporary buffers that are indexed by modified partial id
   * apply modulator output from the buffers and sum to output for final carriers
   * each partial has integer phases that are reset in cycles and kept in state between calls */
-s_t sp_synth(sp_block_t out, sp_time_t start, sp_time_t duration, sp_synth_count_t config_len, sp_synth_partial_t* config, sp_time_t* phases) {
-  s_declare;
+status_t sp_synth(sp_block_t out, sp_time_t start, sp_time_t duration, sp_synth_count_t config_len, sp_synth_partial_t* config, sp_time_t* phases) {
+  status_declare;
   sp_sample_t amp;
   sp_sample_t* carrier;
   sp_time_t channel_i;
@@ -79,7 +79,7 @@ s_t sp_synth(sp_block_t out, sp_time_t start, sp_time_t duration, sp_synth_count
       for (channel_i = 0; (channel_i < out.channels); channel_i = (1 + channel_i)) {
         carrier = modulation_index[(prt.modifies - 1)][channel_i];
         if (!carrier) {
-          s((sph_helper_calloc((duration * sizeof(sp_sample_t)), (&carrier))));
+          status_require((sph_helper_calloc((duration * sizeof(sp_sample_t)), (&carrier))));
           memreg_add(carrier);
         };
         phs = phases[(channel_i + (out.channels * prt_i))];
@@ -111,7 +111,7 @@ s_t sp_synth(sp_block_t out, sp_time_t start, sp_time_t duration, sp_synth_count
   };
 exit:
   memreg_free;
-  s_return;
+  status_return;
 }
 #define sp_synth_partial_set_channel(prt, channel, amp_array, wvl_array, phs_array) \
   (prt.amp)[channel] = amp_array; \
@@ -146,15 +146,15 @@ sp_sample_t sp_triangle(sp_time_t t, sp_time_t a, sp_time_t b) {
 sp_sample_t sp_triangle_96(sp_time_t t) { return ((sp_triangle(t, 48000, 48000))); }
 sp_sample_t sp_square_96(sp_time_t t) { return (((((2 * t) % (2 * 96000)) < 96000) ? -1 : 1)); }
 /** writes a sine wave of size into out. can be used as a lookup table */
-s_t sp_sine_table_new(sp_sample_t** out, sp_time_t size) {
-  s_declare;
+status_t sp_sine_table_new(sp_sample_t** out, sp_time_t size) {
+  status_declare;
   sp_time_t i;
   sp_sample_t* out_array;
-  s((sph_helper_malloc((size * sizeof(sp_sample_t*)), (&out_array))));
+  status_require((sph_helper_malloc((size * sizeof(sp_sample_t*)), (&out_array))));
   for (i = 0; (i < size); i = (1 + i)) {
     out_array[i] = sin((i * (M_PI / (size / 2))));
   };
   *out = out_array;
 exit:
-  s_return;
+  status_return;
 }

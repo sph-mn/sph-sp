@@ -46,8 +46,8 @@ void* sp_seq_parallel_future_f(void* data) {
   (a->event->f)((a->start), (a->end), (a->out), (a->event));
 }
 /** like sp_seq but evaluates events in parallel */
-s_t sp_seq_parallel(sp_time_t start, sp_time_t end, sp_block_t out, sp_event_t* events, sp_time_t size) {
-  s_declare;
+status_t sp_seq_parallel(sp_time_t start, sp_time_t end, sp_block_t out, sp_event_t* events, sp_time_t size) {
+  status_declare;
   sp_time_t e_out_start;
   sp_event_t e;
   sp_time_t e_start;
@@ -71,7 +71,7 @@ s_t sp_seq_parallel(sp_time_t start, sp_time_t end, sp_block_t out, sp_event_t* 
       events_count = (1 + events_count);
     };
   };
-  s((sph_helper_malloc((events_count * sizeof(sp_seq_future_t)), (&seq_futures))));
+  status_require((sph_helper_malloc((events_count * sizeof(sp_seq_future_t)), (&seq_futures))));
   /* parallelise */
   for (i = 0; (i < events_count); i = (1 + i)) {
     e = events[(events_start + i)];
@@ -79,7 +79,7 @@ s_t sp_seq_parallel(sp_time_t start, sp_time_t end, sp_block_t out, sp_event_t* 
     e_out_start = ((e.start > start) ? (e.start - start) : 0);
     e_start = ((start > e.start) ? (start - e.start) : 0);
     e_end = (((e.end < end) ? e.end : end) - e.start);
-    s((sp_block_new((out.channels), (e_end - e_start), (&(sf->out)))));
+    status_require((sp_block_new((out.channels), (e_end - e_start), (&(sf->out)))));
     sf->start = e_start;
     sf->end = e_end;
     sf->out_start = e_out_start;
@@ -99,7 +99,7 @@ s_t sp_seq_parallel(sp_time_t start, sp_time_t end, sp_block_t out, sp_event_t* 
   };
 exit:
   free(seq_futures);
-  s_return;
+  status_return;
 }
 void sp_synth_event_free(sp_event_t* a) {
   free((((sp_synth_event_state_t*)(a->state))->state));
@@ -111,13 +111,13 @@ void sp_synth_event_f(sp_time_t start, sp_time_t end, sp_block_t out, sp_event_t
 }
 /** memory for event.state will be allocated and then owned by the caller.
   config is copied into event.state */
-s_t sp_synth_event(sp_time_t start, sp_time_t end, sp_time_t channel_count, sp_time_t config_len, sp_synth_partial_t* config, sp_event_t* out_event) {
-  s_declare;
+status_t sp_synth_event(sp_time_t start, sp_time_t end, sp_time_t channel_count, sp_time_t config_len, sp_synth_partial_t* config, sp_event_t* out_event) {
+  status_declare;
   sp_event_t e;
   sp_synth_event_state_t* state;
   state = 0;
-  s((sph_helper_malloc((channel_count * sizeof(sp_synth_event_state_t)), (&state))));
-  s((sp_synth_state_new(channel_count, config_len, config, (&(state->state)))));
+  status_require((sph_helper_malloc((channel_count * sizeof(sp_synth_event_state_t)), (&state))));
+  status_require((sp_synth_state_new(channel_count, config_len, config, (&(state->state)))));
   memcpy((state->config), config, (config_len * sizeof(sp_synth_partial_t)));
   state->config_len = config_len;
   e.start = start;
@@ -127,10 +127,10 @@ s_t sp_synth_event(sp_time_t start, sp_time_t end, sp_time_t channel_count, sp_t
   e.state = state;
   *out_event = e;
 exit:
-  if (s_is_failure) {
+  if (status_is_failure) {
     free(state);
   };
-  s_return;
+  status_return;
 }
 typedef struct {
   sp_sample_t** amp;
@@ -184,26 +184,26 @@ void sp_noise_event_free(sp_event_t* a) {
 /** an event for noise filtered by a windowed-sinc filter.
   very processing intensive when parameters change with low resolution.
   memory for event.state will be allocated and then owned by the caller */
-s_t sp_noise_event(sp_time_t start, sp_time_t end, sp_sample_t** amp, sp_sample_t* cut_l, sp_sample_t* cut_h, sp_sample_t* trn_l, sp_sample_t* trn_h, uint8_t is_reject, sp_time_t resolution, sp_random_state_t random_state, sp_event_t* out_event) {
-  s_declare;
+status_t sp_noise_event(sp_time_t start, sp_time_t end, sp_sample_t** amp, sp_sample_t* cut_l, sp_sample_t* cut_h, sp_sample_t* trn_l, sp_sample_t* trn_h, uint8_t is_reject, sp_time_t resolution, sp_random_state_t random_state, sp_event_t* out_event) {
+  status_declare;
   sp_sample_t* temp;
   sp_sample_t* temp_noise;
   sp_time_t ir_len;
   sp_event_t e;
   sp_noise_event_state_t* s;
   resolution = (resolution ? min(resolution, (end - start)) : 96);
-  s((sph_helper_malloc((sizeof(sp_noise_event_state_t)), (&s))));
-  s((sph_helper_malloc((resolution * sizeof(sp_sample_t)), (&(s->noise)))));
-  s((sph_helper_malloc((resolution * sizeof(sp_sample_t)), (&(s->temp)))));
+  status_require((sph_helper_malloc((sizeof(sp_noise_event_state_t)), (&s))));
+  status_require((sph_helper_malloc((resolution * sizeof(sp_sample_t)), (&(s->noise)))));
+  status_require((sph_helper_malloc((resolution * sizeof(sp_sample_t)), (&(s->temp)))));
   /* the result shows a small delay, circa 40 samples for transition 0.07. the size seems to be related to ir-len.
 the state is initialised with one unused call to skip the delay.
 an added benefit is that the filter-state setup malloc is checked */
   ir_len = sp_windowed_sinc_lp_hp_ir_length((min((*trn_l), (*trn_h))));
   s->filter_state = 0;
-  s((sph_helper_malloc((ir_len * sizeof(sp_sample_t)), (&temp))));
-  s((sph_helper_malloc((ir_len * sizeof(sp_sample_t)), (&temp_noise))));
+  status_require((sph_helper_malloc((ir_len * sizeof(sp_sample_t)), (&temp))));
+  status_require((sph_helper_malloc((ir_len * sizeof(sp_sample_t)), (&temp_noise))));
   sp_random_samples((&random_state), ir_len, temp_noise);
-  s((sp_windowed_sinc_bp_br(temp_noise, ir_len, (*cut_l), (*cut_h), (*trn_l), (*trn_h), is_reject, (&(s->filter_state)), temp)));
+  status_require((sp_windowed_sinc_bp_br(temp_noise, ir_len, (*cut_l), (*cut_h), (*trn_l), (*trn_h), is_reject, (&(s->filter_state)), temp)));
   free(temp);
   free(temp_noise);
   s->cut_l = cut_l;
@@ -221,7 +221,7 @@ an added benefit is that the filter-state setup malloc is checked */
   e.state = s;
   *out_event = e;
 exit:
-  s_return;
+  status_return;
 }
 typedef struct {
   sp_sample_t** amp;
@@ -275,15 +275,15 @@ void sp_cheap_noise_event_free(sp_event_t* a) {
   lower processing costs even when parameters change with high resolution.
   multiple passes almost multiply performance costs.
   memory for event.state will be allocated and then owned by the caller */
-s_t sp_cheap_noise_event(sp_time_t start, sp_time_t end, sp_sample_t** amp, sp_state_variable_filter_t type, sp_sample_t* cut, sp_time_t passes, sp_sample_t q_factor, sp_time_t resolution, sp_random_state_t random_state, sp_event_t* out_event) {
-  s_declare;
+status_t sp_cheap_noise_event(sp_time_t start, sp_time_t end, sp_sample_t** amp, sp_state_variable_filter_t type, sp_sample_t* cut, sp_time_t passes, sp_sample_t q_factor, sp_time_t resolution, sp_random_state_t random_state, sp_event_t* out_event) {
+  status_declare;
   sp_event_t e;
   sp_cheap_noise_event_state_t* s;
   resolution = (resolution ? min(resolution, (end - start)) : 96);
-  s((sph_helper_malloc((sizeof(sp_cheap_noise_event_state_t)), (&s))));
-  s((sph_helper_malloc((resolution * sizeof(sp_sample_t)), (&(s->noise)))));
-  s((sph_helper_malloc((resolution * sizeof(sp_sample_t)), (&(s->temp)))));
-  s((sp_cheap_filter_state_new(resolution, passes, (&(s->filter_state)))));
+  status_require((sph_helper_malloc((sizeof(sp_cheap_noise_event_state_t)), (&s))));
+  status_require((sph_helper_malloc((resolution * sizeof(sp_sample_t)), (&(s->noise)))));
+  status_require((sph_helper_malloc((resolution * sizeof(sp_sample_t)), (&(s->temp)))));
+  status_require((sp_cheap_filter_state_new(resolution, passes, (&(s->filter_state)))));
   s->cut = cut;
   s->q_factor = q_factor;
   s->passes = passes;
@@ -298,5 +298,5 @@ s_t sp_cheap_noise_event(sp_time_t start, sp_time_t end, sp_sample_t** amp, sp_s
   e.state = s;
   *out_event = e;
 exit:
-  s_return;
+  status_return;
 }

@@ -16,8 +16,8 @@ void sp_convolution_filter_state_free(sp_convolution_filter_state_t* state) {
   the state object is used to store the impulse response, the parameters that where used to create it and
   overlapping data that has to be carried over between calls.
   ir-f-arguments can be stack allocated and will be copied to state on change */
-s_t sp_convolution_filter_state_set(sp_convolution_filter_ir_f_t ir_f, void* ir_f_arguments, uint8_t ir_f_arguments_len, sp_convolution_filter_state_t** out_state) {
-  s_declare;
+status_t sp_convolution_filter_state_set(sp_convolution_filter_ir_f_t ir_f, void* ir_f_arguments, uint8_t ir_f_arguments_len, sp_convolution_filter_state_t** out_state) {
+  status_declare;
   sp_sample_t* carryover;
   sp_time_t carryover_alloc_len;
   sp_sample_t* ir;
@@ -30,11 +30,11 @@ s_t sp_convolution_filter_state_set(sp_convolution_filter_ir_f_t ir_f, void* ir_
     state = *out_state;
     if ((state->ir_f == ir_f) && (ir_f_arguments_len == state->ir_f_arguments_len) && (0 == memcmp((state->ir_f_arguments), ir_f_arguments, ir_f_arguments_len))) {
       /* unchanged */
-      s_return;
+      status_return;
     } else {
       /* changed */
       if (ir_f_arguments_len > state->ir_f_arguments_len) {
-        s((sph_helper_realloc(ir_f_arguments_len, (&(state->ir_f_arguments)))));
+        status_require((sph_helper_realloc(ir_f_arguments_len, (&(state->ir_f_arguments)))));
       };
       if (state->ir) {
         free((state->ir));
@@ -42,8 +42,8 @@ s_t sp_convolution_filter_state_set(sp_convolution_filter_ir_f_t ir_f, void* ir_
     };
   } else {
     /* new */
-    s((sph_helper_malloc((sizeof(sp_convolution_filter_state_t)), (&state))));
-    s((sph_helper_malloc(ir_f_arguments_len, (&(state->ir_f_arguments)))));
+    status_require((sph_helper_malloc((sizeof(sp_convolution_filter_state_t)), (&state))));
+    status_require((sph_helper_malloc(ir_f_arguments_len, (&(state->ir_f_arguments)))));
     memreg_add(state);
     memreg_add((state->ir_f_arguments));
     state->carryover_alloc_len = 0;
@@ -53,7 +53,7 @@ s_t sp_convolution_filter_state_set(sp_convolution_filter_ir_f_t ir_f, void* ir_
     state->ir_f_arguments_len = ir_f_arguments_len;
   };
   memcpy((state->ir_f_arguments), ir_f_arguments, ir_f_arguments_len);
-  s((ir_f(ir_f_arguments, (&ir), (&ir_len))));
+  status_require((ir_f(ir_f_arguments, (&ir), (&ir_len))));
   /* eventually extend carryover array. the array is never shrunk.
 carryover-len is at least ir-len - 1.
 carryover-alloc-len is the length of the whole array.
@@ -63,14 +63,14 @@ new and extended areas must be set to zero */
     carryover = state->carryover;
     if (ir_len > state->ir_len) {
       if (carryover_alloc_len > state->carryover_alloc_len) {
-        s((sph_helper_realloc((carryover_alloc_len * sizeof(sp_sample_t)), (&carryover))));
+        status_require((sph_helper_realloc((carryover_alloc_len * sizeof(sp_sample_t)), (&carryover))));
         state->carryover_alloc_len = carryover_alloc_len;
       };
       /* in any case reset the extension area */
       memset(((state->ir_len - 1) + carryover), 0, ((ir_len - state->ir_len) * sizeof(sp_sample_t)));
     };
   } else {
-    s((sph_helper_calloc((carryover_alloc_len * sizeof(sp_sample_t)), (&carryover))));
+    status_require((sph_helper_calloc((carryover_alloc_len * sizeof(sp_sample_t)), (&carryover))));
     state->carryover_alloc_len = carryover_alloc_len;
   };
   state->carryover = carryover;
@@ -78,10 +78,10 @@ new and extended areas must be set to zero */
   state->ir_len = ir_len;
   *out_state = state;
 exit:
-  if (s_is_failure) {
+  if (status_is_failure) {
     memreg_free;
   };
-  s_return;
+  status_return;
 }
 /** convolute samples "in", which can be a segment of a continuous stream, with an impulse response
   kernel created by ir-f with ir-f-arguments. can be used for many types of convolution with dynamic impulse response.
@@ -89,16 +89,16 @@ exit:
   values that need to be carried over with calls are kept in out-state.
   * out-state: if zero then state will be allocated. owned by caller
   * out-samples: owned by the caller. length must be at least in-len and the number of output samples will be in-len */
-s_t sp_convolution_filter(sp_sample_t* in, sp_time_t in_len, sp_convolution_filter_ir_f_t ir_f, void* ir_f_arguments, uint8_t ir_f_arguments_len, sp_convolution_filter_state_t** out_state, sp_sample_t* out_samples) {
-  s_declare;
+status_t sp_convolution_filter(sp_sample_t* in, sp_time_t in_len, sp_convolution_filter_ir_f_t ir_f, void* ir_f_arguments, uint8_t ir_f_arguments_len, sp_convolution_filter_state_t** out_state, sp_sample_t* out_samples) {
+  status_declare;
   sp_time_t carryover_len;
   carryover_len = (*out_state ? ((*out_state)->ir_len - 1) : 0);
   /* create/update the impulse response kernel */
-  s((sp_convolution_filter_state_set(ir_f, ir_f_arguments, ir_f_arguments_len, out_state)));
+  status_require((sp_convolution_filter_state_set(ir_f, ir_f_arguments, ir_f_arguments_len, out_state)));
   /* convolve */
   sp_convolve(in, in_len, ((*out_state)->ir), ((*out_state)->ir_len), carryover_len, ((*out_state)->carryover), out_samples);
 exit:
-  s_return;
+  status_return;
 }
 sp_float_t sp_window_blackman(sp_float_t a, sp_time_t width) { return (((0.42 - (0.5 * cos(((2 * M_PI * a) / (width - 1))))) + (0.08 * cos(((4 * M_PI * a) / (width - 1)))))); }
 /** approximate impulse response length for a transition factor and
@@ -111,24 +111,24 @@ sp_time_t sp_windowed_sinc_lp_hp_ir_length(sp_float_t transition) {
   };
   return (a);
 }
-s_t sp_null_ir(sp_sample_t** out_ir, sp_time_t* out_len) {
+status_t sp_null_ir(sp_sample_t** out_ir, sp_time_t* out_len) {
   *out_len = 1;
   return ((sph_helper_calloc((sizeof(sp_sample_t)), out_ir)));
 }
-s_t sp_passthrough_ir(sp_sample_t** out_ir, sp_time_t* out_len) {
-  s_declare;
-  s((sph_helper_malloc((sizeof(sp_sample_t)), out_ir)));
+status_t sp_passthrough_ir(sp_sample_t** out_ir, sp_time_t* out_len) {
+  status_declare;
+  status_require((sph_helper_malloc((sizeof(sp_sample_t)), out_ir)));
   **out_ir = 1;
   *out_len = 1;
 exit:
-  s_return;
+  status_return;
 }
 /** create an impulse response kernel for a windowed sinc low-pass or high-pass filter.
   uses a truncated blackman window.
   allocates out-ir, sets out-len.
   cutoff and transition are as fraction 0..0.5 of the sampling rate */
-s_t sp_windowed_sinc_lp_hp_ir(sp_float_t cutoff, sp_float_t transition, boolean is_high_pass, sp_sample_t** out_ir, sp_time_t* out_len) {
-  s_declare;
+status_t sp_windowed_sinc_lp_hp_ir(sp_float_t cutoff, sp_float_t transition, boolean is_high_pass, sp_sample_t** out_ir, sp_time_t* out_len) {
+  status_declare;
   sp_float_t center_index;
   sp_time_t i;
   sp_sample_t* ir;
@@ -136,7 +136,7 @@ s_t sp_windowed_sinc_lp_hp_ir(sp_float_t cutoff, sp_float_t transition, boolean 
   sp_float_t sum;
   len = sp_windowed_sinc_lp_hp_ir_length(transition);
   center_index = ((len - 1.0) / 2.0);
-  s((sph_helper_malloc((len * sizeof(sp_sample_t)), (&ir))));
+  status_require((sph_helper_malloc((len * sizeof(sp_sample_t)), (&ir))));
   /* set the windowed sinc
 nan can be set here if the freq and transition values are invalid */
   for (i = 0; (i < len); i = (1 + i)) {
@@ -153,12 +153,12 @@ nan can be set here if the freq and transition values are invalid */
   *out_ir = ir;
   *out_len = len;
 exit:
-  s_return;
+  status_return;
 }
 /** like sp-windowed-sinc-ir-lp but for a band-pass or band-reject filter.
   optimisation: if one cutoff is at or above maximum then create only either low-pass or high-pass */
-s_t sp_windowed_sinc_bp_br_ir(sp_float_t cutoff_l, sp_float_t cutoff_h, sp_float_t transition_l, sp_float_t transition_h, boolean is_reject, sp_sample_t** out_ir, sp_time_t* out_len) {
-  s_declare;
+status_t sp_windowed_sinc_bp_br_ir(sp_float_t cutoff_l, sp_float_t cutoff_h, sp_float_t transition_l, sp_float_t transition_h, boolean is_reject, sp_sample_t** out_ir, sp_time_t* out_len) {
+  status_declare;
   sp_sample_t* hp_ir;
   sp_time_t hp_len;
   sp_sample_t* lp_ir;
@@ -180,8 +180,8 @@ s_t sp_windowed_sinc_bp_br_ir(sp_float_t cutoff_l, sp_float_t cutoff_h, sp_float
         return ((sp_windowed_sinc_lp_hp_ir(cutoff_l, transition_l, 0, out_ir, out_len)));
       };
     };
-    s((sp_windowed_sinc_lp_hp_ir(cutoff_l, transition_l, 0, (&lp_ir), (&lp_len))));
-    s((sp_windowed_sinc_lp_hp_ir(cutoff_h, transition_h, 1, (&hp_ir), (&hp_len))));
+    status_require((sp_windowed_sinc_lp_hp_ir(cutoff_l, transition_l, 0, (&lp_ir), (&lp_len))));
+    status_require((sp_windowed_sinc_lp_hp_ir(cutoff_h, transition_h, 1, (&hp_ir), (&hp_len))));
     /* prepare to add the shorter ir to the longer one center-aligned */
     if (lp_len > hp_len) {
       start = (((lp_len - 1) / 2) - ((hp_len - 1) / 2));
@@ -215,19 +215,19 @@ s_t sp_windowed_sinc_bp_br_ir(sp_float_t cutoff_l, sp_float_t cutoff_h, sp_float
         return ((sp_windowed_sinc_lp_hp_ir(cutoff_l, transition_l, 1, out_ir, out_len)));
       };
     };
-    s((sp_windowed_sinc_lp_hp_ir(cutoff_l, transition_l, 1, (&hp_ir), (&hp_len))));
-    s((sp_windowed_sinc_lp_hp_ir(cutoff_h, transition_h, 0, (&lp_ir), (&lp_len))));
+    status_require((sp_windowed_sinc_lp_hp_ir(cutoff_l, transition_l, 1, (&hp_ir), (&hp_len))));
+    status_require((sp_windowed_sinc_lp_hp_ir(cutoff_h, transition_h, 0, (&lp_ir), (&lp_len))));
     /* convolve lp and hp ir samples */
     *out_len = ((lp_len + hp_len) - 1);
-    s((sph_helper_calloc((*out_len * sizeof(sp_sample_t)), out_ir)));
+    status_require((sph_helper_calloc((*out_len * sizeof(sp_sample_t)), out_ir)));
     sp_convolve_one(lp_ir, lp_len, hp_ir, hp_len, (*out_ir));
   };
 exit:
-  s_return;
+  status_return;
 }
 /** maps arguments from the generic ir-f-arguments array.
   arguments is (sp-float-t:cutoff sp-float-t:transition boolean:is-high-pass) */
-s_t sp_windowed_sinc_lp_hp_ir_f(void* arguments, sp_sample_t** out_ir, sp_time_t* out_len) {
+status_t sp_windowed_sinc_lp_hp_ir_f(void* arguments, sp_sample_t** out_ir, sp_time_t* out_len) {
   sp_float_t cutoff;
   sp_float_t transition;
   boolean is_high_pass;
@@ -238,7 +238,7 @@ s_t sp_windowed_sinc_lp_hp_ir_f(void* arguments, sp_sample_t** out_ir, sp_time_t
 }
 /** maps arguments from the generic ir-f-arguments array.
   arguments is (sp-float-t:cutoff-l sp-float-t:cutoff-h sp-float-t:transition boolean:is-reject) */
-s_t sp_windowed_sinc_bp_br_ir_f(void* arguments, sp_sample_t** out_ir, sp_time_t* out_len) {
+status_t sp_windowed_sinc_bp_br_ir_f(void* arguments, sp_sample_t** out_ir, sp_time_t* out_len) {
   sp_float_t cutoff_l;
   sp_float_t cutoff_h;
   sp_float_t transition_l;
@@ -258,8 +258,8 @@ s_t sp_windowed_sinc_bp_br_ir_f(void* arguments, sp_sample_t** out_ir, sp_time_t
   * is-high-pass: if true then it will reduce low frequencies
   * out-state: if zero then state will be allocated.
   * out-samples: owned by the caller. length must be at least in-len */
-s_t sp_windowed_sinc_lp_hp(sp_sample_t* in, sp_time_t in_len, sp_float_t cutoff, sp_float_t transition, boolean is_high_pass, sp_convolution_filter_state_t** out_state, sp_sample_t* out_samples) {
-  s_declare;
+status_t sp_windowed_sinc_lp_hp(sp_sample_t* in, sp_time_t in_len, sp_float_t cutoff, sp_float_t transition, boolean is_high_pass, sp_convolution_filter_state_t** out_state, sp_sample_t* out_samples) {
+  status_declare;
   uint8_t a[(sizeof(boolean) + (2 * sizeof(sp_float_t)))];
   uint8_t a_len;
   /* set arguments array for ir-f */
@@ -268,13 +268,13 @@ s_t sp_windowed_sinc_lp_hp(sp_sample_t* in, sp_time_t in_len, sp_float_t cutoff,
   *(1 + ((sp_float_t*)(a))) = transition;
   *((boolean*)((2 + ((sp_float_t*)(a))))) = is_high_pass;
   /* apply filter */
-  s((sp_convolution_filter(in, in_len, sp_windowed_sinc_lp_hp_ir_f, a, a_len, out_state, out_samples)));
+  status_require((sp_convolution_filter(in, in_len, sp_windowed_sinc_lp_hp_ir_f, a, a_len, out_state, out_samples)));
 exit:
-  s_return;
+  status_return;
 }
 /** like sp-windowed-sinc-lp-hp but for a band-pass or band-reject filter */
-s_t sp_windowed_sinc_bp_br(sp_sample_t* in, sp_time_t in_len, sp_float_t cutoff_l, sp_float_t cutoff_h, sp_float_t transition_l, sp_float_t transition_h, boolean is_reject, sp_convolution_filter_state_t** out_state, sp_sample_t* out_samples) {
-  s_declare;
+status_t sp_windowed_sinc_bp_br(sp_sample_t* in, sp_time_t in_len, sp_float_t cutoff_l, sp_float_t cutoff_h, sp_float_t transition_l, sp_float_t transition_h, boolean is_reject, sp_convolution_filter_state_t** out_state, sp_sample_t* out_samples) {
+  status_declare;
   uint8_t a[(sizeof(boolean) + (3 * sizeof(sp_float_t)))];
   uint8_t a_len;
   /* set arguments array for ir-f */
@@ -285,9 +285,9 @@ s_t sp_windowed_sinc_bp_br(sp_sample_t* in, sp_time_t in_len, sp_float_t cutoff_
   *(3 + ((sp_float_t*)(a))) = transition_h;
   *((boolean*)((4 + ((sp_float_t*)(a))))) = is_reject;
   /* apply filter */
-  s((sp_convolution_filter(in, in_len, sp_windowed_sinc_bp_br_ir_f, a, a_len, out_state, out_samples)));
+  status_require((sp_convolution_filter(in, in_len, sp_windowed_sinc_bp_br_ir_f, a, a_len, out_state, out_samples)));
 exit:
-  s_return;
+  status_return;
 }
 /** samples real real pair [integer integer integer] -> state
     define a routine for a fast filter that supports multiple filter types in one.
@@ -333,29 +333,29 @@ define_sp_state_variable_filter(lp, v2)
           define_sp_state_variable_filter(all, (v0 - (2 * k * v1)))
   /** the sph-sp default precise filter. processing intensive if parameters are change frequently.
   memory for out-state will be allocated and has to be freed with sp-filter-state-free */
-  s_t sp_filter(sp_sample_t* in, sp_time_t in_size, sp_float_t cutoff_l, sp_float_t cutoff_h, sp_float_t transition_l, sp_float_t transition_h, boolean is_reject, sp_filter_state_t** out_state, sp_sample_t* out_samples) { sp_windowed_sinc_bp_br(in, in_size, cutoff_l, cutoff_h, transition_l, transition_h, is_reject, out_state, out_samples); }
-s_t sp_cheap_filter_state_new(sp_time_t max_size, sp_time_t max_passes, sp_cheap_filter_state_t* out_state) {
+  status_t sp_filter(sp_sample_t* in, sp_time_t in_size, sp_float_t cutoff_l, sp_float_t cutoff_h, sp_float_t transition_l, sp_float_t transition_h, boolean is_reject, sp_filter_state_t** out_state, sp_sample_t* out_samples) { sp_windowed_sinc_bp_br(in, in_size, cutoff_l, cutoff_h, transition_l, transition_h, is_reject, out_state, out_samples); }
+status_t sp_cheap_filter_state_new(sp_time_t max_size, sp_time_t max_passes, sp_cheap_filter_state_t* out_state) {
   /* allocates and prepares memory and checks if max-passes doesnt exceed the limit
 heap memory is to be freed with sp-cheap-filter-state-free but only allocated if max-passes is greater than one */
-  s_declare;
+  status_declare;
   sp_sample_t* in_temp = 0;
   sp_sample_t* out_temp = 0;
   if (1 < max_passes) {
     if (sp_cheap_filter_passes_limit < max_passes) {
-      s_set_goto(sp_s_group_sp, sp_s_id_not_implemented);
+      status_set_goto(sp_s_group_sp, sp_s_id_not_implemented);
     } else {
-      s((sp_sample_array_new(max_size, (&in_temp))));
-      s((sp_sample_array_new(max_size, (&out_temp))));
+      status_require((sp_sample_array_new(max_size, (&in_temp))));
+      status_require((sp_sample_array_new(max_size, (&out_temp))));
     };
   };
   out_state->in_temp = in_temp;
   out_state->out_temp = out_temp;
   memset((out_state->svf_state), 0, (sizeof(sp_sample_t) * 2 * sp_cheap_filter_passes_limit));
 exit:
-  if (s_is_failure) {
+  if (status_is_failure) {
     free(in_temp);
   };
-  s_return;
+  status_return;
 }
 void sp_cheap_filter_state_free(sp_cheap_filter_state_t* a) {
   free((a->in_temp));
@@ -363,7 +363,7 @@ void sp_cheap_filter_state_free(sp_cheap_filter_state_t* a) {
 }
 /** the sph-sp default fast filter. caller has to manage the state object with sp-cheap-filter-state-new sp-cheap-filter-state-free */
 void sp_cheap_filter(sp_state_variable_filter_t type, sp_sample_t* in, sp_time_t in_size, sp_float_t cutoff, sp_time_t passes, sp_float_t q_factor, uint8_t unity_gain, sp_cheap_filter_state_t* state, sp_sample_t* out) {
-  s_declare;
+  status_declare;
   sp_sample_t* in_swap;
   sp_sample_t* in_temp;
   sp_sample_t* out_temp;

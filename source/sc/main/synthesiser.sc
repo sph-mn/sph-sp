@@ -11,20 +11,20 @@
   (return (sp-phase-96 current (sp-cheap-ceiling-positive change))))
 
 (define (sp-synth-state-new channel-count config-len config out-state)
-  (s-t sp-time-t sp-synth-count-t sp-synth-partial-t* sp-time-t**)
+  (status-t sp-time-t sp-synth-count-t sp-synth-partial-t* sp-time-t**)
   "contains the initial phase offsets per partial and channel
   as a flat array. should be freed with free"
-  s-declare
+  status-declare
   (declare i sp-time-t channel-i sp-time-t)
-  (s (sph-helper-calloc (* channel-count config-len (sizeof sp-time-t)) out-state))
+  (status-require (sph-helper-calloc (* channel-count config-len (sizeof sp-time-t)) out-state))
   (for ((set i 0) (< i config-len) (set i (+ 1 i)))
     (for ((set channel-i 0) (< channel-i channel-count) (set channel-i (+ 1 channel-i)))
       (set (array-get *out-state (+ channel-i (* channel-count i)))
         (array-get (struct-get (array-get config i) phs) channel-i))))
-  (label exit s-return))
+  (label exit status-return))
 
 (define (sp-synth out start duration config-len config phases)
-  (s-t sp-block-t sp-time-t sp-time-t sp-synth-count-t sp-synth-partial-t* sp-time-t*)
+  (status-t sp-block-t sp-time-t sp-time-t sp-synth-count-t sp-synth-partial-t* sp-time-t*)
   "create sines that start and end at specific times and can optionally modulate the frequency of others.
   sp-synth output is summed into out.
   amplitude and wavelength can be controlled by arrays separately for each partial and channel.
@@ -43,7 +43,7 @@
   * each partial has integer phases that are reset in cycles and kept in state between calls"
   ; config is evaluated from last to first.
   ; modulation is duration length, paths are samples relative to the partial start
-  s-declare
+  status-declare
   (declare
     amp sp-sample-t
     carrier sp-sample-t*
@@ -80,7 +80,7 @@
         (set carrier (array-get modulation-index (- prt.modifies 1) channel-i))
         (if (not carrier)
           (begin
-            (s (sph-helper-calloc (* duration (sizeof sp-sample-t)) &carrier))
+            (status-require (sph-helper-calloc (* duration (sizeof sp-sample-t)) &carrier))
             (memreg-add carrier)))
         (set
           phs (array-get phases (+ channel-i (* out.channels prt-i)))
@@ -111,7 +111,7 @@
             (+ (array-get (array-get out.samples channel-i) (+ prt-offset i))
               (* amp (sp-sine-96 phs)))))
         (set (array-get phases (+ channel-i (* out.channels prt-i))) phs))))
-  (label exit memreg-free s-return))
+  (label exit memreg-free status-return))
 
 (pre-define (sp-synth-partial-set-channel prt channel amp-array wvl-array phs-array)
   (set
@@ -152,12 +152,12 @@
 (define (sp-square-96 t) (sp-sample-t sp-time-t)
   (return (if* (< (modulo (* 2 t) (* 2 96000)) 96000) -1 1)))
 
-(define (sp-sine-table-new out size) (s-t sp-sample-t** sp-time-t)
+(define (sp-sine-table-new out size) (status-t sp-sample-t** sp-time-t)
   "writes a sine wave of size into out. can be used as a lookup table"
-  s-declare
+  status-declare
   (declare i sp-time-t out-array sp-sample-t*)
-  (s (sph-helper-malloc (* size (sizeof sp-sample-t*)) &out-array))
+  (status-require (sph-helper-malloc (* size (sizeof sp-sample-t*)) &out-array))
   (for ((set i 0) (< i size) (set i (+ 1 i)))
     (set (array-get out-array i) (sin (* i (/ M_PI (/ size 2))))))
   (set *out out-array)
-  (label exit s-return))
+  (label exit status-return))

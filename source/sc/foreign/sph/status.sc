@@ -4,17 +4,17 @@
   "status ids are signed integers for compatibility with error return codes from other existing libraries"
   "group ids are strings used to categorise sets of errors codes from different libraries for example")
 
-(declare s-t (type (struct (id int) (group uint8-t*))))
+(declare status-t (type (struct (id int) (group uint8-t*))))
 
 (pre-define
-  s-success 0
-  s-group-undefined (convert-type "" uint8-t*)
-  s-declare (define s-current s-t (struct-literal s-success s-group-undefined))
-  s-is-success (= s-success s-current.id)
-  s-is-failure (not s-is-success)
-  s-return (return s-current)
-  (s-set group-id status-id)
-  (set s-current.group (convert-type group-id uint8-t*) s-current.id status-id)
-  (s-set-goto group-id status-id) (begin (s-set group-id status-id) (goto exit))
-  (s expression) (begin (set s-current expression) (if s-is-failure (goto exit)))
-  (si expression) (begin (set s-current.id expression) (if s-is-failure (goto exit))))
+  status-success 0
+  status-group-undefined (convert-type "" uint8-t*)
+  status-declare (define status status-t (struct-literal status-success status-group-undefined))
+  status-is-success (= status-success status.id)
+  status-is-failure (not status-is-success)
+  status-return (return status)
+  (status-set group-id status-id)
+  (set status.group (convert-type group-id uint8-t*) status.id status-id)
+  (status-set-goto group-id status-id) (begin (status-set group-id status-id) (goto exit))
+  (status-require expression) (begin (set status expression) (if status-is-failure (goto exit)))
+  (status-i-require expression) (begin (set status.id expression) (if status-is-failure (goto exit))))

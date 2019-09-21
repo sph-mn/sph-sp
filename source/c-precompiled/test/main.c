@@ -8,37 +8,37 @@
 #endif
 sp_sample_t error_margin = 0.1;
 uint8_t* test_file_path = "/tmp/test-sph-sp-file";
-s_t test_base() {
-  s_declare;
+status_t test_base() {
+  status_declare;
   test_helper_assert(("input 0.5"), (sp_sample_nearly_equal((0.63662), (sp_sinc((0.5))), error_margin)));
   test_helper_assert("input 1", (sp_sample_nearly_equal((1.0), (sp_sinc(0)), error_margin)));
   test_helper_assert("window-blackman 0 51", (sp_sample_nearly_equal(0, (sp_window_blackman(0, 51)), error_margin)));
   test_helper_assert("window-blackman 25 51", (sp_sample_nearly_equal(1, (sp_window_blackman(25, 51)), error_margin)));
 exit:
-  s_return;
+  status_return;
 }
-s_t test_spectral_inversion_ir() {
-  s_declare;
+status_t test_spectral_inversion_ir() {
+  status_declare;
   sp_time_t a_len;
   sp_sample_t a[5] = { 0.1, -0.2, 0.3, -0.2, 0.1 };
   a_len = 5;
   sp_spectral_inversion_ir(a, a_len);
   test_helper_assert("result check", (sp_sample_nearly_equal((-0.1), (a[0]), error_margin) && sp_sample_nearly_equal((0.2), (a[1]), error_margin) && sp_sample_nearly_equal((0.7), (a[2]), error_margin) && sp_sample_nearly_equal((0.2), (a[3]), error_margin) && sp_sample_nearly_equal((-0.1), (a[4]), error_margin)));
 exit:
-  s_return;
+  status_return;
 }
-s_t test_spectral_reversal_ir() {
-  s_declare;
+status_t test_spectral_reversal_ir() {
+  status_declare;
   sp_time_t a_len;
   sp_sample_t a[5] = { 0.1, -0.2, 0.3, -0.2, 0.1 };
   a_len = 5;
   sp_spectral_reversal_ir(a, a_len);
   test_helper_assert("result check", (sp_sample_nearly_equal((0.1), (a[0]), error_margin) && sp_sample_nearly_equal((0.2), (a[1]), error_margin) && sp_sample_nearly_equal((0.3), (a[2]), error_margin) && sp_sample_nearly_equal((0.2), (a[3]), error_margin) && sp_sample_nearly_equal((0.1), (a[4]), error_margin)));
 exit:
-  s_return;
+  status_return;
 }
-s_t test_convolve() {
-  s_declare;
+status_t test_convolve() {
+  status_declare;
   sp_sample_t* a;
   sp_time_t a_len;
   sp_sample_t* b;
@@ -56,13 +56,13 @@ s_t test_convolve() {
   result_len = sample_count;
   a_len = sample_count;
   carryover_len = b_len;
-  s((sph_helper_calloc((result_len * sizeof(sp_sample_t)), (&result))));
+  status_require((sph_helper_calloc((result_len * sizeof(sp_sample_t)), (&result))));
   memreg_add(result);
-  s((sph_helper_calloc((a_len * sizeof(sp_sample_t)), (&a))));
+  status_require((sph_helper_calloc((a_len * sizeof(sp_sample_t)), (&a))));
   memreg_add(a);
-  s((sph_helper_calloc((b_len * sizeof(sp_sample_t)), (&b))));
+  status_require((sph_helper_calloc((b_len * sizeof(sp_sample_t)), (&b))));
   memreg_add(b);
-  s((sph_helper_calloc((carryover_len * sizeof(sp_sample_t)), (&carryover))));
+  status_require((sph_helper_calloc((carryover_len * sizeof(sp_sample_t)), (&carryover))));
   memreg_add(carryover);
   /* prepare input/output data arrays */
   a[0] = 2;
@@ -99,10 +99,10 @@ s_t test_convolve() {
   test_helper_assert("second result carryover", (sp_sample_array_nearly_equal(carryover, carryover_len, expected_carryover, carryover_len, error_margin)));
 exit:
   memreg_free;
-  s_return;
+  status_return;
 }
-s_t test_moving_average() {
-  s_declare;
+status_t test_moving_average() {
+  status_declare;
   sp_time_t radius;
   sp_sample_t out[5] = { 0, 0, 0, 0, 0 };
   sp_sample_t in[5] = { 1, 3, 5, 7, 8 };
@@ -119,7 +119,7 @@ s_t test_moving_average() {
   in_window = (in + 1);
   in_window_end = (in + 3);
   radius = 3;
-  s((sp_moving_average(in, in_end, in_window, in_window_end, prev, prev_end, next, next_end, radius, out)));
+  status_require((sp_moving_average(in, in_end, in_window, in_window_end, prev, prev_end, next, next_end, radius, out)));
   /* first run with prev and next and only index 1 to 3 inclusively processed */
   test_helper_assert(("moving-average 1.1"), (sp_sample_nearly_equal((6.142857142857143), (out[0]), error_margin)));
   test_helper_assert(("moving-average 1.2"), (sp_sample_nearly_equal((6.571428571428571), (out[1]), error_margin)));
@@ -135,17 +135,17 @@ s_t test_moving_average() {
   in[2] = 2;
   in[3] = 2;
   in[4] = 2;
-  s((sp_moving_average(in, in_end, in, in_end, 0, 0, 0, 0, 1, out)));
+  status_require((sp_moving_average(in, in_end, in, in_end, 0, 0, 0, 0, 1, out)));
   test_helper_assert(("moving-average 2.1"), (sp_sample_nearly_equal((1.3), (out[0]), error_margin)));
   test_helper_assert(("moving-average 2.2"), (sp_sample_nearly_equal(2, (out[1]), error_margin)));
   test_helper_assert(("moving-average 2.3"), (sp_sample_nearly_equal(2, (out[2]), error_margin)));
   test_helper_assert(("moving-average 2.4"), (sp_sample_nearly_equal(2, (out[3]), error_margin)));
   test_helper_assert(("moving-average 2.5"), (sp_sample_nearly_equal((1.3), (out[4]), error_margin)));
 exit:
-  s_return;
+  status_return;
 }
-s_t test_windowed_sinc() {
-  s_declare;
+status_t test_windowed_sinc() {
+  status_declare;
   sp_float_t transition;
   sp_float_t cutoff;
   sp_sample_t* ir;
@@ -157,28 +157,28 @@ s_t test_windowed_sinc() {
   cutoff = 0.1;
   transition = 0.08;
   /* ir functions */
-  s((sp_windowed_sinc_lp_hp_ir(cutoff, transition, 0, (&ir), (&ir_len))));
+  status_require((sp_windowed_sinc_lp_hp_ir(cutoff, transition, 0, (&ir), (&ir_len))));
   test_helper_assert("ir", (sp_sample_nearly_equal((0.0952), (ir[28]), error_margin)));
-  s((sp_windowed_sinc_bp_br_ir((0.1), (0.4), (0.08), (0.08), 0, (&ir), (&ir_len))));
-  s((sp_windowed_sinc_lp_hp_ir(cutoff, transition, 1, (&ir), (&ir_len))));
-  s((sp_windowed_sinc_bp_br_ir(cutoff, cutoff, transition, transition, 1, (&ir), (&ir_len))));
+  status_require((sp_windowed_sinc_bp_br_ir((0.1), (0.4), (0.08), (0.08), 0, (&ir), (&ir_len))));
+  status_require((sp_windowed_sinc_lp_hp_ir(cutoff, transition, 1, (&ir), (&ir_len))));
+  status_require((sp_windowed_sinc_bp_br_ir(cutoff, cutoff, transition, transition, 1, (&ir), (&ir_len))));
   /* filter functions */
-  s((sp_windowed_sinc_lp_hp(source, 10, (0.1), (0.08), 0, (&state), result)));
+  status_require((sp_windowed_sinc_lp_hp(source, 10, (0.1), (0.08), 0, (&state), result)));
   sp_convolution_filter_state_free(state);
   state = 0;
-  s((sp_windowed_sinc_lp_hp(source, 10, (0.1), (0.08), 1, (&state), result)));
+  status_require((sp_windowed_sinc_lp_hp(source, 10, (0.1), (0.08), 1, (&state), result)));
   sp_convolution_filter_state_free(state);
   state = 0;
-  s((sp_windowed_sinc_bp_br(source, 10, (0.1), (0.4), (0.08), (0.08), 0, (&state), result)));
+  status_require((sp_windowed_sinc_bp_br(source, 10, (0.1), (0.4), (0.08), (0.08), 0, (&state), result)));
   sp_convolution_filter_state_free(state);
   state = 0;
-  s((sp_windowed_sinc_bp_br(source, 10, (0.1), (0.4), (0.08), (0.08), 1, (&state), result)));
+  status_require((sp_windowed_sinc_bp_br(source, 10, (0.1), (0.4), (0.08), (0.08), 1, (&state), result)));
   sp_convolution_filter_state_free(state);
 exit:
-  s_return;
+  status_return;
 }
-s_t test_file() {
-  s_declare;
+status_t test_file() {
+  status_declare;
   sp_time_t channel;
   sp_channels_t channel_count;
   sp_block_t block;
@@ -200,8 +200,8 @@ s_t test_file() {
   channel = channel_count;
   sp_block_set_null(block);
   sp_block_set_null(block_2);
-  s((sp_block_new(channel_count, sample_count, (&block))));
-  s((sp_block_new(channel_count, sample_count, (&block_2))));
+  status_require((sp_block_new(channel_count, sample_count, (&block))));
+  status_require((sp_block_new(channel_count, sample_count, (&block_2))));
   while (channel) {
     channel = (channel - 1);
     len = sample_count;
@@ -212,14 +212,14 @@ s_t test_file() {
   };
   goto exit;
   /* test create */
-  s((sp_file_open(test_file_path, sp_file_mode_read_write, channel_count, sample_rate, (&file))));
+  status_require((sp_file_open(test_file_path, sp_file_mode_read_write, channel_count, sample_rate, (&file))));
   printf("  create\n");
-  s((sp_file_position((&file), (&position))));
-  s((sp_file_write((&file), (block.samples), sample_count, (&result_sample_count))));
-  s((sp_file_position((&file), (&position))));
+  status_require((sp_file_position((&file), (&position))));
+  status_require((sp_file_write((&file), (block.samples), sample_count, (&result_sample_count))));
+  status_require((sp_file_position((&file), (&position))));
   test_helper_assert("sp-file-position file after write", (sample_count == position));
-  s((sp_file_position_set((&file), 0)));
-  s((sp_file_read((&file), sample_count, (block_2.samples), (&result_sample_count))));
+  status_require((sp_file_position_set((&file), 0)));
+  status_require((sp_file_read((&file), sample_count, (block_2.samples), (&result_sample_count))));
   /* compare read result with output data */
   len = channel_count;
   unequal = 0;
@@ -228,13 +228,13 @@ s_t test_file() {
     unequal = !sp_sample_array_nearly_equal(((block.samples)[len]), sample_count, ((block_2.samples)[len]), sample_count, error_margin);
   };
   test_helper_assert("sp-file-read new file result", !unequal);
-  s((sp_file_close((&file))));
+  status_require((sp_file_close((&file))));
   printf("  write\n");
   /* test open */
-  s((sp_file_open(test_file_path, sp_file_mode_read_write, 2, 8000, (&file))));
-  s((sp_file_position((&file), (&position))));
+  status_require((sp_file_open(test_file_path, sp_file_mode_read_write, 2, 8000, (&file))));
+  status_require((sp_file_position((&file), (&position))));
   test_helper_assert("sp-file-position existing file", (sample_count == position));
-  s((sp_file_position_set((&file), 0)));
+  status_require((sp_file_position_set((&file), 0)));
   sp_file_read((&file), sample_count, (block_2.samples), (&result_sample_count));
   /* compare read result with output data */
   unequal = 0;
@@ -244,26 +244,26 @@ s_t test_file() {
     unequal = !sp_sample_array_nearly_equal(((block.samples)[len]), sample_count, ((block_2.samples)[len]), sample_count, error_margin);
   };
   test_helper_assert("sp-file-read existing result", !unequal);
-  s((sp_file_close((&file))));
+  status_require((sp_file_close((&file))));
   printf("  open\n");
 exit:
   sp_block_free(block);
   sp_block_free(block_2);
-  s_return;
+  status_return;
 }
-s_t test_fft() {
-  s_declare;
+status_t test_fft() {
+  status_declare;
   sp_sample_t a_real[6] = { -0.6, 0.1, 0.4, 0.8, 0, 0 };
   sp_sample_t a_imag[6] = { 0, 0, 0, 0, 0, 0 };
   sp_time_t a_len;
   a_len = 6;
-  si((sp_fft(a_len, a_real, a_imag)));
-  si((sp_ffti(a_len, a_real, a_imag)));
+  status_i_require((sp_fft(a_len, a_real, a_imag)));
+  status_i_require((sp_ffti(a_len, a_real, a_imag)));
 exit:
-  s_return;
+  status_return;
 }
-s_t test_synth() {
-  s_declare;
+status_t test_synth() {
+  status_declare;
   sp_time_t* state;
   sp_time_t config_len;
   sp_block_t out1;
@@ -310,20 +310,20 @@ s_t test_synth() {
   config[0] = prt1;
   config[1] = prt2;
   config[2] = prt3;
-  s((sp_block_new(channels, duration, (&out1))));
-  s((sp_block_new(channels, duration, (&out2))));
-  s((sp_synth_state_new(channels, config_len, config, (&state))));
-  s((sp_synth(out1, 0, duration, config_len, config, state)));
-  s((sp_synth(out2, 0, duration, config_len, config, state)));
+  status_require((sp_block_new(channels, duration, (&out1))));
+  status_require((sp_block_new(channels, duration, (&out2))));
+  status_require((sp_synth_state_new(channels, config_len, config, (&state))));
+  status_require((sp_synth(out1, 0, duration, config_len, config, state)));
+  status_require((sp_synth(out2, 0, duration, config_len, config, state)));
   sp_block_free(out1);
   sp_block_free(out2);
 exit:
-  s_return;
+  status_return;
 }
 #define sp_seq_duration 20
 #define sp_seq_half_duration (sp_seq_duration / 2)
-s_t test_sp_seq() {
-  s_declare;
+status_t test_sp_seq() {
+  status_declare;
   sp_event_t events[10];
   sp_time_t events_size;
   sp_time_t* state;
@@ -337,36 +337,36 @@ s_t test_sp_seq() {
     amp[i] = 0.5;
   };
   config[0] = sp_synth_partial_1(0, sp_seq_duration, 0, amp, wvl, 0);
-  s((sp_synth_event(0, sp_seq_half_duration, 1, 1, config, (0 + events))));
-  s((sp_synth_event((2 + sp_seq_half_duration), (sp_seq_duration - 2), 1, 1, config, (1 + events))));
+  status_require((sp_synth_event(0, sp_seq_half_duration, 1, 1, config, (0 + events))));
+  status_require((sp_synth_event((2 + sp_seq_half_duration), (sp_seq_duration - 2), 1, 1, config, (1 + events))));
   events_size = 2;
   sp_seq_events_prepare(events, events_size);
-  s((sp_block_new(1, sp_seq_duration, (&out))));
+  status_require((sp_block_new(1, sp_seq_duration, (&out))));
   sp_seq(0, sp_seq_half_duration, out, events, events_size);
   sp_seq(sp_seq_half_duration, sp_seq_duration, (sp_block_with_offset(out, sp_seq_half_duration)), events, events_size);
   /* sp-seq-parallel */
-  s((sp_seq_parallel(0, sp_seq_duration, out, events, events_size)));
+  status_require((sp_seq_parallel(0, sp_seq_duration, out, events, events_size)));
   sp_events_free(events, events_size);
   sp_block_free(out);
 exit:
-  s_return;
+  status_return;
 }
 /** better test separately as it opens gnuplot windows */
-s_t test_sp_plot() {
-  s_declare;
+status_t test_sp_plot() {
+  status_declare;
   sp_sample_t a[9] = { 0.1, -0.2, 0.1, -0.4, 0.3, -0.4, 0.2, -0.2, 0.1 };
   sp_plot_samples(a, 9);
   sp_plot_spectrum(a, 9);
 exit:
-  s_return;
+  status_return;
 }
-s_t test_sp_triangle_square() {
-  s_declare;
+status_t test_sp_triangle_square() {
+  status_declare;
   sp_time_t i;
   sp_sample_t* out_t;
   sp_sample_t* out_s;
-  s((sph_helper_calloc((96000 * sizeof(sp_sample_t*)), (&out_t))));
-  s((sph_helper_calloc((96000 * sizeof(sp_sample_t*)), (&out_s))));
+  status_require((sph_helper_calloc((96000 * sizeof(sp_sample_t*)), (&out_t))));
+  status_require((sph_helper_calloc((96000 * sizeof(sp_sample_t*)), (&out_s))));
   for (i = 0; (i < 96000); i = (1 + i)) {
     out_t[i] = sp_triangle_96(i);
     out_s[i] = sp_square_96(i);
@@ -383,10 +383,10 @@ s_t test_sp_triangle_square() {
   free(out_t);
   free(out_s);
 exit:
-  s_return;
+  status_return;
 }
-s_t test_sp_random() {
-  s_declare;
+status_t test_sp_random() {
+  status_declare;
   sp_random_state_t s;
   sp_sample_t out[20];
   s = sp_random_state_new(80);
@@ -394,13 +394,13 @@ s_t test_sp_random() {
   sp_random_samples((&s), 10, (10 + out));
   test_helper_assert("last value", (f64_nearly_equal((0.355602), (out[19]), error_margin)));
 exit:
-  s_return;
+  status_return;
 }
 #define max(a, b) ((a > b) ? a : b)
 #define min(a, b) ((a < b) ? a : b)
 #define sp_noise_duration 96
-s_t test_sp_noise_event() {
-  s_declare;
+status_t test_sp_noise_event() {
+  status_declare;
   sp_event_t events[1];
   sp_time_t events_size;
   sp_block_t out;
@@ -411,7 +411,7 @@ s_t test_sp_noise_event() {
   sp_sample_t amp1[sp_noise_duration];
   sp_sample_t* amp[sp_channel_limit];
   sp_time_t i;
-  s((sp_block_new(1, sp_noise_duration, (&out))));
+  status_require((sp_block_new(1, sp_noise_duration, (&out))));
   amp[0] = amp1;
   for (i = 0; (i < sp_noise_duration); i = (1 + i)) {
     cut_l[i] = ((i < (sp_noise_duration / 2)) ? 0.01 : 0.1);
@@ -420,16 +420,16 @@ s_t test_sp_noise_event() {
     trn_h[i] = 0.07;
     amp1[i] = 1.0;
   };
-  s((sp_noise_event(0, sp_noise_duration, amp, cut_l, cut_h, trn_l, trn_h, 0, 30, sp_default_random_state, events)));
+  status_require((sp_noise_event(0, sp_noise_duration, amp, cut_l, cut_h, trn_l, trn_h, 0, 30, sp_default_random_state, events)));
   events_size = 1;
   sp_seq(0, sp_noise_duration, out, events, events_size);
   sp_events_free(events, events_size);
   sp_block_free(out);
 exit:
-  s_return;
+  status_return;
 }
-s_t test_sp_cheap_filter() {
-  s_declare;
+status_t test_sp_cheap_filter() {
+  status_declare;
   sp_cheap_filter_state_t state;
   sp_sample_t out[sp_noise_duration];
   sp_sample_t in[sp_noise_duration];
@@ -437,16 +437,16 @@ s_t test_sp_cheap_filter() {
   sp_random_state_t s;
   s = sp_random_state_new(80);
   sp_random((&s), sp_noise_duration, in);
-  s((sp_cheap_filter_state_new(sp_noise_duration, sp_cheap_filter_passes_limit, (&state))));
+  status_require((sp_cheap_filter_state_new(sp_noise_duration, sp_cheap_filter_passes_limit, (&state))));
   sp_cheap_filter_lp(in, sp_noise_duration, (0.2), 1, 0, 1, (&state), out);
   sp_cheap_filter_lp(in, sp_noise_duration, (0.2), sp_cheap_filter_passes_limit, 0, 1, (&state), out);
   sp_cheap_filter_lp(in, sp_noise_duration, (0.2), sp_cheap_filter_passes_limit, 0, 1, (&state), out);
   sp_cheap_filter_state_free((&state));
 exit:
-  s_return;
+  status_return;
 }
-s_t test_sp_cheap_noise_event() {
-  s_declare;
+status_t test_sp_cheap_noise_event() {
+  status_declare;
   sp_event_t events[1];
   sp_time_t events_size;
   sp_block_t out;
@@ -455,7 +455,7 @@ s_t test_sp_cheap_noise_event() {
   sp_sample_t* amp[sp_channel_limit];
   sp_sample_t q_factor;
   sp_time_t i;
-  s((sp_block_new(1, sp_noise_duration, (&out))));
+  status_require((sp_block_new(1, sp_noise_duration, (&out))));
   amp[0] = amp1;
   q_factor = 0;
   for (i = 0; (i < sp_noise_duration); i = (1 + i)) {
@@ -463,16 +463,16 @@ s_t test_sp_cheap_noise_event() {
     cut[i] = 0.08;
     amp1[i] = 1.0;
   };
-  s((sp_cheap_noise_event_lp(0, sp_noise_duration, amp, cut, 1, 0, 0, sp_default_random_state, events)));
+  status_require((sp_cheap_noise_event_lp(0, sp_noise_duration, amp, cut, 1, 0, 0, sp_default_random_state, events)));
   events_size = 1;
   sp_seq(0, sp_noise_duration, out, events, events_size);
   sp_events_free(events, events_size);
   sp_block_free(out);
 exit:
-  s_return;
+  status_return;
 }
 int main() {
-  s_declare;
+  status_declare;
   sp_initialise(6);
   test_helper_test_one(test_sp_cheap_noise_event);
   test_helper_test_one(test_sp_cheap_filter);
@@ -491,5 +491,5 @@ int main() {
   test_helper_test_one(test_windowed_sinc);
 exit:
   test_helper_display_summary();
-  return ((s_current.id));
+  return ((status.id));
 }

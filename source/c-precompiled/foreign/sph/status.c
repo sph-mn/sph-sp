@@ -6,26 +6,26 @@ group ids are strings used to categorise sets of errors codes from different lib
 typedef struct {
   int id;
   uint8_t* group;
-} s_t;
-#define s_success 0
-#define s_group_undefined ((uint8_t*)(""))
-#define s_declare s_t s_current = { s_success, s_group_undefined }
-#define s_is_success (s_success == s_current.id)
-#define s_is_failure !s_is_success
-#define s_return return (s_current)
-#define s_set(group_id, status_id) \
-  s_current.group = ((uint8_t*)(group_id)); \
-  s_current.id = status_id
-#define s_set_goto(group_id, status_id) \
-  s_set(group_id, status_id); \
+} status_t;
+#define status_success 0
+#define status_group_undefined ((uint8_t*)(""))
+#define status_declare status_t status = { status_success, status_group_undefined }
+#define status_is_success (status_success == status.id)
+#define status_is_failure !status_is_success
+#define status_return return (status)
+#define status_set(group_id, status_id) \
+  status.group = ((uint8_t*)(group_id)); \
+  status.id = status_id
+#define status_set_goto(group_id, status_id) \
+  status_set(group_id, status_id); \
   goto exit
-#define s(expression) \
-  s_current = expression; \
-  if (s_is_failure) { \
+#define status_require(expression) \
+  status = expression; \
+  if (status_is_failure) { \
     goto exit; \
   }
-#define si(expression) \
-  s_current.id = expression; \
-  if (s_is_failure) { \
+#define status_i_require(expression) \
+  status.id = expression; \
+  if (status_is_failure) { \
     goto exit; \
   }

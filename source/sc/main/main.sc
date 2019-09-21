@@ -8,15 +8,15 @@
   "../foreign/sph/thread-pool.c" "../foreign/sph/futures.c" "../foreign/sph/random.c")
 
 (pre-define
-  sp-s-declare (s-declare-group sp-s-group-sp)
+  sp-status-declare (status-declare-group sp-s-group-sp)
   (max a b) (if* (> a b) a b)
   (min a b) (if* (< a b) a b)
-  (sp-libc-s-id id) (if (< id 0) (s-set-goto sp-s-group-libc id))
+  (sp-libc-s-id id) (if (< id 0) (status-set-goto sp-s-group-libc id))
   (sp-libc-s expression)
   (begin
-    (set s-current.id expression)
-    (if (< s-current.id 0) (begin (set s-current.group sp-s-group-libc) (goto exit))
-      (set s-current.id 0)))
+    (set status.id expression)
+    (if (< status.id 0) (begin (set status.group sp-s-group-libc) (goto exit))
+      (set status.id 0)))
   (define-sp-interleave name type body)
   (begin
     "define a deinterleave, interleave or similar routine.
@@ -46,8 +46,8 @@
   (for ((set i 1) (< i len) (set i (+ 1 i))) (printf " %.17g" (array-get a i)))
   (printf "\n"))
 
-(define (sp-status-description a) (uint8-t* s-t)
-  "get a string description for a status id in a s-t"
+(define (sp-status-description a) (uint8-t* status-t)
+  "get a string description for a status id in a status-t"
   (declare b uint8-t*)
   (cond
     ( (not (strcmp sp-s-group-sp a.group))
@@ -66,8 +66,8 @@
     (else (set b "")))
   (return b))
 
-(define (sp-status-name a) (uint8-t* s-t)
-  "get a single word identifier for a status id in a s-t"
+(define (sp-status-name a) (uint8-t* status-t)
+  "get a single word identifier for a status id in a status-t"
   (declare b uint8-t*)
   (cond
     ( (= 0 (strcmp sp-s-group-sp a.group))
@@ -79,17 +79,17 @@
     ((= 0 (strcmp sp-s-group-sndfile a.group)) (set b "sndfile")) (else (set b "unknown")))
   (return b))
 
-(define (sp-block-new channels size out) (s-t sp-channels-t sp-time-t sp-block-t*)
+(define (sp-block-new channels size out) (status-t sp-channels-t sp-time-t sp-block-t*)
   "return a newly allocated array for channels with data arrays for each channel"
-  s-declare
+  status-declare
   (memreg-init channels)
   (declare channel sp-sample-t* i sp-time-t)
   (for ((set i 0) (< i channels) (set i (+ 1 i)))
-    (s (sph-helper-calloc (* size (sizeof sp-sample-t)) &channel))
+    (status-require (sph-helper-calloc (* size (sizeof sp-sample-t)) &channel))
     (memreg-add channel)
     (set (array-get out:samples i) channel))
   (set out:size size out:channels channels)
-  (label exit (if s-is-failure memreg-free) s-return))
+  (label exit (if status-is-failure memreg-free) status-return))
 
 (define (sp-block-free a) (void sp-block-t)
   (declare i sp-time-t)
@@ -102,10 +102,10 @@
     (set (array-get a.samples i) (+ offset (array-get a.samples i))))
   (return a))
 
-(define (sp-sample-array-new size out) (s-t sp-time-t sp-sample-t**)
+(define (sp-sample-array-new size out) (status-t sp-time-t sp-sample-t**)
   (return (sph-helper-calloc (* size (sizeof sp-sample-t)) out)))
 
-(define (sp-count-array-new size out) (s-t sp-time-t sp-time-t**)
+(define (sp-count-array-new size out) (status-t sp-time-t sp-time-t**)
   (return (sph-helper-calloc (* size (sizeof sp-time-t)) out)))
 
 (define (sp-sin-lq a) (sp-sample-t sp-float-t)
@@ -131,7 +131,7 @@
 
 (define
   (sp-moving-average in in-end in-window in-window-end prev prev-end next next-end radius out)
-  (s-t sp-sample-t* sp-sample-t*
+  (status-t sp-sample-t* sp-sample-t*
     sp-sample-t* sp-sample-t* sp-sample-t*
     sp-sample-t* sp-sample-t* sp-sample-t* sp-time-t sp-sample-t*)
   "apply a centered moving average filter to samples between in-window and in-window-end inclusively and write to out.
@@ -140,7 +140,7 @@
    * prev and next can be null pointers if not available
    * zero is used for unavailable values
    * rounding errors are kept low by using modified kahan neumaier summation"
-  s-declare
+  status-declare
   (declare
     in-left sp-sample-t*
     in-right sp-sample-t*
@@ -182,7 +182,7 @@
         ;(debug-display-sample-array outside outside-count)
         ))
     (set (pointer-get out) (/ (sp-sample-sum sums 3) width) out (+ 1 out) in-window (+ 1 in-window)))
-  s-return)
+  status-return)
 
 (define (sp-spectral-inversion-ir a a-len) (void sp-sample-t* sp-time-t)
   "modify an impulse response kernel for spectral inversion.
@@ -283,10 +283,10 @@
 (pre-include "../main/io.c" "../main/plot.c"
   "../main/filter.c" "../main/synthesiser.c" "../main/sequencer.c")
 
-(define (sp-initialise cpu-count) (s-t uint16-t)
+(define (sp-initialise cpu-count) (status-t uint16-t)
   "fills the sine wave lookup table"
-  s-declare
-  (if cpu-count (set s-current.id (future-init cpu-count)))
-  (if s-current.id s-return)
+  status-declare
+  (if cpu-count (set status.id (future-init cpu-count)))
+  (if status.id status-return)
   (set sp-default-random-state (sp-random-state-new 1557083953))
   (return (sp-sine-table-new &sp-sine-96-table 96000)))

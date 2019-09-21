@@ -12,17 +12,17 @@
 #include "../foreign/sph/filesystem.c"
 #define test_helper_test_one(func) \
   printf("%s\n", #func); \
-  s((func()))
+  status_require((func()))
 #define test_helper_assert(description, expression) \
   if (!expression) { \
     printf("%s failed\n", description); \
-    s_set_goto("sph-sp", 1); \
+    status_set_goto("sph-sp", 1); \
   }
 #define test_helper_display_summary() \
-  if (s_is_success) { \
+  if (status_is_success) { \
     printf(("--\ntests finished successfully.\n")); \
   } else { \
-    printf(("\ntests failed. %d %s\n"), (s_current.id), (sp_status_description(s_current))); \
+    printf(("\ntests failed. %d %s\n"), (status.id), (sp_status_description(status))); \
   }
 /** display a sample array in one line */
 void debug_display_sample_array(sp_sample_t* a, sp_time_t len) {

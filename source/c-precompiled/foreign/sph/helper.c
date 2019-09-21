@@ -9,7 +9,7 @@
 #define sph_helper_calloc(size, result) sph_helper_primitive_calloc(size, ((void**)(result)))
 #define sph_helper_realloc(size, result) sph_helper_primitive_realloc(size, ((void**)(result)))
 enum { sph_helper_status_id_memory };
-uint8_t* sph_helper_status_description(s_t a) {
+uint8_t* sph_helper_status_description(status_t a) {
   uint8_t* b;
   if (sph_helper_status_id_memory == a.id) {
     b = "not enough memory or other memory allocation error";
@@ -17,7 +17,7 @@ uint8_t* sph_helper_status_description(s_t a) {
     b = "";
   };
 }
-uint8_t* sph_helper_status_name(s_t a) {
+uint8_t* sph_helper_status_name(status_t a) {
   uint8_t* b;
   if (sph_helper_status_id_memory == a.id) {
     b = "memory";
@@ -25,51 +25,51 @@ uint8_t* sph_helper_status_name(s_t a) {
     b = "unknown";
   };
 }
-s_t sph_helper_primitive_malloc(size_t size, void** result) {
-  s_declare;
+status_t sph_helper_primitive_malloc(size_t size, void** result) {
+  status_declare;
   void* a;
   a = malloc(size);
   if (a) {
     *result = a;
   } else {
-    s_current.group = sph_helper_status_group;
-    s_current.id = sph_helper_status_id_memory;
+    status.group = sph_helper_status_group;
+    status.id = sph_helper_status_id_memory;
   };
-  s_return;
+  status_return;
 }
 /** like sph-helper-malloc but allocates one extra byte that is set to zero */
-s_t sph_helper_primitive_malloc_string(size_t length, uint8_t** result) {
-  s_declare;
+status_t sph_helper_primitive_malloc_string(size_t length, uint8_t** result) {
+  status_declare;
   uint8_t* a;
-  s((sph_helper_malloc((1 + length), (&a))));
+  status_require((sph_helper_malloc((1 + length), (&a))));
   a[length] = 0;
   *result = a;
 exit:
-  s_return;
+  status_return;
 }
-s_t sph_helper_primitive_calloc(size_t size, void** result) {
-  s_declare;
+status_t sph_helper_primitive_calloc(size_t size, void** result) {
+  status_declare;
   void* a;
   a = calloc(size, 1);
   if (a) {
     *result = a;
   } else {
-    s_current.group = sph_helper_status_group;
-    s_current.id = sph_helper_status_id_memory;
+    status.group = sph_helper_status_group;
+    status.id = sph_helper_status_id_memory;
   };
-  s_return;
+  status_return;
 }
-s_t sph_helper_primitive_realloc(size_t size, void** block) {
-  s_declare;
+status_t sph_helper_primitive_realloc(size_t size, void** block) {
+  status_declare;
   void* a;
   a = realloc((*block), size);
   if (a) {
     *block = a;
   } else {
-    s_current.group = sph_helper_status_group;
-    s_current.id = sph_helper_status_id_memory;
+    status.group = sph_helper_status_group;
+    status.id = sph_helper_status_id_memory;
   };
-  s_return;
+  status_return;
 }
 /** get a decimal string representation of an unsigned integer */
 uint8_t* sph_helper_uint_to_string(uintmax_t a, size_t* result_len) {

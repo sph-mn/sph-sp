@@ -46,9 +46,9 @@
   (a:event:f a:start a:end a:out a:event))
 
 (define (sp-seq-parallel start end out events size)
-  (s-t sp-time-t sp-time-t sp-block-t sp-event-t* sp-time-t)
+  (status-t sp-time-t sp-time-t sp-block-t sp-event-t* sp-time-t)
   "like sp_seq but evaluates events in parallel"
-  s-declare
+  status-declare
   (declare
     e-out-start sp-time-t
     e sp-event-t
@@ -67,7 +67,7 @@
     (set e (array-get events i))
     (cond ((<= e.end start) (set events-start (+ 1 events-start))) ((<= end e.start) break)
       (else (set events-count (+ 1 events-count)))))
-  (s (sph-helper-malloc (* events-count (sizeof sp-seq-future-t)) &seq-futures))
+  (status-require (sph-helper-malloc (* events-count (sizeof sp-seq-future-t)) &seq-futures))
   (sc-comment "parallelise")
   (for ((set i 0) (< i events-count) (set i (+ 1 i)))
     (set e (array-get events (+ events-start i)) sf (+ i seq-futures))
@@ -75,7 +75,7 @@
       e-out-start (if* (> e.start start) (- e.start start) 0)
       e-start (if* (> start e.start) (- start e.start) 0)
       e-end (- (if* (< e.end end) e.end end) e.start))
-    (s (sp-block-new out.channels (- e-end e-start) &sf:out))
+    (status-require (sp-block-new out.channels (- e-end e-start) &sf:out))
     (set sf:start e-start sf:end e-end sf:out-start e-out-start sf:event (+ events-start i events))
     (future-new sp-seq-parallel-future-f sf &sf:future))
   (sc-comment "merge")
@@ -88,7 +88,7 @@
           (+ (array-get (array-get out.samples channel-i) (+ sf:out-start i))
             (array-get (array-get sf:out.samples channel-i) i)))))
     (sp-block-free sf:out))
-  (label exit (free seq-futures) s-return))
+  (label exit (free seq-futures) status-return))
 
 (define (sp-synth-event-free a) (void sp-event-t*)
   (free (: (convert-type a:state sp-synth-event-state-t*) state))
@@ -99,14 +99,14 @@
   (sp-synth out start (- end start) s:config-len s:config s:state))
 
 (define (sp-synth-event start end channel-count config-len config out-event)
-  (s-t sp-time-t sp-time-t sp-time-t sp-time-t sp-synth-partial-t* sp-event-t*)
+  (status-t sp-time-t sp-time-t sp-time-t sp-time-t sp-synth-partial-t* sp-event-t*)
   "memory for event.state will be allocated and then owned by the caller.
   config is copied into event.state"
-  s-declare
+  status-declare
   (declare e sp-event-t state sp-synth-event-state-t*)
   (set state 0)
-  (s (sph-helper-malloc (* channel-count (sizeof sp-synth-event-state-t)) &state))
-  (s (sp-synth-state-new channel-count config-len config &state:state))
+  (status-require (sph-helper-malloc (* channel-count (sizeof sp-synth-event-state-t)) &state))
+  (status-require (sp-synth-state-new channel-count config-len config &state:state))
   (memcpy state:config config (* config-len (sizeof sp-synth-partial-t)))
   (set
     state:config-len config-len
@@ -116,7 +116,7 @@
     e.free sp-synth-event-free
     e.state state)
   (set *out-event e)
-  (label exit (if s-is-failure (free state)) s-return))
+  (label exit (if status-is-failure (free state)) status-return))
 
 (declare sp-noise-event-state-t
   (type
@@ -175,13 +175,13 @@
 
 (define
   (sp-noise-event start end amp cut-l cut-h trn-l trn-h is-reject resolution random-state out-event)
-  (s-t sp-time-t sp-time-t
+  (status-t sp-time-t sp-time-t
     sp-sample-t** sp-sample-t* sp-sample-t*
     sp-sample-t* sp-sample-t* uint8-t sp-time-t sp-random-state-t sp-event-t*)
   "an event for noise filtered by a windowed-sinc filter.
   very processing intensive when parameters change with low resolution.
   memory for event.state will be allocated and then owned by the caller"
-  s-declare
+  status-declare
   (declare
     temp sp-sample-t*
     temp-noise sp-sample-t*
@@ -189,18 +189,18 @@
     e sp-event-t
     s sp-noise-event-state-t*)
   (set resolution (if* resolution (min resolution (- end start)) 96))
-  (s (sph-helper-malloc (sizeof sp-noise-event-state-t) &s))
-  (s (sph-helper-malloc (* resolution (sizeof sp-sample-t)) &s:noise))
-  (s (sph-helper-malloc (* resolution (sizeof sp-sample-t)) &s:temp))
+  (status-require (sph-helper-malloc (sizeof sp-noise-event-state-t) &s))
+  (status-require (sph-helper-malloc (* resolution (sizeof sp-sample-t)) &s:noise))
+  (status-require (sph-helper-malloc (* resolution (sizeof sp-sample-t)) &s:temp))
   (sc-comment
     "the result shows a small delay, circa 40 samples for transition 0.07. the size seems to be related to ir-len."
     "the state is initialised with one unused call to skip the delay."
     "an added benefit is that the filter-state setup malloc is checked")
   (set ir-len (sp-windowed-sinc-lp-hp-ir-length (min *trn-l *trn-h)) s:filter-state 0)
-  (s (sph-helper-malloc (* ir-len (sizeof sp-sample-t)) &temp))
-  (s (sph-helper-malloc (* ir-len (sizeof sp-sample-t)) &temp-noise))
+  (status-require (sph-helper-malloc (* ir-len (sizeof sp-sample-t)) &temp))
+  (status-require (sph-helper-malloc (* ir-len (sizeof sp-sample-t)) &temp-noise))
   (sp-random-samples &random-state ir-len temp-noise)
-  (s
+  (status-require
     (sp-windowed-sinc-bp-br temp-noise ir-len
       *cut-l *cut-h *trn-l *trn-h is-reject &s:filter-state temp))
   (free temp)
@@ -220,7 +220,7 @@
     e.free sp-noise-event-free
     e.state s)
   (set *out-event e)
-  (label exit s-return))
+  (label exit status-return))
 
 (declare sp-cheap-noise-event-state-t
   (type
@@ -278,20 +278,20 @@
 
 (define
   (sp-cheap-noise-event start end amp type cut passes q-factor resolution random-state out-event)
-  (s-t sp-time-t sp-time-t
+  (status-t sp-time-t sp-time-t
     sp-sample-t** sp-state-variable-filter-t sp-sample-t*
     sp-time-t sp-sample-t sp-time-t sp-random-state-t sp-event-t*)
   "an event for noise filtered by a state-variable filter. multiple passes currently not implemented.
   lower processing costs even when parameters change with high resolution.
   multiple passes almost multiply performance costs.
   memory for event.state will be allocated and then owned by the caller"
-  s-declare
+  status-declare
   (declare e sp-event-t s sp-cheap-noise-event-state-t*)
   (set resolution (if* resolution (min resolution (- end start)) 96))
-  (s (sph-helper-malloc (sizeof sp-cheap-noise-event-state-t) &s))
-  (s (sph-helper-malloc (* resolution (sizeof sp-sample-t)) &s:noise))
-  (s (sph-helper-malloc (* resolution (sizeof sp-sample-t)) &s:temp))
-  (s (sp-cheap-filter-state-new resolution passes &s:filter-state))
+  (status-require (sph-helper-malloc (sizeof sp-cheap-noise-event-state-t) &s))
+  (status-require (sph-helper-malloc (* resolution (sizeof sp-sample-t)) &s:noise))
+  (status-require (sph-helper-malloc (* resolution (sizeof sp-sample-t)) &s:temp))
+  (status-require (sp-cheap-filter-state-new resolution passes &s:filter-state))
   (set
     s:cut cut
     s:q-factor q-factor
@@ -306,4 +306,4 @@
     e.free sp-cheap-noise-event-free
     e.state s)
   (set *out-event e)
-  (label exit s-return))
+  (label exit status-return))
