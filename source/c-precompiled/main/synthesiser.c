@@ -1,5 +1,5 @@
 /** accumulate an integer phase and reset it after cycles.
-  float value phases would be harder to reset */
+  float value phases would be inexact and therefore harder to reset */
 sp_time_t sp_phase_96(sp_time_t current, sp_time_t change) {
   sp_time_t result;
   result = (current + change);
@@ -27,7 +27,7 @@ exit:
   sp-synth output is summed into out.
   amplitude and wavelength can be controlled by arrays separately for each partial and channel.
   modulators can be modulated themselves in chains. state has to be allocated by the caller with sp-synth-state-new.
-  modulator amplitude is relative to carrier wavelength.
+  modulator amplitude is relative to carrier amplitude.
   paths are relative to the start of partials.
   # requirements
   * modulators must come after carriers in config
@@ -35,8 +35,8 @@ exit:
   * all amplitude/wavelength arrays must be of sufficient size and set for all channels
   * sp-initialise must have been called once before using sp-synth
   # algorithm
-  * read config from the end to the start
-  * write modulator output to temporary buffers that are indexed by modified partial id
+  * read config from last to first element
+  * write modulator output to temporary buffers that are indexed by carrier id
   * apply modulator output from the buffers and sum to output for final carriers
   * each partial has integer phases that are reset in cycles and kept in state between calls */
 status_t sp_synth(sp_block_t out, sp_time_t start, sp_time_t duration, sp_synth_count_t config_len, sp_synth_partial_t* config, sp_time_t* phases) {
@@ -57,12 +57,13 @@ status_t sp_synth(sp_block_t out, sp_time_t start, sp_time_t duration, sp_synth_
   sp_synth_partial_t prt;
   sp_time_t prt_start;
   sp_time_t wvl;
-  /* modulation blocks (channel array + data. at least one is carrier and writes only to output) */
+  /* modulation blocks (channel array + data. at least one would be carrier) */
   memreg_init(((config_len - 1) * out.channels));
   memset(modulation_index, 0, (sizeof(modulation_index)));
   end = (start + duration);
   prt_i = config_len;
   while (prt_i) {
+    /* sequencing of partials */
     prt_i = (prt_i - 1);
     prt = config[prt_i];
     if (end < prt.start) {
@@ -71,12 +72,14 @@ status_t sp_synth(sp_block_t out, sp_time_t start, sp_time_t duration, sp_synth_
     if (prt.end <= start) {
       continue;
     };
+    /* offsets relative to the currently generated block */
     prt_start = ((prt.start < start) ? (start - prt.start) : 0);
     prt_offset = ((prt.start > start) ? (prt.start - start) : 0);
     prt_offset_right = ((prt.end > end) ? 0 : (end - prt.end));
     prt_duration = (duration - prt_offset - prt_offset_right);
     if (prt.modifies) {
       for (channel_i = 0; (channel_i < out.channels); channel_i = (1 + channel_i)) {
+        /* get modulator output buffer */
         carrier = modulation_index[(prt.modifies - 1)][channel_i];
         if (!carrier) {
           status_require((sph_helper_calloc((duration * sizeof(sp_sample_t)), (&carrier))));
@@ -84,6 +87,7 @@ status_t sp_synth(sp_block_t out, sp_time_t start, sp_time_t duration, sp_synth_
         };
         phs = phases[(channel_i + (out.channels * prt_i))];
         modulation = modulation_index[prt_i][channel_i];
+        /* calculate sample and sum with carrier */
         for (i = 0; (i < prt_duration); i = (1 + i)) {
           amp = (prt.amp)[channel_i][(prt_start + i)];
           carrier[(prt_offset + i)] = (carrier[(prt_offset + i)] + (amp * sp_sine_96(phs)));
@@ -91,11 +95,13 @@ status_t sp_synth(sp_block_t out, sp_time_t start, sp_time_t duration, sp_synth_
           modulated_wvl = (modulation ? (wvl + (wvl * modulation[(prt_offset + i)])) : wvl);
           phs = sp_phase_96_float(phs, (48000 / modulated_wvl));
         };
+        /* save modulated output */
         phases[(channel_i + (out.channels * prt_i))] = phs;
         modulation_index[(prt.modifies - 1)][channel_i] = carrier;
       };
     } else {
       for (channel_i = 0; (channel_i < out.channels); channel_i = (1 + channel_i)) {
+        /* is carrier. sums into main output */
         phs = phases[(channel_i + (out.channels * prt_i))];
         modulation = modulation_index[prt_i][channel_i];
         for (i = 0; (i < prt_duration); i = (1 + i)) {
@@ -145,7 +151,7 @@ sp_sample_t sp_triangle(sp_time_t t, sp_time_t a, sp_time_t b) {
 }
 sp_sample_t sp_triangle_96(sp_time_t t) { return ((sp_triangle(t, 48000, 48000))); }
 sp_sample_t sp_square_96(sp_time_t t) { return (((((2 * t) % (2 * 96000)) < 96000) ? -1 : 1)); }
-/** writes a sine wave of size into out. can be used as a lookup table */
+/** writes a sine wave of size into out. can be used to create lookup tables */
 status_t sp_sine_table_new(sp_sample_t** out, sp_time_t size) {
   status_declare;
   sp_time_t i;

@@ -1,7 +1,7 @@
 (sc-comment
   "implementation of a windowed sinc low-pass and high-pass filter for continuous streams of sample arrays.
-  sample-rate, radian cutoff frequency and transition band width is variable per call.
-  build with the information on https://tomroelandts.com/articles/how-to-create-a-simple-low-pass-filter")
+  sample-rate, cutoff frequency and transition band width is variable per call.
+  build with the information from https://tomroelandts.com/articles/how-to-create-a-simple-low-pass-filter")
 
 (define (sp-convolution-filter-state-free state) (void sp-convolution-filter-state-t*)
   (if (not state) return)
@@ -273,7 +273,7 @@
 (pre-define (define-sp-state-variable-filter suffix transfer)
   (begin
     "samples real real pair [integer integer integer] -> state
-    define a routine for a fast filter that supports multiple filter types in one.
+    define a routine for a fast filter that also supports multiple filter types in one.
     state must hold two elements and is to be allocated and owned by the caller.
     cutoff is as a fraction of the sample rate between 0 and 0.5.
     uses the state-variable filter described here:

@@ -8,7 +8,7 @@ c code and shared library for sound file input/output and example implementation
   * processing of non-interleaved sample arrays with one array per channel. number of channels and sample rate can be custom set
   * fast fourier transform (fft) and inverse fast fourier transform (ifft)
   * plotting of samples and sound spectra using gnuplot
-* processors that can work on blocks of continuous data streams
+* processors that can work seamlessly on blocks of continuous data streams
   * windowed-sinc low-pass, high-pass, band-pass and band-reject filters
   * state-variable high/low/band/all-pass filter
   * moving average filter

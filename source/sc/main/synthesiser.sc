@@ -1,6 +1,6 @@
 (define (sp-phase-96 current change) (sp-time-t sp-time-t sp-time-t)
   "accumulate an integer phase and reset it after cycles.
-  float value phases would be harder to reset"
+  float value phases would be inexact and therefore harder to reset"
   (declare result sp-time-t)
   (set result (+ current change))
   (return (if* (<= 96000 result) (modulo result 96000) result)))
@@ -29,7 +29,7 @@
   sp-synth output is summed into out.
   amplitude and wavelength can be controlled by arrays separately for each partial and channel.
   modulators can be modulated themselves in chains. state has to be allocated by the caller with sp-synth-state-new.
-  modulator amplitude is relative to carrier wavelength.
+  modulator amplitude is relative to carrier amplitude.
   paths are relative to the start of partials.
   # requirements
   * modulators must come after carriers in config
@@ -37,11 +37,10 @@
   * all amplitude/wavelength arrays must be of sufficient size and set for all channels
   * sp-initialise must have been called once before using sp-synth
   # algorithm
-  * read config from the end to the start
-  * write modulator output to temporary buffers that are indexed by modified partial id
+  * read config from last to first element
+  * write modulator output to temporary buffers that are indexed by carrier id
   * apply modulator output from the buffers and sum to output for final carriers
   * each partial has integer phases that are reset in cycles and kept in state between calls"
-  ; config is evaluated from last to first.
   ; modulation is duration length, paths are samples relative to the partial start
   status-declare
   (declare
@@ -61,15 +60,16 @@
     prt sp-synth-partial-t
     prt-start sp-time-t
     wvl sp-time-t)
-  (sc-comment
-    "modulation blocks (channel array + data. at least one is carrier and writes only to output)")
+  (sc-comment "modulation blocks (channel array + data. at least one would be carrier)")
   (memreg-init (* (- config-len 1) out.channels))
   (memset modulation-index 0 (sizeof modulation-index))
   (set end (+ start duration) prt-i config-len)
   (while prt-i
+    (sc-comment "sequencing of partials")
     (set prt-i (- prt-i 1) prt (array-get config prt-i))
     (if (< end prt.start) break)
     (if (<= prt.end start) continue)
+    (sc-comment "offsets relative to the currently generated block")
     (set
       prt-start (if* (< prt.start start) (- start prt.start) 0)
       prt-offset (if* (> prt.start start) (- prt.start start) 0)
@@ -77,6 +77,7 @@
       prt-duration (- duration prt-offset prt-offset-right))
     (if prt.modifies
       (for ((set channel-i 0) (< channel-i out.channels) (set channel-i (+ 1 channel-i)))
+        (sc-comment "get modulator output buffer")
         (set carrier (array-get modulation-index (- prt.modifies 1) channel-i))
         (if (not carrier)
           (begin
@@ -85,6 +86,7 @@
         (set
           phs (array-get phases (+ channel-i (* out.channels prt-i)))
           modulation (array-get modulation-index prt-i channel-i))
+        (sc-comment "calculate sample and sum with carrier")
         (for ((set i 0) (< i prt-duration) (set i (+ 1 i)))
           (set
             amp (array-get prt.amp channel-i (+ prt-start i))
@@ -93,10 +95,12 @@
             (array-get prt.wvl channel-i (+ prt-start i)) modulated-wvl
             (if* modulation (+ wvl (* wvl (array-get modulation (+ prt-offset i)))) wvl) phs
             (sp-phase-96-float phs (/ 48000 modulated-wvl))))
+        (sc-comment "save modulated output")
         (set
           (array-get phases (+ channel-i (* out.channels prt-i))) phs
           (array-get modulation-index (- prt.modifies 1) channel-i) carrier))
       (for ((set channel-i 0) (< channel-i out.channels) (set channel-i (+ 1 channel-i)))
+        (sc-comment "is carrier. sums into main output")
         (set
           phs (array-get phases (+ channel-i (* out.channels prt-i)))
           modulation (array-get modulation-index prt-i channel-i))
@@ -153,7 +157,7 @@
   (return (if* (< (modulo (* 2 t) (* 2 96000)) 96000) -1 1)))
 
 (define (sp-sine-table-new out size) (status-t sp-sample-t** sp-time-t)
-  "writes a sine wave of size into out. can be used as a lookup table"
+  "writes a sine wave of size into out. can be used to create lookup tables"
   status-declare
   (declare i sp-time-t out-array sp-sample-t*)
   (status-require (sph-helper-malloc (* size (sizeof sp-sample-t*)) &out-array))
