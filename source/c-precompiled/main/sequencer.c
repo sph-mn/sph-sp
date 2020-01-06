@@ -111,7 +111,7 @@ void sp_synth_event_f(sp_time_t start, sp_time_t end, sp_block_t out, sp_event_t
 }
 /** memory for event.state will be allocated and then owned by the caller.
   config is copied into event.state */
-status_t sp_synth_event(sp_time_t start, sp_time_t end, sp_time_t channel_count, sp_time_t config_len, sp_synth_partial_t* config, sp_event_t* out_event) {
+status_t sp_synth_event(sp_time_t start, sp_time_t end, sp_channels_t channel_count, sp_time_t config_len, sp_synth_partial_t* config, sp_event_t* out_event) {
   status_declare;
   sp_event_t e;
   sp_synth_event_state_t* state;

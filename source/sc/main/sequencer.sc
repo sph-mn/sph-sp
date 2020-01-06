@@ -99,7 +99,7 @@
   (sp-synth out start (- end start) s:config-len s:config s:state))
 
 (define (sp-synth-event start end channel-count config-len config out-event)
-  (status-t sp-time-t sp-time-t sp-time-t sp-time-t sp-synth-partial-t* sp-event-t*)
+  (status-t sp-time-t sp-time-t sp-channels-t sp-time-t sp-synth-partial-t* sp-event-t*)
   "memory for event.state will be allocated and then owned by the caller.
   config is copied into event.state"
   status-declare

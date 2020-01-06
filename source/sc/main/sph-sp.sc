@@ -6,8 +6,7 @@
   sp-channels-t uint8-t
   sp-file-format (bit-or SF-FORMAT-WAV SF-FORMAT-FLOAT)
   sp-float-t double
-  sp-time-t uint32-t
-  sp-count-max UINT32_MAX
+  sp-time-t uint64-t
   sp-sample-rate-t uint32-t
   sp-sample-sum f64-sum
   sp-sample-t double
@@ -261,7 +260,7 @@
   (sp-seq-parallel start end out events size)
   (status-t sp-time-t sp-time-t sp-block-t sp-event-t* sp-time-t)
   (sp-synth-event start end channel-count config-len config out-event)
-  (status-t sp-time-t sp-time-t sp-time-t sp-time-t sp-synth-partial-t* sp-event-t*)
+  (status-t sp-time-t sp-time-t sp-channels-t sp-time-t sp-synth-partial-t* sp-event-t*)
   (sp-noise-event start end amp cut-l cut-h trn-l trn-h is-reject resolution random-state out-event)
   (status-t sp-time-t sp-time-t
     sp-sample-t** sp-sample-t* sp-sample-t*
