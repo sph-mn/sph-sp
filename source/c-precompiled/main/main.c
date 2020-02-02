@@ -141,7 +141,7 @@ sp_block_t sp_block_with_offset(sp_block_t a, sp_time_t offset) {
   return (a);
 }
 status_t sp_sample_array_new(sp_time_t size, sp_sample_t** out) { return ((sph_helper_calloc((size * sizeof(sp_sample_t)), out))); }
-status_t sp_count_array_new(sp_time_t size, sp_time_t** out) { return ((sph_helper_calloc((size * sizeof(sp_time_t)), out))); }
+status_t sp_time_array_new(sp_time_t size, sp_time_t** out) { return ((sph_helper_calloc((size * sizeof(sp_time_t)), out))); }
 /** lower precision version of sin() that should be faster */
 sp_sample_t sp_sin_lq(sp_float_t a) {
   sp_sample_t b;

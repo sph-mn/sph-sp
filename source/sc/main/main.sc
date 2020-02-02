@@ -15,8 +15,7 @@
   (sp-libc-s expression)
   (begin
     (set status.id expression)
-    (if (< status.id 0) (begin (set status.group sp-s-group-libc) (goto exit))
-      (set status.id 0)))
+    (if (< status.id 0) (begin (set status.group sp-s-group-libc) (goto exit)) (set status.id 0)))
   (define-sp-interleave name type body)
   (begin
     "define a deinterleave, interleave or similar routine.
@@ -105,7 +104,7 @@
 (define (sp-sample-array-new size out) (status-t sp-time-t sp-sample-t**)
   (return (sph-helper-calloc (* size (sizeof sp-sample-t)) out)))
 
-(define (sp-count-array-new size out) (status-t sp-time-t sp-time-t**)
+(define (sp-time-array-new size out) (status-t sp-time-t sp-time-t**)
   (return (sph-helper-calloc (* size (sizeof sp-time-t)) out)))
 
 (define (sp-sin-lq a) (sp-sample-t sp-float-t)

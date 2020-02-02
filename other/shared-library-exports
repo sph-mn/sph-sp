@@ -71,7 +71,7 @@ exports {
     sp_plot_spectrum_file;
     sp_plot_spectrum_to_file;
     sp_random_samples;
-    sp_samples_new;
+    sp_sample_array_new;
     sp_seq;
     sp_seq_events_prepare;
     sp_seq_parallel;
@@ -95,6 +95,7 @@ exports {
     sp_synth_partial_1;
     sp_synth_partial_2;
     sp_synth_state_new;
+    sp_time_array_new;
     sp_triangle;
     sp_triangle_96;
     sp_window_blackman;

@@ -98,7 +98,7 @@
   (sp-initialise cpu-count) (status-t uint16-t)
   (sp-random-samples state size out) (void sp-random-state-t* sp-time-t sp-sample-t*)
   (sp-sample-array-new size out) (status-t sp-time-t sp-sample-t**)
-  (sp-count-array-new size out) (status-t sp-time-t sp-time-t**))
+  (sp-time-array-new size out) (status-t sp-time-t sp-time-t**))
 
 (sc-comment "filter")
 

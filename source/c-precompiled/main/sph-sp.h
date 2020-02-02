@@ -281,7 +281,7 @@ status_t sp_passthrough_ir(sp_sample_t** out_ir, sp_time_t* out_len);
 status_t sp_initialise(uint16_t cpu_count);
 void sp_random_samples(sp_random_state_t* state, sp_time_t size, sp_sample_t* out);
 status_t sp_sample_array_new(sp_time_t size, sp_sample_t** out);
-status_t sp_count_array_new(sp_time_t size, sp_time_t** out);
+status_t sp_time_array_new(sp_time_t size, sp_time_t** out);
 /* filter */
 #define sp_filter_state_t sp_convolution_filter_state_t
 #define sp_filter_state_free sp_convolution_filter_state_free

@@ -100,8 +100,8 @@
 
 (define (sp-synth-event start end channel-count config-len config out-event)
   (status-t sp-time-t sp-time-t sp-channels-t sp-time-t sp-synth-partial-t* sp-event-t*)
-  "memory for event.state will be allocated and then owned by the caller.
-  config is copied into event.state"
+  "memory for event.state is allocated and then owned by the caller.
+   config is copied to event.state.config to allow config to be a stack array. the copy will be freed by event.free"
   status-declare
   (declare e sp-event-t state sp-synth-event-state-t*)
   (set state 0)
