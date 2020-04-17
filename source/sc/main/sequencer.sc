@@ -28,8 +28,10 @@
         (e.f e-start e-end (if* e-out-start (sp-block-with-offset out e-out-start) out) &e)))))
 
 (define (sp-events-free events size) (void sp-event-t* sp-time-t)
-  (declare i sp-time-t)
-  (for ((set i 0) (< i size) (set i (+ 1 i))) (: (+ events i) free)))
+  (declare i sp-time-t event-free (function-pointer void (struct sp-event-t*)))
+  (for ((set i 0) (< i size) (set i (+ 1 i)))
+    (set event-free (: (+ events i) free))
+    (if event-free (event-free (+ events i)))))
 
 (declare sp-seq-future-t
   (type
@@ -175,12 +177,10 @@
 
 (define
   (sp-noise-event start end amp cut-l cut-h trn-l trn-h is-reject resolution random-state out-event)
-  (status-t sp-time-t sp-time-t
-    sp-sample-t** sp-sample-t* sp-sample-t*
-    sp-sample-t* sp-sample-t* uint8-t sp-time-t sp-random-state-t sp-event-t*)
+  (status-t sp-time-t sp-time-t sp-sample-t** sp-sample-t* sp-sample-t* sp-sample-t* sp-sample-t* uint8-t sp-time-t sp-random-state-t sp-event-t*)
   "an event for noise filtered by a windowed-sinc filter.
-  very processing intensive when parameters change with low resolution.
-  memory for event.state will be allocated and then owned by the caller"
+   very processing intensive when parameters change with low resolution.
+   memory for event.state will be allocated and then owned by the caller"
   status-declare
   (declare
     temp sp-sample-t*
@@ -278,13 +278,11 @@
 
 (define
   (sp-cheap-noise-event start end amp type cut passes q-factor resolution random-state out-event)
-  (status-t sp-time-t sp-time-t
-    sp-sample-t** sp-state-variable-filter-t sp-sample-t*
-    sp-time-t sp-sample-t sp-time-t sp-random-state-t sp-event-t*)
+  (status-t sp-time-t sp-time-t sp-sample-t** sp-state-variable-filter-t sp-sample-t* sp-time-t sp-sample-t sp-time-t sp-random-state-t sp-event-t*)
   "an event for noise filtered by a state-variable filter. multiple passes currently not implemented.
-  lower processing costs even when parameters change with high resolution.
-  multiple passes almost multiply performance costs.
-  memory for event.state will be allocated and then owned by the caller"
+   lower processing costs even when parameters change with high resolution.
+   multiple passes almost multiply performance costs.
+   memory for event.state will be allocated and then owned by the caller"
   status-declare
   (declare e sp-event-t s sp-cheap-noise-event-state-t*)
   (set resolution (if* resolution (min resolution (- end start)) 96))

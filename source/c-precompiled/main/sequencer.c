@@ -29,8 +29,12 @@ void sp_seq(sp_time_t start, sp_time_t end, sp_block_t out, sp_event_t* events, 
 }
 void sp_events_free(sp_event_t* events, sp_time_t size) {
   sp_time_t i;
+  void (*event_free)(struct sp_event_t*);
   for (i = 0; (i < size); i = (1 + i)) {
-    (events + i)->free;
+    event_free = (events + i)->free;
+    if (event_free) {
+      event_free((events + i));
+    };
   };
 }
 typedef struct {
@@ -182,8 +186,8 @@ void sp_noise_event_free(sp_event_t* a) {
   free((a->state));
 }
 /** an event for noise filtered by a windowed-sinc filter.
-  very processing intensive when parameters change with low resolution.
-  memory for event.state will be allocated and then owned by the caller */
+   very processing intensive when parameters change with low resolution.
+   memory for event.state will be allocated and then owned by the caller */
 status_t sp_noise_event(sp_time_t start, sp_time_t end, sp_sample_t** amp, sp_sample_t* cut_l, sp_sample_t* cut_h, sp_sample_t* trn_l, sp_sample_t* trn_h, uint8_t is_reject, sp_time_t resolution, sp_random_state_t random_state, sp_event_t* out_event) {
   status_declare;
   sp_sample_t* temp;
@@ -272,9 +276,9 @@ void sp_cheap_noise_event_free(sp_event_t* a) {
   free((a->state));
 }
 /** an event for noise filtered by a state-variable filter. multiple passes currently not implemented.
-  lower processing costs even when parameters change with high resolution.
-  multiple passes almost multiply performance costs.
-  memory for event.state will be allocated and then owned by the caller */
+   lower processing costs even when parameters change with high resolution.
+   multiple passes almost multiply performance costs.
+   memory for event.state will be allocated and then owned by the caller */
 status_t sp_cheap_noise_event(sp_time_t start, sp_time_t end, sp_sample_t** amp, sp_state_variable_filter_t type, sp_sample_t* cut, sp_time_t passes, sp_sample_t q_factor, sp_time_t resolution, sp_random_state_t random_state, sp_event_t* out_event) {
   status_declare;
   sp_event_t e;
