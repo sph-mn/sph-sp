@@ -82,7 +82,7 @@
 
 (define (sp-file-position-set file a) (status-t sp-file-t* sp-time-t)
   "seeks are defined in number of (multichannel) frames.
-  therefore, a seek in a stereo file from the current position forward with an offset of 1 would skip forward by one sample of both channels"
+   therefore, a seek in a stereo file from the current position forward with an offset of 1 would skip forward by one sample of both channels"
   status-declare
   (declare snd_file SNDFILE* count sf-count-t)
   (set snd_file file:data count (sf-seek snd_file a SEEK-SET))

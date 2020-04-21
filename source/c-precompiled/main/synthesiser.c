@@ -1,15 +1,15 @@
 /** accumulate an integer phase and reset it after cycles.
-  float value phases would be inexact and therefore harder to reset */
+   float value phases would be inexact and therefore harder to reset */
 sp_time_t sp_phase_96(sp_time_t current, sp_time_t change) {
   sp_time_t result;
   result = (current + change);
   return (((96000 <= result) ? (result % 96000) : result));
 }
 /** accumulate an integer phase with change given as a float value.
-  change must be a positive value and is rounded to the next larger integer */
+   change must be a positive value and is rounded to the next larger integer */
 sp_time_t sp_phase_96_float(sp_time_t current, double change) { return ((sp_phase_96(current, (sp_cheap_ceiling_positive(change))))); }
 /** contains the initial phase offsets per partial and channel
-  as a flat array. should be freed with free */
+   as a flat array. should be freed with free */
 status_t sp_synth_state_new(sp_time_t channel_count, sp_synth_count_t config_len, sp_synth_partial_t* config, sp_time_t** out_state) {
   status_declare;
   sp_time_t i;
@@ -24,21 +24,21 @@ exit:
   status_return;
 }
 /** create sines that start and end at specific times and can optionally modulate the frequency of others.
-  sp-synth output is summed into out.
-  amplitude and wavelength can be controlled by arrays separately for each partial and channel.
-  modulators can be modulated themselves in chains. state has to be allocated by the caller with sp-synth-state-new.
-  modulator amplitude is relative to carrier amplitude.
-  paths are relative to the start of partials.
-  # requirements
-  * modulators must come after carriers in config
-  * config-len must not change between calls with the same state
-  * all amplitude/wavelength arrays must be of sufficient size and set for all channels
-  * sp-initialise must have been called once before using sp-synth
-  # algorithm
-  * read config from last to first element
-  * write modulator output to temporary buffers that are indexed by carrier id
-  * apply modulator output from the buffers and sum to output for final carriers
-  * each partial has integer phases that are reset in cycles and kept in state between calls */
+   sp-synth output is summed into out.
+   amplitude and wavelength can be controlled by arrays separately for each partial and channel.
+   modulators can be modulated themselves in chains. state has to be allocated by the caller with sp-synth-state-new.
+   modulator amplitude is relative to carrier amplitude.
+   paths are relative to the start of partials.
+   # requirements
+   * modulators must come after carriers in config
+   * config-len must not change between calls with the same state
+   * all amplitude/wavelength arrays must be of sufficient size and set for all channels
+   * sp-initialise must have been called once before using sp-synth
+   # algorithm
+   * read config from last to first element
+   * write modulator output to temporary buffers that are indexed by carrier id
+   * apply modulator output from the buffers and sum to output for final carriers
+   * each partial has integer phases that are reset in cycles and kept in state between calls */
 status_t sp_synth(sp_block_t out, sp_time_t start, sp_time_t duration, sp_synth_count_t config_len, sp_synth_partial_t* config, sp_time_t* phases) {
   status_declare;
   sp_sample_t amp;

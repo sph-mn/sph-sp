@@ -1,19 +1,19 @@
 (define (sp-phase-96 current change) (sp-time-t sp-time-t sp-time-t)
   "accumulate an integer phase and reset it after cycles.
-  float value phases would be inexact and therefore harder to reset"
+   float value phases would be inexact and therefore harder to reset"
   (declare result sp-time-t)
   (set result (+ current change))
   (return (if* (<= 96000 result) (modulo result 96000) result)))
 
 (define (sp-phase-96-float current change) (sp-time-t sp-time-t double)
   "accumulate an integer phase with change given as a float value.
-  change must be a positive value and is rounded to the next larger integer"
+   change must be a positive value and is rounded to the next larger integer"
   (return (sp-phase-96 current (sp-cheap-ceiling-positive change))))
 
 (define (sp-synth-state-new channel-count config-len config out-state)
   (status-t sp-time-t sp-synth-count-t sp-synth-partial-t* sp-time-t**)
   "contains the initial phase offsets per partial and channel
-  as a flat array. should be freed with free"
+   as a flat array. should be freed with free"
   status-declare
   (declare i sp-time-t channel-i sp-time-t)
   (status-require (sph-helper-calloc (* channel-count config-len (sizeof sp-time-t)) out-state))
@@ -26,22 +26,21 @@
 (define (sp-synth out start duration config-len config phases)
   (status-t sp-block-t sp-time-t sp-time-t sp-synth-count-t sp-synth-partial-t* sp-time-t*)
   "create sines that start and end at specific times and can optionally modulate the frequency of others.
-  sp-synth output is summed into out.
-  amplitude and wavelength can be controlled by arrays separately for each partial and channel.
-  modulators can be modulated themselves in chains. state has to be allocated by the caller with sp-synth-state-new.
-  modulator amplitude is relative to carrier amplitude.
-  paths are relative to the start of partials.
-  # requirements
-  * modulators must come after carriers in config
-  * config-len must not change between calls with the same state
-  * all amplitude/wavelength arrays must be of sufficient size and set for all channels
-  * sp-initialise must have been called once before using sp-synth
-  # algorithm
-  * read config from last to first element
-  * write modulator output to temporary buffers that are indexed by carrier id
-  * apply modulator output from the buffers and sum to output for final carriers
-  * each partial has integer phases that are reset in cycles and kept in state between calls"
-  ; modulation is duration length, paths are samples relative to the partial start
+   sp-synth output is summed into out.
+   amplitude and wavelength can be controlled by arrays separately for each partial and channel.
+   modulators can be modulated themselves in chains. state has to be allocated by the caller with sp-synth-state-new.
+   modulator amplitude is relative to carrier amplitude.
+   paths are relative to the start of partials.
+   # requirements
+   * modulators must come after carriers in config
+   * config-len must not change between calls with the same state
+   * all amplitude/wavelength arrays must be of sufficient size and set for all channels
+   * sp-initialise must have been called once before using sp-synth
+   # algorithm
+   * read config from last to first element
+   * write modulator output to temporary buffers that are indexed by carrier id
+   * apply modulator output from the buffers and sum to output for final carriers
+   * each partial has integer phases that are reset in cycles and kept in state between calls"
   status-declare
   (declare
     amp sp-sample-t
@@ -91,10 +90,11 @@
           (set
             amp (array-get prt.amp channel-i (+ prt-start i))
             (array-get carrier (+ prt-offset i))
-            (+ (array-get carrier (+ prt-offset i)) (* amp (sp-sine-96 phs))) wvl
-            (array-get prt.wvl channel-i (+ prt-start i)) modulated-wvl
-            (if* modulation (+ wvl (* wvl (array-get modulation (+ prt-offset i)))) wvl) phs
-            (sp-phase-96-float phs (/ 48000 modulated-wvl))))
+            (+ (array-get carrier (+ prt-offset i)) (* amp (sp-sine-96 phs)))
+            wvl (array-get prt.wvl channel-i (+ prt-start i))
+            modulated-wvl
+            (if* modulation (+ wvl (* wvl (array-get modulation (+ prt-offset i)))) wvl)
+            phs (sp-phase-96-float phs (/ 48000 modulated-wvl))))
         (sc-comment "save modulated output")
         (set
           (array-get phases (+ channel-i (* out.channels prt-i))) phs
@@ -109,8 +109,8 @@
             amp (array-get prt.amp channel-i (+ prt-start i))
             wvl (array-get prt.wvl channel-i (+ prt-start i))
             modulated-wvl
-            (if* modulation (+ wvl (* wvl (array-get modulation (+ prt-offset i)))) wvl) phs
-            (sp-phase-96-float phs (/ 48000 modulated-wvl))
+            (if* modulation (+ wvl (* wvl (array-get modulation (+ prt-offset i)))) wvl)
+            phs (sp-phase-96-float phs (/ 48000 modulated-wvl))
             (array-get (array-get out.samples channel-i) (+ prt-offset i))
             (+ (array-get (array-get out.samples channel-i) (+ prt-offset i))
               (* amp (sp-sine-96 phs)))))
@@ -132,8 +132,7 @@
   (return prt))
 
 (define (sp-synth-partial-2 start end modifies amp1 amp2 wvl1 wvl2 phs1 phs2)
-  (sp-synth-partial-t sp-time-t sp-time-t
-    sp-synth-count-t sp-sample-t* sp-sample-t* sp-time-t* sp-time-t* sp-time-t sp-time-t)
+  (sp-synth-partial-t sp-time-t sp-time-t sp-synth-count-t sp-sample-t* sp-sample-t* sp-time-t* sp-time-t* sp-time-t sp-time-t)
   "setup a synth partial with two channels"
   (declare prt sp-synth-partial-t)
   (set prt.start start prt.end end prt.modifies modifies)

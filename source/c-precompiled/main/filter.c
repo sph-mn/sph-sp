@@ -1,6 +1,6 @@
 /* implementation of a windowed sinc low-pass and high-pass filter for continuous streams of sample arrays.
-  sample-rate, cutoff frequency and transition band width is variable per call.
-  build with the information from https://tomroelandts.com/articles/how-to-create-a-simple-low-pass-filter */
+   sample-rate, cutoff frequency and transition band width is variable per call.
+   build with the information from https://tomroelandts.com/articles/how-to-create-a-simple-low-pass-filter */
 void sp_convolution_filter_state_free(sp_convolution_filter_state_t* state) {
   if (!state) {
     return;
@@ -11,11 +11,11 @@ void sp_convolution_filter_state_free(sp_convolution_filter_state_t* state) {
   free(state);
 }
 /** create or update a previously created state object.
-  impulse response array properties are calculated with ir-f using ir-f-arguments.
-  eventually frees state.ir.
-  the state object is used to store the impulse response, the parameters that where used to create it and
-  overlapping data that has to be carried over between calls.
-  ir-f-arguments can be stack allocated and will be copied to state on change */
+   impulse response array properties are calculated with ir-f using ir-f-arguments.
+   eventually frees state.ir.
+   the state object is used to store the impulse response, the parameters that where used to create it and
+   overlapping data that has to be carried over between calls.
+   ir-f-arguments can be stack allocated and will be copied to state on change */
 status_t sp_convolution_filter_state_set(sp_convolution_filter_ir_f_t ir_f, void* ir_f_arguments, uint8_t ir_f_arguments_len, sp_convolution_filter_state_t** out_state) {
   status_declare;
   sp_sample_t* carryover;
@@ -84,11 +84,11 @@ exit:
   status_return;
 }
 /** convolute samples "in", which can be a segment of a continuous stream, with an impulse response
-  kernel created by ir-f with ir-f-arguments. can be used for many types of convolution with dynamic impulse response.
-  ir-f is only used when ir-f-arguments changed.
-  values that need to be carried over with calls are kept in out-state.
-  * out-state: if zero then state will be allocated. owned by caller
-  * out-samples: owned by the caller. length must be at least in-len and the number of output samples will be in-len */
+   kernel created by ir-f with ir-f-arguments. can be used for many types of convolution with dynamic impulse response.
+   ir-f is only used when ir-f-arguments changed.
+   values that need to be carried over with calls are kept in out-state.
+   * out-state: if zero then state will be allocated. owned by caller
+   * out-samples: owned by the caller. length must be at least in-len and the number of output samples will be in-len */
 status_t sp_convolution_filter(sp_sample_t* in, sp_time_t in_len, sp_convolution_filter_ir_f_t ir_f, void* ir_f_arguments, uint8_t ir_f_arguments_len, sp_convolution_filter_state_t** out_state, sp_sample_t* out_samples) {
   status_declare;
   sp_time_t carryover_len;
@@ -102,7 +102,7 @@ exit:
 }
 sp_float_t sp_window_blackman(sp_float_t a, sp_time_t width) { return (((0.42 - (0.5 * cos(((2 * M_PI * a) / (width - 1))))) + (0.08 * cos(((4 * M_PI * a) / (width - 1)))))); }
 /** approximate impulse response length for a transition factor and
-  ensure that the length is odd */
+   ensure that the length is odd */
 sp_time_t sp_windowed_sinc_lp_hp_ir_length(sp_float_t transition) {
   sp_time_t a;
   a = ceil((4 / transition));
@@ -124,9 +124,9 @@ exit:
   status_return;
 }
 /** create an impulse response kernel for a windowed sinc low-pass or high-pass filter.
-  uses a truncated blackman window.
-  allocates out-ir, sets out-len.
-  cutoff and transition are as fraction 0..0.5 of the sampling rate */
+   uses a truncated blackman window.
+   allocates out-ir, sets out-len.
+   cutoff and transition are as fraction 0..0.5 of the sampling rate */
 status_t sp_windowed_sinc_lp_hp_ir(sp_float_t cutoff, sp_float_t transition, boolean is_high_pass, sp_sample_t** out_ir, sp_time_t* out_len) {
   status_declare;
   sp_float_t center_index;
@@ -156,7 +156,7 @@ exit:
   status_return;
 }
 /** like sp-windowed-sinc-ir-lp but for a band-pass or band-reject filter.
-  optimisation: if one cutoff is at or above maximum then create only either low-pass or high-pass */
+   optimisation: if one cutoff is at or above maximum then create only either low-pass or high-pass */
 status_t sp_windowed_sinc_bp_br_ir(sp_float_t cutoff_l, sp_float_t cutoff_h, sp_float_t transition_l, sp_float_t transition_h, boolean is_reject, sp_sample_t** out_ir, sp_time_t* out_len) {
   status_declare;
   sp_sample_t* hp_ir;
@@ -226,7 +226,7 @@ exit:
   status_return;
 }
 /** maps arguments from the generic ir-f-arguments array.
-  arguments is (sp-float-t:cutoff sp-float-t:transition boolean:is-high-pass) */
+   arguments is (sp-float-t:cutoff sp-float-t:transition boolean:is-high-pass) */
 status_t sp_windowed_sinc_lp_hp_ir_f(void* arguments, sp_sample_t** out_ir, sp_time_t* out_len) {
   sp_float_t cutoff;
   sp_float_t transition;
@@ -237,7 +237,7 @@ status_t sp_windowed_sinc_lp_hp_ir_f(void* arguments, sp_sample_t** out_ir, sp_t
   return ((sp_windowed_sinc_lp_hp_ir(cutoff, transition, is_high_pass, out_ir, out_len)));
 }
 /** maps arguments from the generic ir-f-arguments array.
-  arguments is (sp-float-t:cutoff-l sp-float-t:cutoff-h sp-float-t:transition boolean:is-reject) */
+   arguments is (sp-float-t:cutoff-l sp-float-t:cutoff-h sp-float-t:transition boolean:is-reject) */
 status_t sp_windowed_sinc_bp_br_ir_f(void* arguments, sp_sample_t** out_ir, sp_time_t* out_len) {
   sp_float_t cutoff_l;
   sp_float_t cutoff_h;
@@ -252,12 +252,12 @@ status_t sp_windowed_sinc_bp_br_ir_f(void* arguments, sp_sample_t** out_ir, sp_t
   return ((sp_windowed_sinc_bp_br_ir(cutoff_l, cutoff_h, transition_l, transition_h, is_reject, out_ir, out_len)));
 }
 /** a windowed sinc low-pass or high-pass filter for segments of continuous streams with
-  variable sample-rate, frequency, transition and impulse response type per call.
-  * cutoff: as a fraction of the sample rate, 0..0.5
-  * transition: like cutoff
-  * is-high-pass: if true then it will reduce low frequencies
-  * out-state: if zero then state will be allocated.
-  * out-samples: owned by the caller. length must be at least in-len */
+   variable sample-rate, frequency, transition and impulse response type per call.
+   * cutoff: as a fraction of the sample rate, 0..0.5
+   * transition: like cutoff
+   * is-high-pass: if true then it will reduce low frequencies
+   * out-state: if zero then state will be allocated.
+   * out-samples: owned by the caller. length must be at least in-len */
 status_t sp_windowed_sinc_lp_hp(sp_sample_t* in, sp_time_t in_len, sp_float_t cutoff, sp_float_t transition, boolean is_high_pass, sp_convolution_filter_state_t** out_state, sp_sample_t* out_samples) {
   status_declare;
   uint8_t a[(sizeof(boolean) + (2 * sizeof(sp_float_t)))];
@@ -290,12 +290,12 @@ exit:
   status_return;
 }
 /** samples real real pair [integer integer integer] -> state
-    define a routine for a fast filter that also supports multiple filter types in one.
-    state must hold two elements and is to be allocated and owned by the caller.
-    cutoff is as a fraction of the sample rate between 0 and 0.5.
-    uses the state-variable filter described here:
-    * http://www.cytomic.com/technical-papers
-    * http://www.earlevel.com/main/2016/02/21/filters-for-synths-starting-out/ */
+     define a routine for a fast filter that also supports multiple filter types in one.
+     state must hold two elements and is to be allocated and owned by the caller.
+     cutoff is as a fraction of the sample rate between 0 and 0.5.
+     uses the state-variable filter described here:
+     * http://www.cytomic.com/technical-papers
+     * http://www.earlevel.com/main/2016/02/21/filters-for-synths-starting-out/ */
 #define define_sp_state_variable_filter(suffix, transfer) \
   void sp_state_variable_filter_##suffix(sp_sample_t* out, sp_sample_t* in, sp_float_t in_count, sp_float_t cutoff, sp_time_t q_factor, sp_sample_t* state) { \
     sp_sample_t a1; \
@@ -332,7 +332,7 @@ define_sp_state_variable_filter(lp, v2)
         define_sp_state_variable_filter(peak, (((2 * v2) - v0) + (k * v1)))
           define_sp_state_variable_filter(all, (v0 - (2 * k * v1)))
   /** the sph-sp default precise filter. processing intensive if parameters are change frequently.
-  memory for out-state will be allocated and has to be freed with sp-filter-state-free */
+   memory for out-state will be allocated and has to be freed with sp-filter-state-free */
   status_t sp_filter(sp_sample_t* in, sp_time_t in_size, sp_float_t cutoff_l, sp_float_t cutoff_h, sp_float_t transition_l, sp_float_t transition_h, boolean is_reject, sp_filter_state_t** out_state, sp_sample_t* out_samples) { sp_windowed_sinc_bp_br(in, in_size, cutoff_l, cutoff_h, transition_l, transition_h, is_reject, out_state, out_samples); }
 status_t sp_cheap_filter_state_new(sp_time_t max_size, sp_time_t max_passes, sp_cheap_filter_state_t* out_state) {
   /* allocates and prepares memory and checks if max-passes doesnt exceed the limit

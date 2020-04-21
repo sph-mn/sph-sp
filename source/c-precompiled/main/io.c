@@ -94,7 +94,7 @@ exit:
   status_return;
 }
 /** seeks are defined in number of (multichannel) frames.
-  therefore, a seek in a stereo file from the current position forward with an offset of 1 would skip forward by one sample of both channels */
+   therefore, a seek in a stereo file from the current position forward with an offset of 1 would skip forward by one sample of both channels */
 status_t sp_file_position_set(sp_file_t* file, sp_time_t a) {
   status_declare;
   SNDFILE* snd_file;
