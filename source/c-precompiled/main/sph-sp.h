@@ -362,6 +362,11 @@ sp_sample_t sp_square_96(sp_time_t t);
 sp_sample_t sp_triangle(sp_time_t t, sp_time_t a, sp_time_t b);
 sp_sample_t sp_triangle_96(sp_time_t t);
 /* sequencer */
+#define sp_event_duration(a) (a.end - a.start)
+#define sp_event_duration_set(a, duration) a.end += (a.start + duration)
+#define sp_event_move(a, start) \
+  a.end = (start + (a.end - a.start)); \
+  a.start = start
 #define sp_cheap_noise_event_lp(start, end, amp, ...) sp_cheap_noise_event(start, end, amp, sp_state_variable_filter_lp, __VA_ARGS__)
 #define sp_cheap_noise_event_hp(start, end, amp, ...) sp_cheap_noise_event(start, end, amp, sp_state_variable_filter_hp, __VA_ARGS__)
 #define sp_cheap_noise_event_bp(start, end, amp, ...) sp_cheap_noise_event(start, end, amp, sp_state_variable_filter_bp, __VA_ARGS__)

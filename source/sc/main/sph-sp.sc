@@ -230,6 +230,9 @@
 (sc-comment "sequencer")
 
 (pre-define
+  (sp-event-duration a) (- a.end a.start)
+  (sp-event-duration-set a duration) (set+ a.end (+ a.start duration))
+  (sp-event-move a start) (set a.end (+ start (- a.end a.start)) a.start start)
   (sp-cheap-noise-event-lp start end amp ...)
   (sp-cheap-noise-event start end amp sp-state-variable-filter-lp __VA_ARGS__)
   (sp-cheap-noise-event-hp start end amp ...)

@@ -69,7 +69,7 @@ the file `source/c-precompiled/main/sph-sp.h` can be edited before compilation t
 ```
 #include <sph-sp.h>
 ```
-call sp_initialise(cpu-count) once
+call sp_initialise(cpu-count) once somewhere
 
 compilation with gcc
 ```
