@@ -19,8 +19,8 @@
   (define-sp-interleave name type body)
   (begin
     "define a deinterleave, interleave or similar routine.
-    a: source
-    b: target"
+     a: source
+     b: target"
     (define (name a b a-size channel-count) (void type** type* sp-time-t sp-channels-t)
       (declare b-size sp-time-t channel sp-channels-t)
       (set b-size (* a-size channel-count))
@@ -123,16 +123,14 @@
 
 (define (sp-ffti input-len input/output-real input/output-imag) (int sp-time-t double* double*)
   "[[real, imaginary], ...]:complex-numbers -> real-numbers
-  input-length > 0
-  output-length = input-length
-  output is allocated and owned by the caller"
+   input-length > 0
+   output-length = input-length
+   output is allocated and owned by the caller"
   (return (not (= 1 (Fft_inverseTransform input/output-real input/output-imag input-len)))))
 
 (define
   (sp-moving-average in in-end in-window in-window-end prev prev-end next next-end radius out)
-  (status-t sp-sample-t* sp-sample-t*
-    sp-sample-t* sp-sample-t* sp-sample-t*
-    sp-sample-t* sp-sample-t* sp-sample-t* sp-time-t sp-sample-t*)
+  (status-t sp-sample-t* sp-sample-t* sp-sample-t* sp-sample-t* sp-sample-t* sp-sample-t* sp-sample-t* sp-sample-t* sp-time-t sp-sample-t*)
   "apply a centered moving average filter to samples between in-window and in-window-end inclusively and write to out.
    removes high frequencies and smoothes data with little distortion in the time domain but the frequency response has large ripples.
    all memory is managed by the caller.
@@ -157,51 +155,42 @@
       in-left (max in (- in-window radius))
       in-right (min in-end (+ in-window radius))
       (array-get sums 1) (sp-sample-sum in-left (+ 1 (- in-right in-left))))
-    ;(printf "current center: %f\n" (pointer-get in-window))
-    ;(printf "in: ")
-    ;(debug-display-sample-array in-left (+ 1 (- in-right in-left)))
     (if (and (< (- in-window in-left) radius) prev)
       (begin
         (set
           in-missing (- radius (- in-window in-left))
           outside (max prev (- prev-end in-missing))
           outside-count (- prev-end outside)
-          (array-get sums 0) (sp-sample-sum outside outside-count))
-        ;(printf "prev: ")
-        ;(debug-display-sample-array outside outside-count)
-        ))
+          (array-get sums 0) (sp-sample-sum outside outside-count))))
     (if (and (< (- in-right in-window) radius) next)
       (begin
         (set
           in-missing (- radius (- in-right in-window))
           outside next
           outside-count (min (- next-end next) in-missing)
-          (array-get sums 2) (sp-sample-sum outside outside-count))
-        ;(printf "next: ")
-        ;(debug-display-sample-array outside outside-count)
-        ))
+          (array-get sums 2) (sp-sample-sum outside outside-count))))
     (set (pointer-get out) (/ (sp-sample-sum sums 3) width) out (+ 1 out) in-window (+ 1 in-window)))
   status-return)
 
 (define (sp-spectral-inversion-ir a a-len) (void sp-sample-t* sp-time-t)
   "modify an impulse response kernel for spectral inversion.
    a-len must be odd and \"a\" must have left-right symmetry.
-  flips the frequency response top to bottom"
+   flips the frequency response top to bottom"
   (declare center sp-time-t i sp-time-t)
   (for ((set i 0) (< i a-len) (set i (+ 1 i))) (set (array-get a i) (* -1 (array-get a i))))
   (set center (/ (- a-len 1) 2) (array-get a center) (+ 1 (array-get a center))))
 
 (define (sp-spectral-reversal-ir a a-len) (void sp-sample-t* sp-time-t)
   "inverts the sign for samples at odd indexes.
-  a-len must be odd and \"a\" must have left-right symmetry.
-  flips the frequency response left to right"
+   a-len must be odd and \"a\" must have left-right symmetry.
+   flips the frequency response left to right"
   (while (> a-len 1) (set a-len (- a-len 2) (array-get a a-len) (* -1 (array-get a a-len)))))
 
 (define (sp-convolve-one a a-len b b-len result-samples)
   (void sp-sample-t* sp-time-t sp-sample-t* sp-time-t sp-sample-t*)
   "discrete linear convolution.
-  result-samples must be all zeros, its length must be at least a-len + b-len - 1.
-  result-samples is owned and allocated by the caller"
+   result-samples must be all zeros, its length must be at least a-len + b-len - 1.
+   result-samples is owned and allocated by the caller"
   (declare a-index sp-time-t b-index sp-time-t)
   (set a-index 0 b-index 0)
   (while (< a-index a-len)
@@ -216,16 +205,16 @@
 (define (sp-convolve a a-len b b-len carryover-len result-carryover result-samples)
   (void sp-sample-t* sp-time-t sp-sample-t* sp-time-t sp-time-t sp-sample-t* sp-sample-t*)
   "discrete linear convolution for sample arrays, possibly of a continuous stream. maps segments (a, a-len) to result-samples
-  using (b, b-len) as the impulse response. b-len must be greater than zero.
-  all heap memory is owned and allocated by the caller.
-  result-samples length is a-len.
-  result-carryover is previous carryover or an empty array.
-  result-carryover length must at least b-len - 1.
-  carryover-len should be zero for the first call or its content should be zeros.
-  carryover-len for subsequent calls should be b-len - 1 or if b-len changed b-len - 1  from the previous call.
-  if b-len is one then there is no carryover.
-  if a-len is smaller than b-len then, with the current implementation, additional performance costs ensue from shifting the carryover array each call.
-  carryover is the extension of result-samples for generated values that dont fit"
+   using (b, b-len) as the impulse response. b-len must be greater than zero.
+   all heap memory is owned and allocated by the caller.
+   result-samples length is a-len.
+   result-carryover is previous carryover or an empty array.
+   result-carryover length must at least b-len - 1.
+   carryover-len should be zero for the first call or its content should be zeros.
+   carryover-len for subsequent calls should be b-len - 1 or if b-len changed b-len - 1  from the previous call.
+   if b-len is one then there is no carryover.
+   if a-len is smaller than b-len then, with the current implementation, additional performance costs ensue from shifting the carryover array each call.
+   carryover is the extension of result-samples for generated values that dont fit"
   (declare size sp-time-t a-index sp-time-t b-index sp-time-t c-index sp-time-t)
   (if carryover-len
     (if (<= carryover-len a-len)
@@ -235,7 +224,8 @@
         (memset result-carryover 0 (* carryover-len (sizeof sp-sample-t)))
         (memset (+ carryover-len result-samples) 0 (* (- a-len carryover-len) (sizeof sp-sample-t))))
       (begin
-        (sc-comment "carryover is larger. set result-samples to all carryover entries that fit."
+        (sc-comment
+          "carryover is larger. set result-samples to all carryover entries that fit."
           "shift remaining carryover to the left")
         (memcpy result-samples result-carryover (* a-len (sizeof sp-sample-t)))
         (memmove result-carryover (+ a-len result-carryover)

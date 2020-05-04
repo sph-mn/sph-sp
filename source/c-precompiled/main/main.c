@@ -30,8 +30,8 @@
     status.id = 0; \
   }
 /** define a deinterleave, interleave or similar routine.
-    a: source
-    b: target */
+     a: source
+     b: target */
 #define define_sp_interleave(name, type, body) \
   void name(type** a, type* b, sp_time_t a_size, sp_channels_t channel_count) { \
     sp_time_t b_size; \
@@ -155,9 +155,9 @@ sp_float_t sp_sinc(sp_float_t a) { return (((0 == a) ? 1 : (sin((M_PI * a)) / (M
 /** all arrays should be input-len and are managed by the caller */
 int sp_fft(sp_time_t input_len, double* input_or_output_real, double* input_or_output_imag) { return ((!Fft_transform(input_or_output_real, input_or_output_imag, input_len))); }
 /** [[real, imaginary], ...]:complex-numbers -> real-numbers
-  input-length > 0
-  output-length = input-length
-  output is allocated and owned by the caller */
+   input-length > 0
+   output-length = input-length
+   output is allocated and owned by the caller */
 int sp_ffti(sp_time_t input_len, double* input_or_output_real, double* input_or_output_imag) { return ((!(1 == Fft_inverseTransform(input_or_output_real, input_or_output_imag, input_len)))); }
 /** apply a centered moving average filter to samples between in-window and in-window-end inclusively and write to out.
    removes high frequencies and smoothes data with little distortion in the time domain but the frequency response has large ripples.
@@ -202,7 +202,7 @@ status_t sp_moving_average(sp_sample_t* in, sp_sample_t* in_end, sp_sample_t* in
 }
 /** modify an impulse response kernel for spectral inversion.
    a-len must be odd and "a" must have left-right symmetry.
-  flips the frequency response top to bottom */
+   flips the frequency response top to bottom */
 void sp_spectral_inversion_ir(sp_sample_t* a, sp_time_t a_len) {
   sp_time_t center;
   sp_time_t i;
@@ -213,8 +213,8 @@ void sp_spectral_inversion_ir(sp_sample_t* a, sp_time_t a_len) {
   a[center] = (1 + a[center]);
 }
 /** inverts the sign for samples at odd indexes.
-  a-len must be odd and "a" must have left-right symmetry.
-  flips the frequency response left to right */
+   a-len must be odd and "a" must have left-right symmetry.
+   flips the frequency response left to right */
 void sp_spectral_reversal_ir(sp_sample_t* a, sp_time_t a_len) {
   while ((a_len > 1)) {
     a_len = (a_len - 2);
@@ -222,8 +222,8 @@ void sp_spectral_reversal_ir(sp_sample_t* a, sp_time_t a_len) {
   };
 }
 /** discrete linear convolution.
-  result-samples must be all zeros, its length must be at least a-len + b-len - 1.
-  result-samples is owned and allocated by the caller */
+   result-samples must be all zeros, its length must be at least a-len + b-len - 1.
+   result-samples is owned and allocated by the caller */
 void sp_convolve_one(sp_sample_t* a, sp_time_t a_len, sp_sample_t* b, sp_time_t b_len, sp_sample_t* result_samples) {
   sp_time_t a_index;
   sp_time_t b_index;
@@ -239,16 +239,16 @@ void sp_convolve_one(sp_sample_t* a, sp_time_t a_len, sp_sample_t* b, sp_time_t 
   };
 }
 /** discrete linear convolution for sample arrays, possibly of a continuous stream. maps segments (a, a-len) to result-samples
-  using (b, b-len) as the impulse response. b-len must be greater than zero.
-  all heap memory is owned and allocated by the caller.
-  result-samples length is a-len.
-  result-carryover is previous carryover or an empty array.
-  result-carryover length must at least b-len - 1.
-  carryover-len should be zero for the first call or its content should be zeros.
-  carryover-len for subsequent calls should be b-len - 1 or if b-len changed b-len - 1  from the previous call.
-  if b-len is one then there is no carryover.
-  if a-len is smaller than b-len then, with the current implementation, additional performance costs ensue from shifting the carryover array each call.
-  carryover is the extension of result-samples for generated values that dont fit */
+   using (b, b-len) as the impulse response. b-len must be greater than zero.
+   all heap memory is owned and allocated by the caller.
+   result-samples length is a-len.
+   result-carryover is previous carryover or an empty array.
+   result-carryover length must at least b-len - 1.
+   carryover-len should be zero for the first call or its content should be zeros.
+   carryover-len for subsequent calls should be b-len - 1 or if b-len changed b-len - 1  from the previous call.
+   if b-len is one then there is no carryover.
+   if a-len is smaller than b-len then, with the current implementation, additional performance costs ensue from shifting the carryover array each call.
+   carryover is the extension of result-samples for generated values that dont fit */
 void sp_convolve(sp_sample_t* a, sp_time_t a_len, sp_sample_t* b, sp_time_t b_len, sp_time_t carryover_len, sp_sample_t* result_carryover, sp_sample_t* result_samples) {
   sp_time_t size;
   sp_time_t a_index;

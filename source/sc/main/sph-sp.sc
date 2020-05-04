@@ -231,7 +231,7 @@
 
 (pre-define
   (sp-event-duration a) (- a.end a.start)
-  (sp-event-duration-set a duration) (set+ a.end (+ a.start duration))
+  (sp-event-duration-set a duration) (set a.end (+ a.start duration))
   (sp-event-move a start) (set a.end (+ start (- a.end a.start)) a.start start)
   (sp-cheap-noise-event-lp start end amp ...)
   (sp-cheap-noise-event start end amp sp-state-variable-filter-lp __VA_ARGS__)
@@ -261,7 +261,7 @@
       (config (array sp-synth-partial-t sp-synth-partial-limit))
       (state sp-time-t*)))
   (sp-seq-events-prepare data size) (void sp-event-t* sp-time-t)
-  (sp-seq start end out events size) (void sp-time-t sp-time-t sp-block-t sp-event-t* sp-time-t)
+  (sp-seq start end out events size) (size-t sp-time-t sp-time-t sp-block-t sp-event-t* sp-time-t)
   (sp-seq-parallel start end out events size)
   (status-t sp-time-t sp-time-t sp-block-t sp-event-t* sp-time-t)
   (sp-synth-event start end channel-count config-len config out-event)

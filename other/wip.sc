@@ -1,4 +1,4 @@
-(declane sp-random-discrete-t
+(declare sp-random-discrete-t
   (type
     (struct
       (cuprob sp-sample-t)

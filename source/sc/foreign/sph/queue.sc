@@ -1,15 +1,15 @@
 (sc-comment
   "a fifo queue with the operations enqueue and dequeue that can enqueue custom struct types and a mix of types.
-  # example usage
-  typedef struct {
-    // custom field definitions ...
-    queue_node_t queue_node;
-  } element_t;
-  element_t e;
-  queue_t q;
-  queue_init(&q);
-  queue_enq(&q, &e.queue_node);
-  queue_get(queue_deq(&q), element_t, queue_node);")
+   # example usage
+   typedef struct {
+     // custom field definitions ...
+     queue_node_t queue_node;
+   } element_t;
+   element_t e;
+   queue_t q;
+   queue_init(&q);
+   queue_enq(&q, &e.queue_node);
+   queue_get(queue_deq(&q), element_t, queue_node);")
 
 (pre-include "stdlib.h" "inttypes.h" "stddef.h")
 
@@ -18,8 +18,8 @@
   (queue-get node type field)
   (begin
     "returns a pointer to the enqueued struct based on the offset of the queue_node_t field in the struct.
-    because of this queue nodes dont have to be allocated separate from user data.
-    downside is that the same user data object cant be contained multiple times"
+     because of this queue nodes dont have to be allocated separate from user data.
+     downside is that the same user data object cant be contained multiple times"
     (convert-type (- (convert-type node char*) (offsetof type field)) type*)))
 
 (declare

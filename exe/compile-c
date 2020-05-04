@@ -6,7 +6,7 @@ c=source/c/
 c_sc=source/c-precompiled
 root="$PWD"
 #warnings="-Wunused-label -Wunused-value -Wunused-variable"
-gcc_options="-funsigned-char -std=c11 -Wfatal-errors -Wpedantic -Wno-pointer-sign $warnings -O$optimisation"
+gcc_options="-funsigned-char -std=c17 -Wfatal-errors -Wpedantic -Wno-pointer-sign $warnings -O$optimisation"
 gcc_options_test="-Wfatal-errors -Og"
 
 compile_sph_sp() {

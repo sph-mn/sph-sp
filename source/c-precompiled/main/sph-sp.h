@@ -82,20 +82,21 @@ typedef struct {
     goto exit; \
   }
 /* * spline-path creates discrete 2d paths interpolated between some given points
-  * maps from one independent discrete value to one dependent continuous value
-  * only the dependent value is returned
-  * kept minimal (only 2d, only selected interpolators, limited segment count) to be extremely fast
-  * multidimensional interpolation can be archieved with multiple configs and calls
-  * a copy of segments is made internally and only the copy is used
-  * uses points as structs because pre-defined size arrays can not be used in structs
-  * segments-len must be greater than zero
-  * segments must be a valid spline-path segment configuration
-  * interpolators are called with path-relative start/end inside segment and with out positioned at the segment output
-  * all segment types have a fixed number of points. line: 1, bezier: 3, move: 1, constant: 0, path: 0
-  * negative x values not supported
-  * internally all segments start at (0 0) and no gaps are between segments
-  * assumes that bit 0 is spline-path-value-t zero
-  * segments draw to the endpoint inclusive, start point exclusive */
+   * maps from one independent discrete value to one dependent continuous value
+   * only the dependent value is returned
+   * kept minimal (only 2d, only selected interpolators, limited segment count) to be extremely fast
+   * multidimensional interpolation can be archieved with multiple configs and calls
+   * a copy of segments is made internally and only the copy is used
+   * uses points as structs because pre-defined size arrays can not be used in structs
+   * segments-count must be greater than zero
+   * segments must be a valid spline-path segment configuration
+   * interpolators are called with path-relative start/end inside segment and with out positioned at the segment output
+   * all segment types require a fixed number of given points. line: 1, bezier: 3, move: 1, constant: 0, path: 0
+   * negative x values not supported
+   * internally all segments start at (0 0) and no gaps are between segments
+   * assumes that bit 0 is spline-path-value-t zero
+   * segments draw to the endpoint inclusive, start point exclusive
+   * spline-path-interpolator-points-count */
 #include <inttypes.h>
 #include <strings.h>
 #include <stdlib.h>
@@ -111,8 +112,6 @@ typedef struct {
 #ifndef spline_path_time_max
 #define spline_path_time_max UINT32_MAX
 #endif
-#define spline_path_point_limit 3
-#define spline_path_interpolator_points_len(a) ((spline_path_i_bezier == a) ? 3 : 1)
 typedef struct {
   spline_path_time_t x;
   spline_path_value_t y;
@@ -120,13 +119,13 @@ typedef struct {
 typedef void (*spline_path_interpolator_t)(spline_path_time_t, spline_path_time_t, spline_path_point_t, spline_path_point_t*, void*, spline_path_value_t*);
 typedef struct {
   spline_path_point_t _start;
-  uint8_t _points_len;
-  spline_path_point_t points[spline_path_point_limit];
+  uint8_t _points_count;
+  spline_path_point_t points[3];
   spline_path_interpolator_t interpolator;
   void* options;
 } spline_path_segment_t;
 typedef struct {
-  spline_path_segment_count_t segments_len;
+  spline_path_segment_count_t segments_count;
   spline_path_segment_t* segments;
 } spline_path_t;
 void spline_path_i_move(spline_path_time_t start, spline_path_time_t end, spline_path_point_t p_start, spline_path_point_t* p_rest, void* options, spline_path_value_t* out);
@@ -137,9 +136,9 @@ void spline_path_get(spline_path_t path, spline_path_time_t start, spline_path_t
 void spline_path_i_path(spline_path_time_t start, spline_path_time_t end, spline_path_point_t p_start, spline_path_point_t* p_rest, void* options, spline_path_value_t* out);
 spline_path_point_t spline_path_start(spline_path_t path);
 spline_path_point_t spline_path_end(spline_path_t path);
-uint8_t spline_path_new(spline_path_segment_count_t segments_len, spline_path_segment_t* segments, spline_path_t* out_path);
+uint8_t spline_path_new(spline_path_segment_count_t segments_count, spline_path_segment_t* segments, spline_path_t* out_path);
 void spline_path_free(spline_path_t a);
-uint8_t spline_path_new_get(spline_path_segment_count_t segments_len, spline_path_segment_t* segments, spline_path_time_t start, spline_path_time_t end, spline_path_value_t* out);
+uint8_t spline_path_new_get(spline_path_segment_count_t segments_count, spline_path_segment_t* segments, spline_path_time_t start, spline_path_time_t end, spline_path_value_t* out);
 spline_path_segment_t spline_path_move(spline_path_time_t x, spline_path_value_t y);
 spline_path_segment_t spline_path_line(spline_path_time_t x, spline_path_value_t y);
 spline_path_segment_t spline_path_bezier(spline_path_time_t x1, spline_path_value_t y1, spline_path_time_t x2, spline_path_value_t y2, spline_path_time_t x3, spline_path_value_t y3);
@@ -363,7 +362,7 @@ sp_sample_t sp_triangle(sp_time_t t, sp_time_t a, sp_time_t b);
 sp_sample_t sp_triangle_96(sp_time_t t);
 /* sequencer */
 #define sp_event_duration(a) (a.end - a.start)
-#define sp_event_duration_set(a, duration) a.end += (a.start + duration)
+#define sp_event_duration_set(a, duration) a.end = (a.start + duration)
 #define sp_event_move(a, start) \
   a.end = (start + (a.end - a.start)); \
   a.start = start
@@ -386,7 +385,7 @@ typedef struct {
   sp_time_t* state;
 } sp_synth_event_state_t;
 void sp_seq_events_prepare(sp_event_t* data, sp_time_t size);
-void sp_seq(sp_time_t start, sp_time_t end, sp_block_t out, sp_event_t* events, sp_time_t size);
+size_t sp_seq(sp_time_t start, sp_time_t end, sp_block_t out, sp_event_t* events, sp_time_t size);
 status_t sp_seq_parallel(sp_time_t start, sp_time_t end, sp_block_t out, sp_event_t* events, sp_time_t size);
 status_t sp_synth_event(sp_time_t start, sp_time_t end, sp_channels_t channel_count, sp_time_t config_len, sp_synth_partial_t* config, sp_event_t* out_event);
 status_t sp_noise_event(sp_time_t start, sp_time_t end, sp_sample_t** amp, sp_sample_t* cut_l, sp_sample_t* cut_h, sp_sample_t* trn_l, sp_sample_t* trn_h, uint8_t is_reject, sp_time_t resolution, sp_random_state_t random_state, sp_event_t* out_event);

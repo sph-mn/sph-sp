@@ -21,6 +21,7 @@ copy_submodules() {
     "$a/string.sc" "$a/filesystem.sc" "$a/quicksort.sc" "$a/queue.sc" \
     "$a/thread-pool.sc" "$a/futures.sc" "$a/spline-path-h.sc" "$a/spline-path.sc" \
     "$a/types.sc" "$a/random-h.sc" "$a/random.sc" "$a/sph.sc"
+
 }
 
 compile_sc() {

@@ -14,7 +14,7 @@
   (quicksort sp-event-sort-less? sp-event-sort-swap data 0 (- size 1)))
 
 (define (sp-seq start end out events size)
-  (void sp-time-t sp-time-t sp-block-t sp-event-t* sp-time-t)
+  (size-t sp-time-t sp-time-t sp-block-t sp-event-t* sp-time-t)
   "event arrays must have been prepared/sorted with sp-seq-event-prepare for seq to work correctly"
   (declare e-out-start sp-time-t e sp-event-t e-start sp-time-t e-end sp-time-t i sp-time-t)
   (for ((set i 0) (< i size) (set i (+ 1 i)))
@@ -25,7 +25,8 @@
           e-out-start (if* (> e.start start) (- e.start start) 0)
           e-start (if* (> start e.start) (- start e.start) 0)
           e-end (- (if* (< e.end end) e.end end) e.start))
-        (e.f e-start e-end (if* e-out-start (sp-block-with-offset out e-out-start) out) &e)))))
+        (e.f e-start e-end (if* e-out-start (sp-block-with-offset out e-out-start) out) &e))))
+  (return i))
 
 (define (sp-events-free events size) (void sp-event-t* sp-time-t)
   (declare i sp-time-t event-free (function-pointer void (struct sp-event-t*)))

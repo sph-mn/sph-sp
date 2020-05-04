@@ -37,8 +37,8 @@ void spline_path_i_bezier(spline_path_time_t start, spline_path_time_t end, spli
   };
 }
 /** get values on path between start (inclusive) and end (exclusive).
-  since x values are integers, a path from (0 0) to (10 20) for example will have reached 20 only at the 11th point.
-  out memory is managed by the caller. the size required for out is end minus start */
+   since x values are integers, a path from (0 0) to (10 20) for example will have reached 20 only at the 11th point.
+   out memory is managed by the caller. the size required for out is end minus start */
 void spline_path_get(spline_path_t path, spline_path_time_t start, spline_path_time_t end, spline_path_value_t* out) {
   /* find all segments that overlap with requested range */
   spline_path_segment_count_t i;
@@ -46,10 +46,10 @@ void spline_path_get(spline_path_t path, spline_path_time_t start, spline_path_t
   spline_path_time_t s_start;
   spline_path_time_t s_end;
   spline_path_time_t out_start;
-  for (i = 0; (i < path.segments_len); i = (1 + i)) {
+  for (i = 0; (i < path.segments_count); i = (1 + i)) {
     s = (path.segments)[i];
     s_start = s._start.x;
-    s_end = ((s.points)[(s._points_len - 1)]).x;
+    s_end = ((s.points)[(s._points_count - 1)]).x;
     if (s_start > end) {
       break;
     };
@@ -64,7 +64,7 @@ void spline_path_get(spline_path_t path, spline_path_time_t start, spline_path_t
   /* outside points zero. set the last segment point which would be set by a following segment.
 can only be true for the last segment */
   if (end > s_end) {
-    out[s_end] = ((s.points)[(s._points_len - 1)]).y;
+    out[s_end] = ((s.points)[(s._points_count - 1)]).y;
     s_end = (1 + s_end);
     if (end > s_end) {
       memset((s_end + out), 0, ((end - s_end) * sizeof(spline_path_value_t)));
@@ -87,28 +87,29 @@ spline_path_point_t spline_path_start(spline_path_t path) {
 }
 spline_path_point_t spline_path_end(spline_path_t path) {
   spline_path_segment_t s;
-  s = (path.segments)[(path.segments_len - 1)];
+  s = (path.segments)[(path.segments_count - 1)];
   if (spline_path_i_constant == s.interpolator) {
-    s = (path.segments)[(path.segments_len - 2)];
+    s = (path.segments)[(path.segments_count - 2)];
   };
-  return (((s.points)[(s._points_len - 1)]));
+  return (((s.points)[(s._points_count - 1)]));
 }
-uint8_t spline_path_new(spline_path_segment_count_t segments_len, spline_path_segment_t* segments, spline_path_t* out_path) {
+/** segments are copied into out-path */
+uint8_t spline_path_new(spline_path_segment_count_t segments_count, spline_path_segment_t* segments, spline_path_t* out_path) {
   spline_path_segment_count_t i;
   spline_path_t path;
   spline_path_segment_t s;
   spline_path_point_t start;
   start.x = 0;
   start.y = 0;
-  path.segments = malloc((segments_len * sizeof(spline_path_segment_t)));
+  path.segments = malloc((segments_count * sizeof(spline_path_segment_t)));
   if (!path.segments) {
     return (1);
   };
-  memcpy((path.segments), segments, (segments_len * sizeof(spline_path_segment_t)));
-  for (i = 0; (i < segments_len); i = (1 + i)) {
+  memcpy((path.segments), segments, (segments_count * sizeof(spline_path_segment_t)));
+  for (i = 0; (i < segments_count); i = (1 + i)) {
     ((path.segments)[i])._start = start;
     s = (path.segments)[i];
-    s._points_len = spline_path_interpolator_points_len((s.interpolator));
+    s._points_count = ((spline_path_i_bezier == s.interpolator) ? 3 : 1);
     if ((spline_path_i_path == s.interpolator)) {
       start = spline_path_end((*((spline_path_t*)(s.options))));
       *(s.points) = start;
@@ -116,19 +117,19 @@ uint8_t spline_path_new(spline_path_segment_count_t segments_len, spline_path_se
       *(s.points) = start;
       (s.points)->x = spline_path_time_max;
     } else {
-      start = (s.points)[(s._points_len - 1)];
+      start = (s.points)[(s._points_count - 1)];
     };
     (path.segments)[i] = s;
   };
-  path.segments_len = segments_len;
+  path.segments_count = segments_count;
   *out_path = path;
   return (0);
 }
 void spline_path_free(spline_path_t a) { free((a.segments)); }
 /** create a path array immediately from segments without creating a path object */
-uint8_t spline_path_new_get(spline_path_segment_count_t segments_len, spline_path_segment_t* segments, spline_path_time_t start, spline_path_time_t end, spline_path_value_t* out) {
+uint8_t spline_path_new_get(spline_path_segment_count_t segments_count, spline_path_segment_t* segments, spline_path_time_t start, spline_path_time_t end, spline_path_value_t* out) {
   spline_path_t path;
-  if (spline_path_new(segments_len, segments, (&path))) {
+  if (spline_path_new(segments_count, segments, (&path))) {
     return (1);
   };
   spline_path_get(path, start, end, out);
@@ -167,7 +168,7 @@ spline_path_segment_t spline_path_constant() {
   return (s);
 }
 /** return a segment that is another spline-path. length is the full length of the path.
-  the path does not necessarily connect and is drawn as it would be on its own starting from the preceding segment */
+   the path does not necessarily connect and is drawn as it would be on its own starting from the preceding segment */
 spline_path_segment_t spline_path_path(spline_path_t* path) {
   spline_path_segment_t s;
   s.interpolator = spline_path_i_path;

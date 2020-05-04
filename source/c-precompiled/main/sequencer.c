@@ -7,7 +7,7 @@ void sp_event_sort_swap(void* a, ssize_t b, ssize_t c) {
 uint8_t sp_event_sort_less_p(void* a, ssize_t b, ssize_t c) { return (((((sp_event_t*)(a))[b]).start < (((sp_event_t*)(a))[c]).start)); }
 void sp_seq_events_prepare(sp_event_t* data, sp_time_t size) { quicksort(sp_event_sort_less_p, sp_event_sort_swap, data, 0, (size - 1)); }
 /** event arrays must have been prepared/sorted with sp-seq-event-prepare for seq to work correctly */
-void sp_seq(sp_time_t start, sp_time_t end, sp_block_t out, sp_event_t* events, sp_time_t size) {
+size_t sp_seq(sp_time_t start, sp_time_t end, sp_block_t out, sp_event_t* events, sp_time_t size) {
   sp_time_t e_out_start;
   sp_event_t e;
   sp_time_t e_start;
@@ -26,6 +26,7 @@ void sp_seq(sp_time_t start, sp_time_t end, sp_block_t out, sp_event_t* events, 
       (e.f)(e_start, e_end, (e_out_start ? sp_block_with_offset(out, e_out_start) : out), (&e));
     };
   };
+  return (i);
 }
 void sp_events_free(sp_event_t* events, sp_time_t size) {
   sp_time_t i;

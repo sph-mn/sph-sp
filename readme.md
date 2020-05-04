@@ -216,6 +216,9 @@ sp_cheap_noise_event_br(start, end, amp, ...)
 sp_cheap_noise_event_hp(start, end, amp, ...)
 sp_cheap_noise_event_lp(start, end, amp, ...)
 sp_cheap_round_positive(a)
+sp_event_move(event, start)
+sp_event_duration(event)
+sp_event_duration_set(event, duration)
 sp_file_bit_closed
 sp_file_bit_input
 sp_file_bit_output
