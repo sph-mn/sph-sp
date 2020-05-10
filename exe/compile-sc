@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/sh -e
 
 # description
 # * compiles the sc source code to c
@@ -8,7 +8,7 @@
 
 root="$PWD"
 sc=source/sc
-c="source/c-precompiled"
+c=source/c-precompiled
 
 copy_submodules() {
   # copy code files from submodules.
@@ -34,5 +34,5 @@ compile_sc() {
   mv "$c/main/sph-sp.c" "$c/main/sph-sp.h"
 }
 
-copy_submodules &&
-compile_sc $@
+copy_submodules
+compile_sc

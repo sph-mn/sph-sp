@@ -391,19 +391,11 @@ status_t sp_synth_event(sp_time_t start, sp_time_t end, sp_channels_t channel_co
 status_t sp_noise_event(sp_time_t start, sp_time_t end, sp_sample_t** amp, sp_sample_t* cut_l, sp_sample_t* cut_h, sp_sample_t* trn_l, sp_sample_t* trn_h, uint8_t is_reject, sp_time_t resolution, sp_random_state_t random_state, sp_event_t* out_event);
 void sp_events_free(sp_event_t* events, sp_time_t size);
 status_t sp_cheap_noise_event(sp_time_t start, sp_time_t end, sp_sample_t** amp, sp_state_variable_filter_t type, sp_sample_t* cut, sp_time_t passes, sp_sample_t q_factor, sp_time_t resolution, sp_random_state_t random_state, sp_event_t* out_event);
-void sp_time_from_samples(sp_sample_t* in, sp_time_t in_size, sp_time_t* out) {
+void sp_samples_to_time(sp_sample_t* in, sp_time_t in_size, sp_time_t* out) {
   sp_time_t i;
   for (i = 0; (i < in_size); i = (1 + i)) {
     out[i] = sp_cheap_round_positive((in[i]));
   };
-}
-int spline_path_new_get_4(sp_sample_t* out, sp_time_t duration, spline_path_segment_t s1, spline_path_segment_t s2, spline_path_segment_t s3, spline_path_segment_t s4) {
-  spline_path_segment_t segments[4];
-  segments[0] = s1;
-  segments[1] = s2;
-  segments[2] = s3;
-  segments[3] = s4;
-  return ((spline_path_new_get(4, segments, 0, duration, out)));
 }
 int spline_path_new_get_2(sp_sample_t* out, sp_time_t duration, spline_path_segment_t s1, spline_path_segment_t s2) {
   spline_path_segment_t segments[2];
@@ -417,6 +409,14 @@ int spline_path_new_get_3(sp_sample_t* out, sp_time_t duration, spline_path_segm
   segments[1] = s2;
   segments[2] = s3;
   return ((spline_path_new_get(3, segments, 0, duration, out)));
+}
+int spline_path_new_get_4(sp_sample_t* out, sp_time_t duration, spline_path_segment_t s1, spline_path_segment_t s2, spline_path_segment_t s3, spline_path_segment_t s4) {
+  spline_path_segment_t segments[4];
+  segments[0] = s1;
+  segments[1] = s2;
+  segments[2] = s3;
+  segments[3] = s4;
+  return ((spline_path_new_get(4, segments, 0, duration, out)));
 }
 status_t sp_block_to_file(sp_block_t block, uint8_t* path, sp_time_t rate) {
   status_declare;
