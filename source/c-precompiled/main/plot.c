@@ -12,7 +12,7 @@ void sp_plot_samples_to_file(sp_sample_t* a, sp_time_t a_size, uint8_t* path) {
   };
   fclose(file);
 }
-void sp_plot_counts_to_file(sp_time_t* a, sp_time_t a_size, uint8_t* path) {
+void sp_plot_times_to_file(sp_time_t* a, sp_time_t a_size, uint8_t* path) {
   FILE* file;
   sp_time_t i;
   file = fopen(path, "w");
@@ -47,7 +47,7 @@ void sp_plot_samples(sp_sample_t* a, sp_time_t a_size) {
   sp_plot_samples_file(path, 1);
   free(path);
 }
-void sp_plot_counts(sp_time_t* a, sp_time_t a_size) {
+void sp_plot_times(sp_time_t* a, sp_time_t a_size) {
   uint8_t path_size = (1 + sp_plot_temp_file_index_maxlength + strlen(sp_plot_temp_path));
   uint8_t* path = calloc(path_size, 1);
   if (!path) {
@@ -55,7 +55,7 @@ void sp_plot_counts(sp_time_t* a, sp_time_t a_size) {
   };
   snprintf(path, path_size, "%s-%lu", sp_plot_temp_path, sp_plot_temp_file_index);
   sp_plot_temp_file_index = (1 + sp_plot_temp_file_index);
-  sp_plot_counts_to_file(a, a_size, path);
+  sp_plot_times_to_file(a, a_size, path);
   sp_plot_samples_file(path, 1);
   free(path);
 }

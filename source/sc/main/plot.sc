@@ -14,7 +14,7 @@
   (for ((set i 0) (< i a-size) (set i (+ 1 i))) (fprintf file "%.3f\n" (array-get a i)))
   (fclose file))
 
-(define (sp-plot-counts->file a a-size path) (void sp-time-t* sp-time-t uint8-t*)
+(define (sp-plot-times->file a a-size path) (void sp-time-t* sp-time-t uint8-t*)
   (declare file FILE* i sp-time-t)
   (set file (fopen path "w"))
   (for ((set i 0) (< i a-size) (set i (+ 1 i))) (fprintf file "%lu\n" (array-get a i)))
@@ -41,13 +41,13 @@
   (sp-plot-samples-file path #t)
   (free path))
 
-(define (sp-plot-counts a a-size) (void sp-time-t* sp-time-t)
+(define (sp-plot-times a a-size) (void sp-time-t* sp-time-t)
   (define path-size uint8-t (+ 1 sp-plot-temp-file-index-maxlength (strlen sp-plot-temp-path)))
   (define path uint8-t* (calloc path-size 1))
   (if (not path) return)
   (snprintf path path-size "%s-%lu" sp-plot-temp-path sp-plot-temp-file-index)
   (set sp-plot-temp-file-index (+ 1 sp-plot-temp-file-index))
-  (sp-plot-counts->file a a-size path)
+  (sp-plot-times->file a a-size path)
   (sp-plot-samples-file path #t)
   (free path))
 

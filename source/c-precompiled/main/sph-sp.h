@@ -331,9 +331,9 @@ status_t sp_cheap_filter_state_new(sp_time_t max_size, sp_time_t max_passes, sp_
 status_t sp_filter(sp_sample_t* in, sp_time_t in_size, sp_float_t cutoff_l, sp_float_t cutoff_h, sp_float_t transition_l, sp_float_t transition_h, boolean is_reject, sp_filter_state_t** out_state, sp_sample_t* out_samples);
 /* plot */
 void sp_plot_samples(sp_sample_t* a, sp_time_t a_size);
-void sp_plot_counts(sp_time_t* a, sp_time_t a_size);
+void sp_plot_times(sp_time_t* a, sp_time_t a_size);
 void sp_plot_samples_to_file(sp_sample_t* a, sp_time_t a_size, uint8_t* path);
-void sp_plot_counts_to_file(sp_time_t* a, sp_time_t a_size, uint8_t* path);
+void sp_plot_times_to_file(sp_time_t* a, sp_time_t a_size, uint8_t* path);
 void sp_plot_samples_file(uint8_t* path, uint8_t use_steps);
 void sp_plot_spectrum_to_file(sp_sample_t* a, sp_time_t a_size, uint8_t* path);
 void sp_plot_spectrum_file(uint8_t* path);
