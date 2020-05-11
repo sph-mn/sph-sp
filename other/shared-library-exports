@@ -14,7 +14,6 @@ exports {
     sp_convolution_filter_state_set;
     sp_convolve;
     sp_convolve_one;
-    sp_counts_new;
     sp_default_random_state;
     sp_events_free;
     sp_fft;
@@ -62,8 +61,8 @@ exports {
     sp_path_new;
     sp_path_new_get;
     sp_path_start;
-    sp_plot_counts;
-    sp_plot_counts_to_file;
+    sp_plot_times;
+    sp_plot_times_to_file;
     sp_plot_samples;
     sp_plot_samples_file;
     sp_plot_samples_to_file;
@@ -71,7 +70,6 @@ exports {
     sp_plot_spectrum_file;
     sp_plot_spectrum_to_file;
     sp_random_samples;
-    sp_sample_array_new;
     sp_seq;
     sp_seq_events_prepare;
     sp_seq_parallel;
