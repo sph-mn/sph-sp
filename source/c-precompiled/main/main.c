@@ -336,20 +336,6 @@ void sp_samples_to_time(sp_sample_t* in, sp_time_t in_size, sp_time_t* out) {
 #define block_size 96000
 #define rate 96000
 typedef status_t (*sp_seq_pointer_t)(sp_time_t, sp_time_t, sp_block_t, sp_event_t*, sp_time_t);
-status_t sp_render_file(sp_event_t* event, sp_time_t start, sp_time_t duration, sp_channels_t channels, uint8_t* path) {
-  status_declare;
-  sp_file_t file;
-  sp_block_t block;
-  sp_time_t written;
-  status_require((sp_block_new(channels, block_size, (&block))));
-  sp_block_set_null(block);
-  status_require((sp_file_open(path, sp_file_mode_write, channels, rate, (&file))));
-  status_require((sp_file_write((&file), (block.samples), block_size, (&written))));
-  status_require((sp_file_close((&file))));
-  sp_seq_pointer_t render_seq;
-exit:
-  status_return;
-}
 /** fills the sine wave lookup table */
 status_t sp_initialise(uint16_t cpu_count) {
   status_declare;

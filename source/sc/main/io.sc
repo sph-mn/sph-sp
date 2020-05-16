@@ -1,8 +1,6 @@
 (define (sp-file-close file) (status-t sp-file-t*)
   status-declare
-  (set status.id (sf-close (convert-type file:data SNDFILE*)))
-  (if status-is-success (set status.group sp-s-group-sndfile)
-    (set file:flags (bit-or sp-file-bit-closed file:flags)))
+  (set status.group sp-s-group-sndfile status.id (sf-close (convert-type file:data SNDFILE*)))
   status-return)
 
 (define (sp-file-open path mode channel-count sample-rate result-file)

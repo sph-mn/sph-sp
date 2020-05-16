@@ -364,7 +364,7 @@
         (if (< 1 passes)
           (begin
             (type out-temp in-temp in-size cutoff q-factor (+ passes state:svf-state))
-            (sp-sample-array-zero in-temp in-size)
+            (sp-samples-zero in-temp in-size)
             (set passes (- passes 1) in-swap in-temp in-temp out-temp out-temp in-swap)
             (goto loop))
           (type out in-temp in-size cutoff q-factor (+ passes state:svf-state))))))

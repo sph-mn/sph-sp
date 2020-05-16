@@ -318,7 +318,8 @@ void sp_group_event_free(sp_event_t* a) {
   free((a->state));
 }
 void sp_group_event_f(sp_time_t start, sp_time_t end, sp_block_t out, sp_event_t* event) { printf("group is running\n"); }
-status_t sp_group_new(time_t start, sp_group_size_t event_size, sp_group_size_t memory_size, sp_event_t* out) {
+void sp_group_event_parallel_f(sp_time_t start, sp_time_t end, sp_block_t out, sp_event_t* event) { printf("parallel group is running\n"); }
+status_t sp_group_new(sp_time_t start, sp_group_size_t event_size, sp_group_size_t memory_size, sp_event_t* out) {
   status_declare;
   sp_group_event_state_t* s;
   memreg_init(2);

@@ -198,8 +198,8 @@ status_t test_file() {
   sample_count = 5;
   position = 0;
   channel = channel_count;
-  sp_block_set_null(block);
-  sp_block_set_null(block_2);
+  sp_block_zero(block);
+  sp_block_zero(block_2);
   status_require((sp_block_new(channel_count, sample_count, (&block))));
   status_require((sp_block_new(channel_count, sample_count, (&block_2))));
   while (channel) {

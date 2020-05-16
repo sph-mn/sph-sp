@@ -321,8 +321,11 @@
 (define (sp-group-event-f start end out event) (void sp-time-t sp-time-t sp-block-t sp-event-t*)
   (printf "group is running\n"))
 
+(define (sp-group-event-parallel-f start end out event) (void sp-time-t sp-time-t sp-block-t sp-event-t*)
+  (printf "parallel group is running\n"))
+
 (define (sp-group-new start event-size memory-size out)
-  (status-t time-t sp-group-size-t sp-group-size-t sp-event-t*)
+  (status-t sp-time-t sp-group-size-t sp-group-size-t sp-event-t*)
   status-declare
   (declare s sp-group-event-state-t*)
   (memreg-init 2)

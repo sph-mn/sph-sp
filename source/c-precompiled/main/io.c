@@ -1,11 +1,7 @@
 status_t sp_file_close(sp_file_t* file) {
   status_declare;
+  status.group = sp_s_group_sndfile;
   status.id = sf_close(((SNDFILE*)(file->data)));
-  if (status_is_success) {
-    status.group = sp_s_group_sndfile;
-  } else {
-    file->flags = (sp_file_bit_closed | file->flags);
-  };
   status_return;
 }
 status_t sp_file_open(uint8_t* path, int mode, sp_channels_t channel_count, sp_sample_rate_t sample_rate, sp_file_t* result_file) {

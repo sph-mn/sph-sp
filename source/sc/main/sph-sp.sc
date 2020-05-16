@@ -30,7 +30,6 @@
   sp-file-bit-input 1
   sp-file-bit-output 2
   sp-file-bit-position 4
-  sp-file-bit-closed 8
   sp-file-mode-read 1
   sp-file-mode-write 2
   sp-file-mode-read-write 3
@@ -60,7 +59,8 @@
   (sp-cheap-round-positive a) (convert-type (+ 0.5 a) sp-time-t)
   (sp-cheap-floor-positive a) (convert-type a sp-time-t)
   (sp-cheap-ceiling-positive a) (+ (convert-type a sp-time-t) (< (convert-type a sp-time-t) a))
-  (sp-block-set-null a) (set a.channels 0))
+  (sp-block-zero a) (set a.channels 0)
+  (sp-samples-zero a size) (memset a 0 (* size (sizeof sp-sample-t))))
 
 (declare
   sp-block-t
@@ -302,6 +302,14 @@
 
 (i-array-declare-type sp-events sp-event-t)
 (declare sp-group-event-state-t (type (struct (events sp-events-t) (memory memreg-register-t))))
+
+(declare
+  (sp-group-new start event-size memory-size out)
+  (status-t sp-time-t sp-group-size-t sp-group-size-t sp-event-t*)
+  (sp-group-append a event) (void sp-event-t* sp-event-t)
+  (sp-group-event-f start end out event) (void sp-time-t sp-time-t sp-block-t sp-event-t*)
+  (sp-group-event-free a) (void sp-event-t*))
+
 (sc-comment "path")
 
 (pre-define
@@ -311,4 +319,31 @@
   sp-path-constant spline-path-constant
   sp-path-path spline-path-path)
 
-(pre-define (sp-sample-array-zero a size) (memset a 0 (* size (sizeof sp-sample-t))))
+(declare
+  (spline-path-new-get-2 out duration s1 s2)
+  (int sp-sample-t* sp-time-t spline-path-segment-t spline-path-segment-t)
+  (spline-path-new-get-3 out duration s1 s2 s3)
+  (int sp-sample-t* sp-time-t spline-path-segment-t spline-path-segment-t spline-path-segment-t)
+  (spline-path-new-get-4 out duration s1 s2 s3 s4)
+  (int sp-sample-t* sp-time-t
+    spline-path-segment-t spline-path-segment-t spline-path-segment-t spline-path-segment-t)
+  (sp-path-samples segment-count segments size out)
+  (status-t spline-path-segment-count-t spline-path-segment-t* spline-path-time-t sp-sample-t**)
+  (sp-path-times segment-count segments size out)
+  (status-t spline-path-segment-count-t spline-path-segment-t* spline-path-time-t sp-time-t**)
+  (sp-path-samples-2 out size s1 s2)
+  (status-t sp-sample-t** spline-path-time-t spline-path-segment-t spline-path-segment-t)
+  (sp-path-samples-3 out size s1 s2 s3)
+  (status-t sp-sample-t** spline-path-time-t
+    spline-path-segment-t spline-path-segment-t spline-path-segment-t)
+  (sp-path-samples-4 out size s1 s2 s3 s4)
+  (status-t sp-sample-t** spline-path-time-t
+    spline-path-segment-t spline-path-segment-t spline-path-segment-t spline-path-segment-t)
+  (sp-path-times-2 out size s1 s2)
+  (status-t sp-time-t** spline-path-time-t spline-path-segment-t spline-path-segment-t)
+  (sp-path-times-3 out size s1 s2 s3)
+  (status-t sp-time-t** spline-path-time-t
+    spline-path-segment-t spline-path-segment-t spline-path-segment-t)
+  (sp-path-times-4 out size s1 s2 s3 s4)
+  (status-t sp-time-t** spline-path-time-t
+    spline-path-segment-t spline-path-segment-t spline-path-segment-t spline-path-segment-t))

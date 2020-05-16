@@ -377,7 +377,7 @@ void sp_cheap_filter(sp_state_variable_filter_t type, sp_sample_t* in, sp_time_t
   loop:
     if (1 < passes) {
       type(out_temp, in_temp, in_size, cutoff, q_factor, (passes + state->svf_state));
-      sp_sample_array_zero(in_temp, in_size);
+      sp_samples_zero(in_temp, in_size);
       passes = (passes - 1);
       in_swap = in_temp;
       in_temp = out_temp;

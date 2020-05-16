@@ -282,18 +282,6 @@
 (declare sp-seq-pointer-t
   (type (function-pointer status-t sp-time-t sp-time-t sp-block-t sp-event-t* sp-time-t)))
 
-(define (sp-render-file event start duration channels path)
-  (status-t sp-event-t* sp-time-t sp-time-t sp-channels-t uint8-t*)
-  status-declare
-  (declare file sp-file-t block sp-block-t written sp-time-t)
-  (status-require (sp-block-new channels block-size &block))
-  (sp-block-set-null block)
-  (status-require (sp-file-open path sp-file-mode-write channels rate &file))
-  (status-require (sp-file-write &file block.samples block-size &written))
-  (status-require (sp-file-close &file))
-  (declare render-seq sp-seq-pointer-t)
-  (label exit status-return))
-
 (define (sp-initialise cpu-count) (status-t uint16-t)
   "fills the sine wave lookup table"
   status-declare

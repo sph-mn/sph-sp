@@ -62,7 +62,6 @@
 #define sp_file_bit_input 1
 #define sp_file_bit_output 2
 #define sp_file_bit_position 4
-#define sp_file_bit_closed 8
 #define sp_file_mode_read 1
 #define sp_file_mode_write 2
 #define sp_file_mode_read_write 3
@@ -93,7 +92,8 @@
 #define sp_cheap_round_positive(a) ((sp_time_t)((0.5 + a)))
 #define sp_cheap_floor_positive(a) ((sp_time_t)(a))
 #define sp_cheap_ceiling_positive(a) (((sp_time_t)(a)) + (((sp_time_t)(a)) < a))
-#define sp_block_set_null(a) a.channels = 0
+#define sp_block_zero(a) a.channels = 0
+#define sp_samples_zero(a, size) memset(a, 0, (size * sizeof(sp_sample_t)))
 typedef struct {
   sp_channels_t channels;
   sp_time_t size;
@@ -273,10 +273,24 @@ typedef struct {
   sp_events_t events;
   memreg_register_t memory;
 } sp_group_event_state_t;
+status_t sp_group_new(sp_time_t start, sp_group_size_t event_size, sp_group_size_t memory_size, sp_event_t* out);
+void sp_group_append(sp_event_t* a, sp_event_t event);
+void sp_group_event_f(sp_time_t start, sp_time_t end, sp_block_t out, sp_event_t* event);
+void sp_group_event_free(sp_event_t* a);
 /* path */
 #define path_move spline_path_move
 #define sp_path_line spline_path_line
 #define sp_path_bezier spline_path_bezier
 #define sp_path_constant spline_path_constant
 #define sp_path_path spline_path_path
-#define sp_sample_array_zero(a, size) memset(a, 0, (size * sizeof(sp_sample_t)))
+int spline_path_new_get_2(sp_sample_t* out, sp_time_t duration, spline_path_segment_t s1, spline_path_segment_t s2);
+int spline_path_new_get_3(sp_sample_t* out, sp_time_t duration, spline_path_segment_t s1, spline_path_segment_t s2, spline_path_segment_t s3);
+int spline_path_new_get_4(sp_sample_t* out, sp_time_t duration, spline_path_segment_t s1, spline_path_segment_t s2, spline_path_segment_t s3, spline_path_segment_t s4);
+status_t sp_path_samples(spline_path_segment_count_t segment_count, spline_path_segment_t* segments, spline_path_time_t size, sp_sample_t** out);
+status_t sp_path_times(spline_path_segment_count_t segment_count, spline_path_segment_t* segments, spline_path_time_t size, sp_time_t** out);
+status_t sp_path_samples_2(sp_sample_t** out, spline_path_time_t size, spline_path_segment_t s1, spline_path_segment_t s2);
+status_t sp_path_samples_3(sp_sample_t** out, spline_path_time_t size, spline_path_segment_t s1, spline_path_segment_t s2, spline_path_segment_t s3);
+status_t sp_path_samples_4(sp_sample_t** out, spline_path_time_t size, spline_path_segment_t s1, spline_path_segment_t s2, spline_path_segment_t s3, spline_path_segment_t s4);
+status_t sp_path_times_2(sp_time_t** out, spline_path_time_t size, spline_path_segment_t s1, spline_path_segment_t s2);
+status_t sp_path_times_3(sp_time_t** out, spline_path_time_t size, spline_path_segment_t s1, spline_path_segment_t s2, spline_path_segment_t s3);
+status_t sp_path_times_4(sp_time_t** out, spline_path_time_t size, spline_path_segment_t s1, spline_path_segment_t s2, spline_path_segment_t s3, spline_path_segment_t s4);
