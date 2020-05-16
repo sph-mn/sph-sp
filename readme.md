@@ -96,7 +96,6 @@ sp_convolution_filter_state_free :: sp_convolution_filter_state_t*:state -> void
 sp_convolution_filter_state_set :: sp_convolution_filter_ir_f_t:ir_f void*:ir_f_arguments uint8_t:ir_f_arguments_len sp_convolution_filter_state_t**:out_state -> status_t
 sp_convolve :: sp_sample_t*:a sp_time_t:a_len sp_sample_t*:b sp_time_t:b_len sp_time_t:result_carryover_len sp_sample_t*:result_carryover sp_sample_t*:result_samples -> void
 sp_convolve_one :: sp_sample_t*:a sp_time_t:a_len sp_sample_t*:b sp_time_t:b_len sp_sample_t*:result_samples -> void
-sp_count_array_new :: sp_time_t:size sp_time_t**:out -> status_t
 sp_events_free :: sp_event_t*:events sp_time_t:size -> void
 sp_fft :: sp_time_t:input_len double*:input_or_output_real double*:input_or_output_imag -> int
 sp_ffti :: sp_time_t:input_len double*:input_or_output_real double*:input_or_output_imag -> int
@@ -107,23 +106,36 @@ sp_file_position_set :: sp_file_t*:file sp_time_t:sample_offset -> status_t
 sp_file_read :: sp_file_t*:file sp_time_t:sample_count sp_sample_t**:result_block sp_time_t*:result_sample_count -> status_t
 sp_file_write :: sp_file_t*:file sp_sample_t**:block sp_time_t:sample_count sp_time_t*:result_sample_count -> status_t
 sp_filter :: sp_sample_t*:in sp_time_t:in_size sp_float_t:cutoff_l sp_float_t:cutoff_h sp_float_t:transition_l sp_float_t:transition_h boolean:is_reject sp_filter_state_t**:out_state sp_sample_t*:out_samples -> status_t
+sp_group_append :: sp_event_t*:a sp_event_t:event -> void
+sp_group_event_f :: sp_time_t:start sp_time_t:end sp_block_t:out sp_event_t*:event -> void
+sp_group_event_free :: sp_event_t*:a -> void
+sp_group_new :: sp_time_t:start sp_group_size_t:event_size sp_group_size_t:memory_size sp_event_t*:out -> status_t
 sp_initialise :: uint16_t:cpu_count -> status_t
 sp_moving_average :: sp_sample_t*:in sp_sample_t*:in_end sp_sample_t*:in_window sp_sample_t*:in_window_end sp_sample_t*:prev sp_sample_t*:prev_end sp_sample_t*:next sp_sample_t*:next_end sp_time_t:radius sp_sample_t*:out -> status_t
 sp_noise_event :: sp_time_t:start sp_time_t:end sp_sample_t**:amp sp_sample_t*:cut_l sp_sample_t*:cut_h sp_sample_t*:trn_l sp_sample_t*:trn_h uint8_t:is_reject sp_time_t:resolution sp_random_state_t:random_state sp_event_t*:out_event -> status_t
 sp_null_ir :: sp_sample_t**:out_ir sp_time_t*:out_len -> status_t
 sp_passthrough_ir :: sp_sample_t**:out_ir sp_time_t*:out_len -> status_t
+sp_path_samples :: spline_path_segment_count_t:segment_count spline_path_segment_t*:segments spline_path_time_t:size sp_sample_t**:out -> status_t
+sp_path_samples_2 :: sp_sample_t**:out spline_path_time_t:size spline_path_segment_t:s1 spline_path_segment_t:s2 -> status_t
+sp_path_samples_3 :: sp_sample_t**:out spline_path_time_t:size spline_path_segment_t:s1 spline_path_segment_t:s2 spline_path_segment_t:s3 -> status_t
+sp_path_samples_4 :: sp_sample_t**:out spline_path_time_t:size spline_path_segment_t:s1 spline_path_segment_t:s2 spline_path_segment_t:s3 spline_path_segment_t:s4 -> status_t
+sp_path_times :: spline_path_segment_count_t:segment_count spline_path_segment_t*:segments spline_path_time_t:size sp_time_t**:out -> status_t
+sp_path_times_2 :: sp_time_t**:out spline_path_time_t:size spline_path_segment_t:s1 spline_path_segment_t:s2 -> status_t
+sp_path_times_3 :: sp_time_t**:out spline_path_time_t:size spline_path_segment_t:s1 spline_path_segment_t:s2 spline_path_segment_t:s3 -> status_t
+sp_path_times_4 :: sp_time_t**:out spline_path_time_t:size spline_path_segment_t:s1 spline_path_segment_t:s2 spline_path_segment_t:s3 spline_path_segment_t:s4 -> status_t
 sp_phase_96 :: sp_time_t:current sp_time_t:change -> sp_time_t
 sp_phase_96_float :: sp_time_t:current double:change -> sp_time_t
-sp_plot_counts :: sp_time_t*:a sp_time_t:a_size -> void
-sp_plot_counts_to_file :: sp_time_t*:a sp_time_t:a_size uint8_t*:path -> void
 sp_plot_samples :: sp_sample_t*:a sp_time_t:a_size -> void
 sp_plot_samples_to_file :: sp_sample_t*:a sp_time_t:a_size uint8_t*:path -> void
 sp_plot_samples_file :: uint8_t*:path uint8_t:use_steps -> void
 sp_plot_spectrum :: sp_sample_t*:a sp_time_t:a_size -> void
 sp_plot_spectrum_to_file :: sp_sample_t*:a sp_time_t:a_size uint8_t*:path -> void
 sp_plot_spectrum_file :: uint8_t*:path -> void
+sp_plot_times :: sp_time_t*:a sp_time_t:a_size -> void
+sp_plot_times_to_file :: sp_time_t*:a sp_time_t:a_size uint8_t*:path -> void
 sp_random_samples :: sp_random_state_t*:state sp_time_t:size sp_sample_t*:out -> void
-sp_sample_array_new :: sp_time_t:size sp_sample_t**:out -> status_t
+sp_samples_to_time :: sp_sample_t*:in sp_time_t:in_size sp_time_t*:out -> void
+sp_samples_new :: sp_time_t:size sp_sample_t**:out -> status_t
 sp_seq :: sp_time_t:start sp_time_t:end sp_block_t:out sp_event_t*:events sp_time_t:size -> void
 sp_seq_events_prepare :: sp_event_t*:data sp_time_t:size -> void
 sp_seq_parallel :: sp_time_t:start sp_time_t:end sp_block_t:out sp_event_t*:events sp_time_t:size -> status_t
@@ -142,11 +154,11 @@ sp_state_variable_filter_peak :: sp_sample_t*:out sp_sample_t*:in sp_float_t:in_
 sp_status_description :: status_t:a -> uint8_t*
 sp_status_name :: status_t:a -> uint8_t*
 sp_synth :: sp_block_t:out sp_time_t:start sp_time_t:duration sp_synth_count_t:config_len sp_synth_partial_t*:config sp_time_t*:phases -> status_t
-sp_synth_event :: sp_time_t:start sp_time_t:end sp_time_t:channel_count sp_time_t:config_len sp_synth_partial_t*:config sp_event_t*:out_event -> status_t
+sp_synth_event :: sp_time_t:start sp_time_t:end sp_channels_t:channel_count sp_time_t:config_len sp_synth_partial_t*:config sp_event_t*:out_event -> status_t
 sp_synth_partial_1 :: sp_time_t:start sp_time_t:end sp_synth_count_t:modifies sp_sample_t*:amp sp_time_t*:wvl sp_time_t:phs -> sp_synth_partial_t
 sp_synth_partial_2 :: sp_time_t:start sp_time_t:end sp_synth_count_t:modifies sp_sample_t*:amp1 sp_sample_t*:amp2 sp_time_t*:wvl1 sp_time_t*:wvl2 sp_time_t:phs1 sp_time_t:phs2 -> sp_synth_partial_t
 sp_synth_state_new :: sp_time_t:channel_count sp_synth_count_t:config_len sp_synth_partial_t*:config sp_time_t**:out_state -> status_t
-sp_time_from_samples :: sp_sample_t*:in sp_time_t:in_size sp_time_t*:out -> void
+sp_times_new :: sp_time_t:size sp_time_t**:out -> status_t
 sp_triangle :: sp_time_t:t sp_time_t:a sp_time_t:b -> sp_sample_t
 sp_triangle_96 :: sp_time_t:t -> sp_sample_t
 sp_window_blackman :: sp_float_t:a sp_time_t:width -> sp_float_t
@@ -159,51 +171,17 @@ sp_windowed_sinc_lp_hp_ir :: sp_float_t:cutoff sp_float_t:transition boolean:is_
 sp_windowed_sinc_lp_hp_ir :: sp_float_t:cutoff sp_float_t:transition boolean:is_high_pass sp_sample_t**:out_ir sp_time_t*:out_len -> status_t
 sp_windowed_sinc_lp_hp_ir_f :: void*:arguments sp_sample_t**:out_ir sp_time_t*:out_len -> status_t
 sp_windowed_sinc_lp_hp_ir_length :: sp_float_t:transition -> sp_time_t
-sph_random :: sph_random_state_t*:state u32:size f64*:out -> void
-sph_random_state_new :: u64:seed -> sph_random_state_t
-spline_path_bezier :: spline_path_time_t:x1 spline_path_value_t:y1 spline_path_time_t:x2 spline_path_value_t:y2 spline_path_time_t:x3 spline_path_value_t:y3 -> spline_path_segment_t
-spline_path_constant :: -> spline_path_segment_t
-spline_path_end :: spline_path_t:path -> spline_path_point_t
-spline_path_free :: spline_path_t:a -> void
-spline_path_get :: spline_path_t:path spline_path_time_t:start spline_path_time_t:end spline_path_value_t*:out -> void
-spline_path_i_bezier :: spline_path_time_t:start spline_path_time_t:end spline_path_point_t:p_start spline_path_point_t*:p_rest void*:options spline_path_value_t*:out -> void
-spline_path_i_constant :: spline_path_time_t:start spline_path_time_t:end spline_path_point_t:p_start spline_path_point_t*:p_rest void*:options spline_path_value_t*:out -> void
-spline_path_i_line :: spline_path_time_t:start spline_path_time_t:end spline_path_point_t:p_start spline_path_point_t*:p_rest void*:options spline_path_value_t*:out -> void
-spline_path_i_move :: spline_path_time_t:start spline_path_time_t:end spline_path_point_t:p_start spline_path_point_t*:p_rest void*:options spline_path_value_t*:out -> void
-spline_path_i_path :: spline_path_time_t:start spline_path_time_t:end spline_path_point_t:p_start spline_path_point_t*:p_rest void*:options spline_path_value_t*:out -> void
-spline_path_line :: spline_path_time_t:x spline_path_value_t:y -> spline_path_segment_t
-spline_path_move :: spline_path_time_t:x spline_path_value_t:y -> spline_path_segment_t
-spline_path_new :: spline_path_segment_count_t:segments_len spline_path_segment_t*:segments spline_path_t*:out_path -> uint8_t
-spline_path_new_get :: spline_path_segment_count_t:segments_len spline_path_segment_t*:segments spline_path_time_t:start spline_path_time_t:end spline_path_value_t*:out -> uint8_t
 spline_path_new_get_2 :: sp_sample_t*:out sp_time_t:duration spline_path_segment_t:s1 spline_path_segment_t:s2 -> int
 spline_path_new_get_3 :: sp_sample_t*:out sp_time_t:duration spline_path_segment_t:s1 spline_path_segment_t:s2 spline_path_segment_t:s3 -> int
 spline_path_new_get_4 :: sp_sample_t*:out sp_time_t:duration spline_path_segment_t:s1 spline_path_segment_t:s2 spline_path_segment_t:s3 spline_path_segment_t:s4 -> int
-spline_path_path :: spline_path_t*:path -> spline_path_segment_t
-spline_path_start :: spline_path_t:path -> spline_path_point_t
 ```
 
 ## macros
 ```
 boolean
-boolean
-define_sph_random(name, size_type, data_type, transfer)
-f32
 f64
-f64
-f64_from_u64(a)
-i16
-i16_fast
-i16_least
-i32
-i32_fast
-i32_least
-i64
-i64_fast
-i64_least
-i8
-i8_fast
-i8_least
-sp_block_set_null(a)
+path_move
+sp_block_zero(a)
 sp_cheap_ceiling_positive(a)
 sp_cheap_filter_bp(...)
 sp_cheap_filter_br(...)
@@ -216,10 +194,10 @@ sp_cheap_noise_event_br(start, end, amp, ...)
 sp_cheap_noise_event_hp(start, end, amp, ...)
 sp_cheap_noise_event_lp(start, end, amp, ...)
 sp_cheap_round_positive(a)
-sp_event_move(event, start)
-sp_event_duration(event)
-sp_event_duration_set(event, duration)
-sp_file_bit_closed
+sp_event_declare(variable)
+sp_event_duration(a)
+sp_event_duration_set(a, duration)
+sp_event_move(a, start)
 sp_file_bit_input
 sp_file_bit_output
 sp_file_bit_position
@@ -228,7 +206,19 @@ sp_file_mode_read_write
 sp_file_mode_write
 sp_filter_state_free
 sp_filter_state_t
+sp_group_add(a, event)
+sp_group_declare
+sp_group_events(a)
+sp_group_free(a)
+sp_group_memory(a)
+sp_group_memory_add(a, pointer)
+sp_group_prepare(a)
+sp_group_size_t
 sp_octets_to_samples(a)
+sp_path_bezier
+sp_path_constant
+sp_path_line
+sp_path_path
 sp_random
 sp_random_state_new
 sp_random_state_t
@@ -236,39 +226,30 @@ sp_s_group_libc
 sp_s_group_sndfile
 sp_s_group_sp
 sp_s_group_sph
-sp_sample_array_zero(a, size)
+sp_s_id_eof
+sp_s_id_file_channel_mismatch
+sp_s_id_file_closed
+sp_s_id_file_encoding
+sp_s_id_file_header
+sp_s_id_file_incompatible
+sp_s_id_file_incomplete
+sp_s_id_file_position
+sp_s_id_file_type
+sp_s_id_input_type
+sp_s_id_invalid_argument
+sp_s_id_memory
+sp_s_id_not_implemented
+sp_s_id_undefined
 sp_samples_to_octets(a)
+sp_samples_zero(a, size)
 sp_sine_96(t)
-spline_path_interpolator_points_len(a)
-spline_path_point_limit
-status_declare
-status_group_undefined
-status_i_require(expression)
-status_is_failure
-status_is_success
-status_require(expression)
-status_return
-status_set(group_id, status_id)
-status_set_goto(group_id, status_id)
-status_success
-u16
-u16_fast
-u16_least
-u32
-u32_fast
-u32_least
-u64
-u64_fast
-u64_least
-u8
-u8_fast
-u8_least
 ```
 
 ## variables
 ```
 sp_random_state_t sp_default_random_state
 sp_sample_t* sp_sine_96_table
+uint32_t sp_cpu_count
 ```
 
 ## types
@@ -276,7 +257,6 @@ sp_sample_t* sp_sine_96_table
 sp_convolution_filter_ir_f_t: void* sp_sample_t** sp_time_t* -> status_t
 sp_event_f_t: sp_time_t sp_time_t sp_block_t sp_event_t* -> void
 sp_state_variable_filter_t: sp_sample_t* sp_sample_t* sp_float_t sp_float_t sp_time_t sp_sample_t* -> void
-spline_path_interpolator_t: spline_path_time_t spline_path_time_t spline_path_point_t spline_path_point_t* void* spline_path_value_t* -> void
 sp_block_t: struct
   channels: sp_channels_t
   size: sp_time_t
@@ -305,6 +285,9 @@ sp_file_t: struct
   sample_rate: sp_sample_rate_t
   channel_count: sp_channels_t
   data: void*
+sp_group_event_state_t: struct
+  events: sp_events_t
+  memory: memreg_register_t
 sp_synth_event_state_t: struct
   config_len: sp_synth_count_t
   config: array sp_synth_partial_t sp_synth_partial_limit
@@ -316,32 +299,6 @@ sp_synth_partial_t: struct
   amp: array sp_sample_t* sp_channel_limit
   wvl: array sp_time_t* sp_channel_limit
   phs: array sp_time_t sp_channel_limit
-sph_random_state_t: struct
-  data: array u64 4
-spline_path_point_t: struct
-  x: spline_path_time_t
-  y: spline_path_value_t
-spline_path_segment_t: struct
-  _start: spline_path_point_t
-  _points_len: uint8_t
-  points: array spline_path_point_t spline_path_point_limit
-  interpolator: spline_path_interpolator_t
-  options: void*
-spline_path_t: struct
-  segments_len: spline_path_segment_count_t
-  segments: spline_path_segment_t*
-status_t: struct
-  id: int
-  group: uint8_t*
-```
-
-## enum
-```
-sp_s_id_file_channel_mismatch sp_s_id_file_encoding sp_s_id_file_header
-  sp_s_id_file_incompatible sp_s_id_file_incomplete sp_s_id_eof
-  sp_s_id_input_type sp_s_id_memory sp_s_id_invalid_argument
-  sp_s_id_not_implemented sp_s_id_file_closed sp_s_id_file_position
-  sp_s_id_file_type sp_s_id_undefined
 ```
 
 # license
