@@ -5,11 +5,11 @@
 #include <float.h>
 #include <math.h>
 #include "../main/sph-sp.h"
-#include "../foreign/sph/float.c"
-#include "../foreign/sph/helper.c"
-#include "../foreign/sph/memreg.c"
-#include "../foreign/sph/string.c"
-#include "../foreign/sph/filesystem.c"
+#include <sph/float.c>
+#include <sph/helper.c>
+#include <sph/memreg.c>
+#include <sph/string.c>
+#include <sph/filesystem.c>
 #define test_helper_test_one(func) \
   printf("%s\n", #func); \
   status_require((func()))
