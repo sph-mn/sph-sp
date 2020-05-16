@@ -5,15 +5,15 @@
 #include <sndfile.h>
 #include <foreign/nayuki-fft/fft.c>
 #include "../main/sph-sp.h"
-#include "../foreign/sph/spline-path.c"
-#include "../foreign/sph/float.c"
-#include "../foreign/sph/helper.c"
-#include "../foreign/sph/memreg.c"
-#include "../foreign/sph/quicksort.c"
-#include "../foreign/sph/queue.c"
-#include "../foreign/sph/thread-pool.c"
-#include "../foreign/sph/futures.c"
-#include "../foreign/sph/random.c"
+#include <sph/spline-path.c>
+#include <sph/float.c>
+#include <sph/helper.c>
+#include <sph/memreg.c>
+#include <sph/quicksort.c>
+#include <sph/queue.c>
+#include <sph/thread-pool.c>
+#include <sph/futures.c>
+#include <sph/random.c>
 #define sp_status_declare status_declare_group(sp_s_group_sp)
 #define max(a, b) ((a > b) ? a : b)
 #define min(a, b) ((a < b) ? a : b)
@@ -47,6 +47,7 @@
       }; \
     }; \
   }
+#define sp_memory_error status_set_goto(sp_s_group_sp, sp_s_id_memory)
 define_sp_interleave(sp_interleave, sp_sample_t, (b[b_size] = (a[channel])[a_size]))
   define_sp_interleave(sp_deinterleave, sp_sample_t, ((a[channel])[a_size] = b[b_size]))
     define_sph_random(sp_random_samples, sp_time_t, sp_sample_t, ((2 * f64_from_u64(result_plus)) - 1.0))
@@ -140,8 +141,8 @@ sp_block_t sp_block_with_offset(sp_block_t a, sp_time_t offset) {
   };
   return (a);
 }
-status_t sp_sample_array_new(sp_time_t size, sp_sample_t** out) { return ((sph_helper_calloc((size * sizeof(sp_sample_t)), out))); }
-status_t sp_time_array_new(sp_time_t size, sp_time_t** out) { return ((sph_helper_calloc((size * sizeof(sp_time_t)), out))); }
+status_t sp_samples_new(sp_time_t size, sp_sample_t** out) { return ((sph_helper_calloc((size * sizeof(sp_sample_t)), out))); }
+status_t sp_times_new(sp_time_t size, sp_time_t** out) { return ((sph_helper_calloc((size * sizeof(sp_time_t)), out))); }
 /** lower precision version of sin() that should be faster */
 sp_sample_t sp_sin_lq(sp_float_t a) {
   sp_sample_t b;
@@ -320,20 +321,45 @@ void sp_set_unity_gain(sp_sample_t* in, sp_time_t in_size, sp_sample_t* out) {
     out[i] = (correction * out[i]);
   };
 }
+void sp_samples_to_time(sp_sample_t* in, sp_time_t in_size, sp_time_t* out) {
+  sp_time_t i;
+  for (i = 0; (i < in_size); i = (1 + i)) {
+    out[i] = sp_cheap_round_positive((in[i]));
+  };
+}
 #include "../main/io.c"
 #include "../main/plot.c"
 #include "../main/filter.c"
 #include "../main/synthesiser.c"
 #include "../main/sequencer.c"
+#include "../main/path.c"
+#define block_size 96000
+#define rate 96000
+typedef status_t (*sp_seq_pointer_t)(sp_time_t, sp_time_t, sp_block_t, sp_event_t*, sp_time_t);
+status_t sp_render_file(sp_event_t* event, sp_time_t start, sp_time_t duration, sp_channels_t channels, uint8_t* path) {
+  status_declare;
+  sp_file_t file;
+  sp_block_t block;
+  sp_time_t written;
+  status_require((sp_block_new(channels, block_size, (&block))));
+  sp_block_set_null(block);
+  status_require((sp_file_open(path, sp_file_mode_write, channels, rate, (&file))));
+  status_require((sp_file_write((&file), (block.samples), block_size, (&written))));
+  status_require((sp_file_close((&file))));
+  sp_seq_pointer_t render_seq;
+exit:
+  status_return;
+}
 /** fills the sine wave lookup table */
 status_t sp_initialise(uint16_t cpu_count) {
   status_declare;
   if (cpu_count) {
     status.id = future_init(cpu_count);
+    if (status.id) {
+      status_return;
+    };
   };
-  if (status.id) {
-    status_return;
-  };
+  sp_cpu_count = cpu_count;
   sp_default_random_state = sp_random_state_new(1557083953);
   return ((sp_sine_table_new((&sp_sine_96_table), 96000)));
 }

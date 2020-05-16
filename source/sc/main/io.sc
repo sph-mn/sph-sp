@@ -102,3 +102,11 @@
 
 (define (sp-file-input-output? a) (boolean sp-file-t*)
   (return (and (bit-and sp-file-bit-input a:flags) (bit-and sp-file-bit-output a:flags))))
+
+(define (sp-block->file block path rate) (status-t sp-block-t uint8-t* sp-time-t)
+  status-declare
+  (declare file sp-file-t written sp-time-t)
+  (status-require (sp-file-open path sp-file-mode-write block.channels rate &file))
+  (status-require (sp-file-write &file block.samples block.size &written))
+  (sp-file-close &file)
+  (label exit status-return))

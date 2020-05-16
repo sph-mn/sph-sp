@@ -195,7 +195,7 @@
   (while channel
     (set channel (- channel 1) len sample-count)
     (while len (set len (- len 1) (array-get (array-get block.samples channel) len) len)))
-  (goto exit)
+  ;(goto exit)
   (sc-comment "test create")
   (status-require (sp-file-open test-file-path sp-file-mode-read-write channel-count sample-rate &file))
   (printf "  create\n")

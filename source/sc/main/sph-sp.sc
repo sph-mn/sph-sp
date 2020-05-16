@@ -19,8 +19,8 @@
   spline-path-time-t sp-time-t
   spline-path-value-t sp-sample-t)
 
-(sc-include "../foreign/sph/status" "../foreign/sph/spline-path-h"
-  "../foreign/sph/types" "../foreign/sph/random-h")
+(pre-include "sph/status.c" "sph/spline-path.h"
+  "sph/types.c" "sph/random.h" "sph/i-array.c" "sph/memreg-heap.c")
 
 (sc-comment "main")
 
@@ -41,19 +41,26 @@
   sp-random sph-random
   sp-random-state-t sph-random-state-t
   sp-random-state-new sph-random-state-new
+  sp-s-id-undefined 1
+  sp-s-id-file-channel-mismatch 2
+  sp-s-id-file-encoding 3
+  sp-s-id-file-header 4
+  sp-s-id-file-incompatible 5
+  sp-s-id-file-incomplete 6
+  sp-s-id-eof 7
+  sp-s-id-input-type 8
+  sp-s-id-memory 9
+  sp-s-id-invalid-argument 10
+  sp-s-id-not-implemented 11
+  sp-s-id-file-closed 11
+  sp-s-id-file-position 12
+  sp-s-id-file-type 13
   (sp-octets->samples a) (begin "sample count to bit octets count" (/ a (sizeof sp-sample-t)))
   (sp-samples->octets a) (* a (sizeof sp-sample-t))
   (sp-cheap-round-positive a) (convert-type (+ 0.5 a) sp-time-t)
   (sp-cheap-floor-positive a) (convert-type a sp-time-t)
   (sp-cheap-ceiling-positive a) (+ (convert-type a sp-time-t) (< (convert-type a sp-time-t) a))
   (sp-block-set-null a) (set a.channels 0))
-
-(enum
-  (sp-s-id-file-channel-mismatch sp-s-id-file-encoding sp-s-id-file-header
-    sp-s-id-file-incompatible sp-s-id-file-incomplete sp-s-id-eof
-    sp-s-id-input-type sp-s-id-memory sp-s-id-invalid-argument
-    sp-s-id-not-implemented sp-s-id-file-closed sp-s-id-file-position
-    sp-s-id-file-type sp-s-id-undefined))
 
 (declare
   sp-block-t
@@ -69,6 +76,7 @@
       (sample-rate sp-sample-rate-t)
       (channel-count sp-channels-t)
       (data void*)))
+  sp-cpu-count uint32-t
   sp-default-random-state sp-random-state-t
   (sp-file-read file sample-count result-block result-sample-count)
   (status-t sp-file-t* sp-time-t sp-sample-t** sp-time-t*)
@@ -79,6 +87,7 @@
   (sp-file-open path mode channel-count sample-rate result-file)
   (status-t uint8-t* int sp-channels-t sp-sample-rate-t sp-file-t*)
   (sp-file-close a) (status-t sp-file-t*)
+  (sp-block->file block path rate) (status-t sp-block-t uint8-t* sp-time-t)
   (sp-block-new channel-count sample-count out-block) (status-t sp-channels-t sp-time-t sp-block-t*)
   (sp-status-description a) (uint8-t* status-t)
   (sp-status-name a) (uint8-t* status-t)
@@ -99,8 +108,9 @@
   (sp-passthrough-ir out-ir out-len) (status-t sp-sample-t** sp-time-t*)
   (sp-initialise cpu-count) (status-t uint16-t)
   (sp-random-samples state size out) (void sp-random-state-t* sp-time-t sp-sample-t*)
-  (sp-sample-array-new size out) (status-t sp-time-t sp-sample-t**)
-  (sp-time-array-new size out) (status-t sp-time-t sp-time-t**))
+  (sp-samples-new size out) (status-t sp-time-t sp-sample-t**)
+  (sp-times-new size out) (status-t sp-time-t sp-time-t**)
+  (sp-samples->time in in-size out) (void sp-sample-t* sp-time-t sp-time-t*))
 
 (sc-comment "filter")
 
@@ -240,7 +250,21 @@
   (sp-cheap-noise-event-bp start end amp ...)
   (sp-cheap-noise-event start end amp sp-state-variable-filter-bp __VA_ARGS__)
   (sp-cheap-noise-event-br start end amp ...)
-  (sp-cheap-noise-event start end amp sp-state-variable-filter-br __VA_ARGS__))
+  (sp-cheap-noise-event start end amp sp-state-variable-filter-br __VA_ARGS__)
+  sp-group-size-t uint32-t
+  (sp-group-events a) (: (convert-type a.state sp-group-event-state-t*) events)
+  (sp-group-memory a) (: (convert-type a.state sp-group-event-state-t*) memory)
+  (sp-group-memory-add a pointer)
+  (if (i-array-space (sp-group-memory a)) (i-array-add (sp-group-memory a) pointer))
+  (sp-group-add a event)
+  (if (i-array-space (sp-group-events a))
+    (begin (i-array-add (sp-group-events a) event) (if (< a.end event.end) (set a.end event.end))))
+  (sp-group-prepare a)
+  (sp-seq-events-prepare (struct-get (sp-group-events a) start)
+    (i-array-length (sp-group-events a)))
+  (sp-event-declare variable) (begin (declare variable sp-event-t) (set variable.state 0))
+  sp-group-declare sp-event-declare
+  (sp-group-free a) (if a.state (a.free &a)))
 
 (declare
   sp-event-t struct
@@ -261,7 +285,7 @@
       (config (array sp-synth-partial-t sp-synth-partial-limit))
       (state sp-time-t*)))
   (sp-seq-events-prepare data size) (void sp-event-t* sp-time-t)
-  (sp-seq start end out events size) (size-t sp-time-t sp-time-t sp-block-t sp-event-t* sp-time-t)
+  (sp-seq start end out events size) (void sp-time-t sp-time-t sp-block-t sp-event-t* sp-time-t)
   (sp-seq-parallel start end out events size)
   (status-t sp-time-t sp-time-t sp-block-t sp-event-t* sp-time-t)
   (sp-synth-event start end channel-count config-len config out-event)
@@ -276,35 +300,15 @@
     sp-sample-t** sp-state-variable-filter-t sp-sample-t*
     sp-time-t sp-sample-t sp-time-t sp-random-state-t sp-event-t*))
 
-(define (sp-samples->time in in-size out) (void sp-sample-t* sp-time-t sp-time-t*)
-  (declare i sp-time-t)
-  (for ((set i 0) (< i in-size) (set i (+ 1 i)))
-    (set (array-get out i) (sp-cheap-round-positive (array-get in i)))))
+(i-array-declare-type sp-events sp-event-t)
+(declare sp-group-event-state-t (type (struct (events sp-events-t) (memory memreg-register-t))))
+(sc-comment "path")
 
-(define (spline-path-new-get-2 out duration s1 s2)
-  (int sp-sample-t* sp-time-t spline-path-segment-t spline-path-segment-t)
-  (declare segments (array spline-path-segment-t 2))
-  (array-set segments 0 s1 1 s2)
-  (return (spline-path-new-get 2 segments 0 duration out)))
-
-(define (spline-path-new-get-3 out duration s1 s2 s3)
-  (int sp-sample-t* sp-time-t spline-path-segment-t spline-path-segment-t spline-path-segment-t)
-  (declare segments (array spline-path-segment-t 3))
-  (array-set segments 0 s1 1 s2 2 s3)
-  (return (spline-path-new-get 3 segments 0 duration out)))
-
-(define (spline-path-new-get-4 out duration s1 s2 s3 s4)
-  (int sp-sample-t* sp-time-t spline-path-segment-t spline-path-segment-t spline-path-segment-t spline-path-segment-t)
-  (declare segments (array spline-path-segment-t 4))
-  (array-set segments 0 s1 1 s2 2 s3 3 s4)
-  (return (spline-path-new-get 4 segments 0 duration out)))
-
-(define (sp-block->file block path rate) (status-t sp-block-t uint8-t* sp-time-t)
-  status-declare
-  (declare file sp-file-t written sp-time-t)
-  (status-require (sp-file-open path sp-file-mode-write block.channels rate &file))
-  (status-require (sp-file-write &file block.samples block.size &written))
-  (sp-file-close &file)
-  (label exit status-return))
+(pre-define
+  path-move spline-path-move
+  sp-path-line spline-path-line
+  sp-path-bezier spline-path-bezier
+  sp-path-constant spline-path-constant
+  sp-path-path spline-path-path)
 
 (pre-define (sp-sample-array-zero a size) (memset a 0 (* size (sizeof sp-sample-t))))

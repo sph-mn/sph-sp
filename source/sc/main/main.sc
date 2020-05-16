@@ -3,9 +3,8 @@
 
 (pre-include "stdio.h" "fcntl.h"
   "sndfile.h" "foreign/nayuki-fft/fft.c" "../main/sph-sp.h"
-  "../foreign/sph/spline-path.c" "../foreign/sph/float.c" "../foreign/sph/helper.c"
-  "../foreign/sph/memreg.c" "../foreign/sph/quicksort.c" "../foreign/sph/queue.c"
-  "../foreign/sph/thread-pool.c" "../foreign/sph/futures.c" "../foreign/sph/random.c")
+  "sph/spline-path.c" "sph/float.c" "sph/helper.c"
+  "sph/memreg.c" "sph/quicksort.c" "sph/queue.c" "sph/thread-pool.c" "sph/futures.c" "sph/random.c")
 
 (pre-define
   sp-status-declare (status-declare-group sp-s-group-sp)
@@ -26,7 +25,8 @@
       (set b-size (* a-size channel-count))
       (while a-size
         (set a-size (- a-size 1) channel channel-count)
-        (while channel (set channel (- channel 1) b-size (- b-size 1)) body)))))
+        (while channel (set channel (- channel 1) b-size (- b-size 1)) body))))
+  sp-memory-error (status-set-goto sp-s-group-sp sp-s-id-memory))
 
 (define-sp-interleave sp-interleave sp-sample-t
   (set (array-get b b-size) (array-get (array-get a channel) a-size)))
@@ -101,10 +101,10 @@
     (set (array-get a.samples i) (+ offset (array-get a.samples i))))
   (return a))
 
-(define (sp-sample-array-new size out) (status-t sp-time-t sp-sample-t**)
+(define (sp-samples-new size out) (status-t sp-time-t sp-sample-t**)
   (return (sph-helper-calloc (* size (sizeof sp-sample-t)) out)))
 
-(define (sp-time-array-new size out) (status-t sp-time-t sp-time-t**)
+(define (sp-times-new size out) (status-t sp-time-t sp-time-t**)
   (return (sph-helper-calloc (* size (sizeof sp-time-t)) out)))
 
 (define (sp-sin-lq a) (sp-sample-t sp-float-t)
@@ -269,13 +269,34 @@
   (for ((set i 0) (< i in-size) (set i (+ 1 i)))
     (set (array-get out i) (* correction (array-get out i)))))
 
+(define (sp-samples->time in in-size out) (void sp-sample-t* sp-time-t sp-time-t*)
+  (declare i sp-time-t)
+  (for ((set i 0) (< i in-size) (set i (+ 1 i)))
+    (set (array-get out i) (sp-cheap-round-positive (array-get in i)))))
+
 (pre-include "../main/io.c" "../main/plot.c"
-  "../main/filter.c" "../main/synthesiser.c" "../main/sequencer.c")
+  "../main/filter.c" "../main/synthesiser.c" "../main/sequencer.c" "../main/path.c")
+
+(pre-define block-size 96000 rate 96000)
+
+(declare sp-seq-pointer-t
+  (type (function-pointer status-t sp-time-t sp-time-t sp-block-t sp-event-t* sp-time-t)))
+
+(define (sp-render-file event start duration channels path)
+  (status-t sp-event-t* sp-time-t sp-time-t sp-channels-t uint8-t*)
+  status-declare
+  (declare file sp-file-t block sp-block-t written sp-time-t)
+  (status-require (sp-block-new channels block-size &block))
+  (sp-block-set-null block)
+  (status-require (sp-file-open path sp-file-mode-write channels rate &file))
+  (status-require (sp-file-write &file block.samples block-size &written))
+  (status-require (sp-file-close &file))
+  (declare render-seq sp-seq-pointer-t)
+  (label exit status-return))
 
 (define (sp-initialise cpu-count) (status-t uint16-t)
   "fills the sine wave lookup table"
   status-declare
-  (if cpu-count (set status.id (future-init cpu-count)))
-  (if status.id status-return)
-  (set sp-default-random-state (sp-random-state-new 1557083953))
+  (if cpu-count (begin (set status.id (future-init cpu-count)) (if status.id status-return)))
+  (set sp-cpu-count cpu-count sp-default-random-state (sp-random-state-new 1557083953))
   (return (sp-sine-table-new &sp-sine-96-table 96000)))

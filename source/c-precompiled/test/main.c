@@ -210,7 +210,6 @@ status_t test_file() {
       ((block.samples)[channel])[len] = len;
     };
   };
-  goto exit;
   /* test create */
   status_require((sp_file_open(test_file_path, sp_file_mode_read_write, channel_count, sample_rate, (&file))));
   printf("  create\n");

@@ -7,7 +7,7 @@ void sp_event_sort_swap(void* a, ssize_t b, ssize_t c) {
 uint8_t sp_event_sort_less_p(void* a, ssize_t b, ssize_t c) { return (((((sp_event_t*)(a))[b]).start < (((sp_event_t*)(a))[c]).start)); }
 void sp_seq_events_prepare(sp_event_t* data, sp_time_t size) { quicksort(sp_event_sort_less_p, sp_event_sort_swap, data, 0, (size - 1)); }
 /** event arrays must have been prepared/sorted with sp-seq-event-prepare for seq to work correctly */
-size_t sp_seq(sp_time_t start, sp_time_t end, sp_block_t out, sp_event_t* events, sp_time_t size) {
+void sp_seq(sp_time_t start, sp_time_t end, sp_block_t out, sp_event_t* events, sp_time_t size) {
   sp_time_t e_out_start;
   sp_event_t e;
   sp_time_t e_start;
@@ -26,7 +26,6 @@ size_t sp_seq(sp_time_t start, sp_time_t end, sp_block_t out, sp_event_t* events
       (e.f)(e_start, e_end, (e_out_start ? sp_block_with_offset(out, e_out_start) : out), (&e));
     };
   };
-  return (i);
 }
 void sp_events_free(sp_event_t* events, sp_time_t size) {
   sp_time_t i;
@@ -304,4 +303,46 @@ status_t sp_cheap_noise_event(sp_time_t start, sp_time_t end, sp_sample_t** amp,
   *out_event = e;
 exit:
   status_return;
+}
+void sp_group_event_free(sp_event_t* a) {
+  sp_group_event_state_t s = *((sp_group_event_state_t*)(a->state));
+  i_array_rewind((s.events));
+  i_array_rewind((s.memory));
+  while (i_array_in_range((s.events))) {
+    ((s.events.current)->free)((s.events.current));
+    i_array_forward((s.events));
+  };
+  memreg_heap_free_pointers((s.memory));
+  i_array_free((s.events));
+  i_array_free((s.memory));
+  free((a->state));
+}
+void sp_group_event_f(sp_time_t start, sp_time_t end, sp_block_t out, sp_event_t* event) { printf("group is running\n"); }
+status_t sp_group_new(time_t start, sp_group_size_t event_size, sp_group_size_t memory_size, sp_event_t* out) {
+  status_declare;
+  sp_group_event_state_t* s;
+  memreg_init(2);
+  status_require((sph_helper_malloc((sizeof(sp_group_event_state_t)), (&s))));
+  memreg_add(s);
+  if (sp_events_new(event_size, (&(s->events)))) {
+    sp_memory_error;
+  };
+  memreg_add((s->events.start));
+  if (memreg_heap_new(memory_size, (&(s->memory)))) {
+    sp_memory_error;
+  };
+  (*out).state = s;
+  (*out).start = start;
+  (*out).end = start;
+  (*out).f = sp_group_event_f;
+  (*out).free = sp_group_event_free;
+exit:
+  if (status_is_failure) {
+    memreg_free;
+  };
+  return (status);
+}
+void sp_group_append(sp_event_t* a, sp_event_t event) {
+  event.start = a->end;
+  sp_group_add((*a), event);
 }

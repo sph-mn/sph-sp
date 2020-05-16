@@ -123,3 +123,13 @@ exit:
 boolean sp_file_input_p(sp_file_t* a) { return ((sp_file_bit_input & a->flags)); }
 boolean sp_file_output_p(sp_file_t* a) { return ((sp_file_bit_output & a->flags)); }
 boolean sp_file_input_output_p(sp_file_t* a) { return (((sp_file_bit_input & a->flags) && (sp_file_bit_output & a->flags))); }
+status_t sp_block_to_file(sp_block_t block, uint8_t* path, sp_time_t rate) {
+  status_declare;
+  sp_file_t file;
+  sp_time_t written;
+  status_require((sp_file_open(path, sp_file_mode_write, (block.channels), rate, (&file))));
+  status_require((sp_file_write((&file), (block.samples), (block.size), (&written))));
+  sp_file_close((&file));
+exit:
+  status_return;
+}

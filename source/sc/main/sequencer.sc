@@ -14,7 +14,7 @@
   (quicksort sp-event-sort-less? sp-event-sort-swap data 0 (- size 1)))
 
 (define (sp-seq start end out events size)
-  (size-t sp-time-t sp-time-t sp-block-t sp-event-t* sp-time-t)
+  (void sp-time-t sp-time-t sp-block-t sp-event-t* sp-time-t)
   "event arrays must have been prepared/sorted with sp-seq-event-prepare for seq to work correctly"
   (declare e-out-start sp-time-t e sp-event-t e-start sp-time-t e-end sp-time-t i sp-time-t)
   (for ((set i 0) (< i size) (set i (+ 1 i)))
@@ -25,8 +25,7 @@
           e-out-start (if* (> e.start start) (- e.start start) 0)
           e-start (if* (> start e.start) (- start e.start) 0)
           e-end (- (if* (< e.end end) e.end end) e.start))
-        (e.f e-start e-end (if* e-out-start (sp-block-with-offset out e-out-start) out) &e))))
-  (return i))
+        (e.f e-start e-end (if* e-out-start (sp-block-with-offset out e-out-start) out) &e)))))
 
 (define (sp-events-free events size) (void sp-event-t* sp-time-t)
   (declare i sp-time-t event-free (function-pointer void (struct sp-event-t*)))
@@ -306,3 +305,35 @@
     e.state s)
   (set *out-event e)
   (label exit status-return))
+
+(define (sp-group-event-free a) (void sp-event-t*)
+  (define s sp-group-event-state-t (pointer-get (convert-type a:state sp-group-event-state-t*)))
+  (i-array-rewind s.events)
+  (i-array-rewind s.memory)
+  (while (i-array-in-range s.events)
+    (s.events.current:free s.events.current)
+    (i-array-forward s.events))
+  (memreg-heap-free-pointers s.memory)
+  (i-array-free s.events)
+  (i-array-free s.memory)
+  (free a:state))
+
+(define (sp-group-event-f start end out event) (void sp-time-t sp-time-t sp-block-t sp-event-t*)
+  (printf "group is running\n"))
+
+(define (sp-group-new start event-size memory-size out)
+  (status-t time-t sp-group-size-t sp-group-size-t sp-event-t*)
+  status-declare
+  (declare s sp-group-event-state-t*)
+  (memreg-init 2)
+  (status-require (sph-helper-malloc (sizeof sp-group-event-state-t) &s))
+  (memreg-add s)
+  (if (sp-events-new event-size &s:events) sp-memory-error)
+  (memreg-add s:events.start)
+  (if (memreg-heap-new memory-size &s:memory) sp-memory-error)
+  (struct-set *out state s start start end start f sp-group-event-f free sp-group-event-free)
+  (label exit (if status-is-failure memreg-free) (return status)))
+
+(define (sp-group-append a event) (void sp-event-t* sp-event-t)
+  (set event.start a:end)
+  (sp-group-add *a event))

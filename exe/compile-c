@@ -6,14 +6,14 @@ c=source/c/
 c_sc=source/c-precompiled
 root="$PWD"
 #warnings="-Wunused-label -Wunused-value -Wunused-variable"
-gcc_options="-funsigned-char -std=c17 -Wfatal-errors -Wpedantic -Wno-pointer-sign $warnings -O$optimisation"
+gcc_options="-funsigned-char -std=c17 -Wfatal-errors -Wno-pointer-sign $warnings -O$optimisation"
 gcc_options_test="-Wfatal-errors -Og"
 
 compile_sph_sp() {
   target="$target_dir/libsph-sp.so"
   source="$c_sc/main/main.c"
   gcc -Wl,--version-script=other/shared-library-exports -shared -fpic "$source" -o "$target" \
-    $gcc_options -lsndfile -lasound -lm -I"$c"
+    $gcc_options -lsndfile -lpthread -lm -I"$c"
 }
 
 compile_test_sph_sp() {

@@ -344,8 +344,8 @@ heap memory is to be freed with sp-cheap-filter-state-free but only allocated if
     if (sp_cheap_filter_passes_limit < max_passes) {
       status_set_goto(sp_s_group_sp, sp_s_id_not_implemented);
     } else {
-      status_require((sp_sample_array_new(max_size, (&in_temp))));
-      status_require((sp_sample_array_new(max_size, (&out_temp))));
+      status_require((sp_samples_new(max_size, (&in_temp))));
+      status_require((sp_samples_new(max_size, (&out_temp))));
     };
   };
   out_state->in_temp = in_temp;

@@ -341,8 +341,8 @@
     (if (< sp-cheap-filter-passes-limit max-passes)
       (status-set-goto sp-s-group-sp sp-s-id-not-implemented)
       (begin
-        (status-require (sp-sample-array-new max-size &in-temp))
-        (status-require (sp-sample-array-new max-size &out-temp)))))
+        (status-require (sp-samples-new max-size &in-temp))
+        (status-require (sp-samples-new max-size &out-temp)))))
   (set out-state:in-temp in-temp out-state:out-temp out-temp)
   (memset out-state:svf-state 0 (* (sizeof sp-sample-t) 2 sp-cheap-filter-passes-limit))
   (label exit (if status-is-failure (free in-temp)) status-return))
