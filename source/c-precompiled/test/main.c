@@ -319,37 +319,6 @@ status_t test_synth() {
 exit:
   status_return;
 }
-#define sp_seq_duration 20
-#define sp_seq_half_duration (sp_seq_duration / 2)
-status_t test_sp_seq() {
-  status_declare;
-  sp_event_t events[10];
-  sp_time_t events_size;
-  sp_time_t* state;
-  sp_block_t out;
-  sp_synth_partial_t config[1];
-  sp_time_t wvl[sp_seq_duration];
-  sp_sample_t amp[sp_seq_duration];
-  sp_time_t i;
-  for (i = 0; (i < sp_seq_duration); i = (1 + i)) {
-    wvl[i] = 5;
-    amp[i] = 0.5;
-  };
-  config[0] = sp_synth_partial_1(0, sp_seq_duration, 0, amp, wvl, 0);
-  status_require((sp_synth_event(0, sp_seq_half_duration, 1, 1, config, (0 + events))));
-  status_require((sp_synth_event((2 + sp_seq_half_duration), (sp_seq_duration - 2), 1, 1, config, (1 + events))));
-  events_size = 2;
-  sp_seq_events_prepare(events, events_size);
-  status_require((sp_block_new(1, sp_seq_duration, (&out))));
-  sp_seq(0, sp_seq_half_duration, out, events, events_size);
-  sp_seq(sp_seq_half_duration, sp_seq_duration, (sp_block_with_offset(out, sp_seq_half_duration)), events, events_size);
-  /* sp-seq-parallel */
-  status_require((sp_seq_parallel(0, sp_seq_duration, out, events, events_size)));
-  sp_events_free(events, events_size);
-  sp_block_free(out);
-exit:
-  status_return;
-}
 /** better test separately as it opens gnuplot windows */
 status_t test_sp_plot() {
   status_declare;
@@ -470,13 +439,104 @@ status_t test_sp_cheap_noise_event() {
 exit:
   status_return;
 }
+#define sp_seq_event_count 2
+status_t test_sp_seq() {
+  status_declare;
+  sp_event_t events[sp_seq_event_count];
+  sp_block_t out;
+  sp_time_t i;
+  events[0] = test_helper_event(0, 40, 1);
+  events[1] = test_helper_event(41, 100, 2);
+  sp_seq_events_prepare(events, sp_seq_event_count);
+  status_require((sp_block_new(2, 100, (&out))));
+  sp_seq(0, 50, out, events, sp_seq_event_count);
+  sp_seq(50, 100, (sp_block_with_offset(out, 50)), events, sp_seq_event_count);
+  test_helper_assert("block contents 1 event 1", ((1 == (out.samples)[0][0]) && (1 == (out.samples)[0][39])));
+  test_helper_assert("block contents 1 gap", (0 == (out.samples)[0][40]));
+  test_helper_assert("block contents 1 event 2", ((2 == (out.samples)[0][41]) && (2 == (out.samples)[0][99])));
+  /* sp-seq-parallel */
+  status_require((sp_seq_parallel(0, 100, out, events, sp_seq_event_count)));
+  sp_events_free(events, sp_seq_event_count);
+  sp_block_free(out);
+exit:
+  status_return;
+}
+status_t test_sp_group() {
+  status_declare;
+  sp_event_t g;
+  sp_event_t e1;
+  sp_event_t e2;
+  sp_block_t block;
+  sp_time_t* m1;
+  sp_time_t* m2;
+  status_require((sp_times_new(100, (&m1))));
+  status_require((sp_times_new(100, (&m2))));
+  status_require((sp_group_new(0, 2, 2, (&g))));
+  status_require((sp_block_new(2, 100, (&block))));
+  e1 = test_helper_event(0, 40, 1);
+  e2 = test_helper_event(50, 100, 2);
+  sp_group_add(g, e1);
+  sp_group_add(g, e2);
+  sp_group_memory_add(g, m1);
+  sp_group_memory_add(g, m2);
+  sp_group_prepare(g);
+  (g.f)(0, 50, block, (&g));
+  (g.f)(50, 100, (sp_block_with_offset(block, 50)), (&g));
+  (g.free)((&g));
+  test_helper_assert("block contents event 1", ((1 == (block.samples)[0][0]) && (1 == (block.samples)[0][39])));
+  test_helper_assert("block contents gap", ((0 == (block.samples)[0][40]) && (0 == (block.samples)[0][49])));
+  test_helper_assert("block contents event 2", ((2 == (block.samples)[0][50]) && (2 == (block.samples)[0][99])));
+  sp_block_free(block);
+exit:
+  status_return;
+}
+#define sp_synth_event_duration 100
+#define sp_synth_event_half_duration (sp_synth_event_duration / 2)
+/** sp synth values were taken from printing index and value of the result array.
+   sp-plot-samples can plot the result */
+status_t test_sp_synth_event() {
+  status_declare;
+  sp_event_t event;
+  sp_block_t out;
+  sp_time_t wvl1[sp_synth_event_duration];
+  sp_time_t wvl2[sp_synth_event_duration];
+  sp_sample_t amp1[sp_synth_event_duration];
+  sp_sample_t amp2[sp_synth_event_duration];
+  sp_synth_partial_t partials[2];
+  sp_time_t i;
+  sp_channels_t ci;
+  for (i = 0; (i < sp_synth_event_duration); i += 1) {
+    wvl1[i] = 5;
+    wvl2[i] = 10;
+    amp1[i] = 0.1;
+    amp2[i] = 1;
+  };
+  partials[0] = sp_synth_partial_2(0, sp_synth_event_half_duration, 0, amp1, amp2, wvl1, wvl2, 0, 0);
+  partials[1] = sp_synth_partial_2(sp_synth_event_half_duration, sp_synth_event_duration, 0, amp2, amp1, wvl2, wvl1, 0, 0);
+  status_require((sp_synth_event(0, sp_synth_event_duration, 2, 2, partials, (&event))));
+  status_require((sp_block_new(2, sp_synth_event_duration, (&out))));
+  (event.f)(0, sp_synth_event_duration, out, (&event));
+  test_helper_assert("values 1", (0.1 >= (out.samples)[0][0]));
+  test_helper_assert("values 2", (0 == (out.samples)[0][49]));
+  test_helper_assert("values 3", (0.1 > (out.samples)[0][44]));
+  test_helper_assert("values 4", (0.1 <= (out.samples)[0][50]));
+  test_helper_assert("values 5", (1 == (out.samples)[0][54]));
+  test_helper_assert("values 6", (0.1 > (out.samples)[0][99]));
+  sp_block_free(out);
+  (event.free)((&event));
+exit:
+  status_return;
+}
+/** "goto exit" can skip events */
 int main() {
   status_declare;
-  sp_initialise(6);
+  sp_initialise(3);
+  test_helper_test_one(test_sp_group);
+  test_helper_test_one(test_sp_synth_event);
+  test_helper_test_one(test_sp_seq);
   test_helper_test_one(test_sp_cheap_noise_event);
   test_helper_test_one(test_sp_cheap_filter);
   test_helper_test_one(test_sp_noise_event);
-  test_helper_test_one(test_sp_seq);
   test_helper_test_one(test_sp_random);
   test_helper_test_one(test_sp_triangle_square);
   test_helper_test_one(test_synth);

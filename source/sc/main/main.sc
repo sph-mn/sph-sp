@@ -95,7 +95,7 @@
   (for ((set i 0) (< i a.channels) (set i (+ 1 i))) (free (array-get a.samples i))))
 
 (define (sp-block-with-offset a offset) (sp-block-t sp-block-t sp-time-t)
-  "add offset to the all channel sample arrays in block"
+  "return a new block with offset added to all channel sample arrays"
   (declare i sp-time-t)
   (for ((set i 0) (< i a.channels) (set i (+ 1 i)))
     (set (array-get a.samples i) (+ offset (array-get a.samples i))))

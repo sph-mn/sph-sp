@@ -15,7 +15,8 @@
 
 (define (sp-seq start end out events size)
   (void sp-time-t sp-time-t sp-block-t sp-event-t* sp-time-t)
-  "event arrays must have been prepared/sorted with sp-seq-event-prepare for seq to work correctly"
+  "event arrays must have been prepared/sorted with sp-seq-event-prepare for seq to work correctly.
+  event functions receive event relative start/end time and block has index 0 at start"
   (declare e-out-start sp-time-t e sp-event-t e-start sp-time-t e-end sp-time-t i sp-time-t)
   (for ((set i 0) (< i size) (set i (+ 1 i)))
     (set e (array-get events i))
@@ -307,11 +308,10 @@
   (label exit status-return))
 
 (define (sp-group-event-free a) (void sp-event-t*)
+  "events.current is used to track freed events"
   (define s sp-group-event-state-t (pointer-get (convert-type a:state sp-group-event-state-t*)))
-  (i-array-rewind s.events)
-  (i-array-rewind s.memory)
   (while (i-array-in-range s.events)
-    (s.events.current:free s.events.current)
+    (if s.events.current:free (s.events.current:free s.events.current))
     (i-array-forward s.events))
   (memreg-heap-free-pointers s.memory)
   (i-array-free s.events)
@@ -319,9 +319,15 @@
   (free a:state))
 
 (define (sp-group-event-f start end out event) (void sp-time-t sp-time-t sp-block-t sp-event-t*)
-  (printf "group is running\n"))
+  "assumes that events are never called outside their start end range"
+  (define s sp-group-event-state-t* event:state)
+  (while (<= s:events.current:end start)
+    (if s:events.current:free (s:events.current:free s:events.current))
+    (i-array-forward s:events))
+  (sp-seq start end out s:events.current (- s:events.unused s:events.current)))
 
-(define (sp-group-event-parallel-f start end out event) (void sp-time-t sp-time-t sp-block-t sp-event-t*)
+(define (sp-group-event-parallel-f start end out event)
+  (void sp-time-t sp-time-t sp-block-t sp-event-t*)
   (printf "parallel group is running\n"))
 
 (define (sp-group-new start event-size memory-size out)
@@ -338,5 +344,6 @@
   (label exit (if status-is-failure memreg-free) (return status)))
 
 (define (sp-group-append a event) (void sp-event-t* sp-event-t)
+  (printf "event-start %lu\n" a:end)
   (set event.start a:end)
   (sp-group-add *a event))

@@ -307,37 +307,6 @@
   (sp-block-free out2)
   (label exit status-return))
 
-(pre-define sp-seq-duration 20 sp-seq-half-duration (/ sp-seq-duration 2))
-
-(define (test-sp-seq) status-t
-  status-declare
-  (declare
-    events (array sp-event-t 10)
-    events-size sp-time-t
-    state sp-time-t*
-    out sp-block-t
-    config (array sp-synth-partial-t 1)
-    wvl (array sp-time-t sp-seq-duration)
-    amp (array sp-sample-t sp-seq-duration)
-    i sp-time-t)
-  (for ((set i 0) (< i sp-seq-duration) (set i (+ 1 i)))
-    (set (array-get wvl i) 5 (array-get amp i) 0.5))
-  (set (array-get config 0) (sp-synth-partial-1 0 sp-seq-duration 0 amp wvl 0))
-  (status-require (sp-synth-event 0 sp-seq-half-duration 1 1 config (+ 0 events)))
-  (status-require
-    (sp-synth-event (+ 2 sp-seq-half-duration) (- sp-seq-duration 2) 1 1 config (+ 1 events)))
-  (set events-size 2)
-  (sp-seq-events-prepare events events-size)
-  (status-require (sp-block-new 1 sp-seq-duration &out))
-  (sp-seq 0 sp-seq-half-duration out events events-size)
-  (sp-seq sp-seq-half-duration sp-seq-duration
-    (sp-block-with-offset out sp-seq-half-duration) events events-size)
-  (sc-comment "sp-seq-parallel")
-  (status-require (sp-seq-parallel 0 sp-seq-duration out events events-size))
-  (sp-events-free events events-size)
-  (sp-block-free out)
-  (label exit status-return))
-
 (define (test-sp-plot) status-t
   "better test separately as it opens gnuplot windows"
   status-declare
@@ -452,13 +421,101 @@
   (sp-block-free out)
   (label exit status-return))
 
-(define (main) int
+(pre-define sp-seq-event-count 2)
+
+(define (test-sp-seq) status-t
   status-declare
-  (sp-initialise 6)
+  (declare events (array sp-event-t sp-seq-event-count) out sp-block-t i sp-time-t)
+  (set
+    (array-get events 0) (test-helper-event 0 40 1)
+    (array-get events 1) (test-helper-event 41 100 2))
+  (sp-seq-events-prepare events sp-seq-event-count)
+  (status-require (sp-block-new 2 100 &out))
+  (sp-seq 0 50 out events sp-seq-event-count)
+  (sp-seq 50 100 (sp-block-with-offset out 50) events sp-seq-event-count)
+  (test-helper-assert "block contents 1 event 1"
+    (and (= 1 (array-get out.samples 0 0)) (= 1 (array-get out.samples 0 39))))
+  (test-helper-assert "block contents 1 gap" (= 0 (array-get out.samples 0 40)))
+  (test-helper-assert "block contents 1 event 2"
+    (and (= 2 (array-get out.samples 0 41)) (= 2 (array-get out.samples 0 99))))
+  (sc-comment "sp-seq-parallel")
+  (status-require (sp-seq-parallel 0 100 out events sp-seq-event-count))
+  (sp-events-free events sp-seq-event-count)
+  (sp-block-free out)
+  (label exit status-return))
+
+(define (test-sp-group) status-t
+  status-declare
+  (declare g sp-event-t e1 sp-event-t e2 sp-event-t block sp-block-t m1 sp-time-t* m2 sp-time-t*)
+  (status-require (sp-times-new 100 &m1))
+  (status-require (sp-times-new 100 &m2))
+  (status-require (sp-group-new 0 2 2 &g))
+  (status-require (sp-block-new 2 100 &block))
+  (set e1 (test-helper-event 0 40 1) e2 (test-helper-event 50 100 2))
+  (sp-group-add g e1)
+  (sp-group-add g e2)
+  (sp-group-memory-add g m1)
+  (sp-group-memory-add g m2)
+  (sp-group-prepare g)
+  (g.f 0 50 block &g)
+  (g.f 50 100 (sp-block-with-offset block 50) &g)
+  (g.free &g)
+  (test-helper-assert "block contents event 1"
+    (and (= 1 (array-get block.samples 0 0)) (= 1 (array-get block.samples 0 39))))
+  (test-helper-assert "block contents gap"
+    (and (= 0 (array-get block.samples 0 40)) (= 0 (array-get block.samples 0 49))))
+  (test-helper-assert "block contents event 2"
+    (and (= 2 (array-get block.samples 0 50)) (= 2 (array-get block.samples 0 99))))
+  (sp-block-free block)
+  (label exit status-return))
+
+(pre-define sp-synth-event-duration 100 sp-synth-event-half-duration (/ sp-synth-event-duration 2))
+
+(define (test-sp-synth-event) status-t
+  "sp synth values were taken from printing index and value of the result array.
+   sp-plot-samples can plot the result"
+  status-declare
+  (declare
+    event sp-event-t
+    out sp-block-t
+    wvl1 (array sp-time-t sp-synth-event-duration)
+    wvl2 (array sp-time-t sp-synth-event-duration)
+    amp1 (array sp-sample-t sp-synth-event-duration)
+    amp2 (array sp-sample-t sp-synth-event-duration)
+    partials (array sp-synth-partial-t 2)
+    i sp-time-t
+    ci sp-channels-t)
+  (for ((set i 0) (< i sp-synth-event-duration) (set+ i 1))
+    (set (array-get wvl1 i) 5 (array-get wvl2 i) 10 (array-get amp1 i) 0.1 (array-get amp2 i) 1))
+  (set
+    (array-get partials 0)
+    (sp-synth-partial-2 0 sp-synth-event-half-duration 0 amp1 amp2 wvl1 wvl2 0 0)
+    (array-get partials 1)
+    (sp-synth-partial-2 sp-synth-event-half-duration sp-synth-event-duration
+      0 amp2 amp1 wvl2 wvl1 0 0))
+  (status-require (sp-synth-event 0 sp-synth-event-duration 2 2 partials &event))
+  (status-require (sp-block-new 2 sp-synth-event-duration &out))
+  (event.f 0 sp-synth-event-duration out &event)
+  (test-helper-assert "values 1" (>= 0.1 (array-get out.samples 0 0)))
+  (test-helper-assert "values 2" (= 0 (array-get out.samples 0 49)))
+  (test-helper-assert "values 3" (> 0.1 (array-get out.samples 0 44)))
+  (test-helper-assert "values 4" (<= 0.1 (array-get out.samples 0 50)))
+  (test-helper-assert "values 5" (= 1 (array-get out.samples 0 54)))
+  (test-helper-assert "values 6" (> 0.1 (array-get out.samples 0 99)))
+  (sp-block-free out)
+  (event.free &event)
+  (label exit status-return))
+
+(define (main) int
+  "\"goto exit\" can skip events"
+  status-declare
+  (sp-initialise 3)
+  (test-helper-test-one test-sp-group)
+  (test-helper-test-one test-sp-synth-event)
+  (test-helper-test-one test-sp-seq)
   (test-helper-test-one test-sp-cheap-noise-event)
   (test-helper-test-one test-sp-cheap-filter)
   (test-helper-test-one test-sp-noise-event)
-  (test-helper-test-one test-sp-seq)
   (test-helper-test-one test-sp-random)
   (test-helper-test-one test-sp-triangle-square)
   (test-helper-test-one test-synth)

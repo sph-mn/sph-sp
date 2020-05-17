@@ -133,7 +133,7 @@ void sp_block_free(sp_block_t a) {
     free(((a.samples)[i]));
   };
 }
-/** add offset to the all channel sample arrays in block */
+/** return a new block with offset added to all channel sample arrays */
 sp_block_t sp_block_with_offset(sp_block_t a, sp_time_t offset) {
   sp_time_t i;
   for (i = 0; (i < a.channels); i = (1 + i)) {
