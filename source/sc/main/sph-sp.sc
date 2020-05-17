@@ -3,21 +3,21 @@
 (sc-comment "configuration")
 
 (pre-define-if-not-defined
+  sp-channel-limit 2
   sp-channels-t uint8-t
   sp-file-format (bit-or SF-FORMAT-WAV SF-FORMAT-FLOAT)
   sp-float-t double
-  sp-time-t uint64-t
+  spline-path-time-t sp-time-t
+  spline-path-value-t sp-sample-t
   sp-sample-rate-t uint32-t
   sp-sample-sum f64-sum
   sp-sample-t double
   sp-sf-read sf-readf-double
   sp-sf-write sf-writef-double
   sp-synth-count-t uint16-t
-  sp-channel-limit 2
-  sp-synth-sine sp-sine-96
   sp-synth-partial-limit 64
-  spline-path-time-t sp-time-t
-  spline-path-value-t sp-sample-t)
+  sp-synth-sine sp-sine-96
+  sp-time-t uint64-t)
 
 (pre-include "sph/status.c" "sph/spline-path.h"
   "sph/types.c" "sph/random.h" "sph/i-array.c" "sph/memreg-heap.c")

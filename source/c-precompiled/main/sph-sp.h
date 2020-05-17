@@ -5,6 +5,9 @@
 #include <inttypes.h>
 #include <string.h>
 /* configuration */
+#ifndef sp_channel_limit
+#define sp_channel_limit 2
+#endif
 #ifndef sp_channels_t
 #define sp_channels_t uint8_t
 #endif
@@ -14,8 +17,11 @@
 #ifndef sp_float_t
 #define sp_float_t double
 #endif
-#ifndef sp_time_t
-#define sp_time_t uint64_t
+#ifndef spline_path_time_t
+#define spline_path_time_t sp_time_t
+#endif
+#ifndef spline_path_value_t
+#define spline_path_value_t sp_sample_t
 #endif
 #ifndef sp_sample_rate_t
 #define sp_sample_rate_t uint32_t
@@ -35,20 +41,14 @@
 #ifndef sp_synth_count_t
 #define sp_synth_count_t uint16_t
 #endif
-#ifndef sp_channel_limit
-#define sp_channel_limit 2
+#ifndef sp_synth_partial_limit
+#define sp_synth_partial_limit 64
 #endif
 #ifndef sp_synth_sine
 #define sp_synth_sine sp_sine_96
 #endif
-#ifndef sp_synth_partial_limit
-#define sp_synth_partial_limit 64
-#endif
-#ifndef spline_path_time_t
-#define spline_path_time_t sp_time_t
-#endif
-#ifndef spline_path_value_t
-#define spline_path_value_t sp_sample_t
+#ifndef sp_time_t
+#define sp_time_t uint64_t
 #endif
 #include <sph/status.c>
 #include <sph/spline-path.h>

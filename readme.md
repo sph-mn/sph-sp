@@ -1,5 +1,5 @@
 # sph-sp
-c code and shared library for sound file input/output and example implementations of sound processors
+c code and shared library for sound synthesis and sequencing. the sound processor implementations can serve as examples.
 
 # features
 * basics
@@ -8,7 +8,7 @@ c code and shared library for sound file input/output and example implementation
   * processing of non-interleaved sample arrays with one array per channel. number of channels and sample rate can be custom set
   * fast fourier transform (fft) and inverse fast fourier transform (ifft)
   * plotting of samples and sound spectra using gnuplot
-* processors that can work seamlessly on blocks of continuous data streams
+* processors that work seamlessly on blocks of continuous data streams
   * windowed-sinc low-pass, high-pass, band-pass and band-reject filters
   * state-variable high/low/band/all-pass filter
   * moving average filter
@@ -16,9 +16,13 @@ c code and shared library for sound file input/output and example implementation
 * synthesis
   * paths created from interpolation between given points. can be used for amplitude, wavelength and other controls
   * additive fm synthesizer with parameters per channel and start/end time for partials
-  * sequencer for parallel event processing of custom routines
-  * events for filtered noise and synth output
   * sine/triangle/square/sawtooth-wave and noise generator
+* sequencing
+  * event renderer for parallel processing with custom routines
+  * events for filtered noise and synth output
+  * event groups that compose for riffs and songs
+
+[code example](other/example.c)
 
 # dependencies
 * run-time
@@ -51,19 +55,19 @@ the file `source/c-precompiled/main/sph-sp.h` can be edited before compilation t
 
 | name | default | description |
 | --- | --- | --- |
+|sp_channel_limit|2|maximum number of channels|
 |sp_channels_t|uint8_t|data type for numbers of channels|
 |sp_file_format|(SF_FORMAT_WAV \| SF_FORMAT_DOUBLE)|soundfile file format. a combination of file and sample format soundfile constants, for example (SF_FORMAT_AU \| SF_FORMAT_DOUBLE). conversion is done automatically as necessary|
 |sp_float_t|double|data type for floating point values other than samples|
-|sp_channel_limit|2|maximum number of channels|
-|sp_count_t|size_t|data type for numbers of samples|
 |sp_sample_rate_t|uint32_t|data type for sample rates|
 |sp_sample_sum|f64_sum|function (sp_sample_t* size_t -> sp_sample_t) that sums samples, by default with kahan error compensation|
 |sp_sample_t|double|sample format. f32 should be possible but integer formats are currently not possible because most processors dont work with them|
 |sp_sf_read|sf_readf_double|libsndfile file reader function to use|
 |sp_sf_write|sf_writef_double|libsndfile file writer function to use|
 |sp_synth_count_t|uint16_t|the datatype for the number of partials for sp_synth|
-|sp_synth_sine|sp_sine_96||
 |sp_synth_partial_limit|128|maximum number of partials sp_synth will be able to process|
+|sp_synth_sine|sp_sine_96||
+|sp_time_t|uint64_t|data type for sample counts|
 
 # c usage
 ```
@@ -77,7 +81,7 @@ gcc -lsph-sp main.c
 ```
 
 ## error handling
-routines return `status_t`, which is a `struct {int id, uint8-t* group}`.
+routines return `status_t`, which is a `struct {int id, uint8-t* group}` and included with sph-sp.h.
 status.id zero is success
 
 # api
@@ -134,6 +138,7 @@ sp_plot_spectrum_file :: uint8_t*:path -> void
 sp_plot_times :: sp_time_t*:a sp_time_t:a_size -> void
 sp_plot_times_to_file :: sp_time_t*:a sp_time_t:a_size uint8_t*:path -> void
 sp_random_samples :: sp_random_state_t*:state sp_time_t:size sp_sample_t*:out -> void
+sp_render_file :: sp_event_t:event sp_time_t:start sp_time_t:duration sp_render_config_t:config uint8_t*:path -> status_t
 sp_samples_to_time :: sp_sample_t*:in sp_time_t:in_size sp_time_t*:out -> void
 sp_samples_new :: sp_time_t:size sp_sample_t**:out -> status_t
 sp_seq :: sp_time_t:start sp_time_t:end sp_block_t:out sp_event_t*:events sp_time_t:size -> void
@@ -179,8 +184,10 @@ spline_path_new_get_4 :: sp_sample_t*:out sp_time_t:duration spline_path_segment
 ## macros
 ```
 boolean
+declare_render_config(name)
 f64
 path_move
+rt(n, d)
 sp_block_zero(a)
 sp_cheap_ceiling_positive(a)
 sp_cheap_filter_bp(...)
@@ -288,6 +295,10 @@ sp_file_t: struct
 sp_group_event_state_t: struct
   events: sp_events_t
   memory: memreg_register_t
+sp_render_config_t: struct
+  rate: sp_time_t
+  block_size: sp_time_t
+  channels: sp_channels_t
 sp_synth_event_state_t: struct
   config_len: sp_synth_count_t
   config: array sp_synth_partial_t sp_synth_partial_limit
