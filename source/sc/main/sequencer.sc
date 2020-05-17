@@ -16,7 +16,7 @@
 (define (sp-seq start end out events size)
   (void sp-time-t sp-time-t sp-block-t sp-event-t* sp-time-t)
   "event arrays must have been prepared/sorted with sp-seq-event-prepare for seq to work correctly.
-  event functions receive event relative start/end time and block has index 0 at start"
+   event functions receive event relative start/end time and block has index 0 at start"
   (declare e-out-start sp-time-t e sp-event-t e-start sp-time-t e-end sp-time-t i sp-time-t)
   (for ((set i 0) (< i size) (set i (+ 1 i)))
     (set e (array-get events i))
@@ -319,7 +319,7 @@
   (free a:state))
 
 (define (sp-group-event-f start end out event) (void sp-time-t sp-time-t sp-block-t sp-event-t*)
-  "assumes that events are never called outside their start end range"
+  "free past events early, they might be sub-group trees"
   (define s sp-group-event-state-t* event:state)
   (while (<= s:events.current:end start)
     (if s:events.current:free (s:events.current:free s:events.current))
@@ -328,7 +328,13 @@
 
 (define (sp-group-event-parallel-f start end out event)
   (void sp-time-t sp-time-t sp-block-t sp-event-t*)
-  (printf "parallel group is running\n"))
+  "can be used in place of sp-group-event-f.
+   seq-parallel can fail if there is not enough memory, but this is ignored currently"
+  (define s sp-group-event-state-t* event:state)
+  (while (<= s:events.current:end start)
+    (if s:events.current:free (s:events.current:free s:events.current))
+    (i-array-forward s:events))
+  (sp-seq-parallel start end out s:events.current (- s:events.unused s:events.current)))
 
 (define (sp-group-new start event-size memory-size out)
   (status-t sp-time-t sp-group-size-t sp-group-size-t sp-event-t*)
@@ -344,6 +350,5 @@
   (label exit (if status-is-failure memreg-free) (return status)))
 
 (define (sp-group-append a event) (void sp-event-t* sp-event-t)
-  (printf "event-start %lu\n" a:end)
-  (set event.start a:end)
+  (set+ event.start a:end event.end a:end)
   (sp-group-add *a event))

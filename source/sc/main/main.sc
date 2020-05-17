@@ -277,10 +277,29 @@
 (pre-include "../main/io.c" "../main/plot.c"
   "../main/filter.c" "../main/synthesiser.c" "../main/sequencer.c" "../main/path.c")
 
-(pre-define block-size 96000 rate 96000)
-
-(declare sp-seq-pointer-t
-  (type (function-pointer status-t sp-time-t sp-time-t sp-block-t sp-event-t* sp-time-t)))
+(define (sp-render-file event start duration config path)
+  (status-t sp-event-t sp-time-t sp-time-t sp-render-config-t uint8-t*)
+  "render a single event to file. event can be a group"
+  status-declare
+  (declare
+    block sp-block-t
+    end sp-time-t
+    file-is-open uint8-t
+    file sp-file-t
+    i sp-time-t
+    written sp-time-t)
+  (set file-is-open 0)
+  (status-require (sp-block-new config.channels config.block-size &block))
+  (status-require (sp-file-open path sp-file-mode-write config.channels config.rate &file))
+  (set
+    file-is-open 1
+    end (/ duration config.block-size)
+    end (if* (> 1 end) config.block-size (* end config.block-size)))
+  (for ((set i 0) (< i end) (set+ i config.block-size))
+    (sp-seq i (+ i config.block-size) block &event 1)
+    (status-require (sp-file-write &file block.samples config.block-size &written))
+    (sp-block-zero block))
+  (label exit (if file-is-open (sp-file-close &file)) status-return))
 
 (define (sp-initialise cpu-count) (status-t uint16-t)
   "fills the sine wave lookup table"

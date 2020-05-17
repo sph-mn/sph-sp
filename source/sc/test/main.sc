@@ -446,14 +446,25 @@
 
 (define (test-sp-group) status-t
   status-declare
-  (declare g sp-event-t e1 sp-event-t e2 sp-event-t block sp-block-t m1 sp-time-t* m2 sp-time-t*)
+  (declare
+    g sp-event-t
+    g1 sp-event-t
+    e1 sp-event-t
+    e2 sp-event-t
+    e3 sp-event-t
+    block sp-block-t
+    m1 sp-time-t*
+    m2 sp-time-t*)
   (status-require (sp-times-new 100 &m1))
   (status-require (sp-times-new 100 &m2))
   (status-require (sp-group-new 0 2 2 &g))
+  (status-require (sp-group-new 10 2 0 &g1))
   (status-require (sp-block-new 2 100 &block))
-  (set e1 (test-helper-event 0 40 1) e2 (test-helper-event 50 100 2))
-  (sp-group-add g e1)
-  (sp-group-add g e2)
+  (set e1 (test-helper-event 0 20 1) e2 (test-helper-event 20 40 2) e3 (test-helper-event 50 100 3))
+  (sp-group-add g1 e1)
+  (sp-group-add g1 e2)
+  (sp-group-add g g1)
+  (sp-group-add g e3)
   (sp-group-memory-add g m1)
   (sp-group-memory-add g m2)
   (sp-group-prepare g)
@@ -461,11 +472,13 @@
   (g.f 50 100 (sp-block-with-offset block 50) &g)
   (g.free &g)
   (test-helper-assert "block contents event 1"
-    (and (= 1 (array-get block.samples 0 0)) (= 1 (array-get block.samples 0 39))))
-  (test-helper-assert "block contents gap"
-    (and (= 0 (array-get block.samples 0 40)) (= 0 (array-get block.samples 0 49))))
+    (and (= 1 (array-get block.samples 0 10)) (= 1 (array-get block.samples 0 29))))
   (test-helper-assert "block contents event 2"
-    (and (= 2 (array-get block.samples 0 50)) (= 2 (array-get block.samples 0 99))))
+    (and (= 2 (array-get block.samples 0 30)) (= 2 (array-get block.samples 0 39))))
+  (test-helper-assert "block contents gap"
+    (and (> 1 (array-get block.samples 0 40)) (> 1 (array-get block.samples 0 49))))
+  (test-helper-assert "block contents event 3"
+    (and (= 3 (array-get block.samples 0 50)) (= 3 (array-get block.samples 0 99))))
   (sp-block-free block)
   (label exit status-return))
 

@@ -1,115 +1,74 @@
+/* creates few seconds long wav file with a synthesised bassdrum.
+an example for using the synthesiser and sequence output using event groups.
+can be compiled with: gcc -lsph-sp example.c -o example.exe */
+#include <stdio.h>
 #include <sph-sp.h>
-#define song_duration 9600
-
-status_t wvl_path_new(sp_count_t duration, sp_count_t** out)
+status_t
+g1_new(sp_time_t start, sp_time_t rate, sp_event_t* out)
 {
   status_declare;
-  sp_sample_t* wvl_float;
-  status_require((sp_samples_new(duration, (&wvl_float))));
-  status_require((sp_counts_new(duration, out)));
-  spline_path_new_get_4(wvl_float,
-    duration,
-    (spline_path_move(0, 600)),
-    (spline_path_line(24000, 1800)),
-    (spline_path_line(duration, 2400)),
-    (spline_path_constant()));
-  sp_counts_from_samples(wvl_float, duration, (*out));
+  sp_event_t b1;
+  sp_time_t b1_duration;
+  sp_synth_partial_t b1_partials[1];
+  sp_sample_t* b1_p1_amp;
+  sp_time_t* b1_p1_wvl;
+  sp_group_declare(g);
+  status_require((sp_group_new(0, 2, 4, (&g))));
+  b1_duration = rt(1, 2);
+  status_require((sp_path_samples_3((&b1_p1_amp),
+    b1_duration,
+    (sp_path_line((rt(1, 8)), 1)),
+    (sp_path_line((rt(3, 8)), 0)),
+    (sp_path_line(b1_duration, 0)))));
+  sp_group_memory_add(g, b1_p1_amp);
+  status_require((sp_path_times_3((&b1_p1_wvl),
+    b1_duration,
+    (sp_path_line((rt(1, 8)), (rt(1, 128)))),
+    (sp_path_line((rt(2, 8)), (rt(1, 64)))),
+    (sp_path_line(b1_duration, (rt(1, 16)))))));
+  sp_group_memory_add(g, b1_p1_wvl);
+  b1_partials[0] = sp_synth_partial_2(
+    0, b1_duration, 0, b1_p1_amp, b1_p1_amp, b1_p1_wvl, b1_p1_wvl, 0, 0);
+  status_require((sp_synth_event(0, b1_duration, 2, 1, b1_partials, (&b1))));
+  sp_group_add(g, b1);
+  sp_group_prepare(g);
+  *out = g;
 exit:
-  return (status);
+  if (status_is_failure) {
+    sp_group_free(g);
+  };
+  status_return;
 }
-
-status_t wvl2_path_new(sp_count_t duration, sp_count_t** out)
+status_t
+song_new(sp_time_t rate, sp_event_t* out)
 {
   status_declare;
-  sp_sample_t* wvl_float;
-  status_require((sp_samples_new(duration, (&wvl_float))));
-  status_require((sp_counts_new(duration, out)));
-  spline_path_new_get_4(wvl_float,
-    duration,
-    (spline_path_move(0, 20)),
-    (spline_path_line(24000, 10)),
-    (spline_path_line(duration, 40)),
-    (spline_path_constant()));
-  sp_counts_from_samples(wvl_float, duration, (*out));
-exit:
-  return (status);
-}
-
-status_t amp_path_new(sp_count_t duration, sp_sample_t** out)
-{
-  status_declare;
-  status_require((sp_samples_new(duration, out)));
-  status_id_require((spline_path_new_get_4((*out),
-    duration,
-    (spline_path_move(0, (0.3))),
-    (spline_path_line(24000, (0.1))),
-    (spline_path_line(duration, 0)),
-    (spline_path_constant()))));
-exit:
-  return (status);
-}
-
-status_t constant_path_new(sp_sample_t value, sp_count_t duration, sp_sample_t** out)
-{
-  status_declare;
-  status_require((sp_samples_new(duration, out)));
-  status_id_require((spline_path_new_get_2(
-    (*out), duration, (spline_path_move(0, value)), (spline_path_constant()))));
-exit:
-  return (status);
-}
-
-int main()
-{
-  status_declare;
-  sp_block_t out;
-  sp_count_t* wvl;
-  sp_count_t* wvl2;
-  sp_sample_t* cut_l;
-  sp_sample_t* cut_h;
-  sp_sample_t* trn_l;
-  sp_sample_t* trn_h;
-  sp_sample_t* amp1;
-  sp_sample_t* amp2;
-  sp_sample_t* amp[sp_channel_limit];
-  sp_synth_partial_t prt;
-  sp_count_t events_size;
   sp_event_t e;
-  sp_event_t events[10];
-  sp_synth_partial_t config[10];
-  sp_count_t* state;
-  events_size = 0;
-  sp_initialise(0);
-  status_require((wvl_path_new(song_duration, (&wvl))));
-  status_require((wvl2_path_new(song_duration, (&wvl2))));
-  status_require((amp_path_new(song_duration, (&amp1))));
-  status_require((constant_path_new((0.01), song_duration, (&cut_l))));
-  status_require((constant_path_new((0.1), song_duration, (&cut_h))));
-  status_require((constant_path_new((0.07), song_duration, (&trn_l))));
-  status_require((constant_path_new((0.5), song_duration, (&amp2))));
-  trn_h = trn_l;
-  config[0] = sp_synth_partial_1(0, song_duration, 0, amp1, wvl, 0);
-  config[1] = sp_synth_partial_1(0, song_duration, 1, amp2, wvl2, 0);
-  status_require((sp_synth_event(0, song_duration, 1, 2, config, events)));
-  events_size = 1;
-  amp[0] = cut_h;
-  status_require((sp_noise_event(0,
-    song_duration,
-    amp,
-    cut_l,
-    cut_h,
-    trn_l,
-    trn_h,
-    0,
-    0,
-    sp_default_random_state,
-    (events_size + events))));
-  events_size = (1 + events_size);
-  sp_seq_events_prepare(events, events_size);
-  status_require((sp_block_new(1, song_duration, (&out))));
-  sp_seq(0, song_duration, out, 0, events, events_size);
-  sp_plot_samples((*(out.samples)), song_duration);
-  sp_events_free(events, events_size);
+  sp_group_declare(song);
+  status_require((sp_group_new(0, 2, 0, (&song))));
+  status_require((g1_new(0, rate, (&e))));
+  sp_group_append((&song), e);
+  status_require((g1_new(0, rate, (&e))));
+  sp_group_append((&song), e);
+  sp_group_prepare(song);
+  *out = song;
 exit:
+  return (status);
+}
+int
+main()
+{
+  status_declare;
+  sp_initialise(1);
+  sp_event_t song;
+  sp_time_t rate;
+  declare_render_config(render_config);
+  rate = render_config.rate;
+  status_require((song_new(rate, (&song))));
+  status_require(
+    (sp_render_file(song, 0, (rt(3, 1)), render_config, ("/tmp/song.wav"))));
+  (song.free)((&song));
+exit:
+  printf("status: %d\n", (status.id));
   return ((status.id));
 }

@@ -283,6 +283,17 @@ void sp_group_event_free(sp_event_t* a);
 #define sp_path_bezier spline_path_bezier
 #define sp_path_constant spline_path_constant
 #define sp_path_path spline_path_path
+/* main 2 */
+#define declare_render_config(name) sp_render_config_t name = { .channels = 2, .rate = 96000, .block_size = 96000 }
+/** returns n/d fractions of the sample rate. for example, 1/2 is half the sample rate.
+     this macro references a local variable named rate which must exists and contain the current sample rate */
+#define rt(n, d) ((sp_time_t)(((rate / d) * n)))
+typedef struct {
+  sp_time_t rate;
+  sp_time_t block_size;
+  sp_channels_t channels;
+} sp_render_config_t;
+status_t sp_render_file(sp_event_t event, sp_time_t start, sp_time_t duration, sp_render_config_t config, uint8_t* path);
 int spline_path_new_get_2(sp_sample_t* out, sp_time_t duration, spline_path_segment_t s1, spline_path_segment_t s2);
 int spline_path_new_get_3(sp_sample_t* out, sp_time_t duration, spline_path_segment_t s1, spline_path_segment_t s2, spline_path_segment_t s3);
 int spline_path_new_get_4(sp_sample_t* out, sp_time_t duration, spline_path_segment_t s1, spline_path_segment_t s2, spline_path_segment_t s3, spline_path_segment_t s4);

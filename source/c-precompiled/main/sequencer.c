@@ -7,7 +7,7 @@ void sp_event_sort_swap(void* a, ssize_t b, ssize_t c) {
 uint8_t sp_event_sort_less_p(void* a, ssize_t b, ssize_t c) { return (((((sp_event_t*)(a))[b]).start < (((sp_event_t*)(a))[c]).start)); }
 void sp_seq_events_prepare(sp_event_t* data, sp_time_t size) { quicksort(sp_event_sort_less_p, sp_event_sort_swap, data, 0, (size - 1)); }
 /** event arrays must have been prepared/sorted with sp-seq-event-prepare for seq to work correctly.
-  event functions receive event relative start/end time and block has index 0 at start */
+   event functions receive event relative start/end time and block has index 0 at start */
 void sp_seq(sp_time_t start, sp_time_t end, sp_block_t out, sp_event_t* events, sp_time_t size) {
   sp_time_t e_out_start;
   sp_event_t e;
@@ -319,7 +319,7 @@ void sp_group_event_free(sp_event_t* a) {
   i_array_free((s.memory));
   free((a->state));
 }
-/** assumes that events are never called outside their start end range */
+/** free past events early, they might be sub-group trees */
 void sp_group_event_f(sp_time_t start, sp_time_t end, sp_block_t out, sp_event_t* event) {
   sp_group_event_state_t* s = event->state;
   while ((s->events.current->end <= start)) {
@@ -330,7 +330,18 @@ void sp_group_event_f(sp_time_t start, sp_time_t end, sp_block_t out, sp_event_t
   };
   sp_seq(start, end, out, (s->events.current), (s->events.unused - s->events.current));
 }
-void sp_group_event_parallel_f(sp_time_t start, sp_time_t end, sp_block_t out, sp_event_t* event) { printf("parallel group is running\n"); }
+/** can be used in place of sp-group-event-f.
+   seq-parallel can fail if there is not enough memory, but this is ignored currently */
+void sp_group_event_parallel_f(sp_time_t start, sp_time_t end, sp_block_t out, sp_event_t* event) {
+  sp_group_event_state_t* s = event->state;
+  while ((s->events.current->end <= start)) {
+    if (s->events.current->free) {
+      (s->events.current->free)((s->events.current));
+    };
+    i_array_forward((s->events));
+  };
+  sp_seq_parallel(start, end, out, (s->events.current), (s->events.unused - s->events.current));
+}
 status_t sp_group_new(sp_time_t start, sp_group_size_t event_size, sp_group_size_t memory_size, sp_event_t* out) {
   status_declare;
   sp_group_event_state_t* s;
@@ -356,7 +367,7 @@ exit:
   return (status);
 }
 void sp_group_append(sp_event_t* a, sp_event_t event) {
-  printf("event-start %lu\n", (a->end));
-  event.start = a->end;
+  event.start += a->end;
+  event.end += a->end;
   sp_group_add((*a), event);
 }

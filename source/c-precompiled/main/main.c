@@ -333,9 +333,32 @@ void sp_samples_to_time(sp_sample_t* in, sp_time_t in_size, sp_time_t* out) {
 #include "../main/synthesiser.c"
 #include "../main/sequencer.c"
 #include "../main/path.c"
-#define block_size 96000
-#define rate 96000
-typedef status_t (*sp_seq_pointer_t)(sp_time_t, sp_time_t, sp_block_t, sp_event_t*, sp_time_t);
+/** render a single event to file. event can be a group */
+status_t sp_render_file(sp_event_t event, sp_time_t start, sp_time_t duration, sp_render_config_t config, uint8_t* path) {
+  status_declare;
+  sp_block_t block;
+  sp_time_t end;
+  uint8_t file_is_open;
+  sp_file_t file;
+  sp_time_t i;
+  sp_time_t written;
+  file_is_open = 0;
+  status_require((sp_block_new((config.channels), (config.block_size), (&block))));
+  status_require((sp_file_open(path, sp_file_mode_write, (config.channels), (config.rate), (&file))));
+  file_is_open = 1;
+  end = (duration / config.block_size);
+  end = ((1 > end) ? config.block_size : (end * config.block_size));
+  for (i = 0; (i < end); i += config.block_size) {
+    sp_seq(i, (i + config.block_size), block, (&event), 1);
+    status_require((sp_file_write((&file), (block.samples), (config.block_size), (&written))));
+    sp_block_zero(block);
+  };
+exit:
+  if (file_is_open) {
+    sp_file_close((&file));
+  };
+  status_return;
+}
 /** fills the sine wave lookup table */
 status_t sp_initialise(uint16_t cpu_count) {
   status_declare;
