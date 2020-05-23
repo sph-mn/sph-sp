@@ -10,14 +10,8 @@
 # delayed event initialisation
 * only generate event dependencies when event is needed
 * to reduce memory usage
-* option
-  * initialiser function for events
-  * seq would have to call them
-  * pro
-    * supported for all events
-  * con
-    * seq overhead
-* option
+* option - selected
+  * to be implemented if needed as array of event initialisers and arguments in group
   * initialiser function and arguments arrays
   * groups can filter and call before seq
   * con
@@ -25,6 +19,13 @@
   * pro
     * less space needed for other event types
     * not every event will be checked
+* option
+  * initialiser function for events
+  * seq would have to call them
+  * pro
+    * supported for all events
+  * con
+    * seq overhead
 
 # group parallelisation
 * option: replaced group function - selected
@@ -35,3 +36,11 @@
 # start/end for events or start/duration
 * duration is always dependent on start and the event can be moved in time just by updating start
 * calculations are simpler with an end value. it would have to be calculated for each event check or cached in a new struct field with more code complexity. `if(end <= t) {continue;} else if(end <= t) {break;}`
+
+# should seq return the event offset
+* selected: no, extra declaration/count/return effort is even easier handled if needed in caller
+
+# notes
+* event start/end times are event relative
+* events must never be called for start/end outside their range
+* out is positioned at start with index 0 so that seq and event.f behave the same when nested

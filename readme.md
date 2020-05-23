@@ -21,6 +21,8 @@ c code and shared library for sound synthesis and sequencing. the sound processo
   * event renderer for parallel processing with custom routines
   * events for filtered noise and synth output
   * event groups that compose for riffs and songs
+* more
+  * higher level features are in the making
 
 [code example](other/example.c)
 
