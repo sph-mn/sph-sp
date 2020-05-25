@@ -26,8 +26,8 @@
 #ifndef sp_sample_rate_t
 #define sp_sample_rate_t uint32_t
 #endif
-#ifndef sp_sample_sum
-#define sp_sample_sum f64_sum
+#ifndef sp_samples_sum
+#define sp_samples_sum f64_sum
 #endif
 #ifndef sp_sample_t
 #define sp_sample_t double
@@ -56,6 +56,7 @@
 #include <sph/random.h>
 #include <sph/i-array.c>
 #include <sph/memreg-heap.c>
+#include <sph/float.c>
 /* main */
 #define boolean uint8_t
 #define f64 double
@@ -132,6 +133,7 @@ status_t sp_null_ir(sp_sample_t** out_ir, sp_time_t* out_len);
 status_t sp_passthrough_ir(sp_sample_t** out_ir, sp_time_t* out_len);
 status_t sp_initialise(uint16_t cpu_count);
 void sp_random_samples(sp_random_state_t* state, sp_time_t size, sp_sample_t* out);
+void sp_random_times(sp_random_state_t* state, sp_time_t size, sp_time_t* out);
 status_t sp_samples_new(sp_time_t size, sp_sample_t** out);
 status_t sp_times_new(sp_time_t size, sp_time_t** out);
 void sp_samples_to_time(sp_sample_t* in, sp_time_t in_size, sp_time_t* out);

@@ -10,7 +10,7 @@
   spline-path-time-t sp-time-t
   spline-path-value-t sp-sample-t
   sp-sample-rate-t uint32-t
-  sp-sample-sum f64-sum
+  sp-samples-sum f64-sum
   sp-sample-t double
   sp-sf-read sf-readf-double
   sp-sf-write sf-writef-double
@@ -20,7 +20,7 @@
   sp-time-t uint64-t)
 
 (pre-include "sph/status.c" "sph/spline-path.h"
-  "sph/types.c" "sph/random.h" "sph/i-array.c" "sph/memreg-heap.c")
+  "sph/types.c" "sph/random.h" "sph/i-array.c" "sph/memreg-heap.c" "sph/float.c")
 
 (sc-comment "main")
 
@@ -108,6 +108,7 @@
   (sp-passthrough-ir out-ir out-len) (status-t sp-sample-t** sp-time-t*)
   (sp-initialise cpu-count) (status-t uint16-t)
   (sp-random-samples state size out) (void sp-random-state-t* sp-time-t sp-sample-t*)
+  (sp-random-times state size out) (void sp-random-state-t* sp-time-t sp-time-t*)
   (sp-samples-new size out) (status-t sp-time-t sp-sample-t**)
   (sp-times-new size out) (status-t sp-time-t sp-time-t**)
   (sp-samples->time in in-size out) (void sp-sample-t* sp-time-t sp-time-t*))

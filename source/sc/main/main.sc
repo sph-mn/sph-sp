@@ -3,8 +3,8 @@
 
 (pre-include "stdio.h" "fcntl.h"
   "sndfile.h" "foreign/nayuki-fft/fft.c" "../main/sph-sp.h"
-  "sph/spline-path.c" "sph/float.c" "sph/helper.c"
-  "sph/memreg.c" "sph/quicksort.c" "sph/queue.c" "sph/thread-pool.c" "sph/futures.c" "sph/random.c")
+  "sph/spline-path.c" "sph/helper.c" "sph/memreg.c"
+  "sph/quicksort.c" "sph/queue.c" "sph/thread-pool.c" "sph/futures.c" "sph/random.c")
 
 (pre-define
   sp-status-declare (status-declare-group sp-s-group-sp)
@@ -34,9 +34,8 @@
 (define-sp-interleave sp-deinterleave sp-sample-t
   (set (array-get (array-get a channel) a-size) (array-get b b-size)))
 
-(sc-no-semicolon
-  (define-sph-random sp-random-samples sp-time-t
-    sp-sample-t (- (* 2 (f64-from-u64 result-plus)) 1.0)))
+(define-sph-random sp-random-samples sp-time-t sp-sample-t (- (* 2 (f64-from-u64 result-plus)) 1.0))
+(define-sph-random sp-random-times sp-time-t sp-time-t result-plus)
 
 (define (display-samples a len) (void sp-sample-t* sp-time-t)
   "display a sample array in one line"
@@ -154,22 +153,25 @@
       (array-get sums 2) 0
       in-left (max in (- in-window radius))
       in-right (min in-end (+ in-window radius))
-      (array-get sums 1) (sp-sample-sum in-left (+ 1 (- in-right in-left))))
+      (array-get sums 1) (sp-samples-sum in-left (+ 1 (- in-right in-left))))
     (if (and (< (- in-window in-left) radius) prev)
       (begin
         (set
           in-missing (- radius (- in-window in-left))
           outside (max prev (- prev-end in-missing))
           outside-count (- prev-end outside)
-          (array-get sums 0) (sp-sample-sum outside outside-count))))
+          (array-get sums 0) (sp-samples-sum outside outside-count))))
     (if (and (< (- in-right in-window) radius) next)
       (begin
         (set
           in-missing (- radius (- in-right in-window))
           outside next
           outside-count (min (- next-end next) in-missing)
-          (array-get sums 2) (sp-sample-sum outside outside-count))))
-    (set (pointer-get out) (/ (sp-sample-sum sums 3) width) out (+ 1 out) in-window (+ 1 in-window)))
+          (array-get sums 2) (sp-samples-sum outside outside-count))))
+    (set
+      (pointer-get out) (/ (sp-samples-sum sums 3) width)
+      out (+ 1 out)
+      in-window (+ 1 in-window)))
   status-return)
 
 (define (sp-spectral-inversion-ir a a-len) (void sp-sample-t* sp-time-t)

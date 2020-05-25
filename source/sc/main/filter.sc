@@ -139,7 +139,7 @@
   (for ((set i 0) (< i len) (set i (+ 1 i)))
     (set (array-get ir i) (* (sp-window-blackman i len) (sp-sinc (* 2 cutoff (- i center-index))))))
   (sc-comment "scale to get unity gain")
-  (set sum (sp-sample-sum ir len))
+  (set sum (sp-samples-sum ir len))
   (for ((set i 0) (< i len) (set i (+ 1 i))) (set (array-get ir i) (/ (array-get ir i) sum)))
   (if is-high-pass (sp-spectral-inversion-ir ir len))
   (set *out-ir ir *out-len len)

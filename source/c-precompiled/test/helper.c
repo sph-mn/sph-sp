@@ -5,7 +5,6 @@
 #include <float.h>
 #include <math.h>
 #include "../main/sph-sp.h"
-#include <sph/float.c>
 #include <sph/helper.c>
 #include <sph/memreg.c>
 #include <sph/string.c>

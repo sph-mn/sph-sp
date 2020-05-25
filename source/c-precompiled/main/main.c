@@ -6,7 +6,6 @@
 #include <foreign/nayuki-fft/fft.c>
 #include "../main/sph-sp.h"
 #include <sph/spline-path.c>
-#include <sph/float.c>
 #include <sph/helper.c>
 #include <sph/memreg.c>
 #include <sph/quicksort.c>
@@ -50,9 +49,10 @@
 #define sp_memory_error status_set_goto(sp_s_group_sp, sp_s_id_memory)
 define_sp_interleave(sp_interleave, sp_sample_t, (b[b_size] = (a[channel])[a_size]))
   define_sp_interleave(sp_deinterleave, sp_sample_t, ((a[channel])[a_size] = b[b_size]))
-    define_sph_random(sp_random_samples, sp_time_t, sp_sample_t, ((2 * f64_from_u64(result_plus)) - 1.0))
-  /** display a sample array in one line */
-  void display_samples(sp_sample_t* a, sp_time_t len) {
+    define_sph_random(sp_random_samples, sp_time_t, sp_sample_t, ((2 * f64_from_u64(result_plus)) - 1.0));
+define_sph_random(sp_random_times, sp_time_t, sp_time_t, result_plus);
+/** display a sample array in one line */
+void display_samples(sp_sample_t* a, sp_time_t len) {
   sp_time_t i;
   printf(("%.17g"), (a[0]));
   for (i = 1; (i < len); i = (1 + i)) {
@@ -182,20 +182,20 @@ status_t sp_moving_average(sp_sample_t* in, sp_sample_t* in_end, sp_sample_t* in
     sums[2] = 0;
     in_left = max(in, (in_window - radius));
     in_right = min(in_end, (in_window + radius));
-    sums[1] = sp_sample_sum(in_left, (1 + (in_right - in_left)));
+    sums[1] = sp_samples_sum(in_left, (1 + (in_right - in_left)));
     if (((in_window - in_left) < radius) && prev) {
       in_missing = (radius - (in_window - in_left));
       outside = max(prev, (prev_end - in_missing));
       outside_count = (prev_end - outside);
-      sums[0] = sp_sample_sum(outside, outside_count);
+      sums[0] = sp_samples_sum(outside, outside_count);
     };
     if (((in_right - in_window) < radius) && next) {
       in_missing = (radius - (in_right - in_window));
       outside = next;
       outside_count = min((next_end - next), in_missing);
-      sums[2] = sp_sample_sum(outside, outside_count);
+      sums[2] = sp_samples_sum(outside, outside_count);
     };
-    *out = (sp_sample_sum(sums, 3) / width);
+    *out = (sp_samples_sum(sums, 3) / width);
     out = (1 + out);
     in_window = (1 + in_window);
   };

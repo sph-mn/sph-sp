@@ -143,7 +143,7 @@ nan can be set here if the freq and transition values are invalid */
     ir[i] = (sp_window_blackman(i, len) * sp_sinc((2 * cutoff * (i - center_index))));
   };
   /* scale to get unity gain */
-  sum = sp_sample_sum(ir, len);
+  sum = sp_samples_sum(ir, len);
   for (i = 0; (i < len); i = (1 + i)) {
     ir[i] = (ir[i] / sum);
   };
