@@ -4,7 +4,7 @@
 (pre-include "stdio.h" "fcntl.h"
   "sndfile.h" "foreign/nayuki-fft/fft.c" "../main/sph-sp.h"
   "sph/spline-path.c" "sph/helper.c" "sph/memreg.c"
-  "sph/quicksort.c" "sph/queue.c" "sph/thread-pool.c" "sph/futures.c" "sph/random.c")
+  "sph/quicksort.c" "sph/queue.c" "sph/thread-pool.c" "sph/futures.c")
 
 (pre-define
   sp-status-declare (status-declare-group sp-s-group-sp)
@@ -34,8 +34,8 @@
 (define-sp-interleave sp-deinterleave sp-sample-t
   (set (array-get (array-get a channel) a-size) (array-get b b-size)))
 
-(define-sph-random sp-random-samples sp-time-t sp-sample-t (- (* 2 (f64-from-u64 result-plus)) 1.0))
-(define-sph-random sp-random-times sp-time-t sp-time-t result-plus)
+(sph-random-define-x256p sp-random-samples sp-sample-t (- (* 2 (sph-random-f64-from-u64 a)) 1.0))
+(sph-random-define-x256ss sp-random-times sp-time-t a)
 
 (define (display-samples a len) (void sp-sample-t* sp-time-t)
   "display a sample array in one line"

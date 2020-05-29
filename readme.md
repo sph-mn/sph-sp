@@ -62,7 +62,7 @@ the file `source/c-precompiled/main/sph-sp.h` can be edited before compilation t
 |sp_file_format|(SF_FORMAT_WAV \| SF_FORMAT_DOUBLE)|soundfile file format. a combination of file and sample format soundfile constants, for example (SF_FORMAT_AU \| SF_FORMAT_DOUBLE). conversion is done automatically as necessary|
 |sp_float_t|double|data type for floating point values other than samples|
 |sp_sample_rate_t|uint32_t|data type for sample rates|
-|sp_sample_sum|f64_sum|function (sp_sample_t* size_t -> sp_sample_t) that sums samples, by default with kahan error compensation|
+|sp_samples_sum|f64_sum|function (sp_sample_t* size_t -> sp_sample_t) that sums samples, by default with kahan error compensation|
 |sp_sample_t|double|sample format. f32 should be possible but integer formats are currently not possible because most processors dont work with them|
 |sp_sf_read|sf_readf_double|libsndfile file reader function to use|
 |sp_sf_write|sf_writef_double|libsndfile file writer function to use|

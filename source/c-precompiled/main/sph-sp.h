@@ -53,7 +53,7 @@
 #include <sph/status.c>
 #include <sph/spline-path.h>
 #include <sph/types.c>
-#include <sph/random.h>
+#include <sph/random.c>
 #include <sph/i-array.c>
 #include <sph/memreg-heap.c>
 #include <sph/float.c>
@@ -70,7 +70,6 @@
 #define sp_s_group_sndfile "sndfile"
 #define sp_s_group_sp "sp"
 #define sp_s_group_sph "sph"
-#define sp_random sph_random
 #define sp_random_state_t sph_random_state_t
 #define sp_random_state_new sph_random_state_new
 #define sp_s_id_undefined 1

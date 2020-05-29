@@ -12,7 +12,6 @@
 #include <sph/queue.c>
 #include <sph/thread-pool.c>
 #include <sph/futures.c>
-#include <sph/random.c>
 #define sp_status_declare status_declare_group(sp_s_group_sp)
 #define max(a, b) ((a > b) ? a : b)
 #define min(a, b) ((a < b) ? a : b)
@@ -49,8 +48,8 @@
 #define sp_memory_error status_set_goto(sp_s_group_sp, sp_s_id_memory)
 define_sp_interleave(sp_interleave, sp_sample_t, (b[b_size] = (a[channel])[a_size]))
   define_sp_interleave(sp_deinterleave, sp_sample_t, ((a[channel])[a_size] = b[b_size]))
-    define_sph_random(sp_random_samples, sp_time_t, sp_sample_t, ((2 * f64_from_u64(result_plus)) - 1.0));
-define_sph_random(sp_random_times, sp_time_t, sp_time_t, result_plus);
+    sph_random_define_x256p(sp_random_samples, sp_sample_t, ((2 * sph_random_f64_from_u64(a)) - 1.0));
+sph_random_define_x256ss(sp_random_times, sp_time_t, a);
 /** display a sample array in one line */
 void display_samples(sp_sample_t* a, sp_time_t len) {
   sp_time_t i;

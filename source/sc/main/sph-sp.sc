@@ -20,7 +20,7 @@
   sp-time-t uint64-t)
 
 (pre-include "sph/status.c" "sph/spline-path.h"
-  "sph/types.c" "sph/random.h" "sph/i-array.c" "sph/memreg-heap.c" "sph/float.c")
+  "sph/types.c" "sph/random.c" "sph/i-array.c" "sph/memreg-heap.c" "sph/float.c")
 
 (sc-comment "main")
 
@@ -37,7 +37,6 @@
   sp-s-group-sndfile "sndfile"
   sp-s-group-sp "sp"
   sp-s-group-sph "sph"
-  sp-random sph-random
   sp-random-state-t sph-random-state-t
   sp-random-state-new sph-random-state-new
   sp-s-id-undefined 1
