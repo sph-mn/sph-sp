@@ -179,15 +179,15 @@ exit:
 }
 status_t test_file() {
   status_declare;
-  sp_time_t channel;
-  sp_channels_t channel_count;
-  sp_block_t block;
   sp_block_t block_2;
-  sp_time_t len;
+  sp_block_t block;
+  sp_channels_t channel_count;
+  sp_time_t channel;
   sp_file_t file;
+  sp_time_t len;
   sp_time_t position;
-  sp_time_t sample_count;
   sp_time_t result_sample_count;
+  sp_time_t sample_count;
   sp_sample_rate_t sample_rate;
   int8_t unequal;
   if (file_exists(test_file_path)) {
@@ -198,8 +198,6 @@ status_t test_file() {
   sample_count = 5;
   position = 0;
   channel = channel_count;
-  sp_block_zero(block);
-  sp_block_zero(block_2);
   status_require((sp_block_new(channel_count, sample_count, (&block))));
   status_require((sp_block_new(channel_count, sample_count, (&block_2))));
   while (channel) {
@@ -391,7 +389,7 @@ status_t test_sp_noise_event() {
   status_require((sp_noise_event(0, sp_noise_duration, amp, cut_l, cut_h, trn_l, trn_h, 0, 30, sp_default_random_state, events)));
   events_size = 1;
   sp_seq(0, sp_noise_duration, out, events, events_size);
-  sp_events_free(events, events_size);
+  sp_events_array_free(events, events_size);
   sp_block_free(out);
 exit:
   status_return;
@@ -434,7 +432,7 @@ status_t test_sp_cheap_noise_event() {
   status_require((sp_cheap_noise_event_lp(0, sp_noise_duration, amp, cut, 1, 0, 0, sp_default_random_state, events)));
   events_size = 1;
   sp_seq(0, sp_noise_duration, out, events, events_size);
-  sp_events_free(events, events_size);
+  sp_events_array_free(events, events_size);
   sp_block_free(out);
 exit:
   status_return;
@@ -456,7 +454,7 @@ status_t test_sp_seq() {
   test_helper_assert("block contents 1 event 2", ((2 == (out.samples)[0][41]) && (2 == (out.samples)[0][99])));
   /* sp-seq-parallel */
   status_require((sp_seq_parallel(0, 100, out, events, sp_seq_event_count)));
-  sp_events_free(events, sp_seq_event_count);
+  sp_events_array_free(events, sp_seq_event_count);
   sp_block_free(out);
 exit:
   status_return;
@@ -471,8 +469,8 @@ status_t test_sp_group() {
   sp_block_t block;
   sp_time_t* m1;
   sp_time_t* m2;
-  status_require((sp_times_new(100, (&m1))));
-  status_require((sp_times_new(100, (&m2))));
+  status_require((sp_time_array_new(100, (&m1))));
+  status_require((sp_time_array_new(100, (&m2))));
   status_require((sp_group_new(0, 2, 2, (&g))));
   status_require((sp_group_new(10, 2, 0, (&g1))));
   status_require((sp_block_new(2, 100, (&block))));
@@ -534,10 +532,21 @@ status_t test_sp_synth_event() {
 exit:
   status_return;
 }
+status_t test_path() {
+  sp_samples_t samples;
+  sp_times_t times;
+  status_declare;
+  status_require((sp_path_samples_2((&samples), 100, (sp_path_line(10, 1)), (sp_path_line(100, 0)))));
+  status_require((sp_path_times_2((&times), 100, (sp_path_line(10, 1)), (sp_path_line(100, 0)))));
+exit:
+  status_return;
+}
 /** "goto exit" can skip events */
 int main() {
   status_declare;
   sp_initialise(3);
+  test_helper_test_one(test_path);
+  test_helper_test_one(test_file);
   test_helper_test_one(test_sp_group);
   test_helper_test_one(test_sp_synth_event);
   test_helper_test_one(test_sp_seq);
@@ -553,7 +562,6 @@ int main() {
   test_helper_test_one(test_base);
   test_helper_test_one(test_spectral_reversal_ir);
   test_helper_test_one(test_convolve);
-  test_helper_test_one(test_file);
   test_helper_test_one(test_windowed_sinc);
 exit:
   test_helper_display_summary();

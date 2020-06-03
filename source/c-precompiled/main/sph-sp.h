@@ -26,8 +26,8 @@
 #ifndef sp_sample_rate_t
 #define sp_sample_rate_t uint32_t
 #endif
-#ifndef sp_samples_sum
-#define sp_samples_sum f64_sum
+#ifndef sp_sample_array_sum
+#define sp_sample_array_sum f64_sum
 #endif
 #ifndef sp_sample_t
 #define sp_sample_t double
@@ -52,9 +52,9 @@
 #endif
 #include <sph/status.c>
 #include <sph/spline-path.h>
-#include <sph/types.c>
 #include <sph/random.c>
-#include <sph/i-array.c>
+#include <sph/array3.c>
+#include <sph/array4.c>
 #include <sph/memreg-heap.c>
 #include <sph/float.c>
 /* main */
@@ -86,14 +86,11 @@
 #define sp_s_id_file_closed 11
 #define sp_s_id_file_position 12
 #define sp_s_id_file_type 13
-/** sample count to bit octets count */
-#define sp_octets_to_samples(a) (a / sizeof(sp_sample_t))
-#define sp_samples_to_octets(a) (a * sizeof(sp_sample_t))
 #define sp_cheap_round_positive(a) ((sp_time_t)((0.5 + a)))
 #define sp_cheap_floor_positive(a) ((sp_time_t)(a))
 #define sp_cheap_ceiling_positive(a) (((sp_time_t)(a)) + (((sp_time_t)(a)) < a))
-#define sp_block_zero(a) a.channels = 0
-#define sp_samples_zero(a, size) memset(a, 0, (size * sizeof(sp_sample_t)))
+#define sp_sample_array_zero(a, size) memset(a, 0, (size * sizeof(sp_sample_t)))
+#define sp_time_array_zero(a, size) memset(a, 0, (size * sizeof(sp_time_t)))
 typedef struct {
   sp_channels_t channels;
   sp_time_t size;
@@ -107,6 +104,7 @@ typedef struct {
 } sp_file_t;
 uint32_t sp_cpu_count;
 sp_random_state_t sp_default_random_state;
+void sp_block_zero(sp_block_t a);
 status_t sp_file_read(sp_file_t* file, sp_time_t sample_count, sp_sample_t** result_block, sp_time_t* result_sample_count);
 status_t sp_file_write(sp_file_t* file, sp_sample_t** block, sp_time_t sample_count, sp_time_t* result_sample_count);
 status_t sp_file_position(sp_file_t* file, sp_time_t* result_position);
@@ -133,9 +131,9 @@ status_t sp_passthrough_ir(sp_sample_t** out_ir, sp_time_t* out_len);
 status_t sp_initialise(uint16_t cpu_count);
 void sp_random_samples(sp_random_state_t* state, sp_time_t size, sp_sample_t* out);
 void sp_random_times(sp_random_state_t* state, sp_time_t size, sp_time_t* out);
-status_t sp_samples_new(sp_time_t size, sp_sample_t** out);
-status_t sp_times_new(sp_time_t size, sp_time_t** out);
-void sp_samples_to_time(sp_sample_t* in, sp_time_t in_size, sp_time_t* out);
+status_t sp_sample_array_new(sp_time_t size, sp_sample_t** out);
+status_t sp_time_array_new(sp_time_t size, sp_time_t** out);
+void sp_sample_array_to_time_array(sp_sample_t* in, sp_time_t in_size, sp_time_t* out);
 /* filter */
 #define sp_filter_state_t sp_convolution_filter_state_t
 #define sp_filter_state_free sp_convolution_filter_state_free
@@ -229,17 +227,17 @@ sp_sample_t sp_triangle_96(sp_time_t t);
 #define sp_group_events(a) ((sp_group_event_state_t*)(a.state))->events
 #define sp_group_memory(a) ((sp_group_event_state_t*)(a.state))->memory
 #define sp_group_memory_add(a, pointer) \
-  if (i_array_space((sp_group_memory(a)))) { \
-    i_array_add((sp_group_memory(a)), pointer); \
+  if (array4_not_full((sp_group_memory(a)))) { \
+    array4_add((sp_group_memory(a)), pointer); \
   }
 #define sp_group_add(a, event) \
-  if (i_array_space((sp_group_events(a)))) { \
-    i_array_add((sp_group_events(a)), event); \
+  if (array4_not_full((sp_group_events(a)))) { \
+    array4_add((sp_group_events(a)), event); \
     if (a.end < event.end) { \
       a.end = event.end; \
     }; \
   }
-#define sp_group_prepare(a) sp_seq_events_prepare(((sp_group_events(a)).start), (i_array_length((sp_group_events(a)))))
+#define sp_group_prepare(a) sp_seq_events_prepare(((sp_group_events(a)).data), (array4_size((sp_group_events(a)))))
 #define sp_event_declare(variable) \
   sp_event_t variable; \
   variable.state = 0
@@ -267,9 +265,9 @@ void sp_seq(sp_time_t start, sp_time_t end, sp_block_t out, sp_event_t* events, 
 status_t sp_seq_parallel(sp_time_t start, sp_time_t end, sp_block_t out, sp_event_t* events, sp_time_t size);
 status_t sp_synth_event(sp_time_t start, sp_time_t end, sp_channels_t channel_count, sp_time_t config_len, sp_synth_partial_t* config, sp_event_t* out_event);
 status_t sp_noise_event(sp_time_t start, sp_time_t end, sp_sample_t** amp, sp_sample_t* cut_l, sp_sample_t* cut_h, sp_sample_t* trn_l, sp_sample_t* trn_h, uint8_t is_reject, sp_time_t resolution, sp_random_state_t random_state, sp_event_t* out_event);
-void sp_events_free(sp_event_t* events, sp_time_t size);
+void sp_events_array_free(sp_event_t* events, sp_time_t size);
 status_t sp_cheap_noise_event(sp_time_t start, sp_time_t end, sp_sample_t** amp, sp_state_variable_filter_t type, sp_sample_t* cut, sp_time_t passes, sp_sample_t q_factor, sp_time_t resolution, sp_random_state_t random_state, sp_event_t* out_event);
-i_array_declare_type(sp_events, sp_event_t);
+array4_declare_type(sp_events, sp_event_t);
 typedef struct {
   sp_events_t events;
   memreg_register_t memory;
@@ -280,10 +278,23 @@ void sp_group_event_f(sp_time_t start, sp_time_t end, sp_block_t out, sp_event_t
 void sp_group_event_free(sp_event_t* a);
 /* path */
 #define path_move spline_path_move
+#define sp_path_segment_t spline_path_segment_t
+#define sp_path_segment_count_t spline_path_segment_count_t
 #define sp_path_line spline_path_line
 #define sp_path_bezier spline_path_bezier
 #define sp_path_constant spline_path_constant
 #define sp_path_path spline_path_path
+array3_declare_type(sp_times, sp_time_t);
+array3_declare_type(sp_samples, sp_sample_t);
+array3_declare_type(sp_path_segments, spline_path_segment_t);
+status_t sp_path_samples(sp_path_segments_t segments, sp_time_t size, sp_samples_t* out);
+status_t sp_path_samples_2(sp_samples_t* out, sp_time_t size, sp_path_segment_t s1, sp_path_segment_t s2);
+status_t sp_path_samples_3(sp_samples_t* out, sp_time_t size, sp_path_segment_t s1, sp_path_segment_t s2, sp_path_segment_t s3);
+status_t sp_path_samples_4(sp_samples_t* out, sp_time_t size, sp_path_segment_t s1, sp_path_segment_t s2, sp_path_segment_t s3, sp_path_segment_t s4);
+status_t sp_path_times(sp_path_segments_t segments, sp_time_t size, sp_times_t* out);
+status_t sp_path_times_2(sp_times_t* out, sp_time_t size, sp_path_segment_t s1, sp_path_segment_t s2);
+status_t sp_path_times_3(sp_times_t* out, sp_time_t size, sp_path_segment_t s1, sp_path_segment_t s2, sp_path_segment_t s3);
+status_t sp_path_times_4(sp_times_t* out, sp_time_t size, sp_path_segment_t s1, sp_path_segment_t s2, sp_path_segment_t s3, sp_path_segment_t s4);
 /* main 2 */
 #define declare_render_config(name) sp_render_config_t name = { .channels = 2, .rate = 96000, .block_size = 96000 }
 /** returns n/d fractions of the sample rate. for example, 1/2 is half the sample rate.
@@ -295,14 +306,3 @@ typedef struct {
   sp_channels_t channels;
 } sp_render_config_t;
 status_t sp_render_file(sp_event_t event, sp_time_t start, sp_time_t duration, sp_render_config_t config, uint8_t* path);
-int spline_path_new_get_2(sp_sample_t* out, sp_time_t duration, spline_path_segment_t s1, spline_path_segment_t s2);
-int spline_path_new_get_3(sp_sample_t* out, sp_time_t duration, spline_path_segment_t s1, spline_path_segment_t s2, spline_path_segment_t s3);
-int spline_path_new_get_4(sp_sample_t* out, sp_time_t duration, spline_path_segment_t s1, spline_path_segment_t s2, spline_path_segment_t s3, spline_path_segment_t s4);
-status_t sp_path_samples(spline_path_segment_count_t segment_count, spline_path_segment_t* segments, spline_path_time_t size, sp_sample_t** out);
-status_t sp_path_times(spline_path_segment_count_t segment_count, spline_path_segment_t* segments, spline_path_time_t size, sp_time_t** out);
-status_t sp_path_samples_2(sp_sample_t** out, spline_path_time_t size, spline_path_segment_t s1, spline_path_segment_t s2);
-status_t sp_path_samples_3(sp_sample_t** out, spline_path_time_t size, spline_path_segment_t s1, spline_path_segment_t s2, spline_path_segment_t s3);
-status_t sp_path_samples_4(sp_sample_t** out, spline_path_time_t size, spline_path_segment_t s1, spline_path_segment_t s2, spline_path_segment_t s3, spline_path_segment_t s4);
-status_t sp_path_times_2(sp_time_t** out, spline_path_time_t size, spline_path_segment_t s1, spline_path_segment_t s2);
-status_t sp_path_times_3(sp_time_t** out, spline_path_time_t size, spline_path_segment_t s1, spline_path_segment_t s2, spline_path_segment_t s3);
-status_t sp_path_times_4(sp_time_t** out, spline_path_time_t size, spline_path_segment_t s1, spline_path_segment_t s2, spline_path_segment_t s3, spline_path_segment_t s4);

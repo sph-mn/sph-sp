@@ -140,8 +140,6 @@ sp_block_t sp_block_with_offset(sp_block_t a, sp_time_t offset) {
   };
   return (a);
 }
-status_t sp_samples_new(sp_time_t size, sp_sample_t** out) { return ((sph_helper_calloc((size * sizeof(sp_sample_t)), out))); }
-status_t sp_times_new(sp_time_t size, sp_time_t** out) { return ((sph_helper_calloc((size * sizeof(sp_time_t)), out))); }
 /** lower precision version of sin() that should be faster */
 sp_sample_t sp_sin_lq(sp_float_t a) {
   sp_sample_t b;
@@ -159,47 +157,6 @@ int sp_fft(sp_time_t input_len, double* input_or_output_real, double* input_or_o
    output-length = input-length
    output is allocated and owned by the caller */
 int sp_ffti(sp_time_t input_len, double* input_or_output_real, double* input_or_output_imag) { return ((!(1 == Fft_inverseTransform(input_or_output_real, input_or_output_imag, input_len)))); }
-/** apply a centered moving average filter to samples between in-window and in-window-end inclusively and write to out.
-   removes high frequencies and smoothes data with little distortion in the time domain but the frequency response has large ripples.
-   all memory is managed by the caller.
-   * prev and next can be null pointers if not available
-   * zero is used for unavailable values
-   * rounding errors are kept low by using modified kahan neumaier summation */
-status_t sp_moving_average(sp_sample_t* in, sp_sample_t* in_end, sp_sample_t* in_window, sp_sample_t* in_window_end, sp_sample_t* prev, sp_sample_t* prev_end, sp_sample_t* next, sp_sample_t* next_end, sp_time_t radius, sp_sample_t* out) {
-  status_declare;
-  sp_sample_t* in_left;
-  sp_sample_t* in_right;
-  sp_sample_t* outside;
-  sp_sample_t sums[3];
-  sp_time_t outside_count;
-  sp_time_t in_missing;
-  sp_time_t width;
-  width = (1 + radius + radius);
-  while ((in_window <= in_window_end)) {
-    sums[0] = 0;
-    sums[1] = 0;
-    sums[2] = 0;
-    in_left = max(in, (in_window - radius));
-    in_right = min(in_end, (in_window + radius));
-    sums[1] = sp_samples_sum(in_left, (1 + (in_right - in_left)));
-    if (((in_window - in_left) < radius) && prev) {
-      in_missing = (radius - (in_window - in_left));
-      outside = max(prev, (prev_end - in_missing));
-      outside_count = (prev_end - outside);
-      sums[0] = sp_samples_sum(outside, outside_count);
-    };
-    if (((in_right - in_window) < radius) && next) {
-      in_missing = (radius - (in_right - in_window));
-      outside = next;
-      outside_count = min((next_end - next), in_missing);
-      sums[2] = sp_samples_sum(outside, outside_count);
-    };
-    *out = (sp_samples_sum(sums, 3) / width);
-    out = (1 + out);
-    in_window = (1 + in_window);
-  };
-  status_return;
-}
 /** modify an impulse response kernel for spectral inversion.
    a-len must be odd and "a" must have left-right symmetry.
    flips the frequency response top to bottom */
@@ -289,19 +246,7 @@ first process values that dont lead to carryover */
     };
   };
 }
-/** get the maximum value in samples array, disregarding sign */
-sp_sample_t sp_samples_absolute_max(sp_sample_t* in, sp_time_t in_size) {
-  sp_sample_t result;
-  sp_sample_t a;
-  sp_time_t i;
-  for (i = 0, result = 0; (i < in_size); i = (1 + i)) {
-    a = fabs((in[i]));
-    if (a > result) {
-      result = a;
-    };
-  };
-  return (result);
-}
+#include "../main/arrays.c"
 /** adjust amplitude of out to match the one of in */
 void sp_set_unity_gain(sp_sample_t* in, sp_time_t in_size, sp_sample_t* out) {
   sp_time_t i;
@@ -309,8 +254,8 @@ void sp_set_unity_gain(sp_sample_t* in, sp_time_t in_size, sp_sample_t* out) {
   sp_sample_t out_max;
   sp_sample_t difference;
   sp_sample_t correction;
-  in_max = sp_samples_absolute_max(in, in_size);
-  out_max = sp_samples_absolute_max(out, in_size);
+  in_max = sp_sample_array_absolute_max(in, in_size);
+  out_max = sp_sample_array_absolute_max(out, in_size);
   if ((0 == in_max) || (0 == out_max)) {
     return;
   };
@@ -320,18 +265,104 @@ void sp_set_unity_gain(sp_sample_t* in, sp_time_t in_size, sp_sample_t* out) {
     out[i] = (correction * out[i]);
   };
 }
-void sp_samples_to_time(sp_sample_t* in, sp_time_t in_size, sp_time_t* out) {
-  sp_time_t i;
-  for (i = 0; (i < in_size); i = (1 + i)) {
-    out[i] = sp_cheap_round_positive((in[i]));
+void sp_block_zero(sp_block_t a) {
+  sp_channels_t i;
+  for (i = 0; (i < a.channels); i += 1) {
+    sp_sample_array_zero(((a.samples)[i]), (a.size));
   };
+}
+status_t sp_path_samples(sp_path_segments_t segments, sp_time_t size, sp_samples_t* out) {
+  status_declare;
+  sp_samples_t result;
+  array3_set_null(result);
+  status_i_require((sp_samples_new(size, (&result))));
+  if (spline_path_new_get((segments.size), (segments.data), 0, size, (result.data))) {
+    array4_free(result);
+    sp_memory_error;
+  };
+  *out = result;
+exit:
+  status_return;
+}
+/** create a new path from the given segments config.
+  memory is allocated and ownership transferred to the caller */
+status_t sp_path_times(sp_path_segments_t segments, sp_time_t size, sp_times_t* out) {
+  status_declare;
+  sp_times_t result;
+  sp_samples_t temp;
+  array3_set_null(temp);
+  status_require((sp_path_samples(segments, size, (&temp))));
+  status_i_require((sp_times_new(size, (&result))));
+  sp_samples_to_times(temp, result);
+  *out = result;
+exit:
+  status_return;
+}
+status_t sp_path_times_2(sp_times_t* out, sp_time_t size, sp_path_segment_t s1, sp_path_segment_t s2) {
+  sp_path_segments_t segments;
+  sp_path_segment_t segments_data[2];
+  segments.size = 2;
+  segments.data = segments_data;
+  segments_data[0] = s1;
+  segments_data[1] = s2;
+  return ((sp_path_times(segments, size, out)));
+}
+status_t sp_path_times_3(sp_times_t* out, sp_time_t size, sp_path_segment_t s1, sp_path_segment_t s2, sp_path_segment_t s3) {
+  sp_path_segments_t segments;
+  sp_path_segment_t segments_data[3];
+  segments.size = 3;
+  segments.data = segments_data;
+  segments_data[0] = s1;
+  segments_data[1] = s2;
+  segments_data[2] = s3;
+  return ((sp_path_times(segments, size, out)));
+}
+status_t sp_path_times_4(sp_times_t* out, sp_time_t size, sp_path_segment_t s1, sp_path_segment_t s2, sp_path_segment_t s3, sp_path_segment_t s4) {
+  sp_path_segments_t segments;
+  sp_path_segment_t segments_data[4];
+  segments.size = 4;
+  segments.data = segments_data;
+  segments_data[0] = s1;
+  segments_data[1] = s2;
+  segments_data[2] = s3;
+  segments_data[3] = s4;
+  return ((sp_path_times(segments, size, out)));
+}
+status_t sp_path_samples_2(sp_samples_t* out, sp_time_t size, sp_path_segment_t s1, sp_path_segment_t s2) {
+  sp_path_segments_t segments;
+  sp_path_segment_t segments_data[2];
+  segments.size = 2;
+  segments.data = segments_data;
+  segments_data[0] = s1;
+  segments_data[1] = s2;
+  return ((sp_path_samples(segments, size, out)));
+}
+status_t sp_path_samples_3(sp_samples_t* out, sp_time_t size, sp_path_segment_t s1, sp_path_segment_t s2, sp_path_segment_t s3) {
+  sp_path_segments_t segments;
+  sp_path_segment_t segments_data[3];
+  segments.size = 3;
+  segments.data = segments_data;
+  segments_data[0] = s1;
+  segments_data[1] = s2;
+  segments_data[2] = s3;
+  return ((sp_path_samples(segments, size, out)));
+}
+status_t sp_path_samples_4(sp_samples_t* out, sp_time_t size, sp_path_segment_t s1, sp_path_segment_t s2, sp_path_segment_t s3, sp_path_segment_t s4) {
+  sp_path_segments_t segments;
+  sp_path_segment_t segments_data[4];
+  segments.size = 4;
+  segments.data = segments_data;
+  segments_data[0] = s1;
+  segments_data[1] = s2;
+  segments_data[2] = s3;
+  segments_data[3] = s4;
+  return ((sp_path_samples(segments, size, out)));
 }
 #include "../main/io.c"
 #include "../main/plot.c"
 #include "../main/filter.c"
 #include "../main/synthesiser.c"
 #include "../main/sequencer.c"
-#include "../main/path.c"
 /** render a single event to file. event can be a group */
 status_t sp_render_file(sp_event_t event, sp_time_t start, sp_time_t duration, sp_render_config_t config, uint8_t* path) {
   status_declare;

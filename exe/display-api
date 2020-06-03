@@ -5,4 +5,4 @@
 #config="$PWD/other/sc-documentor-config.scm"
 export SC_LOAD_PATH="$PWD/source/sc"
 #sc-documentor source/sc/main/sph-sp.sc --config="$config" --md-level=2
-sc-documentor source/sc/main/sph-sp.sc --md-level=2
+sc-documentor source/sc/main/sph-sp.sc --md-level=2 --config=other/display-api-config.scm

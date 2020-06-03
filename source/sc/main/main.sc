@@ -100,12 +100,6 @@
     (set (array-get a.samples i) (+ offset (array-get a.samples i))))
   (return a))
 
-(define (sp-samples-new size out) (status-t sp-time-t sp-sample-t**)
-  (return (sph-helper-calloc (* size (sizeof sp-sample-t)) out)))
-
-(define (sp-times-new size out) (status-t sp-time-t sp-time-t**)
-  (return (sph-helper-calloc (* size (sizeof sp-time-t)) out)))
-
 (define (sp-sin-lq a) (sp-sample-t sp-float-t)
   "lower precision version of sin() that should be faster"
   (declare b sp-sample-t c sp-sample-t)
@@ -126,53 +120,6 @@
    output-length = input-length
    output is allocated and owned by the caller"
   (return (not (= 1 (Fft_inverseTransform input/output-real input/output-imag input-len)))))
-
-(define
-  (sp-moving-average in in-end in-window in-window-end prev prev-end next next-end radius out)
-  (status-t sp-sample-t* sp-sample-t* sp-sample-t* sp-sample-t* sp-sample-t* sp-sample-t* sp-sample-t* sp-sample-t* sp-time-t sp-sample-t*)
-  "apply a centered moving average filter to samples between in-window and in-window-end inclusively and write to out.
-   removes high frequencies and smoothes data with little distortion in the time domain but the frequency response has large ripples.
-   all memory is managed by the caller.
-   * prev and next can be null pointers if not available
-   * zero is used for unavailable values
-   * rounding errors are kept low by using modified kahan neumaier summation"
-  status-declare
-  (declare
-    in-left sp-sample-t*
-    in-right sp-sample-t*
-    outside sp-sample-t*
-    sums (array sp-sample-t (3))
-    outside-count sp-time-t
-    in-missing sp-time-t
-    width sp-time-t)
-  (set width (+ 1 radius radius))
-  (while (<= in-window in-window-end)
-    (set
-      (array-get sums 0) 0
-      (array-get sums 1) 0
-      (array-get sums 2) 0
-      in-left (max in (- in-window radius))
-      in-right (min in-end (+ in-window radius))
-      (array-get sums 1) (sp-samples-sum in-left (+ 1 (- in-right in-left))))
-    (if (and (< (- in-window in-left) radius) prev)
-      (begin
-        (set
-          in-missing (- radius (- in-window in-left))
-          outside (max prev (- prev-end in-missing))
-          outside-count (- prev-end outside)
-          (array-get sums 0) (sp-samples-sum outside outside-count))))
-    (if (and (< (- in-right in-window) radius) next)
-      (begin
-        (set
-          in-missing (- radius (- in-right in-window))
-          outside next
-          outside-count (min (- next-end next) in-missing)
-          (array-get sums 2) (sp-samples-sum outside outside-count))))
-    (set
-      (pointer-get out) (/ (sp-samples-sum sums 3) width)
-      out (+ 1 out)
-      in-window (+ 1 in-window)))
-  status-return)
 
 (define (sp-spectral-inversion-ir a a-len) (void sp-sample-t* sp-time-t)
   "modify an impulse response kernel for spectral inversion.
@@ -249,13 +196,7 @@
           (array-get result-carryover c-index)
           (+ (array-get result-carryover c-index) (* (array-get a a-index) (array-get b b-index))))))))
 
-(define (sp-samples-absolute-max in in-size) (sp-sample-t sp-sample-t* sp-time-t)
-  "get the maximum value in samples array, disregarding sign"
-  (declare result sp-sample-t a sp-sample-t i sp-time-t)
-  (for ((set i 0 result 0) (< i in-size) (set i (+ 1 i)))
-    (set a (fabs (array-get in i)))
-    (if (> a result) (set result a)))
-  (return result))
+(pre-include "../main/arrays.c")
 
 (define (sp-set-unity-gain in in-size out) (void sp-sample-t* sp-time-t sp-sample-t*)
   "adjust amplitude of out to match the one of in"
@@ -265,19 +206,87 @@
     out-max sp-sample-t
     difference sp-sample-t
     correction sp-sample-t)
-  (set in-max (sp-samples-absolute-max in in-size) out-max (sp-samples-absolute-max out in-size))
+  (set
+    in-max (sp-sample-array-absolute-max in in-size)
+    out-max (sp-sample-array-absolute-max out in-size))
   (if (or (= 0 in-max) (= 0 out-max)) return)
   (set difference (/ out-max in-max) correction (+ 1 (/ (- 1 difference) difference)))
   (for ((set i 0) (< i in-size) (set i (+ 1 i)))
     (set (array-get out i) (* correction (array-get out i)))))
 
-(define (sp-samples->time in in-size out) (void sp-sample-t* sp-time-t sp-time-t*)
-  (declare i sp-time-t)
-  (for ((set i 0) (< i in-size) (set i (+ 1 i)))
-    (set (array-get out i) (sp-cheap-round-positive (array-get in i)))))
+(define (sp-block-zero a) (void sp-block-t)
+  (declare i sp-channels-t)
+  (for ((set i 0) (< i a.channels) (set+ i 1))
+    (sp-sample-array-zero (array-get a.samples i) a.size)))
+
+(define (sp-path-samples segments size out) (status-t sp-path-segments-t sp-time-t sp-samples-t*)
+  status-declare
+  (declare result sp-samples-t)
+  (array3-set-null result)
+  (status-i-require (sp-samples-new size &result))
+  (if (spline-path-new-get segments.size segments.data 0 size result.data)
+    (begin (array4-free result) sp-memory-error))
+  (set *out result)
+  (label exit status-return))
+
+(define (sp-path-times segments size out) (status-t sp-path-segments-t sp-time-t sp-times-t*)
+  "create a new path from the given segments config.
+  memory is allocated and ownership transferred to the caller"
+  status-declare
+  (declare result sp-times-t temp sp-samples-t)
+  (array3-set-null temp)
+  (status-require (sp-path-samples segments size &temp))
+  (status-i-require (sp-times-new size &result))
+  (sp-samples->times temp result)
+  (set *out result)
+  (label exit
+    ;(if temp.data (array3-free temp))
+    status-return))
+
+(define (sp-path-times-2 out size s1 s2)
+  (status-t sp-times-t* sp-time-t sp-path-segment-t sp-path-segment-t)
+  (declare segments sp-path-segments-t segments-data (array sp-path-segment-t 2))
+  (set segments.size 2 segments.data segments-data)
+  (array-set segments-data 0 s1 1 s2)
+  (return (sp-path-times segments size out)))
+
+(define (sp-path-times-3 out size s1 s2 s3)
+  (status-t sp-times-t* sp-time-t sp-path-segment-t sp-path-segment-t sp-path-segment-t)
+  (declare segments sp-path-segments-t segments-data (array sp-path-segment-t 3))
+  (set segments.size 3 segments.data segments-data)
+  (array-set segments-data 0 s1 1 s2 2 s3)
+  (return (sp-path-times segments size out)))
+
+(define (sp-path-times-4 out size s1 s2 s3 s4)
+  (status-t sp-times-t* sp-time-t sp-path-segment-t sp-path-segment-t sp-path-segment-t sp-path-segment-t)
+  (declare segments sp-path-segments-t segments-data (array sp-path-segment-t 4))
+  (set segments.size 4 segments.data segments-data)
+  (array-set segments-data 0 s1 1 s2 2 s3 3 s4)
+  (return (sp-path-times segments size out)))
+
+(define (sp-path-samples-2 out size s1 s2)
+  (status-t sp-samples-t* sp-time-t sp-path-segment-t sp-path-segment-t)
+  (declare segments sp-path-segments-t segments-data (array sp-path-segment-t 2))
+  (set segments.size 2 segments.data segments-data)
+  (array-set segments-data 0 s1 1 s2)
+  (return (sp-path-samples segments size out)))
+
+(define (sp-path-samples-3 out size s1 s2 s3)
+  (status-t sp-samples-t* sp-time-t sp-path-segment-t sp-path-segment-t sp-path-segment-t)
+  (declare segments sp-path-segments-t segments-data (array sp-path-segment-t 3))
+  (set segments.size 3 segments.data segments-data)
+  (array-set segments-data 0 s1 1 s2 2 s3)
+  (return (sp-path-samples segments size out)))
+
+(define (sp-path-samples-4 out size s1 s2 s3 s4)
+  (status-t sp-samples-t* sp-time-t sp-path-segment-t sp-path-segment-t sp-path-segment-t sp-path-segment-t)
+  (declare segments sp-path-segments-t segments-data (array sp-path-segment-t 4))
+  (set segments.size 4 segments.data segments-data)
+  (array-set segments-data 0 s1 1 s2 2 s3 3 s4)
+  (return (sp-path-samples segments size out)))
 
 (pre-include "../main/io.c" "../main/plot.c"
-  "../main/filter.c" "../main/synthesiser.c" "../main/sequencer.c" "../main/path.c")
+  "../main/filter.c" "../main/synthesiser.c" "../main/sequencer.c")
 
 (define (sp-render-file event start duration config path)
   (status-t sp-event-t sp-time-t sp-time-t sp-render-config-t uint8-t*)

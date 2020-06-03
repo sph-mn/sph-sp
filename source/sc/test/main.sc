@@ -175,21 +175,19 @@
 (define (test-file) status-t
   status-declare
   (declare
-    channel sp-time-t
-    channel-count sp-channels-t
-    block sp-block-t
     block-2 sp-block-t
-    len sp-time-t
+    block sp-block-t
+    channel-count sp-channels-t
+    channel sp-time-t
     file sp-file-t
+    len sp-time-t
     position sp-time-t
-    sample-count sp-time-t
     result-sample-count sp-time-t
+    sample-count sp-time-t
     sample-rate sp-sample-rate-t
     unequal int8-t)
   (if (file-exists test-file-path) (unlink test-file-path))
   (set channel-count 2 sample-rate 8000 sample-count 5 position 0 channel channel-count)
-  (sp-block-zero block)
-  (sp-block-zero block-2)
   (status-require (sp-block-new channel-count sample-count &block))
   (status-require (sp-block-new channel-count sample-count &block-2))
   (while channel
@@ -374,7 +372,7 @@
       amp cut-l cut-h trn-l trn-h #f 30 sp-default-random-state events))
   (set events-size 1)
   (sp-seq 0 sp-noise-duration out events events-size)
-  (sp-events-free events events-size)
+  (sp-events-array-free events events-size)
   (sp-block-free out)
   (label exit status-return))
 
@@ -417,7 +415,7 @@
     (sp-cheap-noise-event-lp 0 sp-noise-duration amp cut 1 0 #f sp-default-random-state events))
   (set events-size 1)
   (sp-seq 0 sp-noise-duration out events events-size)
-  (sp-events-free events events-size)
+  (sp-events-array-free events events-size)
   (sp-block-free out)
   (label exit status-return))
 
@@ -440,7 +438,7 @@
     (and (= 2 (array-get out.samples 0 41)) (= 2 (array-get out.samples 0 99))))
   (sc-comment "sp-seq-parallel")
   (status-require (sp-seq-parallel 0 100 out events sp-seq-event-count))
-  (sp-events-free events sp-seq-event-count)
+  (sp-events-array-free events sp-seq-event-count)
   (sp-block-free out)
   (label exit status-return))
 
@@ -455,8 +453,8 @@
     block sp-block-t
     m1 sp-time-t*
     m2 sp-time-t*)
-  (status-require (sp-times-new 100 &m1))
-  (status-require (sp-times-new 100 &m2))
+  (status-require (sp-time-array-new 100 &m1))
+  (status-require (sp-time-array-new 100 &m2))
   (status-require (sp-group-new 0 2 2 &g))
   (status-require (sp-group-new 10 2 0 &g1))
   (status-require (sp-block-new 2 100 &block))
@@ -519,10 +517,19 @@
   (event.free &event)
   (label exit status-return))
 
+(define (test-path) status-t
+  (declare samples sp-samples-t times sp-times-t)
+  status-declare
+  (status-require (sp-path-samples-2 &samples 100 (sp-path-line 10 1) (sp-path-line 100 0)))
+  (status-require (sp-path-times-2 &times 100 (sp-path-line 10 1) (sp-path-line 100 0)))
+  (label exit status-return))
+
 (define (main) int
   "\"goto exit\" can skip events"
   status-declare
   (sp-initialise 3)
+  (test-helper-test-one test-path)
+  (test-helper-test-one test-file)
   (test-helper-test-one test-sp-group)
   (test-helper-test-one test-sp-synth-event)
   (test-helper-test-one test-sp-seq)
@@ -538,6 +545,5 @@
   (test-helper-test-one test-base)
   (test-helper-test-one test-spectral-reversal-ir)
   (test-helper-test-one test-convolve)
-  (test-helper-test-one test-file)
   (test-helper-test-one test-windowed-sinc)
   (label exit (test-helper-display-summary) (return status.id)))

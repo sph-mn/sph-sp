@@ -28,7 +28,7 @@
           e-end (- (if* (< e.end end) e.end end) e.start))
         (e.f e-start e-end (if* e-out-start (sp-block-with-offset out e-out-start) out) &e)))))
 
-(define (sp-events-free events size) (void sp-event-t* sp-time-t)
+(define (sp-events-array-free events size) (void sp-event-t* sp-time-t)
   (declare i sp-time-t event-free (function-pointer void (struct sp-event-t*)))
   (for ((set i 0) (< i size) (set i (+ 1 i)))
     (set event-free (: (+ events i) free))
@@ -307,34 +307,37 @@
   (set *out-event e)
   (label exit status-return))
 
+(pre-define (sp-group-event-free-events events end)
+  (while (and (array4-in-range events) (<= (struct-get (array4-get events) end) end))
+    (if (struct-get (array4-get events) free)
+      ((struct-get (array4-get events) free) (array4-get-address events)))
+    (array4-forward events)))
+
 (define (sp-group-event-free a) (void sp-event-t*)
   "events.current is used to track freed events"
   (define s sp-group-event-state-t (pointer-get (convert-type a:state sp-group-event-state-t*)))
-  (while (i-array-in-range s.events)
-    (if s.events.current:free (s.events.current:free s.events.current))
-    (i-array-forward s.events))
+  (while (array4-in-range s.events)
+    (if (struct-get (array4-get s.events) free)
+      ((struct-get (array4-get s.events) free) (array4-get-address s.events)))
+    (array4-forward s.events))
   (memreg-heap-free-pointers s.memory)
-  (i-array-free s.events)
-  (i-array-free s.memory)
+  (array4-free s.events)
+  (array4-free s.memory)
   (free a:state))
 
 (define (sp-group-event-f start end out event) (void sp-time-t sp-time-t sp-block-t sp-event-t*)
   "free past events early, they might be sub-group trees"
   (define s sp-group-event-state-t* event:state)
-  (while (<= s:events.current:end start)
-    (if s:events.current:free (s:events.current:free s:events.current))
-    (i-array-forward s:events))
-  (sp-seq start end out s:events.current (- s:events.unused s:events.current)))
+  (sp-seq start end out (array4-get-address s:events) (array4-right-size s:events))
+  (sp-group-event-free-events s:events end))
 
 (define (sp-group-event-parallel-f start end out event)
   (void sp-time-t sp-time-t sp-block-t sp-event-t*)
   "can be used in place of sp-group-event-f.
    seq-parallel can fail if there is not enough memory, but this is ignored currently"
   (define s sp-group-event-state-t* event:state)
-  (while (<= s:events.current:end start)
-    (if s:events.current:free (s:events.current:free s:events.current))
-    (i-array-forward s:events))
-  (sp-seq-parallel start end out s:events.current (- s:events.unused s:events.current)))
+  (sp-seq-parallel start end out (array4-get-address s:events) (array4-right-size s:events))
+  (sp-group-event-free-events s:events end))
 
 (define (sp-group-new start event-size memory-size out)
   (status-t sp-time-t sp-group-size-t sp-group-size-t sp-event-t*)
@@ -344,7 +347,7 @@
   (status-require (sph-helper-malloc (sizeof sp-group-event-state-t) &s))
   (memreg-add s)
   (if (sp-events-new event-size &s:events) sp-memory-error)
-  (memreg-add s:events.start)
+  (memreg-add s:events.data)
   (if (memreg-heap-new memory-size &s:memory) sp-memory-error)
   (struct-set *out state s start start end start f sp-group-event-f free sp-group-event-free)
   (label exit (if status-is-failure memreg-free) (return status)))

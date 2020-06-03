@@ -11,22 +11,23 @@
     b1 sp-event-t
     b1-duration sp-time-t
     b1-partials (array sp-synth-partial-t 1)
-    b1-p1-amp sp-sample-t*
-    b1-p1-wvl sp-time-t*)
+    b1-p1-amp sp-samples-t
+    b1-p1-wvl sp-times-t)
   (sp-group-declare g)
   (status-require (sp-group-new 0 2 4 &g))
   (set b1-duration (rt 1 2))
   (status-require
     (sp-path-samples-3 &b1-p1-amp b1-duration
       (sp-path-line (rt 1 8) 1) (sp-path-line (rt 3 8) 0) (sp-path-line b1-duration 0)))
-  (sp-group-memory-add g b1-p1-amp)
+  (sp-group-memory-add g b1-p1-amp.data)
   (status-require
     (sp-path-times-3 &b1-p1-wvl b1-duration
       (sp-path-line (rt 1 8) (rt 1 128)) (sp-path-line (rt 2 8) (rt 1 64))
       (sp-path-line b1-duration (rt 1 16))))
-  (sp-group-memory-add g b1-p1-wvl)
+  (sp-group-memory-add g b1-p1-wvl.data)
   (set (array-get b1-partials 0)
-    (sp-synth-partial-2 0 b1-duration 0 b1-p1-amp b1-p1-amp b1-p1-wvl b1-p1-wvl 0 0))
+    (sp-synth-partial-2 0 b1-duration
+      0 b1-p1-amp.data b1-p1-amp.data b1-p1-wvl.data b1-p1-wvl.data 0 0))
   (status-require (sp-synth-event 0 b1-duration 2 1 b1-partials &b1))
   (sp-group-add g b1)
   (sp-group-prepare g)
@@ -53,6 +54,7 @@
   (declare-render-config render-config)
   (set rate render-config.rate)
   (status-require (song-new rate &song))
-  (status-require (sp-render-file song 0 (rt 3 1) render-config "/tmp/song.wav"))
+  (status-require (sp-render-file song 0 (rt 2 2) render-config "/tmp/song.wav"))
+  (printf "wrote %s\n" "/tmp/song.wav")
   (song.free &song)
-  (label exit (printf "status: %d\n" status.id) (return status.id)))
+  (label exit (printf "status: %s\n" (if* status.id "failure" "success")) (return status.id)))
