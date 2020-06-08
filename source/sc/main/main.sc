@@ -37,7 +37,7 @@
 (sph-random-define-x256p sp-random-samples sp-sample-t (- (* 2 (sph-random-f64-from-u64 a)) 1.0))
 (sph-random-define-x256ss sp-random-times sp-time-t a)
 
-(define (display-samples a len) (void sp-sample-t* sp-time-t)
+(define (sp-display-sample-array a len) (void sp-sample-t* sp-time-t)
   "display a sample array in one line"
   (declare i sp-time-t)
   (printf "%.17g" (array-get a 0))
@@ -105,6 +105,78 @@
   (declare b sp-sample-t c sp-sample-t)
   (set b (/ 4 M_PI) c (/ -4 (* M_PI M_PI)))
   (return (- (+ (* b a) (* c a (abs a))))))
+
+(define (sp-phase-96 current change) (sp-time-t sp-time-t sp-time-t)
+  "accumulate an integer phase and reset it after cycles.
+   float value phases would be inexact and therefore harder to reset"
+  (declare result sp-time-t)
+  (set result (+ current change))
+  (return (if* (<= 96000 result) (modulo result 96000) result)))
+
+(define (sp-phase-96-float current change) (sp-time-t sp-time-t double)
+  "accumulate an integer phase with change given as a float value.
+   change must be a positive value and is rounded to the next larger integer"
+  (return (sp-phase-96 current (sp-cheap-ceiling-positive change))))
+
+(define (sp-wave start duration state out) (void sp-time-t sp-time-t sp-wave-state-t* sp-block-t)
+  "amplitude and wavelength can be controlled by arrays separately for each partial and channel"
+  (declare amp sp-sample-t channel-i sp-time-t phs sp-time-t wvl sp-time-t i sp-time-t)
+  (for ((set channel-i 0) (< channel-i out.channels) (set channel-i (+ 1 channel-i)))
+    (set phs (array-get state:phs channel-i))
+    (for ((set i 0) (< i duration) (set i (+ 1 i)))
+      (set
+        amp (array-get state:amp channel-i i)
+        wvl (array-get state:wvl channel-i i)
+        phs (sp-phase-96-float phs (/ 96000 wvl)))
+      (set+ (array-get out.samples channel-i i) (array-get state:wvf phs)))
+    (set (array-get state:phs channel-i) phs)))
+
+(pre-define (sp-wave-state-set-channel a channel amp-array wvl-array phs-value)
+  (set
+    (array-get a.amp channel) amp-array
+    (array-get a.wvl channel) wvl-array
+    (array-get a.phs channel) phs-value))
+
+(define (sp-wave-state-1 wvf amp wvl phs)
+  (sp-wave-state-t sp-sample-t* sp-sample-t* sp-time-t* sp-time-t)
+  "setup a single channel wave config"
+  (declare a sp-wave-state-t)
+  (set a.chn 1 a.wvf wvf)
+  (sp-wave-state-set-channel a 0 amp wvl phs)
+  (return a))
+
+(define (sp-wave-state-2 wvf amp1 amp2 wvl1 wvl2 phs1 phs2)
+  (sp-wave-state-t sp-sample-t* sp-sample-t* sp-sample-t* sp-time-t* sp-time-t* sp-time-t sp-time-t)
+  (declare a sp-wave-state-t)
+  (set a.chn 2 a.wvf wvf)
+  (sp-wave-state-set-channel a 0 amp1 wvl1 phs1)
+  (sp-wave-state-set-channel a 1 amp2 wvl2 phs2)
+  (return a))
+
+(define (sp-triangle t a b) (sp-sample-t sp-time-t sp-time-t sp-time-t)
+  "return a sample for a triangular wave with center offsets a left and b right.
+   creates sawtooth waves if either a or b is 0"
+  (declare remainder sp-time-t)
+  (set remainder (modulo t (+ a b)))
+  (return
+    (if* (< remainder a) (* remainder (/ 1 (convert-type a sp-sample-t)))
+      (* (- (convert-type b sp-sample-t) (- remainder (convert-type a sp-sample-t)))
+        (/ 1 (convert-type b sp-sample-t))))))
+
+(define (sp-triangle-96 t) (sp-sample-t sp-time-t) (return (sp-triangle t 48000 48000)))
+
+(define (sp-square-96 t) (sp-sample-t sp-time-t)
+  (return (if* (< (modulo (* 2 t) (* 2 96000)) 96000) -1 1)))
+
+(define (sp-sine-table-new out size) (status-t sp-sample-t** sp-time-t)
+  "writes a sine wave of size into out. can be used to create lookup tables"
+  status-declare
+  (declare i sp-time-t out-array sp-sample-t*)
+  (status-require (sph-helper-malloc (* size (sizeof sp-sample-t*)) &out-array))
+  (for ((set i 0) (< i size) (set i (+ 1 i)))
+    (set (array-get out-array i) (sin (* i (/ M_PI (/ size 2))))))
+  (set *out out-array)
+  (label exit status-return))
 
 (define (sp-sinc a) (sp-float-t sp-float-t)
   "the normalised sinc function"
@@ -231,7 +303,7 @@
 
 (define (sp-path-times segments size out) (status-t sp-path-segments-t sp-time-t sp-times-t*)
   "create a new path from the given segments config.
-  memory is allocated and ownership transferred to the caller"
+   memory is allocated and ownership transferred to the caller"
   status-declare
   (declare result sp-times-t temp sp-samples-t)
   (array3-set-null temp)
@@ -239,9 +311,7 @@
   (status-i-require (sp-times-new size &result))
   (sp-samples->times temp result)
   (set *out result)
-  (label exit
-    ;(if temp.data (array3-free temp))
-    status-return))
+  (label exit status-return))
 
 (define (sp-path-times-2 out size s1 s2)
   (status-t sp-times-t* sp-time-t sp-path-segment-t sp-path-segment-t)
@@ -285,8 +355,7 @@
   (array-set segments-data 0 s1 1 s2 2 s3 3 s4)
   (return (sp-path-samples segments size out)))
 
-(pre-include "../main/io.c" "../main/plot.c"
-  "../main/filter.c" "../main/synthesiser.c" "../main/sequencer.c")
+(pre-include "../main/io.c" "../main/plot.c" "../main/filter.c" "../main/sequencer.c")
 
 (define (sp-render-file event start duration config path)
   (status-t sp-event-t sp-time-t sp-time-t sp-render-config-t uint8-t*)

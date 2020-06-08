@@ -246,70 +246,11 @@
   (status-i-require (sp-ffti a-len a-real a-imag))
   (label exit status-return))
 
-(define (test-synth) status-t
-  status-declare
-  (declare
-    state sp-time-t*
-    config-len sp-time-t
-    out1 sp-block-t
-    out2 sp-block-t
-    channels sp-channels-t
-    duration sp-time-t
-    prt1 sp-synth-partial-t
-    prt2 sp-synth-partial-t
-    prt3 sp-synth-partial-t
-    config (array sp-synth-partial-t 3)
-    wvl (array sp-time-t 4 2 2 2 2)
-    amp (array sp-sample-t 4 0.1 0.2 0.3 0.4))
-  (set
-    state 0
-    duration 4
-    channels 2
-    config-len 3
-    prt1.modifies 0
-    prt2.modifies 1
-    prt3.modifies 0
-    prt1.start 0
-    prt2.start prt1.start
-    prt3.start prt1.start
-    prt1.end duration
-    prt2.end prt1.end
-    prt3.end prt1.end
-    (array-get prt1.amp 0) amp
-    (array-get prt1.amp 1) amp
-    (array-get prt1.wvl 0) wvl
-    (array-get prt1.wvl 1) wvl
-    (array-get prt1.phs 0) 1
-    (array-get prt1.phs 2) 2
-    (array-get prt2.amp 0) amp
-    (array-get prt2.amp 1) amp
-    (array-get prt2.wvl 0) wvl
-    (array-get prt2.wvl 1) wvl
-    (array-get prt2.phs 0) 1
-    (array-get prt2.phs 2) 2
-    (array-get prt3.amp 0) amp
-    (array-get prt3.amp 1) amp
-    (array-get prt3.wvl 0) wvl
-    (array-get prt3.wvl 1) wvl
-    (array-get prt3.phs 0) 1
-    (array-get prt3.phs 2) 2
-    (array-get config 0) prt1
-    (array-get config 1) prt2
-    (array-get config 2) prt3)
-  (status-require (sp-block-new channels duration &out1))
-  (status-require (sp-block-new channels duration &out2))
-  (status-require (sp-synth-state-new channels config-len config &state))
-  (status-require (sp-synth out1 0 duration config-len config state))
-  (status-require (sp-synth out2 0 duration config-len config state))
-  (sp-block-free out1)
-  (sp-block-free out2)
-  (label exit status-return))
-
 (define (test-sp-plot) status-t
   "better test separately as it opens gnuplot windows"
   status-declare
   (declare a (array sp-sample-t 9 0.1 -0.2 0.1 -0.4 0.3 -0.4 0.2 -0.2 0.1))
-  (sp-plot-samples a 9)
+  (sp-plot-sample-array a 9)
   (sp-plot-spectrum a 9)
   (label exit status-return))
 
@@ -480,39 +421,49 @@
   (sp-block-free block)
   (label exit status-return))
 
-(pre-define sp-synth-event-duration 100 sp-synth-event-half-duration (/ sp-synth-event-duration 2))
+(pre-define test-wave-duration 4 test-wave-channels 2)
 
-(define (test-sp-synth-event) status-t
-  "sp synth values were taken from printing index and value of the result array.
+(define (test-wave) status-t
+  status-declare
+  (declare
+    state sp-wave-state-t
+    out1 sp-block-t
+    out2 sp-block-t
+    wvl (array sp-time-t 4 2 2 2 2)
+    amp (array sp-sample-t 4 0.1 0.2 0.3 0.4))
+  (status-require (sp-block-new test-wave-channels test-wave-duration &out1))
+  (status-require (sp-block-new test-wave-channels test-wave-duration &out2))
+  (set state (sp-wave-state-2 sp-sine-96-table amp amp wvl wvl 0 0))
+  (sp-wave 0 test-wave-duration &state out1)
+  (sp-wave 0 test-wave-duration &state out2)
+  (test-helper-assert "zeros" (= 0 (array-get out1.samples 0 1) (array-get out1.samples 0 3)))
+  (test-helper-assert "non-zeros"
+    (and (not (= 0 (array-get out1.samples 0 0))) (not (= 0 (array-get out1.samples 0 2)))))
+  (sp-block-free out1)
+  (sp-block-free out2)
+  (label exit status-return))
+
+(pre-define sp-wave-event-duration 100)
+
+(define (test-wave-event) status-t
+  "sp wave values were taken from printing index and value of the result array.
    sp-plot-samples can plot the result"
   status-declare
   (declare
     event sp-event-t
     out sp-block-t
-    wvl1 (array sp-time-t sp-synth-event-duration)
-    wvl2 (array sp-time-t sp-synth-event-duration)
-    amp1 (array sp-sample-t sp-synth-event-duration)
-    amp2 (array sp-sample-t sp-synth-event-duration)
-    partials (array sp-synth-partial-t 2)
-    i sp-time-t
-    ci sp-channels-t)
-  (for ((set i 0) (< i sp-synth-event-duration) (set+ i 1))
+    wvl1 (array sp-time-t sp-wave-event-duration)
+    wvl2 (array sp-time-t sp-wave-event-duration)
+    amp1 (array sp-sample-t sp-wave-event-duration)
+    amp2 (array sp-sample-t sp-wave-event-duration)
+    i sp-time-t)
+  (for ((set i 0) (< i sp-wave-event-duration) (set+ i 1))
     (set (array-get wvl1 i) 5 (array-get wvl2 i) 10 (array-get amp1 i) 0.1 (array-get amp2 i) 1))
-  (set
-    (array-get partials 0)
-    (sp-synth-partial-2 0 sp-synth-event-half-duration 0 amp1 amp2 wvl1 wvl2 0 0)
-    (array-get partials 1)
-    (sp-synth-partial-2 sp-synth-event-half-duration sp-synth-event-duration
-      0 amp2 amp1 wvl2 wvl1 0 0))
-  (status-require (sp-synth-event 0 sp-synth-event-duration 2 2 partials &event))
-  (status-require (sp-block-new 2 sp-synth-event-duration &out))
-  (event.f 0 sp-synth-event-duration out &event)
-  (test-helper-assert "values 1" (>= 0.1 (array-get out.samples 0 0)))
-  (test-helper-assert "values 2" (= 0 (array-get out.samples 0 49)))
-  (test-helper-assert "values 3" (> 0.1 (array-get out.samples 0 44)))
-  (test-helper-assert "values 4" (<= 0.1 (array-get out.samples 0 50)))
-  (test-helper-assert "values 5" (= 1 (array-get out.samples 0 54)))
-  (test-helper-assert "values 6" (> 0.1 (array-get out.samples 0 99)))
+  (status-require
+    (sp-wave-event 0 sp-wave-event-duration
+      (sp-wave-state-2 sp-sine-96-table amp1 amp2 wvl1 wvl2 0 0) &event))
+  (status-require (sp-block-new 2 sp-wave-event-duration &out))
+  (event.f 0 sp-wave-event-duration out &event)
   (sp-block-free out)
   (event.free &event)
   (label exit status-return))
@@ -528,17 +479,17 @@
   "\"goto exit\" can skip events"
   status-declare
   (sp-initialise 3)
+  (test-helper-test-one test-wave)
+  (test-helper-test-one test-wave-event)
   (test-helper-test-one test-path)
   (test-helper-test-one test-file)
   (test-helper-test-one test-sp-group)
-  (test-helper-test-one test-sp-synth-event)
   (test-helper-test-one test-sp-seq)
   (test-helper-test-one test-sp-cheap-noise-event)
   (test-helper-test-one test-sp-cheap-filter)
   (test-helper-test-one test-sp-noise-event)
   (test-helper-test-one test-sp-random)
   (test-helper-test-one test-sp-triangle-square)
-  (test-helper-test-one test-synth)
   (test-helper-test-one test-moving-average)
   (test-helper-test-one test-fft)
   (test-helper-test-one test-spectral-inversion-ir)

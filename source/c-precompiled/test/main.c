@@ -259,69 +259,11 @@ status_t test_fft() {
 exit:
   status_return;
 }
-status_t test_synth() {
-  status_declare;
-  sp_time_t* state;
-  sp_time_t config_len;
-  sp_block_t out1;
-  sp_block_t out2;
-  sp_channels_t channels;
-  sp_time_t duration;
-  sp_synth_partial_t prt1;
-  sp_synth_partial_t prt2;
-  sp_synth_partial_t prt3;
-  sp_synth_partial_t config[3];
-  sp_time_t wvl[4] = { 2, 2, 2, 2 };
-  sp_sample_t amp[4] = { 0.1, 0.2, 0.3, 0.4 };
-  state = 0;
-  duration = 4;
-  channels = 2;
-  config_len = 3;
-  prt1.modifies = 0;
-  prt2.modifies = 1;
-  prt3.modifies = 0;
-  prt1.start = 0;
-  prt2.start = prt1.start;
-  prt3.start = prt1.start;
-  prt1.end = duration;
-  prt2.end = prt1.end;
-  prt3.end = prt1.end;
-  (prt1.amp)[0] = amp;
-  (prt1.amp)[1] = amp;
-  (prt1.wvl)[0] = wvl;
-  (prt1.wvl)[1] = wvl;
-  (prt1.phs)[0] = 1;
-  (prt1.phs)[2] = 2;
-  (prt2.amp)[0] = amp;
-  (prt2.amp)[1] = amp;
-  (prt2.wvl)[0] = wvl;
-  (prt2.wvl)[1] = wvl;
-  (prt2.phs)[0] = 1;
-  (prt2.phs)[2] = 2;
-  (prt3.amp)[0] = amp;
-  (prt3.amp)[1] = amp;
-  (prt3.wvl)[0] = wvl;
-  (prt3.wvl)[1] = wvl;
-  (prt3.phs)[0] = 1;
-  (prt3.phs)[2] = 2;
-  config[0] = prt1;
-  config[1] = prt2;
-  config[2] = prt3;
-  status_require((sp_block_new(channels, duration, (&out1))));
-  status_require((sp_block_new(channels, duration, (&out2))));
-  status_require((sp_synth_state_new(channels, config_len, config, (&state))));
-  status_require((sp_synth(out1, 0, duration, config_len, config, state)));
-  status_require((sp_synth(out2, 0, duration, config_len, config, state)));
-  sp_block_free(out1);
-  sp_block_free(out2);
-exit:
-  status_return;
-}
 /** better test separately as it opens gnuplot windows */
 status_t test_sp_plot() {
   status_declare;
   sp_sample_t a[9] = { 0.1, -0.2, 0.1, -0.4, 0.3, -0.4, 0.2, -0.2, 0.1 };
-  sp_plot_samples(a, 9);
+  sp_plot_sample_array(a, 9);
   sp_plot_spectrum(a, 9);
 exit:
   status_return;
@@ -495,38 +437,48 @@ status_t test_sp_group() {
 exit:
   status_return;
 }
-#define sp_synth_event_duration 100
-#define sp_synth_event_half_duration (sp_synth_event_duration / 2)
-/** sp synth values were taken from printing index and value of the result array.
+#define test_wave_duration 4
+#define test_wave_channels 2
+status_t test_wave() {
+  status_declare;
+  sp_wave_state_t state;
+  sp_block_t out1;
+  sp_block_t out2;
+  sp_time_t wvl[4] = { 2, 2, 2, 2 };
+  sp_sample_t amp[4] = { 0.1, 0.2, 0.3, 0.4 };
+  status_require((sp_block_new(test_wave_channels, test_wave_duration, (&out1))));
+  status_require((sp_block_new(test_wave_channels, test_wave_duration, (&out2))));
+  state = sp_wave_state_2(sp_sine_96_table, amp, amp, wvl, wvl, 0, 0);
+  sp_wave(0, test_wave_duration, (&state), out1);
+  sp_wave(0, test_wave_duration, (&state), out2);
+  test_helper_assert("zeros", ((0 == (out1.samples)[0][1]) && ((out1.samples)[0][1] == (out1.samples)[0][3])));
+  test_helper_assert("non-zeros", (!(0 == (out1.samples)[0][0]) && !(0 == (out1.samples)[0][2])));
+  sp_block_free(out1);
+  sp_block_free(out2);
+exit:
+  status_return;
+}
+#define sp_wave_event_duration 100
+/** sp wave values were taken from printing index and value of the result array.
    sp-plot-samples can plot the result */
-status_t test_sp_synth_event() {
+status_t test_wave_event() {
   status_declare;
   sp_event_t event;
   sp_block_t out;
-  sp_time_t wvl1[sp_synth_event_duration];
-  sp_time_t wvl2[sp_synth_event_duration];
-  sp_sample_t amp1[sp_synth_event_duration];
-  sp_sample_t amp2[sp_synth_event_duration];
-  sp_synth_partial_t partials[2];
+  sp_time_t wvl1[sp_wave_event_duration];
+  sp_time_t wvl2[sp_wave_event_duration];
+  sp_sample_t amp1[sp_wave_event_duration];
+  sp_sample_t amp2[sp_wave_event_duration];
   sp_time_t i;
-  sp_channels_t ci;
-  for (i = 0; (i < sp_synth_event_duration); i += 1) {
+  for (i = 0; (i < sp_wave_event_duration); i += 1) {
     wvl1[i] = 5;
     wvl2[i] = 10;
     amp1[i] = 0.1;
     amp2[i] = 1;
   };
-  partials[0] = sp_synth_partial_2(0, sp_synth_event_half_duration, 0, amp1, amp2, wvl1, wvl2, 0, 0);
-  partials[1] = sp_synth_partial_2(sp_synth_event_half_duration, sp_synth_event_duration, 0, amp2, amp1, wvl2, wvl1, 0, 0);
-  status_require((sp_synth_event(0, sp_synth_event_duration, 2, 2, partials, (&event))));
-  status_require((sp_block_new(2, sp_synth_event_duration, (&out))));
-  (event.f)(0, sp_synth_event_duration, out, (&event));
-  test_helper_assert("values 1", (0.1 >= (out.samples)[0][0]));
-  test_helper_assert("values 2", (0 == (out.samples)[0][49]));
-  test_helper_assert("values 3", (0.1 > (out.samples)[0][44]));
-  test_helper_assert("values 4", (0.1 <= (out.samples)[0][50]));
-  test_helper_assert("values 5", (1 == (out.samples)[0][54]));
-  test_helper_assert("values 6", (0.1 > (out.samples)[0][99]));
+  status_require((sp_wave_event(0, sp_wave_event_duration, (sp_wave_state_2(sp_sine_96_table, amp1, amp2, wvl1, wvl2, 0, 0)), (&event))));
+  status_require((sp_block_new(2, sp_wave_event_duration, (&out))));
+  (event.f)(0, sp_wave_event_duration, out, (&event));
   sp_block_free(out);
   (event.free)((&event));
 exit:
@@ -545,17 +497,17 @@ exit:
 int main() {
   status_declare;
   sp_initialise(3);
+  test_helper_test_one(test_wave);
+  test_helper_test_one(test_wave_event);
   test_helper_test_one(test_path);
   test_helper_test_one(test_file);
   test_helper_test_one(test_sp_group);
-  test_helper_test_one(test_sp_synth_event);
   test_helper_test_one(test_sp_seq);
   test_helper_test_one(test_sp_cheap_noise_event);
   test_helper_test_one(test_sp_cheap_filter);
   test_helper_test_one(test_sp_noise_event);
   test_helper_test_one(test_sp_random);
   test_helper_test_one(test_sp_triangle_square);
-  test_helper_test_one(test_synth);
   test_helper_test_one(test_moving_average);
   test_helper_test_one(test_fft);
   test_helper_test_one(test_spectral_inversion_ir);

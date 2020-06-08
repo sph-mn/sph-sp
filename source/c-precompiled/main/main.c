@@ -51,7 +51,7 @@ define_sp_interleave(sp_interleave, sp_sample_t, (b[b_size] = (a[channel])[a_siz
     sph_random_define_x256p(sp_random_samples, sp_sample_t, ((2 * sph_random_f64_from_u64(a)) - 1.0));
 sph_random_define_x256ss(sp_random_times, sp_time_t, a);
 /** display a sample array in one line */
-void display_samples(sp_sample_t* a, sp_time_t len) {
+void sp_display_sample_array(sp_sample_t* a, sp_time_t len) {
   sp_time_t i;
   printf(("%.17g"), (a[0]));
   for (i = 1; (i < len); i = (1 + i)) {
@@ -147,6 +147,76 @@ sp_sample_t sp_sin_lq(sp_float_t a) {
   b = (4 / M_PI);
   c = (-4 / (M_PI * M_PI));
   return ((((b * a) + (c * a * abs(a)))));
+}
+/** accumulate an integer phase and reset it after cycles.
+   float value phases would be inexact and therefore harder to reset */
+sp_time_t sp_phase_96(sp_time_t current, sp_time_t change) {
+  sp_time_t result;
+  result = (current + change);
+  return (((96000 <= result) ? (result % 96000) : result));
+}
+/** accumulate an integer phase with change given as a float value.
+   change must be a positive value and is rounded to the next larger integer */
+sp_time_t sp_phase_96_float(sp_time_t current, double change) { return ((sp_phase_96(current, (sp_cheap_ceiling_positive(change))))); }
+/** amplitude and wavelength can be controlled by arrays separately for each partial and channel */
+void sp_wave(sp_time_t start, sp_time_t duration, sp_wave_state_t* state, sp_block_t out) {
+  sp_sample_t amp;
+  sp_time_t channel_i;
+  sp_time_t phs;
+  sp_time_t wvl;
+  sp_time_t i;
+  for (channel_i = 0; (channel_i < out.channels); channel_i = (1 + channel_i)) {
+    phs = (state->phs)[channel_i];
+    for (i = 0; (i < duration); i = (1 + i)) {
+      amp = (state->amp)[channel_i][i];
+      wvl = (state->wvl)[channel_i][i];
+      phs = sp_phase_96_float(phs, (96000 / wvl));
+      (out.samples)[channel_i][i] += (state->wvf)[phs];
+    };
+    (state->phs)[channel_i] = phs;
+  };
+}
+#define sp_wave_state_set_channel(a, channel, amp_array, wvl_array, phs_value) \
+  (a.amp)[channel] = amp_array; \
+  (a.wvl)[channel] = wvl_array; \
+  (a.phs)[channel] = phs_value
+/** setup a single channel wave config */
+sp_wave_state_t sp_wave_state_1(sp_sample_t* wvf, sp_sample_t* amp, sp_time_t* wvl, sp_time_t phs) {
+  sp_wave_state_t a;
+  a.chn = 1;
+  a.wvf = wvf;
+  sp_wave_state_set_channel(a, 0, amp, wvl, phs);
+  return (a);
+}
+sp_wave_state_t sp_wave_state_2(sp_sample_t* wvf, sp_sample_t* amp1, sp_sample_t* amp2, sp_time_t* wvl1, sp_time_t* wvl2, sp_time_t phs1, sp_time_t phs2) {
+  sp_wave_state_t a;
+  a.chn = 2;
+  a.wvf = wvf;
+  sp_wave_state_set_channel(a, 0, amp1, wvl1, phs1);
+  sp_wave_state_set_channel(a, 1, amp2, wvl2, phs2);
+  return (a);
+}
+/** return a sample for a triangular wave with center offsets a left and b right.
+   creates sawtooth waves if either a or b is 0 */
+sp_sample_t sp_triangle(sp_time_t t, sp_time_t a, sp_time_t b) {
+  sp_time_t remainder;
+  remainder = (t % (a + b));
+  return (((remainder < a) ? (remainder * (1 / ((sp_sample_t)(a)))) : ((((sp_sample_t)(b)) - (remainder - ((sp_sample_t)(a)))) * (1 / ((sp_sample_t)(b))))));
+}
+sp_sample_t sp_triangle_96(sp_time_t t) { return ((sp_triangle(t, 48000, 48000))); }
+sp_sample_t sp_square_96(sp_time_t t) { return (((((2 * t) % (2 * 96000)) < 96000) ? -1 : 1)); }
+/** writes a sine wave of size into out. can be used to create lookup tables */
+status_t sp_sine_table_new(sp_sample_t** out, sp_time_t size) {
+  status_declare;
+  sp_time_t i;
+  sp_sample_t* out_array;
+  status_require((sph_helper_malloc((size * sizeof(sp_sample_t*)), (&out_array))));
+  for (i = 0; (i < size); i = (1 + i)) {
+    out_array[i] = sin((i * (M_PI / (size / 2))));
+  };
+  *out = out_array;
+exit:
+  status_return;
 }
 /** the normalised sinc function */
 sp_float_t sp_sinc(sp_float_t a) { return (((0 == a) ? 1 : (sin((M_PI * a)) / (M_PI * a)))); }
@@ -285,7 +355,7 @@ exit:
   status_return;
 }
 /** create a new path from the given segments config.
-  memory is allocated and ownership transferred to the caller */
+   memory is allocated and ownership transferred to the caller */
 status_t sp_path_times(sp_path_segments_t segments, sp_time_t size, sp_times_t* out) {
   status_declare;
   sp_times_t result;
@@ -361,7 +431,6 @@ status_t sp_path_samples_4(sp_samples_t* out, sp_time_t size, sp_path_segment_t 
 #include "../main/io.c"
 #include "../main/plot.c"
 #include "../main/filter.c"
-#include "../main/synthesiser.c"
 #include "../main/sequencer.c"
 /** render a single event to file. event can be a group */
 status_t sp_render_file(sp_event_t event, sp_time_t start, sp_time_t duration, sp_render_config_t config, uint8_t* path) {

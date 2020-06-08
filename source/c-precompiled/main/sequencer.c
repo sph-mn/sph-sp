@@ -106,34 +106,23 @@ exit:
   free(seq_futures);
   status_return;
 }
-void sp_synth_event_free(sp_event_t* a) {
-  free((((sp_synth_event_state_t*)(a->state))->state));
-  free((a->state));
-}
-void sp_synth_event_f(sp_time_t start, sp_time_t end, sp_block_t out, sp_event_t* event) {
-  sp_synth_event_state_t* s = event->state;
-  sp_synth(out, start, (end - start), (s->config_len), (s->config), (s->state));
-}
-/** memory for event.state is allocated and then owned by the caller.
-   config is copied to event.state.config to allow config to be a stack array. the copy will be freed by event.free */
-status_t sp_synth_event(sp_time_t start, sp_time_t end, sp_channels_t channel_count, sp_time_t config_len, sp_synth_partial_t* config, sp_event_t* out_event) {
+void sp_wave_event_f(sp_time_t start, sp_time_t end, sp_block_t out, sp_event_t* event) { sp_wave(start, (end - start), (event->state), out); }
+void sp_wave_event_free(sp_event_t* event) { free((event->state)); }
+/** memory for event.state is allocated and later freed with event.free */
+status_t sp_wave_event(sp_time_t start, sp_time_t end, sp_wave_state_t state, sp_event_t* out) {
   status_declare;
-  sp_event_t e;
-  sp_synth_event_state_t* state;
-  state = 0;
-  status_require((sph_helper_malloc((channel_count * sizeof(sp_synth_event_state_t)), (&state))));
-  status_require((sp_synth_state_new(channel_count, config_len, config, (&(state->state)))));
-  memcpy((state->config), config, (config_len * sizeof(sp_synth_partial_t)));
-  state->config_len = config_len;
-  e.start = start;
-  e.end = end;
-  e.f = sp_synth_event_f;
-  e.free = sp_synth_event_free;
-  e.state = state;
-  *out_event = e;
+  sp_wave_state_t* event_state;
+  event_state = 0;
+  status_require((sph_helper_malloc((sizeof(sp_wave_state_t)), (&event_state))));
+  *event_state = state;
+  out->start = start;
+  out->end = end;
+  out->f = sp_wave_event_f;
+  out->free = sp_wave_event_free;
+  out->state = event_state;
 exit:
   if (status_is_failure) {
-    free(state);
+    free(event_state);
   };
   status_return;
 }

@@ -93,33 +93,26 @@
     (sp-block-free sf:out))
   (label exit (free seq-futures) status-return))
 
-(define (sp-synth-event-free a) (void sp-event-t*)
-  (free (: (convert-type a:state sp-synth-event-state-t*) state))
-  (free a:state))
+(define (sp-wave-event-f start end out event) (void sp-time-t sp-time-t sp-block-t sp-event-t*)
+  (sp-wave start (- end start) event:state out))
 
-(define (sp-synth-event-f start end out event) (void sp-time-t sp-time-t sp-block-t sp-event-t*)
-  (define s sp-synth-event-state-t* event:state)
-  (sp-synth out start (- end start) s:config-len s:config s:state))
+(define (sp-wave-event-free event) (void sp-event-t*) (free event:state))
 
-(define (sp-synth-event start end channel-count config-len config out-event)
-  (status-t sp-time-t sp-time-t sp-channels-t sp-time-t sp-synth-partial-t* sp-event-t*)
-  "memory for event.state is allocated and then owned by the caller.
-   config is copied to event.state.config to allow config to be a stack array. the copy will be freed by event.free"
+(define (sp-wave-event start end state out)
+  (status-t sp-time-t sp-time-t sp-wave-state-t sp-event-t*)
+  "memory for event.state is allocated and later freed with event.free"
   status-declare
-  (declare e sp-event-t state sp-synth-event-state-t*)
-  (set state 0)
-  (status-require (sph-helper-malloc (* channel-count (sizeof sp-synth-event-state-t)) &state))
-  (status-require (sp-synth-state-new channel-count config-len config &state:state))
-  (memcpy state:config config (* config-len (sizeof sp-synth-partial-t)))
+  (declare event-state sp-wave-state-t*)
+  (set event-state 0)
+  (status-require (sph-helper-malloc (sizeof sp-wave-state-t) &event-state))
   (set
-    state:config-len config-len
-    e.start start
-    e.end end
-    e.f sp-synth-event-f
-    e.free sp-synth-event-free
-    e.state state)
-  (set *out-event e)
-  (label exit (if status-is-failure (free state)) status-return))
+    *event-state state
+    out:start start
+    out:end end
+    out:f sp-wave-event-f
+    out:free sp-wave-event-free
+    out:state event-state)
+  (label exit (if status-is-failure (free event-state)) status-return))
 
 (declare sp-noise-event-state-t
   (type

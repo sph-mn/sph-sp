@@ -8,19 +8,19 @@
   sp-plot-command-pattern-steps
   "gnuplot --persist -e 'set key off; set size ratio 0.5; plot \"%s\" with histeps lc rgb \"blue\"'")
 
-(define (sp-plot-samples->file a a-size path) (void sp-sample-t* sp-time-t uint8-t*)
+(define (sp-plot-sample-array->file a a-size path) (void sp-sample-t* sp-time-t uint8-t*)
   (declare file FILE* i sp-time-t)
   (set file (fopen path "w"))
   (for ((set i 0) (< i a-size) (set i (+ 1 i))) (fprintf file "%.3f\n" (array-get a i)))
   (fclose file))
 
-(define (sp-plot-times->file a a-size path) (void sp-time-t* sp-time-t uint8-t*)
+(define (sp-plot-time-array->file a a-size path) (void sp-time-t* sp-time-t uint8-t*)
   (declare file FILE* i sp-time-t)
   (set file (fopen path "w"))
   (for ((set i 0) (< i a-size) (set i (+ 1 i))) (fprintf file "%lu\n" (array-get a i)))
   (fclose file))
 
-(define (sp-plot-samples-file path use-steps) (void uint8-t* uint8-t)
+(define (sp-plot-sample-array-file path use-steps) (void uint8-t* uint8-t)
   (declare command uint8-t* command-pattern uint8-t* command-size size-t)
   (set
     command-pattern (if* use-steps sp-plot-command-pattern-steps sp-plot-command-pattern-lines)
@@ -31,24 +31,24 @@
   (system command)
   (free command))
 
-(define (sp-plot-samples a a-size) (void sp-sample-t* sp-time-t)
+(define (sp-plot-sample-array a a-size) (void sp-sample-t* sp-time-t)
   (define path-size uint8-t (+ 1 sp-plot-temp-file-index-maxlength (strlen sp-plot-temp-path)))
   (define path uint8-t* (calloc path-size 1))
   (if (not path) return)
   (snprintf path path-size "%s-%lu" sp-plot-temp-path sp-plot-temp-file-index)
   (set sp-plot-temp-file-index (+ 1 sp-plot-temp-file-index))
-  (sp-plot-samples->file a a-size path)
-  (sp-plot-samples-file path #t)
+  (sp-plot-sample-array->file a a-size path)
+  (sp-plot-sample-array-file path #t)
   (free path))
 
-(define (sp-plot-times a a-size) (void sp-time-t* sp-time-t)
+(define (sp-plot-time-array a a-size) (void sp-time-t* sp-time-t)
   (define path-size uint8-t (+ 1 sp-plot-temp-file-index-maxlength (strlen sp-plot-temp-path)))
   (define path uint8-t* (calloc path-size 1))
   (if (not path) return)
   (snprintf path path-size "%s-%lu" sp-plot-temp-path sp-plot-temp-file-index)
   (set sp-plot-temp-file-index (+ 1 sp-plot-temp-file-index))
-  (sp-plot-times->file a a-size path)
-  (sp-plot-samples-file path #t)
+  (sp-plot-time-array->file a a-size path)
+  (sp-plot-sample-array-file path #t)
   (free path))
 
 (define (sp-plot-spectrum->file a a-size path) (void sp-sample-t* sp-time-t uint8-t*)
@@ -72,7 +72,7 @@
   (free imag)
   (free real))
 
-(define (sp-plot-spectrum-file path) (void uint8-t*) (sp-plot-samples-file path #t))
+(define (sp-plot-spectrum-file path) (void uint8-t*) (sp-plot-sample-array-file path #t))
 
 (define (sp-plot-spectrum a a-size) (void sp-sample-t* sp-time-t)
   (define path-size uint8-t (+ 1 sp-plot-temp-file-index-maxlength (strlen sp-plot-temp-path)))

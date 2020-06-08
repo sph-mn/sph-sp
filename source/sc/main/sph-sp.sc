@@ -14,9 +14,6 @@
   sp-sample-t double
   sp-sf-read sf-readf-double
   sp-sf-write sf-writef-double
-  sp-synth-count-t uint16-t
-  sp-synth-partial-limit 64
-  sp-synth-sine sp-sine-96
   sp-time-t uint64-t)
 
 (pre-include "sph/status.c" "sph/spline-path.h"
@@ -57,7 +54,8 @@
   (sp-cheap-floor-positive a) (convert-type a sp-time-t)
   (sp-cheap-ceiling-positive a) (+ (convert-type a sp-time-t) (< (convert-type a sp-time-t) a))
   (sp-sample-array-zero a size) (memset a 0 (* size (sizeof sp-sample-t)))
-  (sp-time-array-zero a size) (memset a 0 (* size (sizeof sp-time-t))))
+  (sp-time-array-zero a size) (memset a 0 (* size (sizeof sp-time-t)))
+  (sp-sine-96 t) (begin "t must be between 0 and 95999" (array-get sp-sine-96-table t)))
 
 (declare
   sp-block-t
@@ -109,7 +107,26 @@
   (sp-random-times state size out) (void sp-random-state-t* sp-time-t sp-time-t*)
   (sp-sample-array-new size out) (status-t sp-time-t sp-sample-t**)
   (sp-time-array-new size out) (status-t sp-time-t sp-time-t**)
-  (sp-sample-array->time-array in in-size out) (void sp-sample-t* sp-time-t sp-time-t*))
+  (sp-sample-array->time-array in in-size out) (void sp-sample-t* sp-time-t sp-time-t*)
+  sp-wave-state-t
+  (type
+    (struct
+      (chn sp-channels-t)
+      (wvf sp-sample-t*)
+      (amp (array sp-sample-t* sp-channel-limit))
+      (wvl (array sp-time-t* sp-channel-limit))
+      (phs (array sp-time-t sp-channel-limit))))
+  sp-sine-96-table sp-sample-t*
+  (sp-sine-table-new out size) (status-t sp-sample-t** sp-time-t)
+  (sp-phase-96 current change) (sp-time-t sp-time-t sp-time-t)
+  (sp-phase-96-float current change) (sp-time-t sp-time-t double)
+  (sp-square-96 t) (sp-sample-t sp-time-t)
+  (sp-triangle t a b) (sp-sample-t sp-time-t sp-time-t sp-time-t)
+  (sp-triangle-96 t) (sp-sample-t sp-time-t)
+  (sp-wave start duration state out) (void sp-time-t sp-time-t sp-wave-state-t* sp-block-t)
+  (sp-wave-state-1 wvf amp wvl phs) (sp-wave-state-t sp-sample-t* sp-sample-t* sp-time-t* sp-time-t)
+  (sp-wave-state-2 wvf amp1 amp2 wvl1 wvl2 phs1 phs2)
+  (sp-wave-state-t sp-sample-t* sp-sample-t* sp-sample-t* sp-time-t* sp-time-t* sp-time-t sp-time-t))
 
 (sc-comment "filter")
 
@@ -197,44 +214,14 @@
 (sc-comment "plot")
 
 (declare
-  (sp-plot-samples a a-size) (void sp-sample-t* sp-time-t)
-  (sp-plot-times a a-size) (void sp-time-t* sp-time-t)
-  (sp-plot-samples->file a a-size path) (void sp-sample-t* sp-time-t uint8-t*)
-  (sp-plot-times->file a a-size path) (void sp-time-t* sp-time-t uint8-t*)
-  (sp-plot-samples-file path use-steps) (void uint8-t* uint8-t)
+  (sp-plot-sample-array a a-size) (void sp-sample-t* sp-time-t)
+  (sp-plot-time-array a a-size) (void sp-time-t* sp-time-t)
+  (sp-plot-sample-array->file a a-size path) (void sp-sample-t* sp-time-t uint8-t*)
+  (sp-plot-time-array->file a a-size path) (void sp-time-t* sp-time-t uint8-t*)
+  (sp-plot-sample-array-file path use-steps) (void uint8-t* uint8-t)
   (sp-plot-spectrum->file a a-size path) (void sp-sample-t* sp-time-t uint8-t*)
   (sp-plot-spectrum-file path) (void uint8-t*)
   (sp-plot-spectrum a a-size) (void sp-sample-t* sp-time-t))
-
-(sc-comment "synthesiser")
-(pre-define (sp-sine-96 t) (begin "t must be between 0 and 95999" (array-get sp-sine-96-table t)))
-
-(declare
-  sp-synth-partial-t
-  (type
-    (struct
-      (start sp-time-t)
-      (end sp-time-t)
-      (modifies sp-synth-count-t)
-      (amp (array sp-sample-t* sp-channel-limit))
-      (wvl (array sp-time-t* sp-channel-limit))
-      (phs (array sp-time-t sp-channel-limit))))
-  sp-sine-96-table sp-sample-t*
-  (sp-sine-table-new out size) (status-t sp-sample-t** sp-time-t)
-  (sp-phase-96 current change) (sp-time-t sp-time-t sp-time-t)
-  (sp-phase-96-float current change) (sp-time-t sp-time-t double)
-  (sp-synth out start duration config-len config phases)
-  (status-t sp-block-t sp-time-t sp-time-t sp-synth-count-t sp-synth-partial-t* sp-time-t*)
-  (sp-synth-state-new channel-count config-len config out-state)
-  (status-t sp-time-t sp-synth-count-t sp-synth-partial-t* sp-time-t**)
-  (sp-synth-partial-1 start end modifies amp wvl phs)
-  (sp-synth-partial-t sp-time-t sp-time-t sp-synth-count-t sp-sample-t* sp-time-t* sp-time-t)
-  (sp-synth-partial-2 start end modifies amp1 amp2 wvl1 wvl2 phs1 phs2)
-  (sp-synth-partial-t sp-time-t sp-time-t
-    sp-synth-count-t sp-sample-t* sp-sample-t* sp-time-t* sp-time-t* sp-time-t sp-time-t)
-  (sp-square-96 t) (sp-sample-t sp-time-t)
-  (sp-triangle t a b) (sp-sample-t sp-time-t sp-time-t sp-time-t)
-  (sp-triangle-96 t) (sp-sample-t sp-time-t))
 
 (sc-comment "sequencer")
 
@@ -276,23 +263,17 @@
       (f (function-pointer void sp-time-t sp-time-t sp-block-t (struct sp-event-t*)))
       (free (function-pointer void (struct sp-event-t*)))))
   sp-event-f-t (type (function-pointer void sp-time-t sp-time-t sp-block-t sp-event-t*))
-  sp-synth-event-state-t
-  (type
-    (struct
-      (config-len sp-synth-count-t)
-      (config (array sp-synth-partial-t sp-synth-partial-limit))
-      (state sp-time-t*)))
   (sp-seq-events-prepare data size) (void sp-event-t* sp-time-t)
   (sp-seq start end out events size) (void sp-time-t sp-time-t sp-block-t sp-event-t* sp-time-t)
   (sp-seq-parallel start end out events size)
   (status-t sp-time-t sp-time-t sp-block-t sp-event-t* sp-time-t)
-  (sp-synth-event start end channel-count config-len config out-event)
-  (status-t sp-time-t sp-time-t sp-channels-t sp-time-t sp-synth-partial-t* sp-event-t*)
   (sp-noise-event start end amp cut-l cut-h trn-l trn-h is-reject resolution random-state out-event)
   (status-t sp-time-t sp-time-t
     sp-sample-t** sp-sample-t* sp-sample-t*
     sp-sample-t* sp-sample-t* uint8-t sp-time-t sp-random-state-t sp-event-t*)
   (sp-events-array-free events size) (void sp-event-t* sp-time-t)
+  (sp-wave-event-f start end out event) (void sp-time-t sp-time-t sp-block-t sp-event-t*)
+  (sp-wave-event start end state out) (status-t sp-time-t sp-time-t sp-wave-state-t sp-event-t*)
   (sp-cheap-noise-event start end amp type cut passes q-factor resolution random-state out-event)
   (status-t sp-time-t sp-time-t
     sp-sample-t** sp-state-variable-filter-t sp-sample-t*

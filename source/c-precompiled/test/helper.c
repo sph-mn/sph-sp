@@ -24,7 +24,7 @@
     printf(("\ntests failed. %d %s\n"), (status.id), (sp_status_description(status))); \
   }
 /** display a sample array in one line */
-void debug_display_sample_array(sp_sample_t* a, sp_time_t len) {
+void sp_display_sample_array(sp_sample_t* a, sp_time_t len) {
   sp_time_t i;
   printf(("%.17g"), (a[0]));
   for (i = 1; (i < len); i = (1 + i)) {

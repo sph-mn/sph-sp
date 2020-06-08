@@ -38,15 +38,6 @@
 #ifndef sp_sf_write
 #define sp_sf_write sf_writef_double
 #endif
-#ifndef sp_synth_count_t
-#define sp_synth_count_t uint16_t
-#endif
-#ifndef sp_synth_partial_limit
-#define sp_synth_partial_limit 64
-#endif
-#ifndef sp_synth_sine
-#define sp_synth_sine sp_sine_96
-#endif
 #ifndef sp_time_t
 #define sp_time_t uint64_t
 #endif
@@ -91,6 +82,8 @@
 #define sp_cheap_ceiling_positive(a) (((sp_time_t)(a)) + (((sp_time_t)(a)) < a))
 #define sp_sample_array_zero(a, size) memset(a, 0, (size * sizeof(sp_sample_t)))
 #define sp_time_array_zero(a, size) memset(a, 0, (size * sizeof(sp_time_t)))
+/** t must be between 0 and 95999 */
+#define sp_sine_96(t) sp_sine_96_table[t]
 typedef struct {
   sp_channels_t channels;
   sp_time_t size;
@@ -134,6 +127,23 @@ void sp_random_times(sp_random_state_t* state, sp_time_t size, sp_time_t* out);
 status_t sp_sample_array_new(sp_time_t size, sp_sample_t** out);
 status_t sp_time_array_new(sp_time_t size, sp_time_t** out);
 void sp_sample_array_to_time_array(sp_sample_t* in, sp_time_t in_size, sp_time_t* out);
+typedef struct {
+  sp_channels_t chn;
+  sp_sample_t* wvf;
+  sp_sample_t* amp[sp_channel_limit];
+  sp_time_t* wvl[sp_channel_limit];
+  sp_time_t phs[sp_channel_limit];
+} sp_wave_state_t;
+sp_sample_t* sp_sine_96_table;
+status_t sp_sine_table_new(sp_sample_t** out, sp_time_t size);
+sp_time_t sp_phase_96(sp_time_t current, sp_time_t change);
+sp_time_t sp_phase_96_float(sp_time_t current, double change);
+sp_sample_t sp_square_96(sp_time_t t);
+sp_sample_t sp_triangle(sp_time_t t, sp_time_t a, sp_time_t b);
+sp_sample_t sp_triangle_96(sp_time_t t);
+void sp_wave(sp_time_t start, sp_time_t duration, sp_wave_state_t* state, sp_block_t out);
+sp_wave_state_t sp_wave_state_1(sp_sample_t* wvf, sp_sample_t* amp, sp_time_t* wvl, sp_time_t phs);
+sp_wave_state_t sp_wave_state_2(sp_sample_t* wvf, sp_sample_t* amp1, sp_sample_t* amp2, sp_time_t* wvl1, sp_time_t* wvl2, sp_time_t phs1, sp_time_t phs2);
 /* filter */
 #define sp_filter_state_t sp_convolution_filter_state_t
 #define sp_filter_state_free sp_convolution_filter_state_free
@@ -183,36 +193,14 @@ void sp_cheap_filter_state_free(sp_cheap_filter_state_t* a);
 status_t sp_cheap_filter_state_new(sp_time_t max_size, sp_time_t max_passes, sp_cheap_filter_state_t* out_state);
 status_t sp_filter(sp_sample_t* in, sp_time_t in_size, sp_float_t cutoff_l, sp_float_t cutoff_h, sp_float_t transition_l, sp_float_t transition_h, boolean is_reject, sp_filter_state_t** out_state, sp_sample_t* out_samples);
 /* plot */
-void sp_plot_samples(sp_sample_t* a, sp_time_t a_size);
-void sp_plot_times(sp_time_t* a, sp_time_t a_size);
-void sp_plot_samples_to_file(sp_sample_t* a, sp_time_t a_size, uint8_t* path);
-void sp_plot_times_to_file(sp_time_t* a, sp_time_t a_size, uint8_t* path);
-void sp_plot_samples_file(uint8_t* path, uint8_t use_steps);
+void sp_plot_sample_array(sp_sample_t* a, sp_time_t a_size);
+void sp_plot_time_array(sp_time_t* a, sp_time_t a_size);
+void sp_plot_sample_array_to_file(sp_sample_t* a, sp_time_t a_size, uint8_t* path);
+void sp_plot_time_array_to_file(sp_time_t* a, sp_time_t a_size, uint8_t* path);
+void sp_plot_sample_array_file(uint8_t* path, uint8_t use_steps);
 void sp_plot_spectrum_to_file(sp_sample_t* a, sp_time_t a_size, uint8_t* path);
 void sp_plot_spectrum_file(uint8_t* path);
 void sp_plot_spectrum(sp_sample_t* a, sp_time_t a_size);
-/* synthesiser */
-/** t must be between 0 and 95999 */
-#define sp_sine_96(t) sp_sine_96_table[t]
-typedef struct {
-  sp_time_t start;
-  sp_time_t end;
-  sp_synth_count_t modifies;
-  sp_sample_t* amp[sp_channel_limit];
-  sp_time_t* wvl[sp_channel_limit];
-  sp_time_t phs[sp_channel_limit];
-} sp_synth_partial_t;
-sp_sample_t* sp_sine_96_table;
-status_t sp_sine_table_new(sp_sample_t** out, sp_time_t size);
-sp_time_t sp_phase_96(sp_time_t current, sp_time_t change);
-sp_time_t sp_phase_96_float(sp_time_t current, double change);
-status_t sp_synth(sp_block_t out, sp_time_t start, sp_time_t duration, sp_synth_count_t config_len, sp_synth_partial_t* config, sp_time_t* phases);
-status_t sp_synth_state_new(sp_time_t channel_count, sp_synth_count_t config_len, sp_synth_partial_t* config, sp_time_t** out_state);
-sp_synth_partial_t sp_synth_partial_1(sp_time_t start, sp_time_t end, sp_synth_count_t modifies, sp_sample_t* amp, sp_time_t* wvl, sp_time_t phs);
-sp_synth_partial_t sp_synth_partial_2(sp_time_t start, sp_time_t end, sp_synth_count_t modifies, sp_sample_t* amp1, sp_sample_t* amp2, sp_time_t* wvl1, sp_time_t* wvl2, sp_time_t phs1, sp_time_t phs2);
-sp_sample_t sp_square_96(sp_time_t t);
-sp_sample_t sp_triangle(sp_time_t t, sp_time_t a, sp_time_t b);
-sp_sample_t sp_triangle_96(sp_time_t t);
 /* sequencer */
 #define sp_event_duration(a) (a.end - a.start)
 #define sp_event_duration_set(a, duration) a.end = (a.start + duration)
@@ -255,17 +243,13 @@ typedef struct sp_event_t {
   void (*free)(struct sp_event_t*);
 } sp_event_t;
 typedef void (*sp_event_f_t)(sp_time_t, sp_time_t, sp_block_t, sp_event_t*);
-typedef struct {
-  sp_synth_count_t config_len;
-  sp_synth_partial_t config[sp_synth_partial_limit];
-  sp_time_t* state;
-} sp_synth_event_state_t;
 void sp_seq_events_prepare(sp_event_t* data, sp_time_t size);
 void sp_seq(sp_time_t start, sp_time_t end, sp_block_t out, sp_event_t* events, sp_time_t size);
 status_t sp_seq_parallel(sp_time_t start, sp_time_t end, sp_block_t out, sp_event_t* events, sp_time_t size);
-status_t sp_synth_event(sp_time_t start, sp_time_t end, sp_channels_t channel_count, sp_time_t config_len, sp_synth_partial_t* config, sp_event_t* out_event);
 status_t sp_noise_event(sp_time_t start, sp_time_t end, sp_sample_t** amp, sp_sample_t* cut_l, sp_sample_t* cut_h, sp_sample_t* trn_l, sp_sample_t* trn_h, uint8_t is_reject, sp_time_t resolution, sp_random_state_t random_state, sp_event_t* out_event);
 void sp_events_array_free(sp_event_t* events, sp_time_t size);
+void sp_wave_event_f(sp_time_t start, sp_time_t end, sp_block_t out, sp_event_t* event);
+status_t sp_wave_event(sp_time_t start, sp_time_t end, sp_wave_state_t state, sp_event_t* out);
 status_t sp_cheap_noise_event(sp_time_t start, sp_time_t end, sp_sample_t** amp, sp_state_variable_filter_t type, sp_sample_t* cut, sp_time_t passes, sp_sample_t q_factor, sp_time_t resolution, sp_random_state_t random_state, sp_event_t* out_event);
 array4_declare_type(sp_events, sp_event_t);
 typedef struct {
