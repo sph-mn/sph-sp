@@ -451,8 +451,8 @@ status_t test_wave() {
   state = sp_wave_state_2(sp_sine_96_table, 96000, spd, amp, amp, 0, 0);
   sp_wave(0, test_wave_duration, (&state), out1);
   sp_wave(0, test_wave_duration, (&state), out2);
-  test_helper_assert("zeros", ((0 == (out1.samples)[0][1]) && ((out1.samples)[0][1] == (out1.samples)[0][3])));
-  test_helper_assert("non-zeros", (!(0 == (out1.samples)[0][0]) && !(0 == (out1.samples)[0][2])));
+  test_helper_assert("zeros", ((0 == (out1.samples)[0][0]) && ((out1.samples)[0][0] == (out1.samples)[0][2])));
+  test_helper_assert("non-zeros", (!(0 == (out1.samples)[0][1]) && !(0 == (out1.samples)[0][3])));
   sp_block_free(out1);
   sp_block_free(out2);
 exit:
@@ -470,7 +470,7 @@ status_t test_wave_event() {
   sp_sample_t amp2[sp_wave_event_duration];
   sp_time_t i;
   for (i = 0; (i < sp_wave_event_duration); i += 1) {
-    spd[i] = 19200;
+    spd[i] = 1;
     amp1[i] = 0.1;
     amp2[i] = 1;
   };
@@ -495,8 +495,8 @@ exit:
 int main() {
   status_declare;
   sp_initialise(3);
-  test_helper_test_one(test_wave);
   test_helper_test_one(test_wave_event);
+  test_helper_test_one(test_wave);
   test_helper_test_one(test_path);
   test_helper_test_one(test_file);
   test_helper_test_one(test_sp_group);

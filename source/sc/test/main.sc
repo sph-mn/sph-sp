@@ -436,9 +436,9 @@
   (set state (sp-wave-state-2 sp-sine-96-table 96000 spd amp amp 0 0))
   (sp-wave 0 test-wave-duration &state out1)
   (sp-wave 0 test-wave-duration &state out2)
-  (test-helper-assert "zeros" (= 0 (array-get out1.samples 0 1) (array-get out1.samples 0 3)))
+  (test-helper-assert "zeros" (= 0 (array-get out1.samples 0 0) (array-get out1.samples 0 2)))
   (test-helper-assert "non-zeros"
-    (and (not (= 0 (array-get out1.samples 0 0))) (not (= 0 (array-get out1.samples 0 2)))))
+    (and (not (= 0 (array-get out1.samples 0 1))) (not (= 0 (array-get out1.samples 0 3)))))
   (sp-block-free out1)
   (sp-block-free out2)
   (label exit status-return))
@@ -457,7 +457,7 @@
     amp2 (array sp-sample-t sp-wave-event-duration)
     i sp-time-t)
   (for ((set i 0) (< i sp-wave-event-duration) (set+ i 1))
-    (set (array-get spd i) 19200 (array-get amp1 i) 0.1 (array-get amp2 i) 1))
+    (set (array-get spd i) 1 (array-get amp1 i) 0.1 (array-get amp2 i) 1))
   (status-require
     (sp-wave-event 0 sp-wave-event-duration
       (sp-wave-state-2 sp-sine-96-table 96000 spd amp1 amp2 0 0) &event))
@@ -478,8 +478,8 @@
   "\"goto exit\" can skip events"
   status-declare
   (sp-initialise 3)
-  (test-helper-test-one test-wave)
   (test-helper-test-one test-wave-event)
+  (test-helper-test-one test-wave)
   (test-helper-test-one test-path)
   (test-helper-test-one test-file)
   (test-helper-test-one test-sp-group)

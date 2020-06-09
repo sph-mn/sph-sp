@@ -5,7 +5,7 @@
 (pre-define-if-not-defined
   sp-channel-limit 2
   sp-channels-t uint8-t
-  sp-file-format (bit-or SF-FORMAT-WAV SF-FORMAT-FLOAT)
+  sp-file-format (bit-or SF-FORMAT-WAV SF_FORMAT_FLOAT)
   sp-float-t double
   spline-path-time-t sp-time-t
   spline-path-value-t sp-sample-t
@@ -297,6 +297,7 @@
   sp-path-segment-t spline-path-segment-t
   sp-path-segment-count-t spline-path-segment-count-t
   sp-path-line spline-path-line
+  sp-path-move spline-path-move
   sp-path-bezier spline-path-bezier
   sp-path-constant spline-path-constant
   sp-path-path spline-path-path)
@@ -331,7 +332,7 @@
   (rt n d)
   (begin
     "returns n/d fractions of the sample rate. for example, 1/2 is half the sample rate.
-     this macro references a local variable named rate which must exists and contain the current sample rate"
+     this macro references a local variable named rate which must exist and contain the current sample rate"
     (convert-type (* (/ rate d) n) sp-time-t)))
 
 (declare

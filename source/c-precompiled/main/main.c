@@ -159,8 +159,9 @@ sp_time_t sp_phase_float(sp_time_t current, sp_sample_t change, sp_time_t cycle)
   return (((a < cycle) ? a : (a % cycle)));
 }
 /** * sums into out
-   * state.spd (speed): value per channel. hertz = rate / wvf-size * spd
+   * state.spd (speed): array with hertz values
    * state.wvf (waveform): array with waveform samples
+   * state.wvf-size: size of state.wvf, should match sample rate
    * state.phs (phase): value per channel
    * state.amp (amplitude): array per channel */
 void sp_wave(sp_time_t start, sp_time_t duration, sp_wave_state_t* state, sp_block_t out) {
@@ -171,11 +172,11 @@ void sp_wave(sp_time_t start, sp_time_t duration, sp_wave_state_t* state, sp_blo
   for (channel_i = 0; (channel_i < out.channels); channel_i = (1 + channel_i)) {
     phs = (state->phs)[channel_i];
     for (i = 0; (i < duration); i = (1 + i)) {
+      (out.samples)[channel_i][i] += ((state->amp)[channel_i][i] * (state->wvf)[phs]);
       phs += (state->spd)[i];
       if (phs >= state->wvf_size) {
         phs = (phs % state->wvf_size);
       };
-      (out.samples)[channel_i][i] += ((state->amp)[channel_i][i] * (state->wvf)[phs]);
     };
     (state->phs)[channel_i] = phs;
   };

@@ -265,6 +265,7 @@ void sp_group_event_free(sp_event_t* a);
 #define sp_path_segment_t spline_path_segment_t
 #define sp_path_segment_count_t spline_path_segment_count_t
 #define sp_path_line spline_path_line
+#define sp_path_move spline_path_move
 #define sp_path_bezier spline_path_bezier
 #define sp_path_constant spline_path_constant
 #define sp_path_path spline_path_path
@@ -282,7 +283,7 @@ status_t sp_path_times_4(sp_times_t* out, sp_time_t size, sp_path_segment_t s1, 
 /* main 2 */
 #define declare_render_config(name) sp_render_config_t name = { .channels = 2, .rate = 96000, .block_size = 96000 }
 /** returns n/d fractions of the sample rate. for example, 1/2 is half the sample rate.
-     this macro references a local variable named rate which must exists and contain the current sample rate */
+     this macro references a local variable named rate which must exist and contain the current sample rate */
 #define rt(n, d) ((sp_time_t)(((rate / d) * n)))
 typedef struct {
   sp_time_t rate;

@@ -118,18 +118,18 @@
 
 (define (sp-wave start duration state out) (void sp-time-t sp-time-t sp-wave-state-t* sp-block-t)
   "* sums into out
-   * state.spd (speed): value per channel. hertz = rate / wvf-size * spd
+   * state.spd (speed): array with hertz values
    * state.wvf (waveform): array with waveform samples
+   * state.wvf-size: size of state.wvf, should match sample rate
    * state.phs (phase): value per channel
    * state.amp (amplitude): array per channel"
   (declare amp sp-sample-t channel-i sp-time-t phs sp-time-t i sp-time-t)
   (for ((set channel-i 0) (< channel-i out.channels) (set channel-i (+ 1 channel-i)))
     (set phs (array-get state:phs channel-i))
     (for ((set i 0) (< i duration) (set i (+ 1 i)))
-      (set+ phs (array-get state:spd i))
-      (if (>= phs state:wvf-size) (set phs (modulo phs state:wvf-size)))
       (set+ (array-get out.samples channel-i i)
-        (* (array-get state:amp channel-i i) (array-get state:wvf phs))))
+        (* (array-get state:amp channel-i i) (array-get state:wvf phs)) phs (array-get state:spd i))
+      (if (>= phs state:wvf-size) (set phs (modulo phs state:wvf-size))))
     (set (array-get state:phs channel-i) phs)))
 
 (pre-define (sp-wave-state-set-channel a channel amp-array phs-value)
