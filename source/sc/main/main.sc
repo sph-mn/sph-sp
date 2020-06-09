@@ -106,51 +106,49 @@
   (set b (/ 4 M_PI) c (/ -4 (* M_PI M_PI)))
   (return (- (+ (* b a) (* c a (abs a))))))
 
-(define (sp-phase-96 current change) (sp-time-t sp-time-t sp-time-t)
-  "accumulate an integer phase and reset it after cycles.
-   float value phases would be inexact and therefore harder to reset"
-  (declare result sp-time-t)
-  (set result (+ current change))
-  (return (if* (<= 96000 result) (modulo result 96000) result)))
+(define (sp-phase current change cycle) (sp-time-t sp-time-t sp-time-t sp-time-t)
+  (define a sp-time-t (+ current change))
+  (return (if* (< a cycle) a (modulo a cycle))))
 
-(define (sp-phase-96-float current change) (sp-time-t sp-time-t double)
+(define (sp-phase-float current change cycle) (sp-time-t sp-time-t sp-sample-t sp-time-t)
   "accumulate an integer phase with change given as a float value.
    change must be a positive value and is rounded to the next larger integer"
-  (return (sp-phase-96 current (sp-cheap-ceiling-positive change))))
+  (define a sp-time-t (+ current (sp-cheap-ceiling-positive change)))
+  (return (if* (< a cycle) a (modulo a cycle))))
 
 (define (sp-wave start duration state out) (void sp-time-t sp-time-t sp-wave-state-t* sp-block-t)
-  "amplitude and wavelength can be controlled by arrays separately for each partial and channel"
-  (declare amp sp-sample-t channel-i sp-time-t phs sp-time-t wvl sp-time-t i sp-time-t)
+  "* sums into out
+   * state.spd (speed): value per channel. hertz = rate / wvf-size * spd
+   * state.wvf (waveform): array with waveform samples
+   * state.phs (phase): value per channel
+   * state.amp (amplitude): array per channel"
+  (declare amp sp-sample-t channel-i sp-time-t phs sp-time-t i sp-time-t)
   (for ((set channel-i 0) (< channel-i out.channels) (set channel-i (+ 1 channel-i)))
     (set phs (array-get state:phs channel-i))
     (for ((set i 0) (< i duration) (set i (+ 1 i)))
-      (set
-        amp (array-get state:amp channel-i i)
-        wvl (array-get state:wvl channel-i i)
-        phs (sp-phase-96-float phs (/ 96000 wvl)))
-      (set+ (array-get out.samples channel-i i) (array-get state:wvf phs)))
+      (set+ phs (array-get state:spd i))
+      (if (>= phs state:wvf-size) (set phs (modulo phs state:wvf-size)))
+      (set+ (array-get out.samples channel-i i)
+        (* (array-get state:amp channel-i i) (array-get state:wvf phs))))
     (set (array-get state:phs channel-i) phs)))
 
-(pre-define (sp-wave-state-set-channel a channel amp-array wvl-array phs-value)
-  (set
-    (array-get a.amp channel) amp-array
-    (array-get a.wvl channel) wvl-array
-    (array-get a.phs channel) phs-value))
+(pre-define (sp-wave-state-set-channel a channel amp-array phs-value)
+  (set (array-get a.amp channel) amp-array (array-get a.phs channel) phs-value))
 
-(define (sp-wave-state-1 wvf amp wvl phs)
-  (sp-wave-state-t sp-sample-t* sp-sample-t* sp-time-t* sp-time-t)
+(define (sp-wave-state-1 wvf wvf-size spd amp phs)
+  (sp-wave-state-t sp-sample-t* sp-time-t sp-time-t* sp-sample-t* sp-time-t)
   "setup a single channel wave config"
   (declare a sp-wave-state-t)
-  (set a.chn 1 a.wvf wvf)
-  (sp-wave-state-set-channel a 0 amp wvl phs)
+  (set a.spd spd a.wvf wvf a.wvf-size wvf-size)
+  (sp-wave-state-set-channel a 0 amp phs)
   (return a))
 
-(define (sp-wave-state-2 wvf amp1 amp2 wvl1 wvl2 phs1 phs2)
-  (sp-wave-state-t sp-sample-t* sp-sample-t* sp-sample-t* sp-time-t* sp-time-t* sp-time-t sp-time-t)
+(define (sp-wave-state-2 wvf wvf-size spd amp1 amp2 phs1 phs2)
+  (sp-wave-state-t sp-sample-t* sp-time-t sp-time-t* sp-sample-t* sp-sample-t* sp-time-t sp-time-t)
   (declare a sp-wave-state-t)
-  (set a.chn 2 a.wvf wvf)
-  (sp-wave-state-set-channel a 0 amp1 wvl1 phs1)
-  (sp-wave-state-set-channel a 1 amp2 wvl2 phs2)
+  (set a.spd spd a.wvf wvf a.wvf-size wvf-size)
+  (sp-wave-state-set-channel a 0 amp1 phs1)
+  (sp-wave-state-set-channel a 1 amp2 phs2)
   (return a))
 
 (define (sp-triangle t a b) (sp-sample-t sp-time-t sp-time-t sp-time-t)

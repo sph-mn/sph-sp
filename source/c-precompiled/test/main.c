@@ -444,11 +444,11 @@ status_t test_wave() {
   sp_wave_state_t state;
   sp_block_t out1;
   sp_block_t out2;
-  sp_time_t wvl[4] = { 2, 2, 2, 2 };
+  sp_time_t spd[4] = { 48000, 48000, 48000, 48000 };
   sp_sample_t amp[4] = { 0.1, 0.2, 0.3, 0.4 };
   status_require((sp_block_new(test_wave_channels, test_wave_duration, (&out1))));
   status_require((sp_block_new(test_wave_channels, test_wave_duration, (&out2))));
-  state = sp_wave_state_2(sp_sine_96_table, amp, amp, wvl, wvl, 0, 0);
+  state = sp_wave_state_2(sp_sine_96_table, 96000, spd, amp, amp, 0, 0);
   sp_wave(0, test_wave_duration, (&state), out1);
   sp_wave(0, test_wave_duration, (&state), out2);
   test_helper_assert("zeros", ((0 == (out1.samples)[0][1]) && ((out1.samples)[0][1] == (out1.samples)[0][3])));
@@ -465,18 +465,16 @@ status_t test_wave_event() {
   status_declare;
   sp_event_t event;
   sp_block_t out;
-  sp_time_t wvl1[sp_wave_event_duration];
-  sp_time_t wvl2[sp_wave_event_duration];
+  sp_time_t spd[sp_wave_event_duration];
   sp_sample_t amp1[sp_wave_event_duration];
   sp_sample_t amp2[sp_wave_event_duration];
   sp_time_t i;
   for (i = 0; (i < sp_wave_event_duration); i += 1) {
-    wvl1[i] = 5;
-    wvl2[i] = 10;
+    spd[i] = 19200;
     amp1[i] = 0.1;
     amp2[i] = 1;
   };
-  status_require((sp_wave_event(0, sp_wave_event_duration, (sp_wave_state_2(sp_sine_96_table, amp1, amp2, wvl1, wvl2, 0, 0)), (&event))));
+  status_require((sp_wave_event(0, sp_wave_event_duration, (sp_wave_state_2(sp_sine_96_table, 96000, spd, amp1, amp2, 0, 0)), (&event))));
   status_require((sp_block_new(2, sp_wave_event_duration, (&out))));
   (event.f)(0, sp_wave_event_duration, out, (&event));
   sp_block_free(out);

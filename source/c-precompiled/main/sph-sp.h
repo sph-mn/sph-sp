@@ -128,22 +128,22 @@ status_t sp_sample_array_new(sp_time_t size, sp_sample_t** out);
 status_t sp_time_array_new(sp_time_t size, sp_time_t** out);
 void sp_sample_array_to_time_array(sp_sample_t* in, sp_time_t in_size, sp_time_t* out);
 typedef struct {
-  sp_channels_t chn;
-  sp_sample_t* wvf;
   sp_sample_t* amp[sp_channel_limit];
-  sp_time_t* wvl[sp_channel_limit];
   sp_time_t phs[sp_channel_limit];
+  sp_time_t* spd;
+  sp_time_t wvf_size;
+  sp_sample_t* wvf;
 } sp_wave_state_t;
 sp_sample_t* sp_sine_96_table;
 status_t sp_sine_table_new(sp_sample_t** out, sp_time_t size);
-sp_time_t sp_phase_96(sp_time_t current, sp_time_t change);
-sp_time_t sp_phase_96_float(sp_time_t current, double change);
+sp_time_t sp_phase(sp_time_t current, sp_time_t change, sp_time_t cycle);
+sp_time_t sp_phase_float(sp_time_t current, double change, sp_time_t cycle);
 sp_sample_t sp_square_96(sp_time_t t);
 sp_sample_t sp_triangle(sp_time_t t, sp_time_t a, sp_time_t b);
 sp_sample_t sp_triangle_96(sp_time_t t);
 void sp_wave(sp_time_t start, sp_time_t duration, sp_wave_state_t* state, sp_block_t out);
-sp_wave_state_t sp_wave_state_1(sp_sample_t* wvf, sp_sample_t* amp, sp_time_t* wvl, sp_time_t phs);
-sp_wave_state_t sp_wave_state_2(sp_sample_t* wvf, sp_sample_t* amp1, sp_sample_t* amp2, sp_time_t* wvl1, sp_time_t* wvl2, sp_time_t phs1, sp_time_t phs2);
+sp_wave_state_t sp_wave_state_1(sp_sample_t* wvf, sp_time_t wvf_size, sp_time_t* spd, sp_sample_t* amp, sp_time_t phs);
+sp_wave_state_t sp_wave_state_2(sp_sample_t* wvf, sp_time_t wvf_size, sp_time_t* spd, sp_sample_t* amp1, sp_sample_t* amp2, sp_time_t phs1, sp_time_t phs2);
 /* filter */
 #define sp_filter_state_t sp_convolution_filter_state_t
 #define sp_filter_state_free sp_convolution_filter_state_free

@@ -148,52 +148,57 @@ sp_sample_t sp_sin_lq(sp_float_t a) {
   c = (-4 / (M_PI * M_PI));
   return ((((b * a) + (c * a * abs(a)))));
 }
-/** accumulate an integer phase and reset it after cycles.
-   float value phases would be inexact and therefore harder to reset */
-sp_time_t sp_phase_96(sp_time_t current, sp_time_t change) {
-  sp_time_t result;
-  result = (current + change);
-  return (((96000 <= result) ? (result % 96000) : result));
+sp_time_t sp_phase(sp_time_t current, sp_time_t change, sp_time_t cycle) {
+  sp_time_t a = (current + change);
+  return (((a < cycle) ? a : (a % cycle)));
 }
 /** accumulate an integer phase with change given as a float value.
    change must be a positive value and is rounded to the next larger integer */
-sp_time_t sp_phase_96_float(sp_time_t current, double change) { return ((sp_phase_96(current, (sp_cheap_ceiling_positive(change))))); }
-/** amplitude and wavelength can be controlled by arrays separately for each partial and channel */
+sp_time_t sp_phase_float(sp_time_t current, sp_sample_t change, sp_time_t cycle) {
+  sp_time_t a = (current + sp_cheap_ceiling_positive(change));
+  return (((a < cycle) ? a : (a % cycle)));
+}
+/** * sums into out
+   * state.spd (speed): value per channel. hertz = rate / wvf-size * spd
+   * state.wvf (waveform): array with waveform samples
+   * state.phs (phase): value per channel
+   * state.amp (amplitude): array per channel */
 void sp_wave(sp_time_t start, sp_time_t duration, sp_wave_state_t* state, sp_block_t out) {
   sp_sample_t amp;
   sp_time_t channel_i;
   sp_time_t phs;
-  sp_time_t wvl;
   sp_time_t i;
   for (channel_i = 0; (channel_i < out.channels); channel_i = (1 + channel_i)) {
     phs = (state->phs)[channel_i];
     for (i = 0; (i < duration); i = (1 + i)) {
-      amp = (state->amp)[channel_i][i];
-      wvl = (state->wvl)[channel_i][i];
-      phs = sp_phase_96_float(phs, (96000 / wvl));
-      (out.samples)[channel_i][i] += (state->wvf)[phs];
+      phs += (state->spd)[i];
+      if (phs >= state->wvf_size) {
+        phs = (phs % state->wvf_size);
+      };
+      (out.samples)[channel_i][i] += ((state->amp)[channel_i][i] * (state->wvf)[phs]);
     };
     (state->phs)[channel_i] = phs;
   };
 }
-#define sp_wave_state_set_channel(a, channel, amp_array, wvl_array, phs_value) \
+#define sp_wave_state_set_channel(a, channel, amp_array, phs_value) \
   (a.amp)[channel] = amp_array; \
-  (a.wvl)[channel] = wvl_array; \
   (a.phs)[channel] = phs_value
 /** setup a single channel wave config */
-sp_wave_state_t sp_wave_state_1(sp_sample_t* wvf, sp_sample_t* amp, sp_time_t* wvl, sp_time_t phs) {
+sp_wave_state_t sp_wave_state_1(sp_sample_t* wvf, sp_time_t wvf_size, sp_time_t* spd, sp_sample_t* amp, sp_time_t phs) {
   sp_wave_state_t a;
-  a.chn = 1;
+  a.spd = spd;
   a.wvf = wvf;
-  sp_wave_state_set_channel(a, 0, amp, wvl, phs);
+  a.wvf_size = wvf_size;
+  sp_wave_state_set_channel(a, 0, amp, phs);
   return (a);
 }
-sp_wave_state_t sp_wave_state_2(sp_sample_t* wvf, sp_sample_t* amp1, sp_sample_t* amp2, sp_time_t* wvl1, sp_time_t* wvl2, sp_time_t phs1, sp_time_t phs2) {
+sp_wave_state_t sp_wave_state_2(sp_sample_t* wvf, sp_time_t wvf_size, sp_time_t* spd, sp_sample_t* amp1, sp_sample_t* amp2, sp_time_t phs1, sp_time_t phs2) {
   sp_wave_state_t a;
-  a.chn = 2;
+  a.spd = spd;
   a.wvf = wvf;
-  sp_wave_state_set_channel(a, 0, amp1, wvl1, phs1);
-  sp_wave_state_set_channel(a, 1, amp2, wvl2, phs2);
+  a.wvf_size = wvf_size;
+  sp_wave_state_set_channel(a, 0, amp1, phs1);
+  sp_wave_state_set_channel(a, 1, amp2, phs2);
   return (a);
 }
 /** return a sample for a triangular wave with center offsets a left and b right.

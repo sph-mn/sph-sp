@@ -429,11 +429,11 @@
     state sp-wave-state-t
     out1 sp-block-t
     out2 sp-block-t
-    wvl (array sp-time-t 4 2 2 2 2)
+    spd (array sp-time-t 4 48000 48000 48000 48000)
     amp (array sp-sample-t 4 0.1 0.2 0.3 0.4))
   (status-require (sp-block-new test-wave-channels test-wave-duration &out1))
   (status-require (sp-block-new test-wave-channels test-wave-duration &out2))
-  (set state (sp-wave-state-2 sp-sine-96-table amp amp wvl wvl 0 0))
+  (set state (sp-wave-state-2 sp-sine-96-table 96000 spd amp amp 0 0))
   (sp-wave 0 test-wave-duration &state out1)
   (sp-wave 0 test-wave-duration &state out2)
   (test-helper-assert "zeros" (= 0 (array-get out1.samples 0 1) (array-get out1.samples 0 3)))
@@ -452,16 +452,15 @@
   (declare
     event sp-event-t
     out sp-block-t
-    wvl1 (array sp-time-t sp-wave-event-duration)
-    wvl2 (array sp-time-t sp-wave-event-duration)
+    spd (array sp-time-t sp-wave-event-duration)
     amp1 (array sp-sample-t sp-wave-event-duration)
     amp2 (array sp-sample-t sp-wave-event-duration)
     i sp-time-t)
   (for ((set i 0) (< i sp-wave-event-duration) (set+ i 1))
-    (set (array-get wvl1 i) 5 (array-get wvl2 i) 10 (array-get amp1 i) 0.1 (array-get amp2 i) 1))
+    (set (array-get spd i) 19200 (array-get amp1 i) 0.1 (array-get amp2 i) 1))
   (status-require
     (sp-wave-event 0 sp-wave-event-duration
-      (sp-wave-state-2 sp-sine-96-table amp1 amp2 wvl1 wvl2 0 0) &event))
+      (sp-wave-state-2 sp-sine-96-table 96000 spd amp1 amp2 0 0) &event))
   (status-require (sp-block-new 2 sp-wave-event-duration &out))
   (event.f 0 sp-wave-event-duration out &event)
   (sp-block-free out)

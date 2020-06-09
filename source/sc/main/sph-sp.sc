@@ -111,22 +111,23 @@
   sp-wave-state-t
   (type
     (struct
-      (chn sp-channels-t)
-      (wvf sp-sample-t*)
       (amp (array sp-sample-t* sp-channel-limit))
-      (wvl (array sp-time-t* sp-channel-limit))
-      (phs (array sp-time-t sp-channel-limit))))
+      (phs (array sp-time-t sp-channel-limit))
+      (spd sp-time-t*)
+      (wvf-size sp-time-t)
+      (wvf sp-sample-t*)))
   sp-sine-96-table sp-sample-t*
   (sp-sine-table-new out size) (status-t sp-sample-t** sp-time-t)
-  (sp-phase-96 current change) (sp-time-t sp-time-t sp-time-t)
-  (sp-phase-96-float current change) (sp-time-t sp-time-t double)
+  (sp-phase current change cycle) (sp-time-t sp-time-t sp-time-t sp-time-t)
+  (sp-phase-float current change cycle) (sp-time-t sp-time-t double sp-time-t)
   (sp-square-96 t) (sp-sample-t sp-time-t)
   (sp-triangle t a b) (sp-sample-t sp-time-t sp-time-t sp-time-t)
   (sp-triangle-96 t) (sp-sample-t sp-time-t)
   (sp-wave start duration state out) (void sp-time-t sp-time-t sp-wave-state-t* sp-block-t)
-  (sp-wave-state-1 wvf amp wvl phs) (sp-wave-state-t sp-sample-t* sp-sample-t* sp-time-t* sp-time-t)
-  (sp-wave-state-2 wvf amp1 amp2 wvl1 wvl2 phs1 phs2)
-  (sp-wave-state-t sp-sample-t* sp-sample-t* sp-sample-t* sp-time-t* sp-time-t* sp-time-t sp-time-t))
+  (sp-wave-state-1 wvf wvf-size spd amp phs)
+  (sp-wave-state-t sp-sample-t* sp-time-t sp-time-t* sp-sample-t* sp-time-t)
+  (sp-wave-state-2 wvf wvf-size spd amp1 amp2 phs1 phs2)
+  (sp-wave-state-t sp-sample-t* sp-time-t sp-time-t* sp-sample-t* sp-sample-t* sp-time-t sp-time-t))
 
 (sc-comment "filter")
 
