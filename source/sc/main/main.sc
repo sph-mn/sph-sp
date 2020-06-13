@@ -34,16 +34,6 @@
 (define-sp-interleave sp-deinterleave sp-sample-t
   (set (array-get (array-get a channel) a-size) (array-get b b-size)))
 
-(sph-random-define-x256p sp-random-samples sp-sample-t (- (* 2 (sph-random-f64-from-u64 a)) 1.0))
-(sph-random-define-x256ss sp-random-times sp-time-t a)
-
-(define (sp-display-sample-array a len) (void sp-sample-t* sp-time-t)
-  "display a sample array in one line"
-  (declare i sp-time-t)
-  (printf "%.17g" (array-get a 0))
-  (for ((set i 1) (< i len) (set i (+ 1 i))) (printf " %.17g" (array-get a i)))
-  (printf "\n"))
-
 (define (sp-status-description a) (uint8-t* status-t)
   "get a string description for a status id in a status-t"
   (declare b uint8-t*)
@@ -268,28 +258,13 @@
 
 (pre-include "../main/arrays.c")
 
-(define (sp-set-unity-gain in in-size out) (void sp-sample-t* sp-time-t sp-sample-t*)
-  "adjust amplitude of out to match the one of in"
-  (declare
-    i sp-time-t
-    in-max sp-sample-t
-    out-max sp-sample-t
-    difference sp-sample-t
-    correction sp-sample-t)
-  (set
-    in-max (sp-sample-array-absolute-max in in-size)
-    out-max (sp-sample-array-absolute-max out in-size))
-  (if (or (= 0 in-max) (= 0 out-max)) return)
-  (set difference (/ out-max in-max) correction (+ 1 (/ (- 1 difference) difference)))
-  (for ((set i 0) (< i in-size) (set i (+ 1 i)))
-    (set (array-get out i) (* correction (array-get out i)))))
-
 (define (sp-block-zero a) (void sp-block-t)
   (declare i sp-channels-t)
   (for ((set i 0) (< i a.channels) (set+ i 1))
     (sp-sample-array-zero (array-get a.samples i) a.size)))
 
 (define (sp-path-samples segments size out) (status-t sp-path-segments-t sp-time-t sp-samples-t*)
+  "samples are allocated"
   status-declare
   (declare result sp-samples-t)
   (array3-set-null result)
@@ -311,6 +286,12 @@
   (set *out result)
   (label exit status-return))
 
+(define (sp-path-times-1 out size s1) (status-t sp-times-t* sp-time-t sp-path-segment-t)
+  (declare segments sp-path-segments-t segments-data (array sp-path-segment-t 1))
+  (set segments.size 1 segments.data segments-data)
+  (array-set segments-data 0 s1)
+  (return (sp-path-times segments size out)))
+
 (define (sp-path-times-2 out size s1 s2)
   (status-t sp-times-t* sp-time-t sp-path-segment-t sp-path-segment-t)
   (declare segments sp-path-segments-t segments-data (array sp-path-segment-t 2))
@@ -331,6 +312,12 @@
   (set segments.size 4 segments.data segments-data)
   (array-set segments-data 0 s1 1 s2 2 s3 3 s4)
   (return (sp-path-times segments size out)))
+
+(define (sp-path-samples-1 out size s1) (status-t sp-samples-t* sp-time-t sp-path-segment-t)
+  (declare segments sp-path-segments-t segments-data (array sp-path-segment-t 1))
+  (set segments.size 1 segments.data segments-data)
+  (array-set segments-data 0 s1)
+  (return (sp-path-samples segments size out)))
 
 (define (sp-path-samples-2 out size s1 s2)
   (status-t sp-samples-t* sp-time-t sp-path-segment-t sp-path-segment-t)

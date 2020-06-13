@@ -80,8 +80,6 @@
 #define sp_cheap_round_positive(a) ((sp_time_t)((0.5 + a)))
 #define sp_cheap_floor_positive(a) ((sp_time_t)(a))
 #define sp_cheap_ceiling_positive(a) (((sp_time_t)(a)) + (((sp_time_t)(a)) < a))
-#define sp_sample_array_zero(a, size) memset(a, 0, (size * sizeof(sp_sample_t)))
-#define sp_time_array_zero(a, size) memset(a, 0, (size * sizeof(sp_time_t)))
 /** t must be between 0 and 95999 */
 #define sp_sine_96(t) sp_sine_96_table[t]
 typedef struct {
@@ -122,11 +120,6 @@ sp_block_t sp_block_with_offset(sp_block_t a, sp_time_t offset);
 status_t sp_null_ir(sp_sample_t** out_ir, sp_time_t* out_len);
 status_t sp_passthrough_ir(sp_sample_t** out_ir, sp_time_t* out_len);
 status_t sp_initialise(uint16_t cpu_count);
-void sp_random_samples(sp_random_state_t* state, sp_time_t size, sp_sample_t* out);
-void sp_random_times(sp_random_state_t* state, sp_time_t size, sp_time_t* out);
-status_t sp_sample_array_new(sp_time_t size, sp_sample_t** out);
-status_t sp_time_array_new(sp_time_t size, sp_time_t** out);
-void sp_sample_array_to_time_array(sp_sample_t* in, sp_time_t in_size, sp_time_t* out);
 typedef struct {
   sp_sample_t* amp[sp_channel_limit];
   sp_time_t phs[sp_channel_limit];
@@ -144,6 +137,16 @@ sp_sample_t sp_triangle_96(sp_time_t t);
 void sp_wave(sp_time_t start, sp_time_t duration, sp_wave_state_t* state, sp_block_t out);
 sp_wave_state_t sp_wave_state_1(sp_sample_t* wvf, sp_time_t wvf_size, sp_time_t* spd, sp_sample_t* amp, sp_time_t phs);
 sp_wave_state_t sp_wave_state_2(sp_sample_t* wvf, sp_time_t wvf_size, sp_time_t* spd, sp_sample_t* amp1, sp_sample_t* amp2, sp_time_t phs1, sp_time_t phs2);
+/* arrays */
+#define sp_sample_array_zero(a, size) memset(a, 0, (size * sizeof(sp_sample_t)))
+#define sp_time_array_zero(a, size) memset(a, 0, (size * sizeof(sp_time_t)))
+void sp_sample_array_set_unity_gain(sp_sample_t* in, sp_time_t in_size, sp_sample_t* out);
+void sp_sample_array_random(sp_random_state_t* state, sp_time_t size, sp_sample_t* out);
+void sp_time_array_random(sp_random_state_t* state, sp_time_t size, sp_time_t* out);
+status_t sp_time_array_new(sp_time_t size, sp_time_t** out);
+void sp_sample_array_to_time_array(sp_sample_t* in, sp_time_t in_size, sp_time_t* out);
+void sp_sample_array_display(sp_sample_t* a, sp_time_t size);
+status_t sp_sample_array_new(sp_time_t size, sp_sample_t** out);
 /* filter */
 #define sp_filter_state_t sp_convolution_filter_state_t
 #define sp_filter_state_free sp_convolution_filter_state_free
@@ -262,6 +265,7 @@ void sp_group_event_f(sp_time_t start, sp_time_t end, sp_block_t out, sp_event_t
 void sp_group_event_free(sp_event_t* a);
 /* path */
 #define path_move spline_path_move
+#define sp_path_t spline_path_t
 #define sp_path_segment_t spline_path_segment_t
 #define sp_path_segment_count_t spline_path_segment_count_t
 #define sp_path_line spline_path_line
@@ -269,14 +273,21 @@ void sp_group_event_free(sp_event_t* a);
 #define sp_path_bezier spline_path_bezier
 #define sp_path_constant spline_path_constant
 #define sp_path_path spline_path_path
+#define sp_path_i_line spline_path_i_line
+#define sp_path_i_move spline_path_i_move
+#define sp_path_i_bezier spline_path_i_bezier
+#define sp_path_i_constant spline_path_i_constant
+#define sp_path_i_path spline_path_i_path
 array3_declare_type(sp_times, sp_time_t);
 array3_declare_type(sp_samples, sp_sample_t);
 array3_declare_type(sp_path_segments, spline_path_segment_t);
 status_t sp_path_samples(sp_path_segments_t segments, sp_time_t size, sp_samples_t* out);
+status_t sp_path_samples_1(sp_samples_t* out, sp_time_t size, sp_path_segment_t s1);
 status_t sp_path_samples_2(sp_samples_t* out, sp_time_t size, sp_path_segment_t s1, sp_path_segment_t s2);
 status_t sp_path_samples_3(sp_samples_t* out, sp_time_t size, sp_path_segment_t s1, sp_path_segment_t s2, sp_path_segment_t s3);
 status_t sp_path_samples_4(sp_samples_t* out, sp_time_t size, sp_path_segment_t s1, sp_path_segment_t s2, sp_path_segment_t s3, sp_path_segment_t s4);
 status_t sp_path_times(sp_path_segments_t segments, sp_time_t size, sp_times_t* out);
+status_t sp_path_times_1(sp_times_t* out, sp_time_t size, sp_path_segment_t s1);
 status_t sp_path_times_2(sp_times_t* out, sp_time_t size, sp_path_segment_t s1, sp_path_segment_t s2);
 status_t sp_path_times_3(sp_times_t* out, sp_time_t size, sp_path_segment_t s1, sp_path_segment_t s2, sp_path_segment_t s3);
 status_t sp_path_times_4(sp_times_t* out, sp_time_t size, sp_path_segment_t s1, sp_path_segment_t s2, sp_path_segment_t s3, sp_path_segment_t s4);

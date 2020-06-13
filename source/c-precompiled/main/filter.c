@@ -392,7 +392,7 @@ void sp_cheap_filter(sp_state_variable_filter_t type, sp_sample_t* in, sp_time_t
     memset((state->svf_state), 0, (sizeof(sp_sample_t) * 2 * (sp_cheap_filter_passes_limit - passes)));
   };
   if (unity_gain) {
-    sp_set_unity_gain(in, in_size, out);
+    sp_sample_array_set_unity_gain(in, in_size, out);
   };
 }
 /** apply a centered moving average filter to samples between in-window and in-window-end inclusively and write to out.

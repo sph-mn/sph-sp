@@ -21,10 +21,6 @@ c code and shared library for sound synthesis and sequencing. the sound processo
   * event renderer for parallel processing with custom routines
   * events for filtered noise and synth output
   * event groups that compose for riffs and songs
-* more
-  * higher level features are in the making
-
-[code example](other/example.c)
 
 # dependencies
 * run-time
@@ -123,28 +119,31 @@ sp_noise_event :: sp_time_t:start sp_time_t:end sp_sample_t**:amp sp_sample_t*:c
 sp_null_ir :: sp_sample_t**:out_ir sp_time_t*:out_len -> status_t
 sp_passthrough_ir :: sp_sample_t**:out_ir sp_time_t*:out_len -> status_t
 sp_path_samples :: sp_path_segments_t:segments sp_time_t:size sp_samples_t*:out -> status_t
+sp_path_samples_1 :: sp_samples_t*:out sp_time_t:size sp_path_segment_t:s1 -> status_t
 sp_path_samples_2 :: sp_samples_t*:out sp_time_t:size sp_path_segment_t:s1 sp_path_segment_t:s2 -> status_t
 sp_path_samples_3 :: sp_samples_t*:out sp_time_t:size sp_path_segment_t:s1 sp_path_segment_t:s2 sp_path_segment_t:s3 -> status_t
 sp_path_samples_4 :: sp_samples_t*:out sp_time_t:size sp_path_segment_t:s1 sp_path_segment_t:s2 sp_path_segment_t:s3 sp_path_segment_t:s4 -> status_t
 sp_path_times :: sp_path_segments_t:segments sp_time_t:size sp_times_t*:out -> status_t
+sp_path_times_1 :: sp_times_t*:out sp_time_t:size sp_path_segment_t:s1 -> status_t
 sp_path_times_2 :: sp_times_t*:out sp_time_t:size sp_path_segment_t:s1 sp_path_segment_t:s2 -> status_t
 sp_path_times_3 :: sp_times_t*:out sp_time_t:size sp_path_segment_t:s1 sp_path_segment_t:s2 sp_path_segment_t:s3 -> status_t
 sp_path_times_4 :: sp_times_t*:out sp_time_t:size sp_path_segment_t:s1 sp_path_segment_t:s2 sp_path_segment_t:s3 sp_path_segment_t:s4 -> status_t
-sp_phase_96 :: sp_time_t:current sp_time_t:change -> sp_time_t
-sp_phase_96_float :: sp_time_t:current double:change -> sp_time_t
-sp_plot_samples :: sp_sample_t*:a sp_time_t:a_size -> void
-sp_plot_samples_to_file :: sp_sample_t*:a sp_time_t:a_size uint8_t*:path -> void
-sp_plot_samples_file :: uint8_t*:path uint8_t:use_steps -> void
+sp_phase :: sp_time_t:current sp_time_t:change sp_time_t:cycle -> sp_time_t
+sp_phase_float :: sp_time_t:current double:change sp_time_t:cycle -> sp_time_t
+sp_plot_sample_array :: sp_sample_t*:a sp_time_t:a_size -> void
+sp_plot_sample_array_to_file :: sp_sample_t*:a sp_time_t:a_size uint8_t*:path -> void
+sp_plot_sample_array_file :: uint8_t*:path uint8_t:use_steps -> void
 sp_plot_spectrum :: sp_sample_t*:a sp_time_t:a_size -> void
 sp_plot_spectrum_to_file :: sp_sample_t*:a sp_time_t:a_size uint8_t*:path -> void
 sp_plot_spectrum_file :: uint8_t*:path -> void
-sp_plot_times :: sp_time_t*:a sp_time_t:a_size -> void
-sp_plot_times_to_file :: sp_time_t*:a sp_time_t:a_size uint8_t*:path -> void
-sp_random_samples :: sp_random_state_t*:state sp_time_t:size sp_sample_t*:out -> void
-sp_random_times :: sp_random_state_t*:state sp_time_t:size sp_time_t*:out -> void
+sp_plot_time_array :: sp_time_t*:a sp_time_t:a_size -> void
+sp_plot_time_array_to_file :: sp_time_t*:a sp_time_t:a_size uint8_t*:path -> void
 sp_render_file :: sp_event_t:event sp_time_t:start sp_time_t:duration sp_render_config_t:config uint8_t*:path -> status_t
 sp_sample_array_to_time_array :: sp_sample_t*:in sp_time_t:in_size sp_time_t*:out -> void
+sp_sample_array_display :: sp_sample_t*:a sp_time_t:size -> void
 sp_sample_array_new :: sp_time_t:size sp_sample_t**:out -> status_t
+sp_sample_array_random :: sp_random_state_t*:state sp_time_t:size sp_sample_t*:out -> void
+sp_sample_array_set_unity_gain :: sp_sample_t*:in sp_time_t:in_size sp_sample_t*:out -> void
 sp_seq :: sp_time_t:start sp_time_t:end sp_block_t:out sp_event_t*:events sp_time_t:size -> void
 sp_seq_events_prepare :: sp_event_t*:data sp_time_t:size -> void
 sp_seq_parallel :: sp_time_t:start sp_time_t:end sp_block_t:out sp_event_t*:events sp_time_t:size -> status_t
@@ -162,14 +161,15 @@ sp_state_variable_filter_lp :: sp_sample_t*:out sp_sample_t*:in sp_float_t:in_co
 sp_state_variable_filter_peak :: sp_sample_t*:out sp_sample_t*:in sp_float_t:in_count sp_float_t:cutoff sp_time_t:q_factor sp_sample_t*:state -> void
 sp_status_description :: status_t:a -> uint8_t*
 sp_status_name :: status_t:a -> uint8_t*
-sp_synth :: sp_block_t:out sp_time_t:start sp_time_t:duration sp_synth_count_t:config_len sp_synth_partial_t*:config sp_time_t*:phases -> status_t
-sp_synth_event :: sp_time_t:start sp_time_t:end sp_channels_t:channel_count sp_time_t:config_len sp_synth_partial_t*:config sp_event_t*:out_event -> status_t
-sp_synth_partial_1 :: sp_time_t:start sp_time_t:end sp_synth_count_t:modifies sp_sample_t*:amp sp_time_t*:wvl sp_time_t:phs -> sp_synth_partial_t
-sp_synth_partial_2 :: sp_time_t:start sp_time_t:end sp_synth_count_t:modifies sp_sample_t*:amp1 sp_sample_t*:amp2 sp_time_t*:wvl1 sp_time_t*:wvl2 sp_time_t:phs1 sp_time_t:phs2 -> sp_synth_partial_t
-sp_synth_state_new :: sp_time_t:channel_count sp_synth_count_t:config_len sp_synth_partial_t*:config sp_time_t**:out_state -> status_t
 sp_time_array_new :: sp_time_t:size sp_time_t**:out -> status_t
+sp_time_array_random :: sp_random_state_t*:state sp_time_t:size sp_time_t*:out -> void
 sp_triangle :: sp_time_t:t sp_time_t:a sp_time_t:b -> sp_sample_t
 sp_triangle_96 :: sp_time_t:t -> sp_sample_t
+sp_wave :: sp_time_t:start sp_time_t:duration sp_wave_state_t*:state sp_block_t:out -> void
+sp_wave_event :: sp_time_t:start sp_time_t:end sp_wave_state_t:state sp_event_t*:out -> status_t
+sp_wave_event_f :: sp_time_t:start sp_time_t:end sp_block_t:out sp_event_t*:event -> void
+sp_wave_state_1 :: sp_sample_t*:wvf sp_time_t:wvf_size sp_time_t*:spd sp_sample_t*:amp sp_time_t:phs -> sp_wave_state_t
+sp_wave_state_2 :: sp_sample_t*:wvf sp_time_t:wvf_size sp_time_t*:spd sp_sample_t*:amp1 sp_sample_t*:amp2 sp_time_t:phs1 sp_time_t:phs2 -> sp_wave_state_t
 sp_window_blackman :: sp_float_t:a sp_time_t:width -> sp_float_t
 sp_windowed_sinc_bp_br :: sp_sample_t*:in sp_time_t:in_len sp_float_t:cutoff_l sp_float_t:cutoff_h sp_float_t:transition_l sp_float_t:transition_h boolean:is_reject sp_convolution_filter_state_t**:out_state sp_sample_t*:out_samples -> status_t
 sp_windowed_sinc_bp_br_ir :: sp_float_t:cutoff_l sp_float_t:cutoff_h sp_float_t:transition_l sp_float_t:transition_h boolean:is_reject sp_sample_t**:out_ir sp_time_t*:out_len -> status_t
@@ -223,10 +223,17 @@ sp_group_prepare(a)
 sp_group_size_t
 sp_path_bezier
 sp_path_constant
+sp_path_i_bezier
+sp_path_i_constant
+sp_path_i_line
+sp_path_i_move
+sp_path_i_path
 sp_path_line
+sp_path_move
 sp_path_path
 sp_path_segment_count_t
 sp_path_segment_t
+sp_path_t
 sp_random_state_new
 sp_random_state_t
 sp_s_group_libc
@@ -312,21 +319,16 @@ sp_samples_t: struct
   data: void*
   size: size_t
   used: size_t
-sp_synth_event_state_t: struct
-  config_len: sp_synth_count_t
-  config: array sp_synth_partial_t sp_synth_partial_limit
-  state: sp_time_t*
-sp_synth_partial_t: struct
-  start: sp_time_t
-  end: sp_time_t
-  modifies: sp_synth_count_t
-  amp: array sp_sample_t* sp_channel_limit
-  wvl: array sp_time_t* sp_channel_limit
-  phs: array sp_time_t sp_channel_limit
 sp_times_t: struct
   data: void*
   size: size_t
   used: size_t
+sp_wave_state_t: struct
+  amp: array sp_sample_t* sp_channel_limit
+  phs: array sp_time_t sp_channel_limit
+  spd: sp_time_t*
+  wvf_size: sp_time_t
+  wvf: sp_sample_t*
 ```
 
 # license

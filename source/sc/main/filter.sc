@@ -371,7 +371,7 @@
   (sc-comment "reset unused state values")
   (if (> sp-cheap-filter-passes-limit passes)
     (memset state:svf-state 0 (* (sizeof sp-sample-t) 2 (- sp-cheap-filter-passes-limit passes))))
-  (if unity-gain (sp-set-unity-gain in in-size out)))
+  (if unity-gain (sp-sample-array-set-unity-gain in in-size out)))
 
 (define
   (sp-moving-average in in-end in-window in-window-end prev prev-end next next-end radius out)

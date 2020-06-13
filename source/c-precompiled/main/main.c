@@ -48,19 +48,8 @@
 #define sp_memory_error status_set_goto(sp_s_group_sp, sp_s_id_memory)
 define_sp_interleave(sp_interleave, sp_sample_t, (b[b_size] = (a[channel])[a_size]))
   define_sp_interleave(sp_deinterleave, sp_sample_t, ((a[channel])[a_size] = b[b_size]))
-    sph_random_define_x256p(sp_random_samples, sp_sample_t, ((2 * sph_random_f64_from_u64(a)) - 1.0));
-sph_random_define_x256ss(sp_random_times, sp_time_t, a);
-/** display a sample array in one line */
-void sp_display_sample_array(sp_sample_t* a, sp_time_t len) {
-  sp_time_t i;
-  printf(("%.17g"), (a[0]));
-  for (i = 1; (i < len); i = (1 + i)) {
-    printf((" %.17g"), (a[i]));
-  };
-  printf("\n");
-}
-/** get a string description for a status id in a status-t */
-uint8_t* sp_status_description(status_t a) {
+  /** get a string description for a status id in a status-t */
+  uint8_t* sp_status_description(status_t a) {
   uint8_t* b;
   if (!strcmp(sp_s_group_sp, (a.group))) {
     if (sp_s_id_eof == a.id) {
@@ -323,30 +312,13 @@ first process values that dont lead to carryover */
   };
 }
 #include "../main/arrays.c"
-/** adjust amplitude of out to match the one of in */
-void sp_set_unity_gain(sp_sample_t* in, sp_time_t in_size, sp_sample_t* out) {
-  sp_time_t i;
-  sp_sample_t in_max;
-  sp_sample_t out_max;
-  sp_sample_t difference;
-  sp_sample_t correction;
-  in_max = sp_sample_array_absolute_max(in, in_size);
-  out_max = sp_sample_array_absolute_max(out, in_size);
-  if ((0 == in_max) || (0 == out_max)) {
-    return;
-  };
-  difference = (out_max / in_max);
-  correction = (1 + ((1 - difference) / difference));
-  for (i = 0; (i < in_size); i = (1 + i)) {
-    out[i] = (correction * out[i]);
-  };
-}
 void sp_block_zero(sp_block_t a) {
   sp_channels_t i;
   for (i = 0; (i < a.channels); i += 1) {
     sp_sample_array_zero(((a.samples)[i]), (a.size));
   };
 }
+/** samples are allocated */
 status_t sp_path_samples(sp_path_segments_t segments, sp_time_t size, sp_samples_t* out) {
   status_declare;
   sp_samples_t result;
@@ -373,6 +345,14 @@ status_t sp_path_times(sp_path_segments_t segments, sp_time_t size, sp_times_t* 
   *out = result;
 exit:
   status_return;
+}
+status_t sp_path_times_1(sp_times_t* out, sp_time_t size, sp_path_segment_t s1) {
+  sp_path_segments_t segments;
+  sp_path_segment_t segments_data[1];
+  segments.size = 1;
+  segments.data = segments_data;
+  segments_data[0] = s1;
+  return ((sp_path_times(segments, size, out)));
 }
 status_t sp_path_times_2(sp_times_t* out, sp_time_t size, sp_path_segment_t s1, sp_path_segment_t s2) {
   sp_path_segments_t segments;
@@ -403,6 +383,14 @@ status_t sp_path_times_4(sp_times_t* out, sp_time_t size, sp_path_segment_t s1, 
   segments_data[2] = s3;
   segments_data[3] = s4;
   return ((sp_path_times(segments, size, out)));
+}
+status_t sp_path_samples_1(sp_samples_t* out, sp_time_t size, sp_path_segment_t s1) {
+  sp_path_segments_t segments;
+  sp_path_segment_t segments_data[1];
+  segments.size = 1;
+  segments.data = segments_data;
+  segments_data[0] = s1;
+  return ((sp_path_samples(segments, size, out)));
 }
 status_t sp_path_samples_2(sp_samples_t* out, sp_time_t size, sp_path_segment_t s1, sp_path_segment_t s2) {
   sp_path_segments_t segments;
