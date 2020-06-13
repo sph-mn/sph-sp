@@ -139,7 +139,7 @@
   (for ((set i 0) (< i len) (set i (+ 1 i)))
     (set (array-get ir i) (* (sp-window-blackman i len) (sp-sinc (* 2 cutoff (- i center-index))))))
   (sc-comment "scale to get unity gain")
-  (set sum (sp-sample-array-sum ir len))
+  (set sum (sp-samples-sum ir len))
   (for ((set i 0) (< i len) (set i (+ 1 i))) (set (array-get ir i) (/ (array-get ir i) sum)))
   (if is-high-pass (sp-spectral-inversion-ir ir len))
   (set *out-ir ir *out-len len)
@@ -341,8 +341,8 @@
     (if (< sp-cheap-filter-passes-limit max-passes)
       (status-set-goto sp-s-group-sp sp-s-id-not-implemented)
       (begin
-        (status-require (sp-sample-array-new max-size &in-temp))
-        (status-require (sp-sample-array-new max-size &out-temp)))))
+        (status-require (sp-samples-new max-size &in-temp))
+        (status-require (sp-samples-new max-size &out-temp)))))
   (set out-state:in-temp in-temp out-state:out-temp out-temp)
   (memset out-state:svf-state 0 (* (sizeof sp-sample-t) 2 sp-cheap-filter-passes-limit))
   (label exit (if status-is-failure (free in-temp)) status-return))
@@ -364,14 +364,14 @@
         (if (< 1 passes)
           (begin
             (type out-temp in-temp in-size cutoff q-factor (+ passes state:svf-state))
-            (sp-sample-array-zero in-temp in-size)
+            (sp-samples-zero in-temp in-size)
             (set passes (- passes 1) in-swap in-temp in-temp out-temp out-temp in-swap)
             (goto loop))
           (type out in-temp in-size cutoff q-factor (+ passes state:svf-state))))))
   (sc-comment "reset unused state values")
   (if (> sp-cheap-filter-passes-limit passes)
     (memset state:svf-state 0 (* (sizeof sp-sample-t) 2 (- sp-cheap-filter-passes-limit passes))))
-  (if unity-gain (sp-sample-array-set-unity-gain in in-size out)))
+  (if unity-gain (sp-samples-set-unity-gain in in-size out)))
 
 (define
   (sp-moving-average in in-end in-window in-window-end prev prev-end next next-end radius out)
@@ -399,23 +399,23 @@
       (array-get sums 2) 0
       in-left (max in (- in-window radius))
       in-right (min in-end (+ in-window radius))
-      (array-get sums 1) (sp-sample-array-sum in-left (+ 1 (- in-right in-left))))
+      (array-get sums 1) (sp-samples-sum in-left (+ 1 (- in-right in-left))))
     (if (and (< (- in-window in-left) radius) prev)
       (begin
         (set
           in-missing (- radius (- in-window in-left))
           outside (max prev (- prev-end in-missing))
           outside-count (- prev-end outside)
-          (array-get sums 0) (sp-sample-array-sum outside outside-count))))
+          (array-get sums 0) (sp-samples-sum outside outside-count))))
     (if (and (< (- in-right in-window) radius) next)
       (begin
         (set
           in-missing (- radius (- in-right in-window))
           outside next
           outside-count (min (- next-end next) in-missing)
-          (array-get sums 2) (sp-sample-array-sum outside outside-count))))
+          (array-get sums 2) (sp-samples-sum outside outside-count))))
     (set
-      (pointer-get out) (/ (sp-sample-array-sum sums 3) width)
+      (pointer-get out) (/ (sp-samples-sum sums 3) width)
       out (+ 1 out)
       in-window (+ 1 in-window)))
   status-return)

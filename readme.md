@@ -118,32 +118,32 @@ sp_moving_average :: sp_sample_t*:in sp_sample_t*:in_end sp_sample_t*:in_window 
 sp_noise_event :: sp_time_t:start sp_time_t:end sp_sample_t**:amp sp_sample_t*:cut_l sp_sample_t*:cut_h sp_sample_t*:trn_l sp_sample_t*:trn_h uint8_t:is_reject sp_time_t:resolution sp_random_state_t:random_state sp_event_t*:out_event -> status_t
 sp_null_ir :: sp_sample_t**:out_ir sp_time_t*:out_len -> status_t
 sp_passthrough_ir :: sp_sample_t**:out_ir sp_time_t*:out_len -> status_t
-sp_path_samples :: sp_path_segments_t:segments sp_time_t:size sp_samples_t*:out -> status_t
-sp_path_samples_1 :: sp_samples_t*:out sp_time_t:size sp_path_segment_t:s1 -> status_t
-sp_path_samples_2 :: sp_samples_t*:out sp_time_t:size sp_path_segment_t:s1 sp_path_segment_t:s2 -> status_t
-sp_path_samples_3 :: sp_samples_t*:out sp_time_t:size sp_path_segment_t:s1 sp_path_segment_t:s2 sp_path_segment_t:s3 -> status_t
-sp_path_samples_4 :: sp_samples_t*:out sp_time_t:size sp_path_segment_t:s1 sp_path_segment_t:s2 sp_path_segment_t:s3 sp_path_segment_t:s4 -> status_t
-sp_path_times :: sp_path_segments_t:segments sp_time_t:size sp_times_t*:out -> status_t
-sp_path_times_1 :: sp_times_t*:out sp_time_t:size sp_path_segment_t:s1 -> status_t
-sp_path_times_2 :: sp_times_t*:out sp_time_t:size sp_path_segment_t:s1 sp_path_segment_t:s2 -> status_t
-sp_path_times_3 :: sp_times_t*:out sp_time_t:size sp_path_segment_t:s1 sp_path_segment_t:s2 sp_path_segment_t:s3 -> status_t
-sp_path_times_4 :: sp_times_t*:out sp_time_t:size sp_path_segment_t:s1 sp_path_segment_t:s2 sp_path_segment_t:s3 sp_path_segment_t:s4 -> status_t
+sp_path_samples :: sp_path_segments_t:segments sp_time_t:size sp_sample_t**:out -> status_t
+sp_path_samples_1 :: sp_sample_t**:out sp_time_t:size sp_path_segment_t:s1 -> status_t
+sp_path_samples_2 :: sp_sample_t**:out sp_time_t:size sp_path_segment_t:s1 sp_path_segment_t:s2 -> status_t
+sp_path_samples_3 :: sp_sample_t**:out sp_time_t:size sp_path_segment_t:s1 sp_path_segment_t:s2 sp_path_segment_t:s3 -> status_t
+sp_path_samples_4 :: sp_sample_t**:out sp_time_t:size sp_path_segment_t:s1 sp_path_segment_t:s2 sp_path_segment_t:s3 sp_path_segment_t:s4 -> status_t
+sp_path_times :: sp_path_segments_t:segments sp_time_t:size sp_time_t**:out -> status_t
+sp_path_times_1 :: sp_time_t**:out sp_time_t:size sp_path_segment_t:s1 -> status_t
+sp_path_times_2 :: sp_time_t**:out sp_time_t:size sp_path_segment_t:s1 sp_path_segment_t:s2 -> status_t
+sp_path_times_3 :: sp_time_t**:out sp_time_t:size sp_path_segment_t:s1 sp_path_segment_t:s2 sp_path_segment_t:s3 -> status_t
+sp_path_times_4 :: sp_time_t**:out sp_time_t:size sp_path_segment_t:s1 sp_path_segment_t:s2 sp_path_segment_t:s3 sp_path_segment_t:s4 -> status_t
 sp_phase :: sp_time_t:current sp_time_t:change sp_time_t:cycle -> sp_time_t
 sp_phase_float :: sp_time_t:current double:change sp_time_t:cycle -> sp_time_t
-sp_plot_sample_array :: sp_sample_t*:a sp_time_t:a_size -> void
-sp_plot_sample_array_to_file :: sp_sample_t*:a sp_time_t:a_size uint8_t*:path -> void
-sp_plot_sample_array_file :: uint8_t*:path uint8_t:use_steps -> void
+sp_plot_samples :: sp_sample_t*:a sp_time_t:a_size -> void
+sp_plot_samples_to_file :: sp_sample_t*:a sp_time_t:a_size uint8_t*:path -> void
+sp_plot_samples_file :: uint8_t*:path uint8_t:use_steps -> void
 sp_plot_spectrum :: sp_sample_t*:a sp_time_t:a_size -> void
 sp_plot_spectrum_to_file :: sp_sample_t*:a sp_time_t:a_size uint8_t*:path -> void
 sp_plot_spectrum_file :: uint8_t*:path -> void
-sp_plot_time_array :: sp_time_t*:a sp_time_t:a_size -> void
-sp_plot_time_array_to_file :: sp_time_t*:a sp_time_t:a_size uint8_t*:path -> void
+sp_plot_times :: sp_time_t*:a sp_time_t:a_size -> void
+sp_plot_times_to_file :: sp_time_t*:a sp_time_t:a_size uint8_t*:path -> void
 sp_render_file :: sp_event_t:event sp_time_t:start sp_time_t:duration sp_render_config_t:config uint8_t*:path -> status_t
-sp_sample_array_to_time_array :: sp_sample_t*:in sp_time_t:in_size sp_time_t*:out -> void
-sp_sample_array_display :: sp_sample_t*:a sp_time_t:size -> void
-sp_sample_array_new :: sp_time_t:size sp_sample_t**:out -> status_t
-sp_sample_array_random :: sp_random_state_t*:state sp_time_t:size sp_sample_t*:out -> void
-sp_sample_array_set_unity_gain :: sp_sample_t*:in sp_time_t:in_size sp_sample_t*:out -> void
+sp_samples_to_times :: sp_sample_t*:in sp_time_t:in_size sp_time_t*:out -> void
+sp_samples_display :: sp_sample_t*:a sp_time_t:size -> void
+sp_samples_new :: sp_time_t:size sp_sample_t**:out -> status_t
+sp_samples_random :: sp_random_state_t*:state sp_time_t:size sp_sample_t*:out -> void
+sp_samples_set_unity_gain :: sp_sample_t*:in sp_time_t:in_size sp_sample_t*:out -> void
 sp_seq :: sp_time_t:start sp_time_t:end sp_block_t:out sp_event_t*:events sp_time_t:size -> void
 sp_seq_events_prepare :: sp_event_t*:data sp_time_t:size -> void
 sp_seq_parallel :: sp_time_t:start sp_time_t:end sp_block_t:out sp_event_t*:events sp_time_t:size -> status_t
@@ -161,8 +161,8 @@ sp_state_variable_filter_lp :: sp_sample_t*:out sp_sample_t*:in sp_float_t:in_co
 sp_state_variable_filter_peak :: sp_sample_t*:out sp_sample_t*:in sp_float_t:in_count sp_float_t:cutoff sp_time_t:q_factor sp_sample_t*:state -> void
 sp_status_description :: status_t:a -> uint8_t*
 sp_status_name :: status_t:a -> uint8_t*
-sp_time_array_new :: sp_time_t:size sp_time_t**:out -> status_t
-sp_time_array_random :: sp_random_state_t*:state sp_time_t:size sp_time_t*:out -> void
+sp_times_new :: sp_time_t:size sp_time_t**:out -> status_t
+sp_times_random :: sp_random_state_t*:state sp_time_t:size sp_time_t*:out -> void
 sp_triangle :: sp_time_t:t sp_time_t:a sp_time_t:b -> sp_sample_t
 sp_triangle_96 :: sp_time_t:t -> sp_sample_t
 sp_wave :: sp_time_t:start sp_time_t:duration sp_wave_state_t*:state sp_block_t:out -> void
@@ -254,9 +254,11 @@ sp_s_id_invalid_argument
 sp_s_id_memory
 sp_s_id_not_implemented
 sp_s_id_undefined
-sp_sample_array_zero(a, size)
+sp_samples_zero(a, size)
 sp_sine_96(t)
-sp_time_array_zero(a, size)
+sp_sine_96_state_1(spd, amp, phs)
+sp_sine_96_state_2(spd, amp1, amp2, phs1, phs2)
+sp_times_zero(a, size)
 ```
 
 ## variables

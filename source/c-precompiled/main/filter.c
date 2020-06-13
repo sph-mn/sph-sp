@@ -143,7 +143,7 @@ nan can be set here if the freq and transition values are invalid */
     ir[i] = (sp_window_blackman(i, len) * sp_sinc((2 * cutoff * (i - center_index))));
   };
   /* scale to get unity gain */
-  sum = sp_sample_array_sum(ir, len);
+  sum = sp_samples_sum(ir, len);
   for (i = 0; (i < len); i = (1 + i)) {
     ir[i] = (ir[i] / sum);
   };
@@ -344,8 +344,8 @@ heap memory is to be freed with sp-cheap-filter-state-free but only allocated if
     if (sp_cheap_filter_passes_limit < max_passes) {
       status_set_goto(sp_s_group_sp, sp_s_id_not_implemented);
     } else {
-      status_require((sp_sample_array_new(max_size, (&in_temp))));
-      status_require((sp_sample_array_new(max_size, (&out_temp))));
+      status_require((sp_samples_new(max_size, (&in_temp))));
+      status_require((sp_samples_new(max_size, (&out_temp))));
     };
   };
   out_state->in_temp = in_temp;
@@ -377,7 +377,7 @@ void sp_cheap_filter(sp_state_variable_filter_t type, sp_sample_t* in, sp_time_t
   loop:
     if (1 < passes) {
       type(out_temp, in_temp, in_size, cutoff, q_factor, (passes + state->svf_state));
-      sp_sample_array_zero(in_temp, in_size);
+      sp_samples_zero(in_temp, in_size);
       passes = (passes - 1);
       in_swap = in_temp;
       in_temp = out_temp;
@@ -392,7 +392,7 @@ void sp_cheap_filter(sp_state_variable_filter_t type, sp_sample_t* in, sp_time_t
     memset((state->svf_state), 0, (sizeof(sp_sample_t) * 2 * (sp_cheap_filter_passes_limit - passes)));
   };
   if (unity_gain) {
-    sp_sample_array_set_unity_gain(in, in_size, out);
+    sp_samples_set_unity_gain(in, in_size, out);
   };
 }
 /** apply a centered moving average filter to samples between in-window and in-window-end inclusively and write to out.
@@ -417,20 +417,20 @@ status_t sp_moving_average(sp_sample_t* in, sp_sample_t* in_end, sp_sample_t* in
     sums[2] = 0;
     in_left = max(in, (in_window - radius));
     in_right = min(in_end, (in_window + radius));
-    sums[1] = sp_sample_array_sum(in_left, (1 + (in_right - in_left)));
+    sums[1] = sp_samples_sum(in_left, (1 + (in_right - in_left)));
     if (((in_window - in_left) < radius) && prev) {
       in_missing = (radius - (in_window - in_left));
       outside = max(prev, (prev_end - in_missing));
       outside_count = (prev_end - outside);
-      sums[0] = sp_sample_array_sum(outside, outside_count);
+      sums[0] = sp_samples_sum(outside, outside_count);
     };
     if (((in_right - in_window) < radius) && next) {
       in_missing = (radius - (in_right - in_window));
       outside = next;
       outside_count = min((next_end - next), in_missing);
-      sums[2] = sp_sample_array_sum(outside, outside_count);
+      sums[2] = sp_samples_sum(outside, outside_count);
     };
-    *out = (sp_sample_array_sum(sums, 3) / width);
+    *out = (sp_samples_sum(sums, 3) / width);
     out = (1 + out);
     in_window = (1 + in_window);
   };

@@ -315,17 +315,16 @@ first process values that dont lead to carryover */
 void sp_block_zero(sp_block_t a) {
   sp_channels_t i;
   for (i = 0; (i < a.channels); i += 1) {
-    sp_sample_array_zero(((a.samples)[i]), (a.size));
+    sp_samples_zero(((a.samples)[i]), (a.size));
   };
 }
-/** samples are allocated */
-status_t sp_path_samples(sp_path_segments_t segments, sp_time_t size, sp_samples_t* out) {
+/** out memory is allocated */
+status_t sp_path_samples(sp_path_segments_t segments, sp_time_t size, sp_sample_t** out) {
   status_declare;
-  sp_samples_t result;
-  array3_set_null(result);
-  status_i_require((sp_samples_new(size, (&result))));
-  if (spline_path_new_get((segments.size), (segments.data), 0, size, (result.data))) {
-    array4_free(result);
+  sp_sample_t* result;
+  status_require((sp_samples_new(size, (&result))));
+  if (spline_path_new_get((segments.size), (segments.data), 0, size, result)) {
+    free(result);
     sp_memory_error;
   };
   *out = result;
@@ -334,19 +333,18 @@ exit:
 }
 /** create a new path from the given segments config.
    memory is allocated and ownership transferred to the caller */
-status_t sp_path_times(sp_path_segments_t segments, sp_time_t size, sp_times_t* out) {
+status_t sp_path_times(sp_path_segments_t segments, sp_time_t size, sp_time_t** out) {
   status_declare;
-  sp_times_t result;
-  sp_samples_t temp;
-  array3_set_null(temp);
+  sp_time_t* result;
+  sp_sample_t* temp;
   status_require((sp_path_samples(segments, size, (&temp))));
-  status_i_require((sp_times_new(size, (&result))));
-  sp_samples_to_times(temp, result);
+  status_require((sp_times_new(size, (&result))));
+  sp_samples_to_times(temp, size, result);
   *out = result;
 exit:
   status_return;
 }
-status_t sp_path_times_1(sp_times_t* out, sp_time_t size, sp_path_segment_t s1) {
+status_t sp_path_times_1(sp_time_t** out, sp_time_t size, sp_path_segment_t s1) {
   sp_path_segments_t segments;
   sp_path_segment_t segments_data[1];
   segments.size = 1;
@@ -354,7 +352,7 @@ status_t sp_path_times_1(sp_times_t* out, sp_time_t size, sp_path_segment_t s1) 
   segments_data[0] = s1;
   return ((sp_path_times(segments, size, out)));
 }
-status_t sp_path_times_2(sp_times_t* out, sp_time_t size, sp_path_segment_t s1, sp_path_segment_t s2) {
+status_t sp_path_times_2(sp_time_t** out, sp_time_t size, sp_path_segment_t s1, sp_path_segment_t s2) {
   sp_path_segments_t segments;
   sp_path_segment_t segments_data[2];
   segments.size = 2;
@@ -363,7 +361,7 @@ status_t sp_path_times_2(sp_times_t* out, sp_time_t size, sp_path_segment_t s1, 
   segments_data[1] = s2;
   return ((sp_path_times(segments, size, out)));
 }
-status_t sp_path_times_3(sp_times_t* out, sp_time_t size, sp_path_segment_t s1, sp_path_segment_t s2, sp_path_segment_t s3) {
+status_t sp_path_times_3(sp_time_t** out, sp_time_t size, sp_path_segment_t s1, sp_path_segment_t s2, sp_path_segment_t s3) {
   sp_path_segments_t segments;
   sp_path_segment_t segments_data[3];
   segments.size = 3;
@@ -373,7 +371,7 @@ status_t sp_path_times_3(sp_times_t* out, sp_time_t size, sp_path_segment_t s1, 
   segments_data[2] = s3;
   return ((sp_path_times(segments, size, out)));
 }
-status_t sp_path_times_4(sp_times_t* out, sp_time_t size, sp_path_segment_t s1, sp_path_segment_t s2, sp_path_segment_t s3, sp_path_segment_t s4) {
+status_t sp_path_times_4(sp_time_t** out, sp_time_t size, sp_path_segment_t s1, sp_path_segment_t s2, sp_path_segment_t s3, sp_path_segment_t s4) {
   sp_path_segments_t segments;
   sp_path_segment_t segments_data[4];
   segments.size = 4;
@@ -384,7 +382,7 @@ status_t sp_path_times_4(sp_times_t* out, sp_time_t size, sp_path_segment_t s1, 
   segments_data[3] = s4;
   return ((sp_path_times(segments, size, out)));
 }
-status_t sp_path_samples_1(sp_samples_t* out, sp_time_t size, sp_path_segment_t s1) {
+status_t sp_path_samples_1(sp_sample_t** out, sp_time_t size, sp_path_segment_t s1) {
   sp_path_segments_t segments;
   sp_path_segment_t segments_data[1];
   segments.size = 1;
@@ -392,7 +390,7 @@ status_t sp_path_samples_1(sp_samples_t* out, sp_time_t size, sp_path_segment_t 
   segments_data[0] = s1;
   return ((sp_path_samples(segments, size, out)));
 }
-status_t sp_path_samples_2(sp_samples_t* out, sp_time_t size, sp_path_segment_t s1, sp_path_segment_t s2) {
+status_t sp_path_samples_2(sp_sample_t** out, sp_time_t size, sp_path_segment_t s1, sp_path_segment_t s2) {
   sp_path_segments_t segments;
   sp_path_segment_t segments_data[2];
   segments.size = 2;
@@ -401,7 +399,7 @@ status_t sp_path_samples_2(sp_samples_t* out, sp_time_t size, sp_path_segment_t 
   segments_data[1] = s2;
   return ((sp_path_samples(segments, size, out)));
 }
-status_t sp_path_samples_3(sp_samples_t* out, sp_time_t size, sp_path_segment_t s1, sp_path_segment_t s2, sp_path_segment_t s3) {
+status_t sp_path_samples_3(sp_sample_t** out, sp_time_t size, sp_path_segment_t s1, sp_path_segment_t s2, sp_path_segment_t s3) {
   sp_path_segments_t segments;
   sp_path_segment_t segments_data[3];
   segments.size = 3;
@@ -411,7 +409,7 @@ status_t sp_path_samples_3(sp_samples_t* out, sp_time_t size, sp_path_segment_t 
   segments_data[2] = s3;
   return ((sp_path_samples(segments, size, out)));
 }
-status_t sp_path_samples_4(sp_samples_t* out, sp_time_t size, sp_path_segment_t s1, sp_path_segment_t s2, sp_path_segment_t s3, sp_path_segment_t s4) {
+status_t sp_path_samples_4(sp_sample_t** out, sp_time_t size, sp_path_segment_t s1, sp_path_segment_t s2, sp_path_segment_t s3, sp_path_segment_t s4) {
   sp_path_segments_t segments;
   sp_path_segment_t segments_data[4];
   segments.size = 4;

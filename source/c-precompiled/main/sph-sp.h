@@ -26,8 +26,8 @@
 #ifndef sp_sample_rate_t
 #define sp_sample_rate_t uint32_t
 #endif
-#ifndef sp_sample_array_sum
-#define sp_sample_array_sum f64_sum
+#ifndef sp_samples_sum
+#define sp_samples_sum f64_sum
 #endif
 #ifndef sp_sample_t
 #define sp_sample_t double
@@ -82,6 +82,8 @@
 #define sp_cheap_ceiling_positive(a) (((sp_time_t)(a)) + (((sp_time_t)(a)) < a))
 /** t must be between 0 and 95999 */
 #define sp_sine_96(t) sp_sine_96_table[t]
+#define sp_sine_96_state_1(spd, amp, phs) sp_wave_state_1(sp_sine_96_table, 96000, amp, phs)
+#define sp_sine_96_state_2(spd, amp1, amp2, phs1, phs2) sp_wave_state_2(sp_sine_96_table, 96000, amp1, amp2, phs1, phs2)
 typedef struct {
   sp_channels_t channels;
   sp_time_t size;
@@ -138,15 +140,15 @@ void sp_wave(sp_time_t start, sp_time_t duration, sp_wave_state_t* state, sp_blo
 sp_wave_state_t sp_wave_state_1(sp_sample_t* wvf, sp_time_t wvf_size, sp_time_t* spd, sp_sample_t* amp, sp_time_t phs);
 sp_wave_state_t sp_wave_state_2(sp_sample_t* wvf, sp_time_t wvf_size, sp_time_t* spd, sp_sample_t* amp1, sp_sample_t* amp2, sp_time_t phs1, sp_time_t phs2);
 /* arrays */
-#define sp_sample_array_zero(a, size) memset(a, 0, (size * sizeof(sp_sample_t)))
-#define sp_time_array_zero(a, size) memset(a, 0, (size * sizeof(sp_time_t)))
-void sp_sample_array_set_unity_gain(sp_sample_t* in, sp_time_t in_size, sp_sample_t* out);
-void sp_sample_array_random(sp_random_state_t* state, sp_time_t size, sp_sample_t* out);
-void sp_time_array_random(sp_random_state_t* state, sp_time_t size, sp_time_t* out);
-status_t sp_time_array_new(sp_time_t size, sp_time_t** out);
-void sp_sample_array_to_time_array(sp_sample_t* in, sp_time_t in_size, sp_time_t* out);
-void sp_sample_array_display(sp_sample_t* a, sp_time_t size);
-status_t sp_sample_array_new(sp_time_t size, sp_sample_t** out);
+#define sp_samples_zero(a, size) memset(a, 0, (size * sizeof(sp_sample_t)))
+#define sp_times_zero(a, size) memset(a, 0, (size * sizeof(sp_time_t)))
+void sp_samples_set_unity_gain(sp_sample_t* in, sp_time_t in_size, sp_sample_t* out);
+void sp_samples_random(sp_random_state_t* state, sp_time_t size, sp_sample_t* out);
+void sp_times_random(sp_random_state_t* state, sp_time_t size, sp_time_t* out);
+status_t sp_times_new(sp_time_t size, sp_time_t** out);
+void sp_samples_to_times(sp_sample_t* in, sp_time_t in_size, sp_time_t* out);
+void sp_samples_display(sp_sample_t* a, sp_time_t size);
+status_t sp_samples_new(sp_time_t size, sp_sample_t** out);
 /* filter */
 #define sp_filter_state_t sp_convolution_filter_state_t
 #define sp_filter_state_free sp_convolution_filter_state_free
@@ -196,11 +198,11 @@ void sp_cheap_filter_state_free(sp_cheap_filter_state_t* a);
 status_t sp_cheap_filter_state_new(sp_time_t max_size, sp_time_t max_passes, sp_cheap_filter_state_t* out_state);
 status_t sp_filter(sp_sample_t* in, sp_time_t in_size, sp_float_t cutoff_l, sp_float_t cutoff_h, sp_float_t transition_l, sp_float_t transition_h, boolean is_reject, sp_filter_state_t** out_state, sp_sample_t* out_samples);
 /* plot */
-void sp_plot_sample_array(sp_sample_t* a, sp_time_t a_size);
-void sp_plot_time_array(sp_time_t* a, sp_time_t a_size);
-void sp_plot_sample_array_to_file(sp_sample_t* a, sp_time_t a_size, uint8_t* path);
-void sp_plot_time_array_to_file(sp_time_t* a, sp_time_t a_size, uint8_t* path);
-void sp_plot_sample_array_file(uint8_t* path, uint8_t use_steps);
+void sp_plot_samples(sp_sample_t* a, sp_time_t a_size);
+void sp_plot_times(sp_time_t* a, sp_time_t a_size);
+void sp_plot_samples_to_file(sp_sample_t* a, sp_time_t a_size, uint8_t* path);
+void sp_plot_times_to_file(sp_time_t* a, sp_time_t a_size, uint8_t* path);
+void sp_plot_samples_file(uint8_t* path, uint8_t use_steps);
 void sp_plot_spectrum_to_file(sp_sample_t* a, sp_time_t a_size, uint8_t* path);
 void sp_plot_spectrum_file(uint8_t* path);
 void sp_plot_spectrum(sp_sample_t* a, sp_time_t a_size);
@@ -278,19 +280,17 @@ void sp_group_event_free(sp_event_t* a);
 #define sp_path_i_bezier spline_path_i_bezier
 #define sp_path_i_constant spline_path_i_constant
 #define sp_path_i_path spline_path_i_path
-array3_declare_type(sp_times, sp_time_t);
-array3_declare_type(sp_samples, sp_sample_t);
 array3_declare_type(sp_path_segments, spline_path_segment_t);
-status_t sp_path_samples(sp_path_segments_t segments, sp_time_t size, sp_samples_t* out);
-status_t sp_path_samples_1(sp_samples_t* out, sp_time_t size, sp_path_segment_t s1);
-status_t sp_path_samples_2(sp_samples_t* out, sp_time_t size, sp_path_segment_t s1, sp_path_segment_t s2);
-status_t sp_path_samples_3(sp_samples_t* out, sp_time_t size, sp_path_segment_t s1, sp_path_segment_t s2, sp_path_segment_t s3);
-status_t sp_path_samples_4(sp_samples_t* out, sp_time_t size, sp_path_segment_t s1, sp_path_segment_t s2, sp_path_segment_t s3, sp_path_segment_t s4);
-status_t sp_path_times(sp_path_segments_t segments, sp_time_t size, sp_times_t* out);
-status_t sp_path_times_1(sp_times_t* out, sp_time_t size, sp_path_segment_t s1);
-status_t sp_path_times_2(sp_times_t* out, sp_time_t size, sp_path_segment_t s1, sp_path_segment_t s2);
-status_t sp_path_times_3(sp_times_t* out, sp_time_t size, sp_path_segment_t s1, sp_path_segment_t s2, sp_path_segment_t s3);
-status_t sp_path_times_4(sp_times_t* out, sp_time_t size, sp_path_segment_t s1, sp_path_segment_t s2, sp_path_segment_t s3, sp_path_segment_t s4);
+status_t sp_path_samples(sp_path_segments_t segments, sp_time_t size, sp_sample_t** out);
+status_t sp_path_samples_1(sp_sample_t** out, sp_time_t size, sp_path_segment_t s1);
+status_t sp_path_samples_2(sp_sample_t** out, sp_time_t size, sp_path_segment_t s1, sp_path_segment_t s2);
+status_t sp_path_samples_3(sp_sample_t** out, sp_time_t size, sp_path_segment_t s1, sp_path_segment_t s2, sp_path_segment_t s3);
+status_t sp_path_samples_4(sp_sample_t** out, sp_time_t size, sp_path_segment_t s1, sp_path_segment_t s2, sp_path_segment_t s3, sp_path_segment_t s4);
+status_t sp_path_times(sp_path_segments_t segments, sp_time_t size, sp_time_t** out);
+status_t sp_path_times_1(sp_time_t** out, sp_time_t size, sp_path_segment_t s1);
+status_t sp_path_times_2(sp_time_t** out, sp_time_t size, sp_path_segment_t s1, sp_path_segment_t s2);
+status_t sp_path_times_3(sp_time_t** out, sp_time_t size, sp_path_segment_t s1, sp_path_segment_t s2, sp_path_segment_t s3);
+status_t sp_path_times_4(sp_time_t** out, sp_time_t size, sp_path_segment_t s1, sp_path_segment_t s2, sp_path_segment_t s3, sp_path_segment_t s4);
 /* main 2 */
 #define declare_render_config(name) sp_render_config_t name = { .channels = 2, .rate = 96000, .block_size = 96000 }
 /** returns n/d fractions of the sample rate. for example, 1/2 is half the sample rate.

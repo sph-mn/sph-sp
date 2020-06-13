@@ -10,7 +10,7 @@
   spline-path-time-t sp-time-t
   spline-path-value-t sp-sample-t
   sp-sample-rate-t uint32-t
-  sp-sample-array-sum f64-sum
+  sp-samples-sum f64-sum
   sp-sample-t double
   sp-sf-read sf-readf-double
   sp-sf-write sf-writef-double
@@ -53,7 +53,10 @@
   (sp-cheap-round-positive a) (convert-type (+ 0.5 a) sp-time-t)
   (sp-cheap-floor-positive a) (convert-type a sp-time-t)
   (sp-cheap-ceiling-positive a) (+ (convert-type a sp-time-t) (< (convert-type a sp-time-t) a))
-  (sp-sine-96 t) (begin "t must be between 0 and 95999" (array-get sp-sine-96-table t)))
+  (sp-sine-96 t) (begin "t must be between 0 and 95999" (array-get sp-sine-96-table t))
+  (sp-sine-96-state-1 spd amp phs) (sp-wave-state-1 sp-sine-96-table 96000 amp phs)
+  (sp-sine-96-state-2 spd amp1 amp2 phs1 phs2)
+  (sp-wave-state-2 sp-sine-96-table 96000 amp1 amp2 phs1 phs2))
 
 (declare
   sp-block-t
@@ -125,17 +128,17 @@
 (sc-comment "arrays")
 
 (pre-define
-  (sp-sample-array-zero a size) (memset a 0 (* size (sizeof sp-sample-t)))
-  (sp-time-array-zero a size) (memset a 0 (* size (sizeof sp-time-t))))
+  (sp-samples-zero a size) (memset a 0 (* size (sizeof sp-sample-t)))
+  (sp-times-zero a size) (memset a 0 (* size (sizeof sp-time-t))))
 
 (declare
-  (sp-sample-array-set-unity-gain in in-size out) (void sp-sample-t* sp-time-t sp-sample-t*)
-  (sp-sample-array-random state size out) (void sp-random-state-t* sp-time-t sp-sample-t*)
-  (sp-time-array-random state size out) (void sp-random-state-t* sp-time-t sp-time-t*)
-  (sp-time-array-new size out) (status-t sp-time-t sp-time-t**)
-  (sp-sample-array->time-array in in-size out) (void sp-sample-t* sp-time-t sp-time-t*)
-  (sp-sample-array-display a size) (void sp-sample-t* sp-time-t)
-  (sp-sample-array-new size out) (status-t sp-time-t sp-sample-t**))
+  (sp-samples-set-unity-gain in in-size out) (void sp-sample-t* sp-time-t sp-sample-t*)
+  (sp-samples-random state size out) (void sp-random-state-t* sp-time-t sp-sample-t*)
+  (sp-times-random state size out) (void sp-random-state-t* sp-time-t sp-time-t*)
+  (sp-times-new size out) (status-t sp-time-t sp-time-t**)
+  (sp-samples->times in in-size out) (void sp-sample-t* sp-time-t sp-time-t*)
+  (sp-samples-display a size) (void sp-sample-t* sp-time-t)
+  (sp-samples-new size out) (status-t sp-time-t sp-sample-t**))
 
 (sc-comment "filter")
 
@@ -223,11 +226,11 @@
 (sc-comment "plot")
 
 (declare
-  (sp-plot-sample-array a a-size) (void sp-sample-t* sp-time-t)
-  (sp-plot-time-array a a-size) (void sp-time-t* sp-time-t)
-  (sp-plot-sample-array->file a a-size path) (void sp-sample-t* sp-time-t uint8-t*)
-  (sp-plot-time-array->file a a-size path) (void sp-time-t* sp-time-t uint8-t*)
-  (sp-plot-sample-array-file path use-steps) (void uint8-t* uint8-t)
+  (sp-plot-samples a a-size) (void sp-sample-t* sp-time-t)
+  (sp-plot-times a a-size) (void sp-time-t* sp-time-t)
+  (sp-plot-samples->file a a-size path) (void sp-sample-t* sp-time-t uint8-t*)
+  (sp-plot-times->file a a-size path) (void sp-time-t* sp-time-t uint8-t*)
+  (sp-plot-samples-file path use-steps) (void uint8-t* uint8-t)
   (sp-plot-spectrum->file a a-size path) (void sp-sample-t* sp-time-t uint8-t*)
   (sp-plot-spectrum-file path) (void uint8-t*)
   (sp-plot-spectrum a a-size) (void sp-sample-t* sp-time-t))
@@ -316,28 +319,26 @@
   sp-path-i-constant spline-path-i-constant
   sp-path-i-path spline-path-i-path)
 
-(array3-declare-type sp-times sp-time-t)
-(array3-declare-type sp-samples sp-sample-t)
 (array3-declare-type sp-path-segments spline-path-segment-t)
 
 (declare
-  (sp-path-samples segments size out) (status-t sp-path-segments-t sp-time-t sp-samples-t*)
-  (sp-path-samples-1 out size s1) (status-t sp-samples-t* sp-time-t sp-path-segment-t)
+  (sp-path-samples segments size out) (status-t sp-path-segments-t sp-time-t sp-sample-t**)
+  (sp-path-samples-1 out size s1) (status-t sp-sample-t** sp-time-t sp-path-segment-t)
   (sp-path-samples-2 out size s1 s2)
-  (status-t sp-samples-t* sp-time-t sp-path-segment-t sp-path-segment-t)
+  (status-t sp-sample-t** sp-time-t sp-path-segment-t sp-path-segment-t)
   (sp-path-samples-3 out size s1 s2 s3)
-  (status-t sp-samples-t* sp-time-t sp-path-segment-t sp-path-segment-t sp-path-segment-t)
+  (status-t sp-sample-t** sp-time-t sp-path-segment-t sp-path-segment-t sp-path-segment-t)
   (sp-path-samples-4 out size s1 s2 s3 s4)
-  (status-t sp-samples-t* sp-time-t
+  (status-t sp-sample-t** sp-time-t
     sp-path-segment-t sp-path-segment-t sp-path-segment-t sp-path-segment-t)
-  (sp-path-times segments size out) (status-t sp-path-segments-t sp-time-t sp-times-t*)
-  (sp-path-times-1 out size s1) (status-t sp-times-t* sp-time-t sp-path-segment-t)
+  (sp-path-times segments size out) (status-t sp-path-segments-t sp-time-t sp-time-t**)
+  (sp-path-times-1 out size s1) (status-t sp-time-t** sp-time-t sp-path-segment-t)
   (sp-path-times-2 out size s1 s2)
-  (status-t sp-times-t* sp-time-t sp-path-segment-t sp-path-segment-t)
+  (status-t sp-time-t** sp-time-t sp-path-segment-t sp-path-segment-t)
   (sp-path-times-3 out size s1 s2 s3)
-  (status-t sp-times-t* sp-time-t sp-path-segment-t sp-path-segment-t sp-path-segment-t)
+  (status-t sp-time-t** sp-time-t sp-path-segment-t sp-path-segment-t sp-path-segment-t)
   (sp-path-times-4 out size s1 s2 s3 s4)
-  (status-t sp-times-t* sp-time-t
+  (status-t sp-time-t** sp-time-t
     sp-path-segment-t sp-path-segment-t sp-path-segment-t sp-path-segment-t))
 
 (sc-comment "main 2")

@@ -4,11 +4,11 @@
   ( (= sp-sample-format-f64 sp-sample-format)
     (pre-define
       sp-sample-nearly-equal f64-nearly-equal
-      sp-sample-array-nearly-equal f64-array-nearly-equal))
+      sp-samples-nearly-equal f64-array-nearly-equal))
   ( (= sp-sample-format-f32 sp-sample-format)
     (pre-define
       sp-sample-nearly-equal f32-nearly-equal
-      sp-sample-array-nearly-equal f32-array-nearly-equal)))
+      sp-samples-nearly-equal f32-array-nearly-equal)))
 
 (define error-margin sp-sample-t 0.1)
 (define test-file-path uint8-t* "/tmp/test-sph-sp-file")
@@ -80,9 +80,9 @@
   (sc-comment "test convolve first segment")
   (sp-convolve a a-len b b-len carryover-len carryover result)
   (test-helper-assert "first result"
-    (sp-sample-array-nearly-equal result result-len expected-result result-len error-margin))
+    (sp-samples-nearly-equal result result-len expected-result result-len error-margin))
   (test-helper-assert "first result carryover"
-    (sp-sample-array-nearly-equal carryover carryover-len
+    (sp-samples-nearly-equal carryover carryover-len
       expected-carryover carryover-len error-margin))
   (sc-comment "test convolve second segment")
   (array-set a 0 8 1 9 2 10 3 11 4 12)
@@ -90,9 +90,9 @@
   (array-set expected-carryover 0 57 1 36 2 0)
   (sp-convolve a a-len b b-len carryover-len carryover result)
   (test-helper-assert "second result"
-    (sp-sample-array-nearly-equal result result-len expected-result result-len error-margin))
+    (sp-samples-nearly-equal result result-len expected-result result-len error-margin))
   (test-helper-assert "second result carryover"
-    (sp-sample-array-nearly-equal carryover carryover-len
+    (sp-samples-nearly-equal carryover carryover-len
       expected-carryover carryover-len error-margin))
   (label exit memreg-free status-return))
 
@@ -210,7 +210,7 @@
       len (- len 1)
       unequal
       (not
-        (sp-sample-array-nearly-equal (array-get block.samples len) sample-count
+        (sp-samples-nearly-equal (array-get block.samples len) sample-count
           (array-get block-2.samples len) sample-count error-margin))))
   (test-helper-assert "sp-file-read new file result" (not unequal))
   (status-require (sp-file-close &file))
@@ -228,7 +228,7 @@
       len (- len 1)
       unequal
       (not
-        (sp-sample-array-nearly-equal (array-get block.samples len) sample-count
+        (sp-samples-nearly-equal (array-get block.samples len) sample-count
           (array-get block-2.samples len) sample-count error-margin))))
   (test-helper-assert "sp-file-read existing result" (not unequal))
   (status-require (sp-file-close &file))
@@ -250,7 +250,7 @@
   "better test separately as it opens gnuplot windows"
   status-declare
   (declare a (array sp-sample-t 9 0.1 -0.2 0.1 -0.4 0.3 -0.4 0.2 -0.2 0.1))
-  (sp-plot-sample-array a 9)
+  (sp-plot-samples a 9)
   (sp-plot-spectrum a 9)
   (label exit status-return))
 
@@ -278,8 +278,8 @@
   status-declare
   (declare s sp-random-state-t out (array sp-sample-t 20))
   (set s (sp-random-state-new 80))
-  (sp-sample-array-random &s 10 out)
-  (sp-sample-array-random &s 10 (+ 10 out))
+  (sp-samples-random &s 10 out)
+  (sp-samples-random &s 10 (+ 10 out))
   (test-helper-assert "last value" (f64-nearly-equal 0.355602 (array-get out 19) error-margin))
   (label exit status-return))
 
@@ -326,7 +326,7 @@
     i sp-time-t
     s sp-random-state-t)
   (set s (sp-random-state-new 80))
-  (sp-sample-array-random &s sp-noise-duration in)
+  (sp-samples-random &s sp-noise-duration in)
   (status-require (sp-cheap-filter-state-new sp-noise-duration sp-cheap-filter-passes-limit &state))
   (sp-cheap-filter-lp in sp-noise-duration 0.2 1 0 1 &state out)
   (sp-cheap-filter-lp in sp-noise-duration 0.2 sp-cheap-filter-passes-limit 0 1 &state out)
@@ -394,8 +394,8 @@
     block sp-block-t
     m1 sp-time-t*
     m2 sp-time-t*)
-  (status-require (sp-time-array-new 100 &m1))
-  (status-require (sp-time-array-new 100 &m2))
+  (status-require (sp-times-new 100 &m1))
+  (status-require (sp-times-new 100 &m2))
   (status-require (sp-group-new 0 2 2 &g))
   (status-require (sp-group-new 10 2 0 &g1))
   (status-require (sp-block-new 2 100 &block))
@@ -468,7 +468,7 @@
   (label exit status-return))
 
 (define (test-path) status-t
-  (declare samples sp-samples-t times sp-times-t)
+  (declare samples sp-sample-t* times sp-time-t*)
   status-declare
   (status-require (sp-path-samples-2 &samples 100 (sp-path-line 10 1) (sp-path-line 100 0)))
   (status-require (sp-path-times-2 &times 100 (sp-path-line 10 1) (sp-path-line 100 0)))

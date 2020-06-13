@@ -1,10 +1,10 @@
 #include "./helper.c"
 #if (sp_sample_format_f64 == sp_sample_format)
 #define sp_sample_nearly_equal f64_nearly_equal
-#define sp_sample_array_nearly_equal f64_array_nearly_equal
+#define sp_samples_nearly_equal f64_array_nearly_equal
 #elif (sp_sample_format_f32 == sp_sample_format)
 #define sp_sample_nearly_equal f32_nearly_equal
-#define sp_sample_array_nearly_equal f32_array_nearly_equal
+#define sp_samples_nearly_equal f32_array_nearly_equal
 #endif
 sp_sample_t error_margin = 0.1;
 uint8_t* test_file_path = "/tmp/test-sph-sp-file";
@@ -78,8 +78,8 @@ status_t test_convolve() {
   carryover[2] = 0;
   /* test convolve first segment */
   sp_convolve(a, a_len, b, b_len, carryover_len, carryover, result);
-  test_helper_assert("first result", (sp_sample_array_nearly_equal(result, result_len, expected_result, result_len, error_margin)));
-  test_helper_assert("first result carryover", (sp_sample_array_nearly_equal(carryover, carryover_len, expected_carryover, carryover_len, error_margin)));
+  test_helper_assert("first result", (sp_samples_nearly_equal(result, result_len, expected_result, result_len, error_margin)));
+  test_helper_assert("first result carryover", (sp_samples_nearly_equal(carryover, carryover_len, expected_carryover, carryover_len, error_margin)));
   /* test convolve second segment */
   a[0] = 8;
   a[1] = 9;
@@ -95,8 +95,8 @@ status_t test_convolve() {
   expected_carryover[1] = 36;
   expected_carryover[2] = 0;
   sp_convolve(a, a_len, b, b_len, carryover_len, carryover, result);
-  test_helper_assert("second result", (sp_sample_array_nearly_equal(result, result_len, expected_result, result_len, error_margin)));
-  test_helper_assert("second result carryover", (sp_sample_array_nearly_equal(carryover, carryover_len, expected_carryover, carryover_len, error_margin)));
+  test_helper_assert("second result", (sp_samples_nearly_equal(result, result_len, expected_result, result_len, error_margin)));
+  test_helper_assert("second result carryover", (sp_samples_nearly_equal(carryover, carryover_len, expected_carryover, carryover_len, error_margin)));
 exit:
   memreg_free;
   status_return;
@@ -222,7 +222,7 @@ status_t test_file() {
   unequal = 0;
   while ((len && !unequal)) {
     len = (len - 1);
-    unequal = !sp_sample_array_nearly_equal(((block.samples)[len]), sample_count, ((block_2.samples)[len]), sample_count, error_margin);
+    unequal = !sp_samples_nearly_equal(((block.samples)[len]), sample_count, ((block_2.samples)[len]), sample_count, error_margin);
   };
   test_helper_assert("sp-file-read new file result", !unequal);
   status_require((sp_file_close((&file))));
@@ -238,7 +238,7 @@ status_t test_file() {
   len = channel_count;
   while ((len && !unequal)) {
     len = (len - 1);
-    unequal = !sp_sample_array_nearly_equal(((block.samples)[len]), sample_count, ((block_2.samples)[len]), sample_count, error_margin);
+    unequal = !sp_samples_nearly_equal(((block.samples)[len]), sample_count, ((block_2.samples)[len]), sample_count, error_margin);
   };
   test_helper_assert("sp-file-read existing result", !unequal);
   status_require((sp_file_close((&file))));
@@ -263,7 +263,7 @@ exit:
 status_t test_sp_plot() {
   status_declare;
   sp_sample_t a[9] = { 0.1, -0.2, 0.1, -0.4, 0.3, -0.4, 0.2, -0.2, 0.1 };
-  sp_plot_sample_array(a, 9);
+  sp_plot_samples(a, 9);
   sp_plot_spectrum(a, 9);
 exit:
   status_return;
@@ -298,8 +298,8 @@ status_t test_sp_random() {
   sp_random_state_t s;
   sp_sample_t out[20];
   s = sp_random_state_new(80);
-  sp_sample_array_random((&s), 10, out);
-  sp_sample_array_random((&s), 10, (10 + out));
+  sp_samples_random((&s), 10, out);
+  sp_samples_random((&s), 10, (10 + out));
   test_helper_assert("last value", (f64_nearly_equal((0.355602), (out[19]), error_margin)));
 exit:
   status_return;
@@ -344,7 +344,7 @@ status_t test_sp_cheap_filter() {
   sp_time_t i;
   sp_random_state_t s;
   s = sp_random_state_new(80);
-  sp_sample_array_random((&s), sp_noise_duration, in);
+  sp_samples_random((&s), sp_noise_duration, in);
   status_require((sp_cheap_filter_state_new(sp_noise_duration, sp_cheap_filter_passes_limit, (&state))));
   sp_cheap_filter_lp(in, sp_noise_duration, (0.2), 1, 0, 1, (&state), out);
   sp_cheap_filter_lp(in, sp_noise_duration, (0.2), sp_cheap_filter_passes_limit, 0, 1, (&state), out);
@@ -411,8 +411,8 @@ status_t test_sp_group() {
   sp_block_t block;
   sp_time_t* m1;
   sp_time_t* m2;
-  status_require((sp_time_array_new(100, (&m1))));
-  status_require((sp_time_array_new(100, (&m2))));
+  status_require((sp_times_new(100, (&m1))));
+  status_require((sp_times_new(100, (&m2))));
   status_require((sp_group_new(0, 2, 2, (&g))));
   status_require((sp_group_new(10, 2, 0, (&g1))));
   status_require((sp_block_new(2, 100, (&block))));
@@ -483,8 +483,8 @@ exit:
   status_return;
 }
 status_t test_path() {
-  sp_samples_t samples;
-  sp_times_t times;
+  sp_sample_t* samples;
+  sp_time_t* times;
   status_declare;
   status_require((sp_path_samples_2((&samples), 100, (sp_path_line(10, 1)), (sp_path_line(100, 0)))));
   status_require((sp_path_times_2((&times), 100, (sp_path_line(10, 1)), (sp_path_line(100, 0)))));
