@@ -8,3 +8,6 @@
     sp-times-t (type (struct (data void*) (size size-t) (used size-t)))
     sp-path-segments-t (type (struct (data void*) (size size-t) (used size-t)))
     sp-events-t (type (struct (data void*) (size size-t) (used size-t) (current size-t)))))
+
+(remove
+  "__*")

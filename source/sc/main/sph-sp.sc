@@ -309,7 +309,6 @@
 (sc-comment "path")
 
 (pre-define
-  path-move spline-path-move
   sp-path-t spline-path-t
   sp-path-segment-t spline-path-segment-t
   sp-path-segment-count-t spline-path-segment-count-t
@@ -348,14 +347,8 @@
 
 (sc-comment "main 2")
 
-(pre-define
-  (declare-render-config name)
-  (define name sp-render-config-t (struct-literal (channels 2) (rate 96000) (block-size 96000)))
-  (rt n d)
-  (begin
-    "returns n/d fractions of the sample rate. for example, 1/2 is half the sample rate.
-     this macro references a local variable named rate which must exist and contain the current sample rate"
-    (convert-type (* (/ rate d) n) sp-time-t)))
+(pre-define (declare-render-config name)
+  (define name sp-render-config-t (struct-literal (channels 2) (rate 96000) (block-size 96000))))
 
 (declare
   sp-render-config-t (type (struct (rate sp-time-t) (block-size sp-time-t) (channels sp-channels-t)))

@@ -142,7 +142,6 @@ sp_render_file :: sp_event_t:event sp_time_t:start sp_time_t:duration sp_render_
 sp_samples_to_times :: sp_sample_t*:in sp_time_t:in_size sp_time_t*:out -> void
 sp_samples_display :: sp_sample_t*:a sp_time_t:size -> void
 sp_samples_new :: sp_time_t:size sp_sample_t**:out -> status_t
-sp_samples_random :: sp_random_state_t*:state sp_time_t:size sp_sample_t*:out -> void
 sp_samples_set_unity_gain :: sp_sample_t*:in sp_time_t:in_size sp_sample_t*:out -> void
 sp_seq :: sp_time_t:start sp_time_t:end sp_block_t:out sp_event_t*:events sp_time_t:size -> void
 sp_seq_events_prepare :: sp_event_t*:data sp_time_t:size -> void
@@ -161,8 +160,8 @@ sp_state_variable_filter_lp :: sp_sample_t*:out sp_sample_t*:in sp_float_t:in_co
 sp_state_variable_filter_peak :: sp_sample_t*:out sp_sample_t*:in sp_float_t:in_count sp_float_t:cutoff sp_time_t:q_factor sp_sample_t*:state -> void
 sp_status_description :: status_t:a -> uint8_t*
 sp_status_name :: status_t:a -> uint8_t*
+sp_times_display :: sp_time_t*:a sp_time_t:size -> void
 sp_times_new :: sp_time_t:size sp_time_t**:out -> status_t
-sp_times_random :: sp_random_state_t*:state sp_time_t:size sp_time_t*:out -> void
 sp_triangle :: sp_time_t:t sp_time_t:a sp_time_t:b -> sp_sample_t
 sp_triangle_96 :: sp_time_t:t -> sp_sample_t
 sp_wave :: sp_time_t:start sp_time_t:duration sp_wave_state_t*:state sp_block_t:out -> void
@@ -184,11 +183,9 @@ sp_windowed_sinc_lp_hp_ir_length :: sp_float_t:transition -> sp_time_t
 
 ## macros
 ```
-boolean
 declare_render_config(name)
-f64
-path_move
-rt(n, d)
+sp_channel_limit
+sp_channels_t
 sp_cheap_ceiling_positive(a)
 sp_cheap_filter_bp(...)
 sp_cheap_filter_br(...)
@@ -208,11 +205,13 @@ sp_event_move(a, start)
 sp_file_bit_input
 sp_file_bit_output
 sp_file_bit_position
+sp_file_format
 sp_file_mode_read
 sp_file_mode_read_write
 sp_file_mode_write
 sp_filter_state_free
 sp_filter_state_t
+sp_float_t
 sp_group_add(a, event)
 sp_group_declare
 sp_group_events(a)
@@ -254,11 +253,25 @@ sp_s_id_invalid_argument
 sp_s_id_memory
 sp_s_id_not_implemented
 sp_s_id_undefined
+sp_sample_random
+sp_sample_rate_t
+sp_sample_t
+sp_samples_random
+sp_samples_sum
 sp_samples_zero(a, size)
+sp_sf_read
+sp_sf_write
 sp_sine_96(t)
 sp_sine_96_state_1(spd, amp, phs)
 sp_sine_96_state_2(spd, amp1, amp2, phs1, phs2)
+sp_time_random
+sp_time_random_bounded
+sp_time_t
+sp_times_random
+sp_times_random_bounded
 sp_times_zero(a, size)
+spline_path_time_t
+spline_path_value_t
 ```
 
 ## variables
