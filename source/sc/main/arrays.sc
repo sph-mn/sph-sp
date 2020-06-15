@@ -2,9 +2,6 @@
   "there are currently two types of arrays:
    * plain memory pointers, called samples and times")
 
-(sph-random-define-x256p sp-samples-random sp-sample-t (- (* 2 (sph-random-f64-from-u64 a)) 1.0))
-(sph-random-define-x256ss sp-times-random sp-time-t a)
-
 (define (sp-samples-new size out) (status-t sp-time-t sp-sample-t**)
   (return (sph-helper-calloc (* size (sizeof sp-sample-t)) out)))
 
@@ -29,6 +26,13 @@
   (declare i sp-time-t)
   (printf "%.5f" (array-get a 0))
   (for ((set i 1) (< i size) (set i (+ 1 i))) (printf " %.5f" (array-get a i)))
+  (printf "\n"))
+
+(define (sp-times-display a size) (void sp-time-t* sp-time-t)
+  "display a time array in one line"
+  (declare i sp-time-t)
+  (printf "%lu" (array-get a 0))
+  (for ((set i 1) (< i size) (set i (+ 1 i))) (printf " %lu" (array-get a i)))
   (printf "\n"))
 
 (define (sp-samples-set-unity-gain in in-size out) (void sp-sample-t* sp-time-t sp-sample-t*)

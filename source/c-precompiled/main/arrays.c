@@ -1,7 +1,5 @@
 /* there are currently two types of arrays:
    * plain memory pointers, called samples and times */
-sph_random_define_x256p(sp_samples_random, sp_sample_t, ((2 * sph_random_f64_from_u64(a)) - 1.0));
-sph_random_define_x256ss(sp_times_random, sp_time_t, a);
 status_t sp_samples_new(sp_time_t size, sp_sample_t** out) { return ((sph_helper_calloc((size * sizeof(sp_sample_t)), out))); }
 status_t sp_times_new(sp_time_t size, sp_time_t** out) { return ((sph_helper_calloc((size * sizeof(sp_time_t)), out))); }
 void sp_samples_to_times(sp_sample_t* in, sp_time_t size, sp_time_t* out) {
@@ -29,6 +27,15 @@ void sp_samples_display(sp_sample_t* a, sp_time_t size) {
   printf(("%.5f"), (a[0]));
   for (i = 1; (i < size); i = (1 + i)) {
     printf((" %.5f"), (a[i]));
+  };
+  printf("\n");
+}
+/** display a time array in one line */
+void sp_times_display(sp_time_t* a, sp_time_t size) {
+  sp_time_t i;
+  printf("%lu", (a[0]));
+  for (i = 1; (i < size); i = (1 + i)) {
+    printf(" %lu", (a[i]));
   };
   printf("\n");
 }

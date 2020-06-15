@@ -39,7 +39,25 @@
 #define sp_sf_write sf_writef_double
 #endif
 #ifndef sp_time_t
-#define sp_time_t uint64_t
+#define sp_time_t uint32_t
+#endif
+#ifndef sp_times_random
+#define sp_times_random sph_random_u32_array
+#endif
+#ifndef sp_times_random_bounded
+#define sp_times_random_bounded sph_random_u32_bounded_array
+#endif
+#ifndef sp_samples_random
+#define sp_samples_random sph_random_f64_array
+#endif
+#ifndef sp_time_random
+#define sp_time_random sph_random_u32
+#endif
+#ifndef sp_time_random_bounded
+#define sp_time_random_bounded sph_random_u32_bounded
+#endif
+#ifndef sp_sample_random
+#define sp_sample_random sph_random_f64
 #endif
 #include <sph/status.c>
 #include <sph/spline-path.h>
@@ -143,11 +161,10 @@ sp_wave_state_t sp_wave_state_2(sp_sample_t* wvf, sp_time_t wvf_size, sp_time_t*
 #define sp_samples_zero(a, size) memset(a, 0, (size * sizeof(sp_sample_t)))
 #define sp_times_zero(a, size) memset(a, 0, (size * sizeof(sp_time_t)))
 void sp_samples_set_unity_gain(sp_sample_t* in, sp_time_t in_size, sp_sample_t* out);
-void sp_samples_random(sp_random_state_t* state, sp_time_t size, sp_sample_t* out);
-void sp_times_random(sp_random_state_t* state, sp_time_t size, sp_time_t* out);
 status_t sp_times_new(sp_time_t size, sp_time_t** out);
 void sp_samples_to_times(sp_sample_t* in, sp_time_t in_size, sp_time_t* out);
 void sp_samples_display(sp_sample_t* a, sp_time_t size);
+void sp_times_display(sp_time_t* a, sp_time_t size);
 status_t sp_samples_new(sp_time_t size, sp_sample_t** out);
 /* filter */
 #define sp_filter_state_t sp_convolution_filter_state_t

@@ -300,7 +300,7 @@ status_t test_sp_random() {
   s = sp_random_state_new(80);
   sp_samples_random((&s), 10, out);
   sp_samples_random((&s), 10, (10 + out));
-  test_helper_assert("last value", (f64_nearly_equal((0.355602), (out[19]), error_margin)));
+  test_helper_assert("last value", (f64_nearly_equal((0.6778), (out[19]), error_margin)));
 exit:
   status_return;
 }

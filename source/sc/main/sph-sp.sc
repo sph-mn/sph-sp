@@ -14,7 +14,13 @@
   sp-sample-t double
   sp-sf-read sf-readf-double
   sp-sf-write sf-writef-double
-  sp-time-t uint64-t)
+  sp-time-t uint32-t
+  sp-times-random sph-random-u32-array
+  sp-times-random-bounded sph-random-u32-bounded-array
+  sp-samples-random sph-random-f64-array
+  sp-time-random sph-random-u32
+  sp-time-random-bounded sph-random-u32-bounded
+  sp-sample-random sph-random-f64)
 
 (pre-include "sph/status.c" "sph/spline-path.h"
   "sph/random.c" "sph/array3.c" "sph/array4.c" "sph/memreg-heap.c" "sph/float.c")
@@ -133,11 +139,10 @@
 
 (declare
   (sp-samples-set-unity-gain in in-size out) (void sp-sample-t* sp-time-t sp-sample-t*)
-  (sp-samples-random state size out) (void sp-random-state-t* sp-time-t sp-sample-t*)
-  (sp-times-random state size out) (void sp-random-state-t* sp-time-t sp-time-t*)
   (sp-times-new size out) (status-t sp-time-t sp-time-t**)
   (sp-samples->times in in-size out) (void sp-sample-t* sp-time-t sp-time-t*)
   (sp-samples-display a size) (void sp-sample-t* sp-time-t)
+  (sp-times-display a size) (void sp-time-t* sp-time-t)
   (sp-samples-new size out) (status-t sp-time-t sp-sample-t**))
 
 (sc-comment "filter")

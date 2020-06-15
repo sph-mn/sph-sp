@@ -280,7 +280,7 @@
   (set s (sp-random-state-new 80))
   (sp-samples-random &s 10 out)
   (sp-samples-random &s 10 (+ 10 out))
-  (test-helper-assert "last value" (f64-nearly-equal 0.355602 (array-get out 19) error-margin))
+  (test-helper-assert "last value" (f64-nearly-equal 0.67780 (array-get out 19) error-margin))
   (label exit status-return))
 
 (pre-define (max a b) (if* (> a b) a b) (min a b) (if* (< a b) a b))
