@@ -150,7 +150,7 @@ sp_time_t sp_phase_float(sp_time_t current, sp_sample_t change, sp_time_t cycle)
 /** * sums into out
    * state.spd (speed): array with hertz values
    * state.wvf (waveform): array with waveform samples
-   * state.wvf-size: size of state.wvf, should match sample rate
+   * state.wvf-size: size of state.wvf
    * state.phs (phase): value per channel
    * state.amp (amplitude): array per channel */
 void sp_wave(sp_time_t start, sp_time_t duration, sp_wave_state_t* state, sp_block_t out) {
@@ -200,18 +200,12 @@ sp_sample_t sp_triangle(sp_time_t t, sp_time_t a, sp_time_t b) {
 }
 sp_sample_t sp_triangle_96(sp_time_t t) { return ((sp_triangle(t, 48000, 48000))); }
 sp_sample_t sp_square_96(sp_time_t t) { return (((((2 * t) % (2 * 96000)) < 96000) ? -1 : 1)); }
-/** writes a sine wave of size into out. can be used to create lookup tables */
-status_t sp_sine_table_new(sp_sample_t** out, sp_time_t size) {
-  status_declare;
+/** writes one full period of a sine wave into out. can be used to create lookup tables */
+void sp_sine_period(sp_time_t size, sp_sample_t* out) {
   sp_time_t i;
-  sp_sample_t* out_array;
-  status_require((sph_helper_malloc((size * sizeof(sp_sample_t*)), (&out_array))));
   for (i = 0; (i < size); i = (1 + i)) {
-    out_array[i] = sin((i * (M_PI / (size / 2))));
+    out[i] = sin((i * (M_PI / (size / 2))));
   };
-  *out = out_array;
-exit:
-  status_return;
 }
 /** the normalised sinc function */
 sp_float_t sp_sinc(sp_float_t a) { return (((0 == a) ? 1 : (sin((M_PI * a)) / (M_PI * a)))); }
@@ -425,10 +419,10 @@ status_t sp_path_samples_4(sp_sample_t** out, sp_time_t size, sp_path_segment_t 
 #include "../main/filter.c"
 #include "../main/sequencer.c"
 /** render a single event to file. event can be a group */
-status_t sp_render_file(sp_event_t event, sp_time_t start, sp_time_t duration, sp_render_config_t config, uint8_t* path) {
+status_t sp_render_file(sp_event_t event, sp_time_t start, sp_time_t end, sp_render_config_t config, uint8_t* path) {
   status_declare;
   sp_block_t block;
-  sp_time_t end;
+  sp_time_t block_end;
   uint8_t file_is_open;
   sp_file_t file;
   sp_time_t i;
@@ -437,17 +431,29 @@ status_t sp_render_file(sp_event_t event, sp_time_t start, sp_time_t duration, s
   status_require((sp_block_new((config.channels), (config.block_size), (&block))));
   status_require((sp_file_open(path, sp_file_mode_write, (config.channels), (config.rate), (&file))));
   file_is_open = 1;
-  end = (duration / config.block_size);
-  end = ((1 > end) ? config.block_size : (end * config.block_size));
-  for (i = 0; (i < end); i += config.block_size) {
+  block_end = ((end - start) / config.block_size);
+  block_end = ((1 > block_end) ? config.block_size : (block_end * config.block_size));
+  for (i = 0; (i < block_end); i += config.block_size) {
     sp_seq(i, (i + config.block_size), block, (&event), 1);
     status_require((sp_file_write((&file), (block.samples), (config.block_size), (&written))));
     sp_block_zero(block);
   };
+  sp_block_free(block);
 exit:
   if (file_is_open) {
     sp_file_close((&file));
   };
+  status_return;
+}
+/** render a single event to file. event can be a group */
+status_t sp_render_block(sp_event_t event, sp_time_t start, sp_time_t end, sp_render_config_t config, sp_block_t* out) {
+  status_declare;
+  sp_block_t block;
+  sp_time_t i;
+  status_require((sp_block_new((config.channels), (end - start), (&block))));
+  sp_seq(start, end, block, (&event), 1);
+  *out = block;
+exit:
   status_return;
 }
 /** fills the sine wave lookup table */
@@ -461,5 +467,8 @@ status_t sp_initialise(uint16_t cpu_count) {
   };
   sp_cpu_count = cpu_count;
   sp_default_random_state = sp_random_state_new(1557083953);
-  return ((sp_sine_table_new((&sp_sine_96_table), 96000)));
+  status_require((sp_samples_new(96000, (&sp_sine_96_table))));
+  sp_sine_period(96000, sp_sine_96_table);
+exit:
+  status_return;
 }

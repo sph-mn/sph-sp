@@ -60,9 +60,9 @@
   (sp-cheap-floor-positive a) (convert-type a sp-time-t)
   (sp-cheap-ceiling-positive a) (+ (convert-type a sp-time-t) (< (convert-type a sp-time-t) a))
   (sp-sine-96 t) (begin "t must be between 0 and 95999" (array-get sp-sine-96-table t))
-  (sp-sine-96-state-1 spd amp phs) (sp-wave-state-1 sp-sine-96-table 96000 amp phs)
+  (sp-sine-96-state-1 spd amp phs) (sp-wave-state-1 sp-sine-96-table 96000 spd amp phs)
   (sp-sine-96-state-2 spd amp1 amp2 phs1 phs2)
-  (sp-wave-state-2 sp-sine-96-table 96000 amp1 amp2 phs1 phs2))
+  (sp-wave-state-2 sp-sine-96-table 96000 spd amp1 amp2 phs1 phs2))
 
 (declare
   sp-block-t
@@ -119,7 +119,7 @@
       (wvf-size sp-time-t)
       (wvf sp-sample-t*)))
   sp-sine-96-table sp-sample-t*
-  (sp-sine-table-new out size) (status-t sp-sample-t** sp-time-t)
+  (sp-sine-period size out) (void sp-time-t sp-sample-t*)
   (sp-phase current change cycle) (sp-time-t sp-time-t sp-time-t sp-time-t)
   (sp-phase-float current change cycle) (sp-time-t sp-time-t double sp-time-t)
   (sp-square-96 t) (sp-sample-t sp-time-t)
@@ -352,5 +352,7 @@
 
 (declare
   sp-render-config-t (type (struct (rate sp-time-t) (block-size sp-time-t) (channels sp-channels-t)))
-  (sp-render-file event start duration config path)
-  (status-t sp-event-t sp-time-t sp-time-t sp-render-config-t uint8-t*))
+  (sp-render-file event start end config path)
+  (status-t sp-event-t sp-time-t sp-time-t sp-render-config-t uint8-t*)
+  (sp-render-block event start end config out)
+  (status-t sp-event-t sp-time-t sp-time-t sp-render-config-t sp-block-t*))

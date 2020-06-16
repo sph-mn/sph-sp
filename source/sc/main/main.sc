@@ -110,7 +110,7 @@
   "* sums into out
    * state.spd (speed): array with hertz values
    * state.wvf (waveform): array with waveform samples
-   * state.wvf-size: size of state.wvf, should match sample rate
+   * state.wvf-size: size of state.wvf
    * state.phs (phase): value per channel
    * state.amp (amplitude): array per channel"
   (declare amp sp-sample-t channel-i sp-time-t phs sp-time-t i sp-time-t)
@@ -156,15 +156,11 @@
 (define (sp-square-96 t) (sp-sample-t sp-time-t)
   (return (if* (< (modulo (* 2 t) (* 2 96000)) 96000) -1 1)))
 
-(define (sp-sine-table-new out size) (status-t sp-sample-t** sp-time-t)
-  "writes a sine wave of size into out. can be used to create lookup tables"
-  status-declare
-  (declare i sp-time-t out-array sp-sample-t*)
-  (status-require (sph-helper-malloc (* size (sizeof sp-sample-t*)) &out-array))
+(define (sp-sine-period size out) (void sp-time-t sp-sample-t*)
+  "writes one full period of a sine wave into out. can be used to create lookup tables"
+  (declare i sp-time-t)
   (for ((set i 0) (< i size) (set i (+ 1 i)))
-    (set (array-get out-array i) (sin (* i (/ M_PI (/ size 2))))))
-  (set *out out-array)
-  (label exit status-return))
+    (set (array-get out i) (sin (* i (/ M_PI (/ size 2)))))))
 
 (define (sp-sinc a) (sp-float-t sp-float-t)
   "the normalised sinc function"
@@ -260,8 +256,7 @@
 
 (define (sp-block-zero a) (void sp-block-t)
   (declare i sp-channels-t)
-  (for ((set i 0) (< i a.channels) (set+ i 1))
-    (sp-samples-zero (array-get a.samples i) a.size)))
+  (for ((set i 0) (< i a.channels) (set+ i 1)) (sp-samples-zero (array-get a.samples i) a.size)))
 
 (define (sp-path-samples segments size out) (status-t sp-path-segments-t sp-time-t sp-sample-t**)
   "out memory is allocated"
@@ -340,13 +335,13 @@
 
 (pre-include "../main/io.c" "../main/plot.c" "../main/filter.c" "../main/sequencer.c")
 
-(define (sp-render-file event start duration config path)
+(define (sp-render-file event start end config path)
   (status-t sp-event-t sp-time-t sp-time-t sp-render-config-t uint8-t*)
   "render a single event to file. event can be a group"
   status-declare
   (declare
     block sp-block-t
-    end sp-time-t
+    block-end sp-time-t
     file-is-open uint8-t
     file sp-file-t
     i sp-time-t
@@ -356,17 +351,30 @@
   (status-require (sp-file-open path sp-file-mode-write config.channels config.rate &file))
   (set
     file-is-open 1
-    end (/ duration config.block-size)
-    end (if* (> 1 end) config.block-size (* end config.block-size)))
-  (for ((set i 0) (< i end) (set+ i config.block-size))
+    block-end (/ (- end start) config.block-size)
+    block-end (if* (> 1 block-end) config.block-size (* block-end config.block-size)))
+  (for ((set i 0) (< i block-end) (set+ i config.block-size))
     (sp-seq i (+ i config.block-size) block &event 1)
     (status-require (sp-file-write &file block.samples config.block-size &written))
     (sp-block-zero block))
+  (sp-block-free block)
   (label exit (if file-is-open (sp-file-close &file)) status-return))
+
+(define (sp-render-block event start end config out)
+  (status-t sp-event-t sp-time-t sp-time-t sp-render-config-t sp-block-t*)
+  "render a single event to file. event can be a group"
+  status-declare
+  (declare block sp-block-t i sp-time-t)
+  (status-require (sp-block-new config.channels (- end start) &block))
+  (sp-seq start end block &event 1)
+  (set *out block)
+  (label exit status-return))
 
 (define (sp-initialise cpu-count) (status-t uint16-t)
   "fills the sine wave lookup table"
   status-declare
   (if cpu-count (begin (set status.id (future-init cpu-count)) (if status.id status-return)))
   (set sp-cpu-count cpu-count sp-default-random-state (sp-random-state-new 1557083953))
-  (return (sp-sine-table-new &sp-sine-96-table 96000)))
+  (status-require (sp-samples-new 96000 &sp-sine-96-table))
+  (sp-sine-period 96000 sp-sine-96-table)
+  (label exit status-return))
