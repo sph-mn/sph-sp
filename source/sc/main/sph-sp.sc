@@ -59,10 +59,9 @@
   (sp-cheap-round-positive a) (convert-type (+ 0.5 a) sp-time-t)
   (sp-cheap-floor-positive a) (convert-type a sp-time-t)
   (sp-cheap-ceiling-positive a) (+ (convert-type a sp-time-t) (< (convert-type a sp-time-t) a))
-  (sp-sine-96 t) (begin "t must be between 0 and 95999" (array-get sp-sine-96-table t))
-  (sp-sine-96-state-1 spd amp phs) (sp-wave-state-1 sp-sine-96-table 96000 spd amp phs)
-  (sp-sine-96-state-2 spd amp1 amp2 phs1 phs2)
-  (sp-wave-state-2 sp-sine-96-table 96000 spd amp1 amp2 phs1 phs2))
+  (sp-sine-state-1 spd amp phs) (sp-wave-state-1 sp-sine-table sp-sine-table-size spd amp phs)
+  (sp-sine-state-2 spd amp1 amp2 phs1 phs2)
+  (sp-wave-state-2 sp-sine-table sp-sine-table-size spd amp1 amp2 phs1 phs2))
 
 (declare
   sp-block-t
@@ -80,6 +79,8 @@
       (data void*)))
   sp-cpu-count uint32-t
   sp-default-random-state sp-random-state-t
+  sp-sine-table-size sp-time-t
+  sp-sine-table sp-sample-t*
   (sp-block-zero a) (void sp-block-t)
   (sp-file-read file sample-count result-block result-sample-count)
   (status-t sp-file-t* sp-time-t sp-sample-t** sp-time-t*)
@@ -109,7 +110,7 @@
   (sp-block-with-offset a offset) (sp-block-t sp-block-t sp-time-t)
   (sp-null-ir out-ir out-len) (status-t sp-sample-t** sp-time-t*)
   (sp-passthrough-ir out-ir out-len) (status-t sp-sample-t** sp-time-t*)
-  (sp-initialise cpu-count) (status-t uint16-t)
+  (sp-initialise cpu-count sine-table-size) (status-t uint16-t sp-time-t)
   sp-wave-state-t
   (type
     (struct
@@ -118,13 +119,11 @@
       (spd sp-time-t*)
       (wvf-size sp-time-t)
       (wvf sp-sample-t*)))
-  sp-sine-96-table sp-sample-t*
   (sp-sine-period size out) (void sp-time-t sp-sample-t*)
   (sp-phase current change cycle) (sp-time-t sp-time-t sp-time-t sp-time-t)
   (sp-phase-float current change cycle) (sp-time-t sp-time-t double sp-time-t)
-  (sp-square-96 t) (sp-sample-t sp-time-t)
+  (sp-square t size) (sp-sample-t sp-time-t sp-time-t)
   (sp-triangle t a b) (sp-sample-t sp-time-t sp-time-t sp-time-t)
-  (sp-triangle-96 t) (sp-sample-t sp-time-t)
   (sp-wave start duration state out) (void sp-time-t sp-time-t sp-wave-state-t* sp-block-t)
   (sp-wave-state-1 wvf wvf-size spd amp phs)
   (sp-wave-state-t sp-sample-t* sp-time-t sp-time-t* sp-sample-t* sp-time-t)
@@ -348,7 +347,8 @@
 (sc-comment "main 2")
 
 (pre-define (declare-render-config name)
-  (define name sp-render-config-t (struct-literal (channels 2) (rate 96000) (block-size 96000))))
+  (define name sp-render-config-t
+    (struct-literal (channels 2) (rate sp-sine-table-size) (block-size sp-sine-table-size))))
 
 (declare
   sp-render-config-t (type (struct (rate sp-time-t) (block-size sp-time-t) (channels sp-channels-t)))

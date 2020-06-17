@@ -151,10 +151,8 @@
       (* (- (convert-type b sp-sample-t) (- remainder (convert-type a sp-sample-t)))
         (/ 1 (convert-type b sp-sample-t))))))
 
-(define (sp-triangle-96 t) (sp-sample-t sp-time-t) (return (sp-triangle t 48000 48000)))
-
-(define (sp-square-96 t) (sp-sample-t sp-time-t)
-  (return (if* (< (modulo (* 2 t) (* 2 96000)) 96000) -1 1)))
+(define (sp-square t size) (sp-sample-t sp-time-t sp-time-t)
+  (return (if* (< (modulo (* 2 t) (* 2 size)) size) -1 1)))
 
 (define (sp-sine-period size out) (void sp-time-t sp-sample-t*)
   "writes one full period of a sine wave into out. can be used to create lookup tables"
@@ -370,11 +368,14 @@
   (set *out block)
   (label exit status-return))
 
-(define (sp-initialise cpu-count) (status-t uint16-t)
+(define (sp-initialise cpu-count sine-table-size) (status-t uint16-t sp-time-t)
   "fills the sine wave lookup table"
   status-declare
   (if cpu-count (begin (set status.id (future-init cpu-count)) (if status.id status-return)))
-  (set sp-cpu-count cpu-count sp-default-random-state (sp-random-state-new 1557083953))
-  (status-require (sp-samples-new 96000 &sp-sine-96-table))
-  (sp-sine-period 96000 sp-sine-96-table)
+  (set
+    sp-cpu-count cpu-count
+    sp-sine-table-size sine-table-size
+    sp-default-random-state (sp-random-state-new 1557083953))
+  (status-require (sp-samples-new sine-table-size &sp-sine-table))
+  (sp-sine-period sine-table-size sp-sine-table)
   (label exit status-return))

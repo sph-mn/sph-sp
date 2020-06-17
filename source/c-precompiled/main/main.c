@@ -198,8 +198,7 @@ sp_sample_t sp_triangle(sp_time_t t, sp_time_t a, sp_time_t b) {
   remainder = (t % (a + b));
   return (((remainder < a) ? (remainder * (1 / ((sp_sample_t)(a)))) : ((((sp_sample_t)(b)) - (remainder - ((sp_sample_t)(a)))) * (1 / ((sp_sample_t)(b))))));
 }
-sp_sample_t sp_triangle_96(sp_time_t t) { return ((sp_triangle(t, 48000, 48000))); }
-sp_sample_t sp_square_96(sp_time_t t) { return (((((2 * t) % (2 * 96000)) < 96000) ? -1 : 1)); }
+sp_sample_t sp_square(sp_time_t t, sp_time_t size) { return (((((2 * t) % (2 * size)) < size) ? -1 : 1)); }
 /** writes one full period of a sine wave into out. can be used to create lookup tables */
 void sp_sine_period(sp_time_t size, sp_sample_t* out) {
   sp_time_t i;
@@ -457,7 +456,7 @@ exit:
   status_return;
 }
 /** fills the sine wave lookup table */
-status_t sp_initialise(uint16_t cpu_count) {
+status_t sp_initialise(uint16_t cpu_count, sp_time_t sine_table_size) {
   status_declare;
   if (cpu_count) {
     status.id = future_init(cpu_count);
@@ -466,9 +465,10 @@ status_t sp_initialise(uint16_t cpu_count) {
     };
   };
   sp_cpu_count = cpu_count;
+  sp_sine_table_size = sine_table_size;
   sp_default_random_state = sp_random_state_new(1557083953);
-  status_require((sp_samples_new(96000, (&sp_sine_96_table))));
-  sp_sine_period(96000, sp_sine_96_table);
+  status_require((sp_samples_new(sine_table_size, (&sp_sine_table))));
+  sp_sine_period(sine_table_size, sp_sine_table);
 exit:
   status_return;
 }

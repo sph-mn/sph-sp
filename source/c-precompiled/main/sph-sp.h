@@ -98,10 +98,8 @@
 #define sp_cheap_round_positive(a) ((sp_time_t)((0.5 + a)))
 #define sp_cheap_floor_positive(a) ((sp_time_t)(a))
 #define sp_cheap_ceiling_positive(a) (((sp_time_t)(a)) + (((sp_time_t)(a)) < a))
-/** t must be between 0 and 95999 */
-#define sp_sine_96(t) sp_sine_96_table[t]
-#define sp_sine_96_state_1(spd, amp, phs) sp_wave_state_1(sp_sine_96_table, 96000, spd, amp, phs)
-#define sp_sine_96_state_2(spd, amp1, amp2, phs1, phs2) sp_wave_state_2(sp_sine_96_table, 96000, spd, amp1, amp2, phs1, phs2)
+#define sp_sine_state_1(spd, amp, phs) sp_wave_state_1(sp_sine_table, sp_sine_table_size, spd, amp, phs)
+#define sp_sine_state_2(spd, amp1, amp2, phs1, phs2) sp_wave_state_2(sp_sine_table, sp_sine_table_size, spd, amp1, amp2, phs1, phs2)
 typedef struct {
   sp_channels_t channels;
   sp_time_t size;
@@ -115,6 +113,8 @@ typedef struct {
 } sp_file_t;
 uint32_t sp_cpu_count;
 sp_random_state_t sp_default_random_state;
+sp_time_t sp_sine_table_size;
+sp_sample_t* sp_sine_table;
 void sp_block_zero(sp_block_t a);
 status_t sp_file_read(sp_file_t* file, sp_time_t sample_count, sp_sample_t** result_block, sp_time_t* result_sample_count);
 status_t sp_file_write(sp_file_t* file, sp_sample_t** block, sp_time_t sample_count, sp_time_t* result_sample_count);
@@ -139,7 +139,7 @@ void sp_block_free(sp_block_t a);
 sp_block_t sp_block_with_offset(sp_block_t a, sp_time_t offset);
 status_t sp_null_ir(sp_sample_t** out_ir, sp_time_t* out_len);
 status_t sp_passthrough_ir(sp_sample_t** out_ir, sp_time_t* out_len);
-status_t sp_initialise(uint16_t cpu_count);
+status_t sp_initialise(uint16_t cpu_count, sp_time_t sine_table_size);
 typedef struct {
   sp_sample_t* amp[sp_channel_limit];
   sp_time_t phs[sp_channel_limit];
@@ -147,13 +147,11 @@ typedef struct {
   sp_time_t wvf_size;
   sp_sample_t* wvf;
 } sp_wave_state_t;
-sp_sample_t* sp_sine_96_table;
 void sp_sine_period(sp_time_t size, sp_sample_t* out);
 sp_time_t sp_phase(sp_time_t current, sp_time_t change, sp_time_t cycle);
 sp_time_t sp_phase_float(sp_time_t current, double change, sp_time_t cycle);
-sp_sample_t sp_square_96(sp_time_t t);
+sp_sample_t sp_square(sp_time_t t, sp_time_t size);
 sp_sample_t sp_triangle(sp_time_t t, sp_time_t a, sp_time_t b);
-sp_sample_t sp_triangle_96(sp_time_t t);
 void sp_wave(sp_time_t start, sp_time_t duration, sp_wave_state_t* state, sp_block_t out);
 sp_wave_state_t sp_wave_state_1(sp_sample_t* wvf, sp_time_t wvf_size, sp_time_t* spd, sp_sample_t* amp, sp_time_t phs);
 sp_wave_state_t sp_wave_state_2(sp_sample_t* wvf, sp_time_t wvf_size, sp_time_t* spd, sp_sample_t* amp1, sp_sample_t* amp2, sp_time_t phs1, sp_time_t phs2);
@@ -308,7 +306,7 @@ status_t sp_path_times_2(sp_time_t** out, sp_time_t size, sp_path_segment_t s1, 
 status_t sp_path_times_3(sp_time_t** out, sp_time_t size, sp_path_segment_t s1, sp_path_segment_t s2, sp_path_segment_t s3);
 status_t sp_path_times_4(sp_time_t** out, sp_time_t size, sp_path_segment_t s1, sp_path_segment_t s2, sp_path_segment_t s3, sp_path_segment_t s4);
 /* main 2 */
-#define declare_render_config(name) sp_render_config_t name = { .channels = 2, .rate = 96000, .block_size = 96000 }
+#define declare_render_config(name) sp_render_config_t name = { .channels = 2, .rate = sp_sine_table_size, .block_size = sp_sine_table_size }
 typedef struct {
   sp_time_t rate;
   sp_time_t block_size;

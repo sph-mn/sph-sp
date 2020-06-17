@@ -6,6 +6,7 @@
 #define sp_sample_nearly_equal f32_nearly_equal
 #define sp_samples_nearly_equal f32_array_nearly_equal
 #endif
+#define _rate 96000
 sp_sample_t error_margin = 0.1;
 uint8_t* test_file_path = "/tmp/test-sph-sp-file";
 status_t test_base() {
@@ -273,11 +274,11 @@ status_t test_sp_triangle_square() {
   sp_time_t i;
   sp_sample_t* out_t;
   sp_sample_t* out_s;
-  status_require((sph_helper_calloc((96000 * sizeof(sp_sample_t*)), (&out_t))));
-  status_require((sph_helper_calloc((96000 * sizeof(sp_sample_t*)), (&out_s))));
-  for (i = 0; (i < 96000); i = (1 + i)) {
-    out_t[i] = sp_triangle_96(i);
-    out_s[i] = sp_square_96(i);
+  status_require((sph_helper_calloc((_rate * sizeof(sp_sample_t*)), (&out_t))));
+  status_require((sph_helper_calloc((_rate * sizeof(sp_sample_t*)), (&out_s))));
+  for (i = 0; (i < _rate); i = (1 + i)) {
+    out_t[i] = sp_triangle(i, (_rate / 2), (_rate / 2));
+    out_s[i] = sp_square(i, _rate);
   };
   test_helper_assert("triangle 0", (0 == out_t[0]));
   test_helper_assert("triangle 1/2", (1 == out_t[48000]));
@@ -448,7 +449,7 @@ status_t test_wave() {
   sp_sample_t amp[4] = { 0.1, 0.2, 0.3, 0.4 };
   status_require((sp_block_new(test_wave_channels, test_wave_duration, (&out1))));
   status_require((sp_block_new(test_wave_channels, test_wave_duration, (&out2))));
-  state = sp_wave_state_2(sp_sine_96_table, 96000, spd, amp, amp, 0, 0);
+  state = sp_wave_state_2(sp_sine_table, _rate, spd, amp, amp, 0, 0);
   sp_wave(0, test_wave_duration, (&state), out1);
   sp_wave(0, test_wave_duration, (&state), out2);
   test_helper_assert("zeros", ((0 == (out1.samples)[0][0]) && ((out1.samples)[0][0] == (out1.samples)[0][2])));
@@ -474,7 +475,7 @@ status_t test_wave_event() {
     amp1[i] = 0.1;
     amp2[i] = 1;
   };
-  status_require((sp_wave_event(0, sp_wave_event_duration, (sp_wave_state_2(sp_sine_96_table, 96000, spd, amp1, amp2, 0, 0)), (&event))));
+  status_require((sp_wave_event(0, sp_wave_event_duration, (sp_wave_state_2(sp_sine_table, _rate, spd, amp1, amp2, 0, 0)), (&event))));
   status_require((sp_block_new(2, sp_wave_event_duration, (&out))));
   (event.f)(0, sp_wave_event_duration, out, (&event));
   sp_block_free(out);
@@ -494,7 +495,7 @@ exit:
 /** "goto exit" can skip events */
 int main() {
   status_declare;
-  sp_initialise(3);
+  sp_initialise(3, _rate);
   test_helper_test_one(test_wave_event);
   test_helper_test_one(test_wave);
   test_helper_test_one(test_path);

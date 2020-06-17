@@ -10,6 +10,7 @@
       sp-sample-nearly-equal f32-nearly-equal
       sp-samples-nearly-equal f32-array-nearly-equal)))
 
+(pre-define _rate 96000)
 (define error-margin sp-sample-t 0.1)
 (define test-file-path uint8-t* "/tmp/test-sph-sp-file")
 
@@ -82,8 +83,7 @@
   (test-helper-assert "first result"
     (sp-samples-nearly-equal result result-len expected-result result-len error-margin))
   (test-helper-assert "first result carryover"
-    (sp-samples-nearly-equal carryover carryover-len
-      expected-carryover carryover-len error-margin))
+    (sp-samples-nearly-equal carryover carryover-len expected-carryover carryover-len error-margin))
   (sc-comment "test convolve second segment")
   (array-set a 0 8 1 9 2 10 3 11 4 12)
   (array-set expected-result 0 35 1 43 2 52 3 58 4 64)
@@ -92,8 +92,7 @@
   (test-helper-assert "second result"
     (sp-samples-nearly-equal result result-len expected-result result-len error-margin))
   (test-helper-assert "second result carryover"
-    (sp-samples-nearly-equal carryover carryover-len
-      expected-carryover carryover-len error-margin))
+    (sp-samples-nearly-equal carryover carryover-len expected-carryover carryover-len error-margin))
   (label exit memreg-free status-return))
 
 (define (test-moving-average) status-t
@@ -257,10 +256,10 @@
 (define (test-sp-triangle-square) status-t
   status-declare
   (declare i sp-time-t out-t sp-sample-t* out-s sp-sample-t*)
-  (status-require (sph-helper-calloc (* 96000 (sizeof sp-sample-t*)) &out-t))
-  (status-require (sph-helper-calloc (* 96000 (sizeof sp-sample-t*)) &out-s))
-  (for ((set i 0) (< i 96000) (set i (+ 1 i)))
-    (set (array-get out-t i) (sp-triangle-96 i) (array-get out-s i) (sp-square-96 i)))
+  (status-require (sph-helper-calloc (* _rate (sizeof sp-sample-t*)) &out-t))
+  (status-require (sph-helper-calloc (* _rate (sizeof sp-sample-t*)) &out-s))
+  (for ((set i 0) (< i _rate) (set i (+ 1 i)))
+    (set (array-get out-t i) (sp-triangle i (/ _rate 2) (/ _rate 2)) (array-get out-s i) (sp-square i _rate)))
   (test-helper-assert "triangle 0" (= 0 (array-get out-t 0)))
   (test-helper-assert "triangle 1/2" (= 1 (array-get out-t 48000)))
   (test-helper-assert "triangle 1" (f64-nearly-equal 0 (array-get out-t 95999) error-margin))
@@ -280,7 +279,7 @@
   (set s (sp-random-state-new 80))
   (sp-samples-random &s 10 out)
   (sp-samples-random &s 10 (+ 10 out))
-  (test-helper-assert "last value" (f64-nearly-equal 0.67780 (array-get out 19) error-margin))
+  (test-helper-assert "last value" (f64-nearly-equal 0.6778 (array-get out 19) error-margin))
   (label exit status-return))
 
 (pre-define (max a b) (if* (> a b) a b) (min a b) (if* (< a b) a b))
@@ -433,7 +432,7 @@
     amp (array sp-sample-t 4 0.1 0.2 0.3 0.4))
   (status-require (sp-block-new test-wave-channels test-wave-duration &out1))
   (status-require (sp-block-new test-wave-channels test-wave-duration &out2))
-  (set state (sp-wave-state-2 sp-sine-96-table 96000 spd amp amp 0 0))
+  (set state (sp-wave-state-2 sp-sine-table _rate spd amp amp 0 0))
   (sp-wave 0 test-wave-duration &state out1)
   (sp-wave 0 test-wave-duration &state out2)
   (test-helper-assert "zeros" (= 0 (array-get out1.samples 0 0) (array-get out1.samples 0 2)))
@@ -460,7 +459,7 @@
     (set (array-get spd i) 1 (array-get amp1 i) 0.1 (array-get amp2 i) 1))
   (status-require
     (sp-wave-event 0 sp-wave-event-duration
-      (sp-wave-state-2 sp-sine-96-table 96000 spd amp1 amp2 0 0) &event))
+      (sp-wave-state-2 sp-sine-table _rate spd amp1 amp2 0 0) &event))
   (status-require (sp-block-new 2 sp-wave-event-duration &out))
   (event.f 0 sp-wave-event-duration out &event)
   (sp-block-free out)
@@ -477,7 +476,7 @@
 (define (main) int
   "\"goto exit\" can skip events"
   status-declare
-  (sp-initialise 3)
+  (sp-initialise 3 _rate)
   (test-helper-test-one test-wave-event)
   (test-helper-test-one test-wave)
   (test-helper-test-one test-path)
