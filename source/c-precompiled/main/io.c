@@ -1,7 +1,9 @@
-status_t sp_file_close(sp_file_t* file) {
+status_t sp_file_close(sp_file_t file) {
   status_declare;
-  status.group = sp_s_group_sndfile;
-  status.id = sf_close(((SNDFILE*)(file->data)));
+  if (file.flags) {
+    status.group = sp_s_group_sndfile;
+    status.id = sf_close(((SNDFILE*)(file.data)));
+  };
   status_return;
 }
 status_t sp_file_open(uint8_t* path, int mode, sp_channels_t channel_count, sp_sample_rate_t sample_rate, sp_file_t* result_file) {
@@ -125,7 +127,7 @@ status_t sp_block_to_file(sp_block_t block, uint8_t* path, sp_time_t rate) {
   sp_time_t written;
   status_require((sp_file_open(path, sp_file_mode_write, (block.channels), rate, (&file))));
   status_require((sp_file_write((&file), (block.samples), (block.size), (&written))));
-  sp_file_close((&file));
+  sp_file_close(file);
 exit:
   status_return;
 }

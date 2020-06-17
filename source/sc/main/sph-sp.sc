@@ -56,6 +56,8 @@
   sp-s-id-file-closed 11
   sp-s-id-file-position 12
   sp-s-id-file-type 13
+  (sp-file-declare a) (begin (declare a sp-file-t) (set a.flags 0))
+  (sp-block-declare a) (begin (declare a sp-block-t) (set a.size 0))
   (sp-cheap-round-positive a) (convert-type (+ 0.5 a) sp-time-t)
   (sp-cheap-floor-positive a) (convert-type a sp-time-t)
   (sp-cheap-ceiling-positive a) (+ (convert-type a sp-time-t) (< (convert-type a sp-time-t) a))
@@ -90,7 +92,7 @@
   (sp-file-position-set file sample-offset) (status-t sp-file-t* sp-time-t)
   (sp-file-open path mode channel-count sample-rate result-file)
   (status-t uint8-t* int sp-channels-t sp-sample-rate-t sp-file-t*)
-  (sp-file-close a) (status-t sp-file-t*)
+  (sp-file-close a) (status-t sp-file-t)
   (sp-block->file block path rate) (status-t sp-block-t uint8-t* sp-time-t)
   (sp-block-new channel-count sample-count out-block) (status-t sp-channels-t sp-time-t sp-block-t*)
   (sp-status-description a) (uint8-t* status-t)
@@ -228,6 +230,7 @@
     sp-float-t sp-float-t sp-float-t sp-float-t boolean sp-filter-state-t** sp-sample-t*))
 
 (sc-comment "plot")
+(pre-define (sp-block-plot-1 a) (sp-plot-samples (array-get a.samples 0) a.size))
 
 (declare
   (sp-plot-samples a a-size) (void sp-sample-t* sp-time-t)
@@ -263,7 +266,7 @@
     (begin (array4-add (sp-group-events a) event) (if (< a.end event.end) (set a.end event.end))))
   (sp-group-prepare a)
   (sp-seq-events-prepare (struct-get (sp-group-events a) data) (array4-size (sp-group-events a)))
-  (sp-event-declare variable) (begin (declare variable sp-event-t) (set variable.state 0))
+  (sp-event-declare a) (begin (declare a sp-event-t) (set a.state 0 a.start 0 a.end 0))
   sp-group-declare sp-event-declare
   (sp-group-free a) (if a.state (a.free &a)))
 
@@ -346,7 +349,7 @@
 
 (sc-comment "main 2")
 
-(pre-define (declare-render-config name)
+(pre-define (sp-render-config-declare name)
   (define name sp-render-config-t
     (struct-literal (channels 2) (rate sp-sine-table-size) (block-size sp-sine-table-size))))
 

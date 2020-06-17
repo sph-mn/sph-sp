@@ -212,7 +212,7 @@
         (sp-samples-nearly-equal (array-get block.samples len) sample-count
           (array-get block-2.samples len) sample-count error-margin))))
   (test-helper-assert "sp-file-read new file result" (not unequal))
-  (status-require (sp-file-close &file))
+  (status-require (sp-file-close file))
   (printf "  write\n")
   (sc-comment "test open")
   (status-require (sp-file-open test-file-path sp-file-mode-read-write 2 8000 &file))
@@ -230,7 +230,7 @@
         (sp-samples-nearly-equal (array-get block.samples len) sample-count
           (array-get block-2.samples len) sample-count error-margin))))
   (test-helper-assert "sp-file-read existing result" (not unequal))
-  (status-require (sp-file-close &file))
+  (status-require (sp-file-close file))
   (printf "  open\n")
   (label exit (sp-block-free block) (sp-block-free block-2) status-return))
 
@@ -259,7 +259,9 @@
   (status-require (sph-helper-calloc (* _rate (sizeof sp-sample-t*)) &out-t))
   (status-require (sph-helper-calloc (* _rate (sizeof sp-sample-t*)) &out-s))
   (for ((set i 0) (< i _rate) (set i (+ 1 i)))
-    (set (array-get out-t i) (sp-triangle i (/ _rate 2) (/ _rate 2)) (array-get out-s i) (sp-square i _rate)))
+    (set
+      (array-get out-t i) (sp-triangle i (/ _rate 2) (/ _rate 2))
+      (array-get out-s i) (sp-square i _rate)))
   (test-helper-assert "triangle 0" (= 0 (array-get out-t 0)))
   (test-helper-assert "triangle 1/2" (= 1 (array-get out-t 48000)))
   (test-helper-assert "triangle 1" (f64-nearly-equal 0 (array-get out-t 95999) error-margin))
@@ -456,15 +458,41 @@
     amp2 (array sp-sample-t sp-wave-event-duration)
     i sp-time-t)
   (for ((set i 0) (< i sp-wave-event-duration) (set+ i 1))
-    (set (array-get spd i) 1 (array-get amp1 i) 0.1 (array-get amp2 i) 1))
+    (set (array-get spd i) 2000 (array-get amp1 i) 1 (array-get amp2 i) 0.5))
   (status-require
     (sp-wave-event 0 sp-wave-event-duration
       (sp-wave-state-2 sp-sine-table _rate spd amp1 amp2 0 0) &event))
   (status-require (sp-block-new 2 sp-wave-event-duration &out))
-  (event.f 0 sp-wave-event-duration out &event)
+  (event.f 0 30 out &event)
+  (event.f 30 sp-wave-event-duration
+    (sp-block-with-offset out 30) &event)
   (sp-block-free out)
   (event.free &event)
   (label exit status-return))
+
+(define (test-render-block) status-t
+  status-declare
+  (declare
+    event sp-event-t
+    out sp-block-t
+    spd (array sp-time-t sp-wave-event-duration)
+    amp (array sp-sample-t sp-wave-event-duration)
+    i sp-time-t)
+  (sp-render-config-declare rc)
+  (set rc.block-size 40)
+  (for ((set i 0) (< i sp-wave-event-duration) (set+ i 1))
+    (set (array-get spd i) 1500 (array-get amp i) 1 ))
+  (status-require
+    (sp-wave-event 0 sp-wave-event-duration
+      (sp-sine-state-2 spd amp amp 0 0) &event))
+  (status-require (sp-block-new 2 sp-wave-event-duration &out))
+  (sp-render-file event 0 sp-wave-event-duration rc "/tmp/test.wav")
+  (sc-comment (sp-render-block event 0 sp-wave-event-duration rc &out))
+  (sc-comment (sp-block-plot-1 out))
+  (sp-block-free out)
+  (event.free &event)
+  (label exit status-return))
+
 
 (define (test-path) status-t
   (declare samples sp-sample-t* times sp-time-t*)
@@ -477,6 +505,7 @@
   "\"goto exit\" can skip events"
   status-declare
   (sp-initialise 3 _rate)
+  (test-helper-test-one test-render-block)
   (test-helper-test-one test-wave-event)
   (test-helper-test-one test-wave)
   (test-helper-test-one test-path)

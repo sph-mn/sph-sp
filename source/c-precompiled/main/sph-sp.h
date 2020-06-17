@@ -95,6 +95,12 @@
 #define sp_s_id_file_closed 11
 #define sp_s_id_file_position 12
 #define sp_s_id_file_type 13
+#define sp_file_declare(a) \
+  sp_file_t a; \
+  a.flags = 0
+#define sp_block_declare(a) \
+  sp_block_t a; \
+  a.size = 0
 #define sp_cheap_round_positive(a) ((sp_time_t)((0.5 + a)))
 #define sp_cheap_floor_positive(a) ((sp_time_t)(a))
 #define sp_cheap_ceiling_positive(a) (((sp_time_t)(a)) + (((sp_time_t)(a)) < a))
@@ -121,7 +127,7 @@ status_t sp_file_write(sp_file_t* file, sp_sample_t** block, sp_time_t sample_co
 status_t sp_file_position(sp_file_t* file, sp_time_t* result_position);
 status_t sp_file_position_set(sp_file_t* file, sp_time_t sample_offset);
 status_t sp_file_open(uint8_t* path, int mode, sp_channels_t channel_count, sp_sample_rate_t sample_rate, sp_file_t* result_file);
-status_t sp_file_close(sp_file_t* a);
+status_t sp_file_close(sp_file_t a);
 status_t sp_block_to_file(sp_block_t block, uint8_t* path, sp_time_t rate);
 status_t sp_block_new(sp_channels_t channel_count, sp_time_t sample_count, sp_block_t* out_block);
 uint8_t* sp_status_description(status_t a);
@@ -213,6 +219,7 @@ void sp_cheap_filter_state_free(sp_cheap_filter_state_t* a);
 status_t sp_cheap_filter_state_new(sp_time_t max_size, sp_time_t max_passes, sp_cheap_filter_state_t* out_state);
 status_t sp_filter(sp_sample_t* in, sp_time_t in_size, sp_float_t cutoff_l, sp_float_t cutoff_h, sp_float_t transition_l, sp_float_t transition_h, boolean is_reject, sp_filter_state_t** out_state, sp_sample_t* out_samples);
 /* plot */
+#define sp_block_plot_1(a) sp_plot_samples(((a.samples)[0]), (a.size))
 void sp_plot_samples(sp_sample_t* a, sp_time_t a_size);
 void sp_plot_times(sp_time_t* a, sp_time_t a_size);
 void sp_plot_samples_to_file(sp_sample_t* a, sp_time_t a_size, uint8_t* path);
@@ -246,9 +253,11 @@ void sp_plot_spectrum(sp_sample_t* a, sp_time_t a_size);
     }; \
   }
 #define sp_group_prepare(a) sp_seq_events_prepare(((sp_group_events(a)).data), (array4_size((sp_group_events(a)))))
-#define sp_event_declare(variable) \
-  sp_event_t variable; \
-  variable.state = 0
+#define sp_event_declare(a) \
+  sp_event_t a; \
+  a.state = 0; \
+  a.start = 0; \
+  a.end = 0
 #define sp_group_declare sp_event_declare
 #define sp_group_free(a) \
   if (a.state) { \
@@ -306,7 +315,7 @@ status_t sp_path_times_2(sp_time_t** out, sp_time_t size, sp_path_segment_t s1, 
 status_t sp_path_times_3(sp_time_t** out, sp_time_t size, sp_path_segment_t s1, sp_path_segment_t s2, sp_path_segment_t s3);
 status_t sp_path_times_4(sp_time_t** out, sp_time_t size, sp_path_segment_t s1, sp_path_segment_t s2, sp_path_segment_t s3, sp_path_segment_t s4);
 /* main 2 */
-#define declare_render_config(name) sp_render_config_t name = { .channels = 2, .rate = sp_sine_table_size, .block_size = sp_sine_table_size }
+#define sp_render_config_declare(name) sp_render_config_t name = { .channels = 2, .rate = sp_sine_table_size, .block_size = sp_sine_table_size }
 typedef struct {
   sp_time_t rate;
   sp_time_t block_size;

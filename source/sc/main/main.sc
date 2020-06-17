@@ -81,7 +81,7 @@
 
 (define (sp-block-free a) (void sp-block-t)
   (declare i sp-time-t)
-  (for ((set i 0) (< i a.channels) (set i (+ 1 i))) (free (array-get a.samples i))))
+  (if a.size (for ((set i 0) (< i a.channels) (set i (+ 1 i))) (free (array-get a.samples i)))))
 
 (define (sp-block-with-offset a offset) (sp-block-t sp-block-t sp-time-t)
   "return a new block with offset added to all channel sample arrays"
@@ -118,7 +118,8 @@
     (set phs (array-get state:phs channel-i))
     (for ((set i 0) (< i duration) (set i (+ 1 i)))
       (set+ (array-get out.samples channel-i i)
-        (* (array-get state:amp channel-i i) (array-get state:wvf phs)) phs (array-get state:spd i))
+        (* (array-get state:amp channel-i (+ start i)) (array-get state:wvf phs)) phs
+        (array-get state:spd (+ start i)))
       (if (>= phs state:wvf-size) (set phs (modulo phs state:wvf-size))))
     (set (array-get state:phs channel-i) phs)))
 
@@ -337,26 +338,23 @@
   (status-t sp-event-t sp-time-t sp-time-t sp-render-config-t uint8-t*)
   "render a single event to file. event can be a group"
   status-declare
-  (declare
-    block sp-block-t
-    block-end sp-time-t
-    file-is-open uint8-t
-    file sp-file-t
-    i sp-time-t
-    written sp-time-t)
-  (set file-is-open 0)
+  (declare block-end sp-time-t remainder sp-time-t i sp-time-t written sp-time-t)
+  (sp-block-declare block)
+  (sp-file-declare file)
   (status-require (sp-block-new config.channels config.block-size &block))
   (status-require (sp-file-open path sp-file-mode-write config.channels config.rate &file))
   (set
-    file-is-open 1
-    block-end (/ (- end start) config.block-size)
-    block-end (if* (> 1 block-end) config.block-size (* block-end config.block-size)))
+    remainder (modulo (- end start) config.block-size)
+    block-end (* config.block-size (/ (- end start) config.block-size)))
   (for ((set i 0) (< i block-end) (set+ i config.block-size))
     (sp-seq i (+ i config.block-size) block &event 1)
     (status-require (sp-file-write &file block.samples config.block-size &written))
     (sp-block-zero block))
-  (sp-block-free block)
-  (label exit (if file-is-open (sp-file-close &file)) status-return))
+  (if remainder
+    (begin
+      (sp-seq i (+ i remainder) block &event 1)
+      (status-require (sp-file-write &file block.samples remainder &written))))
+  (label exit (sp-block-free block) (sp-file-close file) status-return))
 
 (define (sp-render-block event start end config out)
   (status-t sp-event-t sp-time-t sp-time-t sp-render-config-t sp-block-t*)

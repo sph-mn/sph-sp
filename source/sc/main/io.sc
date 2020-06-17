@@ -1,6 +1,7 @@
-(define (sp-file-close file) (status-t sp-file-t*)
+(define (sp-file-close file) (status-t sp-file-t)
   status-declare
-  (set status.group sp-s-group-sndfile status.id (sf-close (convert-type file:data SNDFILE*)))
+  (if file.flags
+    (set status.group sp-s-group-sndfile status.id (sf-close (convert-type file.data SNDFILE*))))
   status-return)
 
 (define (sp-file-open path mode channel-count sample-rate result-file)
@@ -106,5 +107,5 @@
   (declare file sp-file-t written sp-time-t)
   (status-require (sp-file-open path sp-file-mode-write block.channels rate &file))
   (status-require (sp-file-write &file block.samples block.size &written))
-  (sp-file-close &file)
+  (sp-file-close file)
   (label exit status-return))

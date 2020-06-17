@@ -117,8 +117,10 @@ exit:
 }
 void sp_block_free(sp_block_t a) {
   sp_time_t i;
-  for (i = 0; (i < a.channels); i = (1 + i)) {
-    free(((a.samples)[i]));
+  if (a.size) {
+    for (i = 0; (i < a.channels); i = (1 + i)) {
+      free(((a.samples)[i]));
+    };
   };
 }
 /** return a new block with offset added to all channel sample arrays */
@@ -161,8 +163,8 @@ void sp_wave(sp_time_t start, sp_time_t duration, sp_wave_state_t* state, sp_blo
   for (channel_i = 0; (channel_i < out.channels); channel_i = (1 + channel_i)) {
     phs = (state->phs)[channel_i];
     for (i = 0; (i < duration); i = (1 + i)) {
-      (out.samples)[channel_i][i] += ((state->amp)[channel_i][i] * (state->wvf)[phs]);
-      phs += (state->spd)[i];
+      (out.samples)[channel_i][i] += ((state->amp)[channel_i][(start + i)] * (state->wvf)[phs]);
+      phs += (state->spd)[(start + i)];
       if (phs >= state->wvf_size) {
         phs = (phs % state->wvf_size);
       };
@@ -420,28 +422,28 @@ status_t sp_path_samples_4(sp_sample_t** out, sp_time_t size, sp_path_segment_t 
 /** render a single event to file. event can be a group */
 status_t sp_render_file(sp_event_t event, sp_time_t start, sp_time_t end, sp_render_config_t config, uint8_t* path) {
   status_declare;
-  sp_block_t block;
   sp_time_t block_end;
-  uint8_t file_is_open;
-  sp_file_t file;
+  sp_time_t remainder;
   sp_time_t i;
   sp_time_t written;
-  file_is_open = 0;
+  sp_block_declare(block);
+  sp_file_declare(file);
   status_require((sp_block_new((config.channels), (config.block_size), (&block))));
   status_require((sp_file_open(path, sp_file_mode_write, (config.channels), (config.rate), (&file))));
-  file_is_open = 1;
-  block_end = ((end - start) / config.block_size);
-  block_end = ((1 > block_end) ? config.block_size : (block_end * config.block_size));
+  remainder = ((end - start) % config.block_size);
+  block_end = (config.block_size * ((end - start) / config.block_size));
   for (i = 0; (i < block_end); i += config.block_size) {
     sp_seq(i, (i + config.block_size), block, (&event), 1);
     status_require((sp_file_write((&file), (block.samples), (config.block_size), (&written))));
     sp_block_zero(block);
   };
-  sp_block_free(block);
-exit:
-  if (file_is_open) {
-    sp_file_close((&file));
+  if (remainder) {
+    sp_seq(i, (i + remainder), block, (&event), 1);
+    status_require((sp_file_write((&file), (block.samples), remainder, (&written))));
   };
+exit:
+  sp_block_free(block);
+  sp_file_close(file);
   status_return;
 }
 /** render a single event to file. event can be a group */

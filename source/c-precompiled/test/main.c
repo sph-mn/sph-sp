@@ -226,7 +226,7 @@ status_t test_file() {
     unequal = !sp_samples_nearly_equal(((block.samples)[len]), sample_count, ((block_2.samples)[len]), sample_count, error_margin);
   };
   test_helper_assert("sp-file-read new file result", !unequal);
-  status_require((sp_file_close((&file))));
+  status_require((sp_file_close(file)));
   printf("  write\n");
   /* test open */
   status_require((sp_file_open(test_file_path, sp_file_mode_read_write, 2, 8000, (&file))));
@@ -242,7 +242,7 @@ status_t test_file() {
     unequal = !sp_samples_nearly_equal(((block.samples)[len]), sample_count, ((block_2.samples)[len]), sample_count, error_margin);
   };
   test_helper_assert("sp-file-read existing result", !unequal);
-  status_require((sp_file_close((&file))));
+  status_require((sp_file_close(file)));
   printf("  open\n");
 exit:
   sp_block_free(block);
@@ -471,13 +471,37 @@ status_t test_wave_event() {
   sp_sample_t amp2[sp_wave_event_duration];
   sp_time_t i;
   for (i = 0; (i < sp_wave_event_duration); i += 1) {
-    spd[i] = 1;
-    amp1[i] = 0.1;
-    amp2[i] = 1;
+    spd[i] = 2000;
+    amp1[i] = 1;
+    amp2[i] = 0.5;
   };
   status_require((sp_wave_event(0, sp_wave_event_duration, (sp_wave_state_2(sp_sine_table, _rate, spd, amp1, amp2, 0, 0)), (&event))));
   status_require((sp_block_new(2, sp_wave_event_duration, (&out))));
-  (event.f)(0, sp_wave_event_duration, out, (&event));
+  (event.f)(0, 30, out, (&event));
+  (event.f)(30, sp_wave_event_duration, (sp_block_with_offset(out, 30)), (&event));
+  sp_block_free(out);
+  (event.free)((&event));
+exit:
+  status_return;
+}
+status_t test_render_block() {
+  status_declare;
+  sp_event_t event;
+  sp_block_t out;
+  sp_time_t spd[sp_wave_event_duration];
+  sp_sample_t amp[sp_wave_event_duration];
+  sp_time_t i;
+  sp_render_config_declare(rc);
+  rc.block_size = 40;
+  for (i = 0; (i < sp_wave_event_duration); i += 1) {
+    spd[i] = 1500;
+    amp[i] = 1;
+  };
+  status_require((sp_wave_event(0, sp_wave_event_duration, (sp_sine_state_2(spd, amp, amp, 0, 0)), (&event))));
+  status_require((sp_block_new(2, sp_wave_event_duration, (&out))));
+  sp_render_file(event, 0, sp_wave_event_duration, rc, ("/tmp/test.wav"));
+  /* (sp-render-block event 0 sp-wave-event-duration rc &out) */
+  /* (sp-block-plot-1 out) */
   sp_block_free(out);
   (event.free)((&event));
 exit:
@@ -496,6 +520,7 @@ exit:
 int main() {
   status_declare;
   sp_initialise(3, _rate);
+  test_helper_test_one(test_render_block);
   test_helper_test_one(test_wave_event);
   test_helper_test_one(test_wave);
   test_helper_test_one(test_path);
