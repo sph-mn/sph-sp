@@ -4,7 +4,7 @@
 (pre-include "stdio.h" "fcntl.h"
   "sndfile.h" "foreign/nayuki-fft/fft.c" "../main/sph-sp.h"
   "sph/spline-path.c" "sph/helper.c" "sph/memreg.c"
-  "sph/quicksort.c" "sph/queue.c" "sph/thread-pool.c" "sph/futures.c")
+  "sph/quicksort.c" "sph/queue.c" "sph/thread-pool.c" "sph/futures.c" "sph/set.c")
 
 (pre-define
   sp-status-declare (status-declare-group sp-s-group-sp)
@@ -251,6 +251,36 @@
           (array-get result-carryover c-index)
           (+ (array-get result-carryover c-index) (* (array-get a a-index) (array-get b b-index))))))))
 
+(define (sp-time-expt base exp) (sp-time-t sp-time-t sp-time-t)
+  (define a sp-time-t 1)
+  (for ((begin) (begin) (begin))
+    (if (bit-and exp 1) (set* a base))
+    (set exp (bit-shift-right exp 1))
+    (if (not exp) break)
+    (set* base base))
+  (return a))
+
+(define (sp-time-factorial a) (sp-time-t sp-time-t)
+  (declare result sp-time-t)
+  (set result 1)
+  (while (> a 0) (set result (* result a) a (- a 1)))
+  (return result))
+
+(define (sp-sequence-max size min-size) (sp-time-t sp-time-t sp-time-t)
+  "calculate the maximum possible number of overlapping sequences"
+  (declare i sp-time-t)
+  (cond ((or (= 0 size) (> min-size size)) (return 0)) ((= min-size size) (return 1))
+    (else (define result sp-time-t 0)
+      (for ((set i min-size) (<= i size) (set+ i 1)) (set+ result (- (+ 1 size) i))) (return result))))
+
+(define (sp-set-sequence-max set-size selection-size) (sp-time-t sp-time-t sp-time-t)
+  "calculate the maximum number of possible distinct selections from a set with length \"set-size\""
+  (return (if* (= 0 set-size) 0 (sp-time-expt set-size selection-size))))
+
+(define (sp-permutations-max set-size selection-size) (sp-time-t sp-time-t sp-time-t)
+  (return (/ (sp-time-factorial set-size) (- set-size selection-size))))
+
+(define (sp-compositions-max sum) (sp-time-t sp-time-t) (return (sp-time-expt 2 (- sum 1))))
 (pre-include "../main/arrays.c")
 
 (define (sp-block-zero a) (void sp-block-t)

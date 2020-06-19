@@ -161,15 +161,95 @@ sp_sample_t sp_triangle(sp_time_t t, sp_time_t a, sp_time_t b);
 void sp_wave(sp_time_t start, sp_time_t duration, sp_wave_state_t* state, sp_block_t out);
 sp_wave_state_t sp_wave_state_1(sp_sample_t* wvf, sp_time_t wvf_size, sp_time_t* spd, sp_sample_t* amp, sp_time_t phs);
 sp_wave_state_t sp_wave_state_2(sp_sample_t* wvf, sp_time_t wvf_size, sp_time_t* spd, sp_sample_t* amp1, sp_sample_t* amp2, sp_time_t phs1, sp_time_t phs2);
+sp_time_t sp_time_expt(sp_time_t base, sp_time_t exp);
+sp_time_t sp_time_factorial(sp_time_t a);
+sp_time_t sp_sequence_max(sp_time_t size, sp_time_t min_size);
+sp_time_t sp_set_sequence_max(sp_time_t set_size, sp_time_t selection_size);
+sp_time_t sp_permutations_max(sp_time_t set_size, sp_time_t selection_size);
+sp_time_t sp_compositions_max(sp_time_t sum);
 /* arrays */
 #define sp_samples_zero(a, size) memset(a, 0, (size * sizeof(sp_sample_t)))
 #define sp_times_zero(a, size) memset(a, 0, (size * sizeof(sp_time_t)))
-void sp_samples_set_unity_gain(sp_sample_t* in, sp_time_t in_size, sp_sample_t* out);
-status_t sp_times_new(sp_time_t size, sp_time_t** out);
-void sp_samples_to_times(sp_sample_t* in, sp_time_t in_size, sp_time_t* out);
+sp_sample_t sp_samples_absolute_max(sp_sample_t* in, sp_time_t in_size);
+void sp_samples_add_1(sp_sample_t* a, sp_time_t size, sp_sample_t n, sp_sample_t* out);
+void sp_samples_add(sp_sample_t* a, sp_time_t size, sp_sample_t* b, sp_sample_t* out);
+void sp_samples_and(sp_sample_t* a, sp_sample_t* b, sp_time_t size, sp_sample_t limit, sp_sample_t* out);
 void sp_samples_display(sp_sample_t* a, sp_time_t size);
-void sp_times_display(sp_time_t* a, sp_time_t size);
+void sp_samples_divide_1(sp_sample_t* a, sp_time_t size, sp_sample_t n, sp_sample_t* out);
+void sp_samples_divide(sp_sample_t* a, sp_time_t size, sp_sample_t* b, sp_sample_t* out);
+uint8_t sp_samples_equal_1(sp_sample_t* a, sp_time_t size, sp_sample_t n);
+uint8_t sp_samples_every_equal(sp_sample_t* a, sp_time_t size, sp_sample_t n);
+void sp_samples_multiply_1(sp_sample_t* a, sp_time_t size, sp_sample_t n, sp_sample_t* out);
+void sp_samples_multiply(sp_sample_t* a, sp_time_t size, sp_sample_t* b, sp_sample_t* out);
 status_t sp_samples_new(sp_time_t size, sp_sample_t** out);
+void sp_samples_or(sp_sample_t* a, sp_sample_t* b, sp_time_t size, sp_sample_t limit, sp_sample_t* out);
+uint8_t sp_sample_sort_less_p(void* a, ssize_t b, ssize_t c);
+void sp_sample_sort_swap(void* a, ssize_t b, ssize_t c);
+sp_sample_t sp_samples_range(sp_sample_t* a, sp_time_t size, sp_sample_t* out_min, sp_sample_t* out_max);
+void sp_samples_reverse(sp_sample_t* a, sp_time_t size, sp_sample_t* out);
+void sp_samples_set_unity_gain(sp_sample_t* in, sp_time_t in_size, sp_sample_t* out);
+void sp_samples_square(sp_sample_t* a, sp_time_t size, sp_sample_t* out);
+void sp_samples_subtract_1(sp_sample_t* a, sp_time_t size, sp_sample_t n, sp_sample_t* out);
+void sp_samples_subtract(sp_sample_t* a, sp_time_t size, sp_sample_t* b, sp_sample_t* out);
+void sp_samples_to_times(sp_sample_t* in, sp_time_t in_size, sp_time_t* out);
+void sp_samples_xor(sp_sample_t* a, sp_sample_t* b, sp_time_t size, sp_sample_t limit, sp_sample_t* out);
+status_t sp_samples_copy(sp_sample_t* a, sp_time_t size, sp_sample_t** out);
+sp_sample_t sp_samples_mean(sp_sample_t* a, sp_time_t size);
+sp_sample_t sp_samples_std_dev(sp_sample_t* a, sp_time_t size, sp_sample_t mean);
+sp_sample_t sp_samples_covariance(sp_sample_t* a, sp_time_t size, sp_sample_t* b);
+sp_sample_t sp_samples_correlation(sp_sample_t* a, sp_time_t size, sp_sample_t* b);
+sp_sample_t sp_samples_autocorrelation(sp_sample_t* a, sp_time_t size, sp_time_t lag);
+sp_sample_t sp_samples_center_of_mass(sp_sample_t* a, sp_time_t size);
+void sp_samples_differences(sp_sample_t* a, sp_time_t size, sp_sample_t* out);
+sp_sample_t sp_samples_median(sp_sample_t* a, sp_time_t size, sp_sample_t* temp);
+void sp_samples_additions(sp_sample_t start, sp_sample_t summand, sp_time_t count, sp_sample_t* out);
+void sp_samples_divisions(sp_sample_t start, sp_sample_t n, sp_time_t count, sp_sample_t* out);
+void sp_samples_scale(sp_sample_t* a, sp_time_t size, sp_sample_t n, sp_sample_t* out);
+void sp_samples_scale_sum(sp_sample_t* a, sp_time_t size, sp_sample_t n, sp_sample_t* out);
+void sp_times_add_1(sp_time_t* a, sp_time_t size, sp_time_t n, sp_time_t* out);
+void sp_times_add(sp_time_t* a, sp_time_t size, sp_time_t* b, sp_time_t* out);
+void sp_times_and(sp_time_t* a, sp_time_t* b, sp_time_t size, sp_time_t limit, sp_time_t* out);
+void sp_times_display(sp_time_t* a, sp_time_t size);
+void sp_times_divide_1(sp_time_t* a, sp_time_t size, sp_time_t n, sp_time_t* out);
+void sp_times_divide(sp_time_t* a, sp_time_t size, sp_time_t* b, sp_time_t* out);
+uint8_t sp_times_equal_1(sp_time_t* a, sp_time_t size, sp_time_t n);
+void sp_times_multiply_1(sp_time_t* a, sp_time_t size, sp_time_t n, sp_time_t* out);
+void sp_times_multiply(sp_time_t* a, sp_time_t size, sp_time_t* b, sp_time_t* out);
+status_t sp_times_new(sp_time_t size, sp_time_t** out);
+void sp_times_or(sp_time_t* a, sp_time_t* b, sp_time_t size, sp_time_t limit, sp_time_t* out);
+void sp_times_set_1(sp_time_t* a, sp_time_t size, sp_time_t n, sp_time_t* out);
+void sp_samples_set_1(sp_sample_t* a, sp_time_t size, sp_sample_t n, sp_sample_t* out);
+uint8_t sp_time_sort_less_p(void* a, ssize_t b, ssize_t c);
+void sp_time_sort_swap(void* a, ssize_t b, ssize_t c);
+sp_time_t sp_times_range(sp_time_t* a, sp_time_t size, sp_time_t* out_min, sp_time_t* out_max);
+void sp_times_reverse(sp_time_t* a, sp_time_t size, sp_time_t* out);
+void sp_times_square(sp_time_t* a, sp_time_t size, sp_time_t* out);
+void sp_times_subtract_1(sp_time_t* a, sp_time_t size, sp_time_t n, sp_time_t* out);
+void sp_times_subtract(sp_time_t* a, sp_time_t size, sp_time_t* b, sp_time_t* out);
+void sp_times_xor(sp_time_t* a, sp_time_t* b, sp_time_t size, sp_time_t limit, sp_time_t* out);
+status_t sp_times_copy(sp_time_t a, sp_time_t size, sp_time_t** out);
+sp_sample_t sp_times_mean(sp_time_t* a, sp_time_t size);
+sp_sample_t sp_times_std_dev(sp_time_t* a, sp_time_t size, sp_time_t mean);
+sp_sample_t sp_times_center_of_mass(sp_time_t* a, sp_time_t size);
+void sp_times_differences(sp_time_t* a, sp_time_t size, sp_time_t* out);
+sp_sample_t sp_times_median(sp_time_t* a, sp_time_t size, sp_time_t* temp);
+void sp_times_cusum(sp_time_t* a, sp_time_t size, sp_time_t* out);
+void sp_times_random_discrete(sp_random_state_t* state, sp_time_t* cudist, sp_time_t cudist_size, sp_time_t count, sp_time_t* out);
+status_t sp_times_sequence_count(sp_time_t* a, sp_time_t size, sp_time_t min_width, sp_time_t max_width, sp_time_t step_width, sp_time_t* out);
+void sp_times_swap(sp_time_t* a, ssize_t i1, ssize_t i2);
+void sp_times_sequence_increment_le(sp_time_t* a, sp_time_t size, sp_time_t set_size);
+status_t sp_times_compositions(sp_time_t sum, sp_time_t*** out, sp_time_t* out_size, sp_time_t** out_sizes);
+status_t sp_times_permutations(sp_time_t size, sp_time_t* set, sp_time_t set_size, sp_time_t*** out, sp_time_t* out_size);
+void sp_times_multiplications(sp_time_t start, sp_time_t factor, sp_time_t count, sp_time_t* out);
+void sp_times_additions(sp_time_t start, sp_time_t summand, sp_time_t count, sp_time_t* out);
+void sp_times_extract_at_indices(sp_time_t* a, sp_time_t* indices, sp_time_t size, sp_time_t* out);
+void sp_times_bits_to_times(sp_time_t* a, sp_time_t size, sp_time_t* out);
+void sp_times_shuffle(sp_random_state_t* state, sp_time_t* a, sp_time_t size);
+status_t sp_times_random_binary(sp_random_state_t* state, sp_time_t size, sp_time_t* out);
+void sp_times_gt_indices(sp_time_t* a, sp_time_t size, sp_time_t n, sp_time_t* out, sp_time_t* out_size);
+void sp_times_extract_random(sp_random_state_t* state, sp_time_t* a, sp_time_t size, sp_time_t* out, sp_time_t* out_size);
+status_t sp_times_constant(sp_time_t a, sp_time_t size, sp_time_t** out);
+uint64_t sp_u64_from_array(uint8_t* a, sp_time_t size);
 /* filter */
 #define sp_filter_state_t sp_convolution_filter_state_t
 #define sp_filter_state_free sp_convolution_filter_state_free
@@ -263,6 +343,12 @@ void sp_plot_spectrum(sp_sample_t* a, sp_time_t a_size);
   if (a.state) { \
     (a.free)((&a)); \
   }
+#define sp_group_memory_add_2(g, a1, a2) \
+  sp_group_memory_add(g, a1); \
+  sp_group_memory_add(g, a2)
+#define sp_group_memory_add_3(g, a1, a2, a3) \
+  sp_group_memory_add_2(g, a1, a2); \
+  sp_group_memory_add(g, a3)
 struct sp_event_t;
 typedef struct sp_event_t {
   void* state;
@@ -291,6 +377,7 @@ void sp_group_event_f(sp_time_t start, sp_time_t end, sp_block_t out, sp_event_t
 void sp_group_event_free(sp_event_t* a);
 /* path */
 #define sp_path_t spline_path_t
+#define sp_path_point_t spline_path_point_t
 #define sp_path_segment_t spline_path_segment_t
 #define sp_path_segment_count_t spline_path_segment_count_t
 #define sp_path_line spline_path_line
@@ -303,6 +390,9 @@ void sp_group_event_free(sp_event_t* a);
 #define sp_path_i_bezier spline_path_i_bezier
 #define sp_path_i_constant spline_path_i_constant
 #define sp_path_i_path spline_path_i_path
+#define sp_path_segments_declare_stack(name, size) array3_declare_stack(name, size, sp_path_segments_t, sp_path_segment_t)
+#define sp_path_times_constant(out, size, value) sp_path_times_2(out, size, (sp_path_move(0, value)), (sp_path_constant()))
+#define sp_path_samples_constant(out, size, value) sp_path_samples_2(out, size, (sp_path_move(0, value)), (sp_path_constant()))
 array3_declare_type(sp_path_segments, spline_path_segment_t);
 status_t sp_path_samples(sp_path_segments_t segments, sp_time_t size, sp_sample_t** out);
 status_t sp_path_samples_1(sp_sample_t** out, sp_time_t size, sp_path_segment_t s1);
@@ -316,6 +406,7 @@ status_t sp_path_times_3(sp_time_t** out, sp_time_t size, sp_path_segment_t s1, 
 status_t sp_path_times_4(sp_time_t** out, sp_time_t size, sp_path_segment_t s1, sp_path_segment_t s2, sp_path_segment_t s3, sp_path_segment_t s4);
 /* main 2 */
 #define sp_render_config_declare(name) sp_render_config_t name = { .channels = 2, .rate = sp_sine_table_size, .block_size = sp_sine_table_size }
+#define rt(n, d) ((sp_time_t)(((_rate / d) * n)))
 typedef struct {
   sp_time_t rate;
   sp_time_t block_size;

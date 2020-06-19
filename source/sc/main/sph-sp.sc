@@ -130,7 +130,13 @@
   (sp-wave-state-1 wvf wvf-size spd amp phs)
   (sp-wave-state-t sp-sample-t* sp-time-t sp-time-t* sp-sample-t* sp-time-t)
   (sp-wave-state-2 wvf wvf-size spd amp1 amp2 phs1 phs2)
-  (sp-wave-state-t sp-sample-t* sp-time-t sp-time-t* sp-sample-t* sp-sample-t* sp-time-t sp-time-t))
+  (sp-wave-state-t sp-sample-t* sp-time-t sp-time-t* sp-sample-t* sp-sample-t* sp-time-t sp-time-t)
+  (sp-time-expt base exp) (sp-time-t sp-time-t sp-time-t)
+  (sp-time-factorial a) (sp-time-t sp-time-t)
+  (sp-sequence-max size min-size) (sp-time-t sp-time-t sp-time-t)
+  (sp-set-sequence-max set-size selection-size) (sp-time-t sp-time-t sp-time-t)
+  (sp-permutations-max set-size selection-size) (sp-time-t sp-time-t sp-time-t)
+  (sp-compositions-max sum) (sp-time-t sp-time-t))
 
 (sc-comment "arrays")
 
@@ -139,12 +145,97 @@
   (sp-times-zero a size) (memset a 0 (* size (sizeof sp-time-t))))
 
 (declare
-  (sp-samples-set-unity-gain in in-size out) (void sp-sample-t* sp-time-t sp-sample-t*)
-  (sp-times-new size out) (status-t sp-time-t sp-time-t**)
-  (sp-samples->times in in-size out) (void sp-sample-t* sp-time-t sp-time-t*)
+  (sp-samples-absolute-max in in-size) (sp-sample-t sp-sample-t* sp-time-t)
+  (sp-samples-add-1 a size n out) (void sp-sample-t* sp-time-t sp-sample-t sp-sample-t*)
+  (sp-samples-add a size b out) (void sp-sample-t* sp-time-t sp-sample-t* sp-sample-t*)
+  (sp-samples-and a b size limit out)
+  (void sp-sample-t* sp-sample-t* sp-time-t sp-sample-t sp-sample-t*)
   (sp-samples-display a size) (void sp-sample-t* sp-time-t)
+  (sp-samples-divide-1 a size n out) (void sp-sample-t* sp-time-t sp-sample-t sp-sample-t*)
+  (sp-samples-divide a size b out) (void sp-sample-t* sp-time-t sp-sample-t* sp-sample-t*)
+  (sp-samples-equal-1 a size n) (uint8-t sp-sample-t* sp-time-t sp-sample-t)
+  (sp-samples-every-equal a size n) (uint8-t sp-sample-t* sp-time-t sp-sample-t)
+  (sp-samples-multiply-1 a size n out) (void sp-sample-t* sp-time-t sp-sample-t sp-sample-t*)
+  (sp-samples-multiply a size b out) (void sp-sample-t* sp-time-t sp-sample-t* sp-sample-t*)
+  (sp-samples-new size out) (status-t sp-time-t sp-sample-t**)
+  (sp-samples-or a b size limit out)
+  (void sp-sample-t* sp-sample-t* sp-time-t sp-sample-t sp-sample-t*)
+  (sp-sample-sort-less? a b c) (uint8-t void* ssize-t ssize-t)
+  (sp-sample-sort-swap a b c) (void void* ssize-t ssize-t)
+  (sp-samples-range a size out-min out-max)
+  (sp-sample-t sp-sample-t* sp-time-t sp-sample-t* sp-sample-t*)
+  (sp-samples-reverse a size out) (void sp-sample-t* sp-time-t sp-sample-t*)
+  (sp-samples-set-unity-gain in in-size out) (void sp-sample-t* sp-time-t sp-sample-t*)
+  (sp-samples-square a size out) (void sp-sample-t* sp-time-t sp-sample-t*)
+  (sp-samples-subtract-1 a size n out) (void sp-sample-t* sp-time-t sp-sample-t sp-sample-t*)
+  (sp-samples-subtract a size b out) (void sp-sample-t* sp-time-t sp-sample-t* sp-sample-t*)
+  (sp-samples->times in in-size out) (void sp-sample-t* sp-time-t sp-time-t*)
+  (sp-samples-xor a b size limit out)
+  (void sp-sample-t* sp-sample-t* sp-time-t sp-sample-t sp-sample-t*)
+  (sp-samples-copy a size out) (status-t sp-sample-t* sp-time-t sp-sample-t**)
+  (sp-samples-mean a size) (sp-sample-t sp-sample-t* sp-time-t)
+  (sp-samples-std-dev a size mean) (sp-sample-t sp-sample-t* sp-time-t sp-sample-t)
+  (sp-samples-covariance a size b) (sp-sample-t sp-sample-t* sp-time-t sp-sample-t*)
+  (sp-samples-correlation a size b) (sp-sample-t sp-sample-t* sp-time-t sp-sample-t*)
+  (sp-samples-autocorrelation a size lag) (sp-sample-t sp-sample-t* sp-time-t sp-time-t)
+  (sp-samples-center-of-mass a size) (sp-sample-t sp-sample-t* sp-time-t)
+  (sp-samples-differences a size out) (void sp-sample-t* sp-time-t sp-sample-t*)
+  (sp-samples-median a size temp) (sp-sample-t sp-sample-t* sp-time-t sp-sample-t*)
+  (sp-samples-additions start summand count out)
+  (void sp-sample-t sp-sample-t sp-time-t sp-sample-t*)
+  (sp-samples-divisions start n count out) (void sp-sample-t sp-sample-t sp-time-t sp-sample-t*)
+  (sp-samples-scale a size n out) (void sp-sample-t* sp-time-t sp-sample-t sp-sample-t*)
+  (sp-samples-scale-sum a size n out) (void sp-sample-t* sp-time-t sp-sample-t sp-sample-t*)
+  (sp-times-add-1 a size n out) (void sp-time-t* sp-time-t sp-time-t sp-time-t*)
+  (sp-times-add a size b out) (void sp-time-t* sp-time-t sp-time-t* sp-time-t*)
+  (sp-times-and a b size limit out) (void sp-time-t* sp-time-t* sp-time-t sp-time-t sp-time-t*)
   (sp-times-display a size) (void sp-time-t* sp-time-t)
-  (sp-samples-new size out) (status-t sp-time-t sp-sample-t**))
+  (sp-times-divide-1 a size n out) (void sp-time-t* sp-time-t sp-time-t sp-time-t*)
+  (sp-times-divide a size b out) (void sp-time-t* sp-time-t sp-time-t* sp-time-t*)
+  (sp-times-equal-1 a size n) (uint8-t sp-time-t* sp-time-t sp-time-t)
+  (sp-times-multiply-1 a size n out) (void sp-time-t* sp-time-t sp-time-t sp-time-t*)
+  (sp-times-multiply a size b out) (void sp-time-t* sp-time-t sp-time-t* sp-time-t*)
+  (sp-times-new size out) (status-t sp-time-t sp-time-t**)
+  (sp-times-or a b size limit out) (void sp-time-t* sp-time-t* sp-time-t sp-time-t sp-time-t*)
+  (sp-times-set-1 a size n out) (void sp-time-t* sp-time-t sp-time-t sp-time-t*)
+  (sp-samples-set-1 a size n out) (void sp-sample-t* sp-time-t sp-sample-t sp-sample-t*)
+  (sp-time-sort-less? a b c) (uint8-t void* ssize-t ssize-t)
+  (sp-time-sort-swap a b c) (void void* ssize-t ssize-t)
+  (sp-times-range a size out-min out-max) (sp-time-t sp-time-t* sp-time-t sp-time-t* sp-time-t*)
+  (sp-times-reverse a size out) (void sp-time-t* sp-time-t sp-time-t*)
+  (sp-times-square a size out) (void sp-time-t* sp-time-t sp-time-t*)
+  (sp-times-subtract-1 a size n out) (void sp-time-t* sp-time-t sp-time-t sp-time-t*)
+  (sp-times-subtract a size b out) (void sp-time-t* sp-time-t sp-time-t* sp-time-t*)
+  (sp-times-xor a b size limit out) (void sp-time-t* sp-time-t* sp-time-t sp-time-t sp-time-t*)
+  (sp-times-copy a size out) (status-t sp-time-t sp-time-t sp-time-t**)
+  (sp-times-mean a size) (sp-sample-t sp-time-t* sp-time-t)
+  (sp-times-std-dev a size mean) (sp-sample-t sp-time-t* sp-time-t sp-time-t)
+  (sp-times-center-of-mass a size) (sp-sample-t sp-time-t* sp-time-t)
+  (sp-times-differences a size out) (void sp-time-t* sp-time-t sp-time-t*)
+  (sp-times-median a size temp) (sp-sample-t sp-time-t* sp-time-t sp-time-t*)
+  (sp-times-cusum a size out) (void sp-time-t* sp-time-t sp-time-t*)
+  (sp-times-random-discrete state cudist cudist-size count out)
+  (void sp-random-state-t* sp-time-t* sp-time-t sp-time-t sp-time-t*)
+  (sp-times-sequence-count a size min-width max-width step-width out)
+  (status-t sp-time-t* sp-time-t sp-time-t sp-time-t sp-time-t sp-time-t*)
+  (sp-times-swap a i1 i2) (void sp-time-t* ssize-t ssize-t)
+  (sp-times-sequence-increment-le a size set-size) (void sp-time-t* sp-time-t sp-time-t)
+  (sp-times-compositions sum out out-size out-sizes)
+  (status-t sp-time-t sp-time-t*** sp-time-t* sp-time-t**)
+  (sp-times-permutations size set set-size out out-size)
+  (status-t sp-time-t sp-time-t* sp-time-t sp-time-t*** sp-time-t*)
+  (sp-times-multiplications start factor count out) (void sp-time-t sp-time-t sp-time-t sp-time-t*)
+  (sp-times-additions start summand count out) (void sp-time-t sp-time-t sp-time-t sp-time-t*)
+  (sp-times-extract-at-indices a indices size out) (void sp-time-t* sp-time-t* sp-time-t sp-time-t*)
+  (sp-times-bits->times a size out) (void sp-time-t* sp-time-t sp-time-t*)
+  (sp-times-shuffle state a size) (void sp-random-state-t* sp-time-t* sp-time-t)
+  (sp-times-random-binary state size out) (status-t sp-random-state-t* sp-time-t sp-time-t*)
+  (sp-times-gt-indices a size n out out-size)
+  (void sp-time-t* sp-time-t sp-time-t sp-time-t* sp-time-t*)
+  (sp-times-extract-random state a size out out-size)
+  (void sp-random-state-t* sp-time-t* sp-time-t sp-time-t* sp-time-t*)
+  (sp-times-constant a size out) (status-t sp-time-t sp-time-t sp-time-t**)
+  (sp-u64-from-array a size) (uint64-t uint8-t* sp-time-t))
 
 (sc-comment "filter")
 
@@ -268,7 +359,10 @@
   (sp-seq-events-prepare (struct-get (sp-group-events a) data) (array4-size (sp-group-events a)))
   (sp-event-declare a) (begin (declare a sp-event-t) (set a.state 0 a.start 0 a.end 0))
   sp-group-declare sp-event-declare
-  (sp-group-free a) (if a.state (a.free &a)))
+  (sp-group-free a) (if a.state (a.free &a))
+  (sp-group-memory-add-2 g a1 a2) (begin (sp-group-memory-add g a1) (sp-group-memory-add g a2))
+  (sp-group-memory-add-3 g a1 a2 a3)
+  (begin (sp-group-memory-add-2 g a1 a2) (sp-group-memory-add g a3)))
 
 (declare
   sp-event-t struct
@@ -312,6 +406,7 @@
 
 (pre-define
   sp-path-t spline-path-t
+  sp-path-point-t spline-path-point-t
   sp-path-segment-t spline-path-segment-t
   sp-path-segment-count-t spline-path-segment-count-t
   sp-path-line spline-path-line
@@ -323,7 +418,13 @@
   sp-path-i-move spline-path-i-move
   sp-path-i-bezier spline-path-i-bezier
   sp-path-i-constant spline-path-i-constant
-  sp-path-i-path spline-path-i-path)
+  sp-path-i-path spline-path-i-path
+  (sp-path-segments-declare-stack name size)
+  (array3-declare-stack name size sp-path-segments-t sp-path-segment-t)
+  (sp-path-times-constant out size value)
+  (sp-path-times-2 out size (sp-path-move 0 value) (sp-path-constant))
+  (sp-path-samples-constant out size value)
+  (sp-path-samples-2 out size (sp-path-move 0 value) (sp-path-constant)))
 
 (array3-declare-type sp-path-segments spline-path-segment-t)
 
@@ -349,9 +450,11 @@
 
 (sc-comment "main 2")
 
-(pre-define (sp-render-config-declare name)
+(pre-define
+  (sp-render-config-declare name)
   (define name sp-render-config-t
-    (struct-literal (channels 2) (rate sp-sine-table-size) (block-size sp-sine-table-size))))
+    (struct-literal (channels 2) (rate sp-sine-table-size) (block-size sp-sine-table-size)))
+  (rt n d) (convert-type (* (/ _rate d) n) sp-time-t))
 
 (declare
   sp-render-config-t (type (struct (rate sp-time-t) (block-size sp-time-t) (channels sp-channels-t)))

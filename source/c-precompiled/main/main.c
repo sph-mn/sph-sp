@@ -12,6 +12,7 @@
 #include <sph/queue.c>
 #include <sph/thread-pool.c>
 #include <sph/futures.c>
+#include <sph/set.c>
 #define sp_status_declare status_declare_group(sp_s_group_sp)
 #define max(a, b) ((a > b) ? a : b)
 #define min(a, b) ((a < b) ? a : b)
@@ -306,6 +307,48 @@ first process values that dont lead to carryover */
     };
   };
 }
+sp_time_t sp_time_expt(sp_time_t base, sp_time_t exp) {
+  sp_time_t a = 1;
+  for (;;) {
+    if (exp & 1) {
+      a *= base;
+    };
+    exp = (exp >> 1);
+    if (!exp) {
+      break;
+    };
+    base *= base;
+  };
+  return (a);
+}
+sp_time_t sp_time_factorial(sp_time_t a) {
+  sp_time_t result;
+  result = 1;
+  while ((a > 0)) {
+    result = (result * a);
+    a = (a - 1);
+  };
+  return (result);
+}
+/** calculate the maximum possible number of overlapping sequences */
+sp_time_t sp_sequence_max(sp_time_t size, sp_time_t min_size) {
+  sp_time_t i;
+  if ((0 == size) || (min_size > size)) {
+    return (0);
+  } else if (min_size == size) {
+    return (1);
+  } else {
+    sp_time_t result = 0;
+    for (i = min_size; (i <= size); i += 1) {
+      result += ((1 + size) - i);
+    };
+    return (result);
+  };
+}
+/** calculate the maximum number of possible distinct selections from a set with length "set-size" */
+sp_time_t sp_set_sequence_max(sp_time_t set_size, sp_time_t selection_size) { return (((0 == set_size) ? 0 : sp_time_expt(set_size, selection_size))); }
+sp_time_t sp_permutations_max(sp_time_t set_size, sp_time_t selection_size) { return ((sp_time_factorial(set_size) / (set_size - selection_size))); }
+sp_time_t sp_compositions_max(sp_time_t sum) { return ((sp_time_expt(2, (sum - 1)))); }
 #include "../main/arrays.c"
 void sp_block_zero(sp_block_t a) {
   sp_channels_t i;

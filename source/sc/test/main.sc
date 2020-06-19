@@ -464,8 +464,7 @@
       (sp-wave-state-2 sp-sine-table _rate spd amp1 amp2 0 0) &event))
   (status-require (sp-block-new 2 sp-wave-event-duration &out))
   (event.f 0 30 out &event)
-  (event.f 30 sp-wave-event-duration
-    (sp-block-with-offset out 30) &event)
+  (event.f 30 sp-wave-event-duration (sp-block-with-offset out 30) &event)
   (sp-block-free out)
   (event.free &event)
   (label exit status-return))
@@ -481,10 +480,8 @@
   (sp-render-config-declare rc)
   (set rc.block-size 40)
   (for ((set i 0) (< i sp-wave-event-duration) (set+ i 1))
-    (set (array-get spd i) 1500 (array-get amp i) 1 ))
-  (status-require
-    (sp-wave-event 0 sp-wave-event-duration
-      (sp-sine-state-2 spd amp amp 0 0) &event))
+    (set (array-get spd i) 1500 (array-get amp i) 1))
+  (status-require (sp-wave-event 0 sp-wave-event-duration (sp-sine-state-2 spd amp amp 0 0) &event))
   (status-require (sp-block-new 2 sp-wave-event-duration &out))
   (sp-render-file event 0 sp-wave-event-duration rc "/tmp/test.wav")
   (sc-comment (sp-render-block event 0 sp-wave-event-duration rc &out))
@@ -493,7 +490,6 @@
   (event.free &event)
   (label exit status-return))
 
-
 (define (test-path) status-t
   (declare samples sp-sample-t* times sp-time-t*)
   status-declare
@@ -501,9 +497,165 @@
   (status-require (sp-path-times-2 &times 100 (sp-path-line 10 1) (sp-path-line 100 0)))
   (label exit status-return))
 
+(pre-define
+  sp-sample-nearly-equal f64-nearly-equal
+  sp-sample-array-nearly-equal f64-array-nearly-equal
+  (feq a b) (sp-sample-nearly-equal a b 0.1))
+
+(declare rs sp-random-state-t)
+
+(define (u64-from-array-test size) (uint8-t sp-time-t)
+  (declare bits-in uint64-t bits-out uint64-t)
+  (set bits-in 9838263505978427528u bits-out (sp-u64-from-array (convert-type &bits-in uint8-t*) size))
+  (return (= 0 (memcmp (convert-type &bits-in uint8-t*) (convert-type &bits-out uint8-t*) size))))
+
+(define (test-times) status-t
+  status-declare
+  (declare
+    size sp-time-t
+    a-temp sp-time-t*
+    a (array sp-time-t 8 1 2 3 4 5 6 7 8)
+    b (array sp-time-t 8 0 0 0 0 0 0 0 0)
+    b-size sp-time-t
+    bits sp-time-t*
+    s sp-random-state-t)
+  (set a-temp 0 size 8 s (sp-random-state-new 123))
+  (test-helper-assert "mean" (feq 4.5 (sp-times-mean a size)))
+  (test-helper-assert "std-dev" (feq 5.5 (sp-times-std-dev a size (sp-times-mean a size))))
+  (test-helper-assert "center-of-mass" (feq 4.6 (sp-times-center-of-mass a size)))
+  (status-require (sp-times-new size &a-temp))
+  (test-helper-assert "median" (feq 4.5 (sp-times-median a size a-temp)))
+  (sp-times-multiplications 1 3 size a)
+  (test-helper-assert "multiplications" (= 81 (array-get a 4)))
+  (sp-times-additions 1 3 size a)
+  (test-helper-assert "additions" (= 13 (array-get a 4)))
+  (declare indices (array sp-time-t 3 1 2 4))
+  (sp-times-extract-at-indices a indices 3 a)
+  (test-helper-assert "extract-indices"
+    (and (= 4 (array-get a 0)) (= 7 (array-get a 1)) (= 13 (array-get a 2))))
+  (sp-times-set-1 a size 1039 a)
+  (status-require (sp-times-new (* 8 (sizeof sp-time-t)) &bits))
+  (sp-times-bits->times a (* 8 (sizeof sp-time-t)) bits)
+  (test-helper-assert "bits->times"
+    (and (= 1 (array-get bits 0)) (= 1 (array-get bits 3))
+      (= 0 (array-get bits 4)) (= 1 (array-get bits 10))))
+  (free bits)
+  (sp-times-multiplications 1 3 size a)
+  (sp-times-shuffle &s a size)
+  (set s (sp-random-state-new 12))
+  (sp-times-random-binary &s size a)
+  (sp-times-multiplications 1 3 size a)
+  (set s (sp-random-state-new 113))
+  (sp-times-extract-random &s a size b &b-size)
+  (label exit (free a-temp) status-return))
+
+(define (test-simple-mappings) status-t
+  status-declare
+  (declare
+    size sp-time-t
+    a (array sp-time-t 4 1 1 1 1)
+    b (array sp-time-t 4 2 2 2 2)
+    as (array sp-sample-t 4 1 1 1 1)
+    bs (array sp-sample-t 4 2 2 2 2))
+  (set size 4)
+  (sc-comment "times")
+  (sp-times-set-1 a size 0 a)
+  (sp-samples-set-1 as size 0 as)
+  (test-helper-assert "times set-1" (sp-times-equal-1 a size 0))
+  (test-helper-assert "samples set-1" (sp-samples-equal-1 as size 0))
+  (sp-times-add-1 a size 1 a)
+  (test-helper-assert "add-1" (sp-times-equal-1 a size 1))
+  (sp-times-subtract-1 a size 10 a)
+  (test-helper-assert "subtract-1" (sp-times-equal-1 a size 0))
+  (sp-times-add-1 a size 4 a)
+  (sp-times-multiply-1 a size 2 a)
+  (test-helper-assert "multiply-1" (sp-times-equal-1 a size 8))
+  (sp-times-divide-1 a size 2 a)
+  (test-helper-assert "divide-1" (sp-times-equal-1 a size 4))
+  (sp-times-set-1 a size 4 a)
+  (sp-times-add a size b a)
+  (test-helper-assert "add" (sp-times-equal-1 a size 6))
+  (sp-times-set-1 a size 4 a)
+  (sp-times-subtract a size b a)
+  (test-helper-assert "subtract" (sp-times-equal-1 a size 2))
+  (sp-times-set-1 a size 4 a)
+  (sp-times-multiply a size b a)
+  (test-helper-assert "multiply" (sp-times-equal-1 a size 8))
+  (sp-times-set-1 a size 4 a)
+  (sp-times-divide a size b a)
+  (test-helper-assert "divide" (sp-times-equal-1 a size 2))
+  (sp-times-set-1 a size 1 a)
+  (label exit status-return))
+
+(define (test-random-discrete) status-t
+  status-declare
+  (declare
+    i sp-time-t
+    size sp-time-t
+    cudist-size sp-time-t
+    prob (array sp-time-t 4 0 3 0 3)
+    cudist (array sp-time-t 4)
+    a (array sp-time-t 8))
+  (set cudist-size 4 size 8)
+  (sp-times-cusum prob size cudist)
+  (sp-times-random-discrete &rs cudist cudist-size 8 a)
+  (for ((set i 1) (< i size) (set i (+ 1 i)))
+    (test-helper-assert "random-discrete" (or (= 1 (array-get a i)) (= 3 (array-get a i)))))
+  (label exit status-return))
+
+(define (test-sequence-count) status-t
+  status-declare
+  (declare
+    a (array sp-time-t 4 1 2 3 3)
+    size sp-time-t
+    count sp-time-t
+    i sp-time-t)
+  (for ((set i 1) (<= i 8) (set i (+ 1 i)))
+    (test-helper-assert "u64-from-array" (u64-from-array-test i)))
+  (set size 4)
+  (status-require (sp-times-sequence-count a size 1 size 1 &count))
+  (test-helper-assert "sequence-count" (= 9 count))
+  (test-helper-assert "sequence-max 1" (= 0 (sp-sequence-max 0 1)))
+  (test-helper-assert "sequence-max 2" (= 1 (sp-sequence-max 1 1)))
+  (test-helper-assert "sequence-max 3" (= 3 (sp-sequence-max 2 1)))
+  (test-helper-assert "sequence-max 4" (= 6 (sp-sequence-max 3 1)))
+  (test-helper-assert "sequence-max 5" (= 1 (sp-sequence-max 3 3)))
+  (test-helper-assert "sequence-max 6" (= 1 (sp-sequence-max 2 2)))
+  (test-helper-assert "sequence-max 7" (= 3 (sp-sequence-max 2 1)))
+  (test-helper-assert "sequence-max 8" (= 6 (sp-sequence-max 3 1)))
+  (test-helper-assert "sequence-max 9" (= 10 (sp-sequence-max 4 1)))
+  (test-helper-assert "set-sequence-max 1" (= 0 (sp-set-sequence-max 0 1)))
+  (test-helper-assert "set-sequence-max 2" (= 1 (sp-set-sequence-max 1 1)))
+  (test-helper-assert "set-sequence-max 3" (= 16 (sp-set-sequence-max 2 4)))
+  (label exit status-return))
+
+(define (test-compositions) status-t
+  (declare out sp-time-t** out-size sp-time-t out-sizes sp-time-t* i sp-time-t b sp-time-t*)
+  status-declare
+  (status-require (sp-times-compositions 5 &out &out-size &out-sizes))
+  (for ((set i 0) (< i out-size) (set+ i 1)) (set b (array-get out i)) (free b))
+  (free out)
+  (label exit status-return))
+
+(define (test-permutations) status-t
+  (declare
+    in (array sp-time-t 3 1 2 3)
+    size sp-time-t
+    out-size sp-time-t
+    out sp-time-t**
+    i sp-time-t
+    b sp-time-t*)
+  status-declare
+  (set size 3)
+  (status-require (sp-times-permutations size in size &out &out-size))
+  (for ((set i 0) (< i out-size) (set+ i 1)) (set b (array-get out i)) (free b))
+  (free out)
+  (label exit status-return))
+
 (define (main) int
   "\"goto exit\" can skip events"
   status-declare
+  (set rs (sp-random-state-new 3))
   (sp-initialise 3 _rate)
   (test-helper-test-one test-render-block)
   (test-helper-test-one test-wave-event)
@@ -524,4 +676,10 @@
   (test-helper-test-one test-spectral-reversal-ir)
   (test-helper-test-one test-convolve)
   (test-helper-test-one test-windowed-sinc)
+  (test-helper-test-one test-times)
+  (test-helper-test-one test-permutations)
+  (test-helper-test-one test-compositions)
+  (test-helper-test-one test-sequence-count)
+  (test-helper-test-one test-simple-mappings)
+  (test-helper-test-one test-random-discrete)
   (label exit (test-helper-display-summary) (return status.id)))

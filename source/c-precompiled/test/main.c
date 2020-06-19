@@ -516,9 +516,178 @@ status_t test_path() {
 exit:
   status_return;
 }
+#define sp_sample_nearly_equal f64_nearly_equal
+#define sp_sample_array_nearly_equal f64_array_nearly_equal
+#define feq(a, b) sp_sample_nearly_equal(a, b, (0.1))
+sp_random_state_t rs;
+uint8_t u64_from_array_test(sp_time_t size) {
+  uint64_t bits_in;
+  uint64_t bits_out;
+  bits_in = 9838263505978427528u;
+  bits_out = sp_u64_from_array(((uint8_t*)(&bits_in)), size);
+  return ((0 == memcmp(((uint8_t*)(&bits_in)), ((uint8_t*)(&bits_out)), size)));
+}
+status_t test_times() {
+  status_declare;
+  sp_time_t size;
+  sp_time_t* a_temp;
+  sp_time_t a[8] = { 1, 2, 3, 4, 5, 6, 7, 8 };
+  sp_time_t b[8] = { 0, 0, 0, 0, 0, 0, 0, 0 };
+  sp_time_t b_size;
+  sp_time_t* bits;
+  sp_random_state_t s;
+  a_temp = 0;
+  size = 8;
+  s = sp_random_state_new(123);
+  test_helper_assert("mean", (feq((4.5), (sp_times_mean(a, size)))));
+  test_helper_assert("std-dev", (feq((5.5), (sp_times_std_dev(a, size, (sp_times_mean(a, size)))))));
+  test_helper_assert("center-of-mass", (feq((4.6), (sp_times_center_of_mass(a, size)))));
+  status_require((sp_times_new(size, (&a_temp))));
+  test_helper_assert("median", (feq((4.5), (sp_times_median(a, size, a_temp)))));
+  sp_times_multiplications(1, 3, size, a);
+  test_helper_assert("multiplications", (81 == a[4]));
+  sp_times_additions(1, 3, size, a);
+  test_helper_assert("additions", (13 == a[4]));
+  sp_time_t indices[3] = { 1, 2, 4 };
+  sp_times_extract_at_indices(a, indices, 3, a);
+  test_helper_assert("extract-indices", ((4 == a[0]) && (7 == a[1]) && (13 == a[2])));
+  sp_times_set_1(a, size, 1039, a);
+  status_require((sp_times_new((8 * sizeof(sp_time_t)), (&bits))));
+  sp_times_bits_to_times(a, (8 * sizeof(sp_time_t)), bits);
+  test_helper_assert(("bits->times"), ((1 == bits[0]) && (1 == bits[3]) && (0 == bits[4]) && (1 == bits[10])));
+  free(bits);
+  sp_times_multiplications(1, 3, size, a);
+  sp_times_shuffle((&s), a, size);
+  s = sp_random_state_new(12);
+  sp_times_random_binary((&s), size, a);
+  sp_times_multiplications(1, 3, size, a);
+  s = sp_random_state_new(113);
+  sp_times_extract_random((&s), a, size, b, (&b_size));
+exit:
+  free(a_temp);
+  status_return;
+}
+status_t test_simple_mappings() {
+  status_declare;
+  sp_time_t size;
+  sp_time_t a[4] = { 1, 1, 1, 1 };
+  sp_time_t b[4] = { 2, 2, 2, 2 };
+  sp_sample_t as[4] = { 1, 1, 1, 1 };
+  sp_sample_t bs[4] = { 2, 2, 2, 2 };
+  size = 4;
+  /* times */
+  sp_times_set_1(a, size, 0, a);
+  sp_samples_set_1(as, size, 0, as);
+  test_helper_assert("times set-1", (sp_times_equal_1(a, size, 0)));
+  test_helper_assert("samples set-1", (sp_samples_equal_1(as, size, 0)));
+  sp_times_add_1(a, size, 1, a);
+  test_helper_assert("add-1", (sp_times_equal_1(a, size, 1)));
+  sp_times_subtract_1(a, size, 10, a);
+  test_helper_assert("subtract-1", (sp_times_equal_1(a, size, 0)));
+  sp_times_add_1(a, size, 4, a);
+  sp_times_multiply_1(a, size, 2, a);
+  test_helper_assert("multiply-1", (sp_times_equal_1(a, size, 8)));
+  sp_times_divide_1(a, size, 2, a);
+  test_helper_assert("divide-1", (sp_times_equal_1(a, size, 4)));
+  sp_times_set_1(a, size, 4, a);
+  sp_times_add(a, size, b, a);
+  test_helper_assert("add", (sp_times_equal_1(a, size, 6)));
+  sp_times_set_1(a, size, 4, a);
+  sp_times_subtract(a, size, b, a);
+  test_helper_assert("subtract", (sp_times_equal_1(a, size, 2)));
+  sp_times_set_1(a, size, 4, a);
+  sp_times_multiply(a, size, b, a);
+  test_helper_assert("multiply", (sp_times_equal_1(a, size, 8)));
+  sp_times_set_1(a, size, 4, a);
+  sp_times_divide(a, size, b, a);
+  test_helper_assert("divide", (sp_times_equal_1(a, size, 2)));
+  sp_times_set_1(a, size, 1, a);
+exit:
+  status_return;
+}
+status_t test_random_discrete() {
+  status_declare;
+  sp_time_t i;
+  sp_time_t size;
+  sp_time_t cudist_size;
+  sp_time_t prob[4] = { 0, 3, 0, 3 };
+  sp_time_t cudist[4];
+  sp_time_t a[8];
+  cudist_size = 4;
+  size = 8;
+  sp_times_cusum(prob, size, cudist);
+  sp_times_random_discrete((&rs), cudist, cudist_size, 8, a);
+  for (i = 1; (i < size); i = (1 + i)) {
+    test_helper_assert("random-discrete", ((1 == a[i]) || (3 == a[i])));
+  };
+exit:
+  status_return;
+}
+status_t test_sequence_count() {
+  status_declare;
+  sp_time_t a[4] = { 1, 2, 3, 3 };
+  sp_time_t size;
+  sp_time_t count;
+  sp_time_t i;
+  for (i = 1; (i <= 8); i = (1 + i)) {
+    test_helper_assert("u64-from-array", (u64_from_array_test(i)));
+  };
+  size = 4;
+  status_require((sp_times_sequence_count(a, size, 1, size, 1, (&count))));
+  test_helper_assert("sequence-count", (9 == count));
+  test_helper_assert("sequence-max 1", (0 == sp_sequence_max(0, 1)));
+  test_helper_assert("sequence-max 2", (1 == sp_sequence_max(1, 1)));
+  test_helper_assert("sequence-max 3", (3 == sp_sequence_max(2, 1)));
+  test_helper_assert("sequence-max 4", (6 == sp_sequence_max(3, 1)));
+  test_helper_assert("sequence-max 5", (1 == sp_sequence_max(3, 3)));
+  test_helper_assert("sequence-max 6", (1 == sp_sequence_max(2, 2)));
+  test_helper_assert("sequence-max 7", (3 == sp_sequence_max(2, 1)));
+  test_helper_assert("sequence-max 8", (6 == sp_sequence_max(3, 1)));
+  test_helper_assert("sequence-max 9", (10 == sp_sequence_max(4, 1)));
+  test_helper_assert("set-sequence-max 1", (0 == sp_set_sequence_max(0, 1)));
+  test_helper_assert("set-sequence-max 2", (1 == sp_set_sequence_max(1, 1)));
+  test_helper_assert("set-sequence-max 3", (16 == sp_set_sequence_max(2, 4)));
+exit:
+  status_return;
+}
+status_t test_compositions() {
+  sp_time_t** out;
+  sp_time_t out_size;
+  sp_time_t* out_sizes;
+  sp_time_t i;
+  sp_time_t* b;
+  status_declare;
+  status_require((sp_times_compositions(5, (&out), (&out_size), (&out_sizes))));
+  for (i = 0; (i < out_size); i += 1) {
+    b = out[i];
+    free(b);
+  };
+  free(out);
+exit:
+  status_return;
+}
+status_t test_permutations() {
+  sp_time_t in[3] = { 1, 2, 3 };
+  sp_time_t size;
+  sp_time_t out_size;
+  sp_time_t** out;
+  sp_time_t i;
+  sp_time_t* b;
+  status_declare;
+  size = 3;
+  status_require((sp_times_permutations(size, in, size, (&out), (&out_size))));
+  for (i = 0; (i < out_size); i += 1) {
+    b = out[i];
+    free(b);
+  };
+  free(out);
+exit:
+  status_return;
+}
 /** "goto exit" can skip events */
 int main() {
   status_declare;
+  rs = sp_random_state_new(3);
   sp_initialise(3, _rate);
   test_helper_test_one(test_render_block);
   test_helper_test_one(test_wave_event);
@@ -539,6 +708,12 @@ int main() {
   test_helper_test_one(test_spectral_reversal_ir);
   test_helper_test_one(test_convolve);
   test_helper_test_one(test_windowed_sinc);
+  test_helper_test_one(test_times);
+  test_helper_test_one(test_permutations);
+  test_helper_test_one(test_compositions);
+  test_helper_test_one(test_sequence_count);
+  test_helper_test_one(test_simple_mappings);
+  test_helper_test_one(test_random_discrete);
 exit:
   test_helper_display_summary();
   return ((status.id));
