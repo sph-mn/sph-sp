@@ -462,6 +462,7 @@ status_t sp_path_samples_4(sp_sample_t** out, sp_time_t size, sp_path_segment_t 
 #include "../main/plot.c"
 #include "../main/filter.c"
 #include "../main/sequencer.c"
+#include "../main/statistics.c"
 /** render a single event to file. event can be a group */
 status_t sp_render_file(sp_event_t event, sp_time_t start, sp_time_t end, sp_render_config_t config, uint8_t* path) {
   status_declare;

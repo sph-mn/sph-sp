@@ -362,7 +362,8 @@
   (array-set segments-data 0 s1 1 s2 2 s3 3 s4)
   (return (sp-path-samples segments size out)))
 
-(pre-include "../main/io.c" "../main/plot.c" "../main/filter.c" "../main/sequencer.c")
+(pre-include "../main/io.c" "../main/plot.c"
+  "../main/filter.c" "../main/sequencer.c" "../main/statistics.c")
 
 (define (sp-render-file event start end config path)
   (status-t sp-event-t sp-time-t sp-time-t sp-render-config-t uint8-t*)

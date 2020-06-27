@@ -183,9 +183,8 @@ void sp_samples_multiply_1(sp_sample_t* a, sp_time_t size, sp_sample_t n, sp_sam
 void sp_samples_multiply(sp_sample_t* a, sp_time_t size, sp_sample_t* b, sp_sample_t* out);
 status_t sp_samples_new(sp_time_t size, sp_sample_t** out);
 void sp_samples_or(sp_sample_t* a, sp_sample_t* b, sp_time_t size, sp_sample_t limit, sp_sample_t* out);
-uint8_t sp_sample_sort_less_p(void* a, ssize_t b, ssize_t c);
-void sp_sample_sort_swap(void* a, ssize_t b, ssize_t c);
-sp_sample_t sp_samples_range(sp_sample_t* a, sp_time_t size, sp_sample_t* out_min, sp_sample_t* out_max);
+uint8_t sp_samples_sort_less_p(void* a, ssize_t b, ssize_t c);
+void sp_samples_sort_swap(void* a, ssize_t b, ssize_t c);
 void sp_samples_reverse(sp_sample_t* a, sp_time_t size, sp_sample_t* out);
 void sp_samples_set_unity_gain(sp_sample_t* in, sp_time_t in_size, sp_sample_t* out);
 void sp_samples_square(sp_sample_t* a, sp_time_t size, sp_sample_t* out);
@@ -194,14 +193,7 @@ void sp_samples_subtract(sp_sample_t* a, sp_time_t size, sp_sample_t* b, sp_samp
 void sp_samples_to_times(sp_sample_t* in, sp_time_t in_size, sp_time_t* out);
 void sp_samples_xor(sp_sample_t* a, sp_sample_t* b, sp_time_t size, sp_sample_t limit, sp_sample_t* out);
 status_t sp_samples_copy(sp_sample_t* a, sp_time_t size, sp_sample_t** out);
-sp_sample_t sp_samples_mean(sp_sample_t* a, sp_time_t size);
-sp_sample_t sp_samples_std_dev(sp_sample_t* a, sp_time_t size, sp_sample_t mean);
-sp_sample_t sp_samples_covariance(sp_sample_t* a, sp_time_t size, sp_sample_t* b);
-sp_sample_t sp_samples_correlation(sp_sample_t* a, sp_time_t size, sp_sample_t* b);
-sp_sample_t sp_samples_autocorrelation(sp_sample_t* a, sp_time_t size, sp_time_t lag);
-sp_sample_t sp_samples_center_of_mass(sp_sample_t* a, sp_time_t size);
 void sp_samples_differences(sp_sample_t* a, sp_time_t size, sp_sample_t* out);
-sp_sample_t sp_samples_median(sp_sample_t* a, sp_time_t size, sp_sample_t* temp);
 void sp_samples_additions(sp_sample_t start, sp_sample_t summand, sp_time_t count, sp_sample_t* out);
 void sp_samples_divisions(sp_sample_t start, sp_sample_t n, sp_time_t count, sp_sample_t* out);
 void sp_samples_scale(sp_sample_t* a, sp_time_t size, sp_sample_t n, sp_sample_t* out);
@@ -219,20 +211,15 @@ status_t sp_times_new(sp_time_t size, sp_time_t** out);
 void sp_times_or(sp_time_t* a, sp_time_t* b, sp_time_t size, sp_time_t limit, sp_time_t* out);
 void sp_times_set_1(sp_time_t* a, sp_time_t size, sp_time_t n, sp_time_t* out);
 void sp_samples_set_1(sp_sample_t* a, sp_time_t size, sp_sample_t n, sp_sample_t* out);
-uint8_t sp_time_sort_less_p(void* a, ssize_t b, ssize_t c);
-void sp_time_sort_swap(void* a, ssize_t b, ssize_t c);
-sp_time_t sp_times_range(sp_time_t* a, sp_time_t size, sp_time_t* out_min, sp_time_t* out_max);
+uint8_t sp_times_sort_less_p(void* a, ssize_t b, ssize_t c);
+void sp_times_sort_swap(void* a, ssize_t b, ssize_t c);
 void sp_times_reverse(sp_time_t* a, sp_time_t size, sp_time_t* out);
 void sp_times_square(sp_time_t* a, sp_time_t size, sp_time_t* out);
 void sp_times_subtract_1(sp_time_t* a, sp_time_t size, sp_time_t n, sp_time_t* out);
 void sp_times_subtract(sp_time_t* a, sp_time_t size, sp_time_t* b, sp_time_t* out);
 void sp_times_xor(sp_time_t* a, sp_time_t* b, sp_time_t size, sp_time_t limit, sp_time_t* out);
 status_t sp_times_copy(sp_time_t a, sp_time_t size, sp_time_t** out);
-sp_sample_t sp_times_mean(sp_time_t* a, sp_time_t size);
-sp_sample_t sp_times_std_dev(sp_time_t* a, sp_time_t size, sp_time_t mean);
-sp_sample_t sp_times_center_of_mass(sp_time_t* a, sp_time_t size);
 void sp_times_differences(sp_time_t* a, sp_time_t size, sp_time_t* out);
-sp_sample_t sp_times_median(sp_time_t* a, sp_time_t size, sp_time_t* temp);
 void sp_times_cusum(sp_time_t* a, sp_time_t size, sp_time_t* out);
 void sp_times_random_discrete(sp_random_state_t* state, sp_time_t* cudist, sp_time_t cudist_size, sp_time_t count, sp_time_t* out);
 status_t sp_times_sequence_count(sp_time_t* a, sp_time_t size, sp_time_t min_width, sp_time_t max_width, sp_time_t step_width, sp_time_t* out);
@@ -250,6 +237,38 @@ void sp_times_gt_indices(sp_time_t* a, sp_time_t size, sp_time_t n, sp_time_t* o
 void sp_times_extract_random(sp_random_state_t* state, sp_time_t* a, sp_time_t size, sp_time_t* out, sp_time_t* out_size);
 status_t sp_times_constant(sp_time_t a, sp_time_t size, sp_time_t** out);
 uint64_t sp_u64_from_array(uint8_t* a, sp_time_t size);
+/* statistics */
+#define sp_stat_types_count (1 + (sp_stat_range_max - sp_stat_center))
+typedef enum { sp_stat_center,
+  sp_stat_complexity,
+  sp_stat_complexity_width,
+  sp_stat_deviation,
+  sp_stat_mean,
+  sp_stat_median,
+  sp_stat_range,
+  sp_stat_range_min,
+  sp_stat_range_max } sp_stat_type_t;
+typedef uint8_t (*sp_stat_times_f_t)(sp_time_t*, sp_time_t, sp_sample_t*);
+typedef uint8_t (*sp_stat_samples_f_t)(sp_sample_t*, sp_time_t, sp_sample_t*);
+typedef uint8_t (*sp_stat2_times_f_t)(sp_time_t*, sp_time_t*, sp_time_t, sp_sample_t*);
+typedef uint8_t (*sp_stat2_samples_f_t)(sp_sample_t*, sp_sample_t*, sp_time_t, sp_sample_t*);
+status_t sp_stat_times(sp_time_t* a, sp_time_t a_size, sp_stat_type_t* stats, sp_time_t size, sp_sample_t* out);
+status_t sp_stat_samples(sp_sample_t* a, sp_time_t a_size, sp_stat_type_t* stats, sp_time_t size, sp_sample_t* out);
+uint8_t sp_stat_times_range(sp_time_t* a, sp_time_t size, sp_sample_t* out);
+uint8_t sp_stat_samples_range(sp_sample_t* a, sp_time_t size, sp_sample_t* out);
+uint8_t sp_stat_times_complexity(sp_time_t* a, sp_time_t size, sp_sample_t* out);
+uint8_t sp_stat_times_mean(sp_time_t* a, sp_time_t size, sp_sample_t* out);
+uint8_t sp_stat_times_deviation(sp_time_t* a, sp_time_t size, sp_sample_t* out);
+uint8_t sp_stat_times_median(sp_time_t* a, sp_time_t size, sp_sample_t* out);
+uint8_t sp_stat_times_center(sp_time_t* a, sp_time_t size, sp_sample_t* out);
+uint8_t sp_stat_samples_complexity(sp_sample_t* a, sp_time_t size, sp_sample_t* out);
+uint8_t sp_stat_samples_mean(sp_sample_t* a, sp_time_t size, sp_sample_t* out);
+uint8_t sp_stat_samples_deviation(sp_sample_t* a, sp_time_t size, sp_sample_t* out);
+uint8_t sp_stat_samples_median(sp_sample_t* a, sp_time_t size, sp_sample_t* out);
+uint8_t sp_stat_samples_center(sp_sample_t* a, sp_time_t size, sp_sample_t* out);
+sp_stat_times_f_t sp_stat_times_f_array[sp_stat_types_count] = { sp_stat_times_center, sp_stat_times_complexity, sp_stat_times_complexity, sp_stat_times_deviation, sp_stat_times_mean, sp_stat_times_median, sp_stat_times_range, sp_stat_times_range, sp_stat_times_range };
+sp_stat_samples_f_t sp_stat_samples_f_array[sp_stat_types_count] = { sp_stat_samples_center, sp_stat_samples_complexity, sp_stat_samples_complexity, sp_stat_samples_deviation, sp_stat_samples_mean, sp_stat_samples_median, sp_stat_samples_range, sp_stat_samples_range, sp_stat_samples_range };
+void sp_samples_scale_to_times(sp_sample_t* a, sp_time_t size, sp_time_t max, sp_time_t* out);
 /* filter */
 #define sp_filter_state_t sp_convolution_filter_state_t
 #define sp_filter_state_free sp_convolution_filter_state_free

@@ -160,10 +160,8 @@
   (sp-samples-new size out) (status-t sp-time-t sp-sample-t**)
   (sp-samples-or a b size limit out)
   (void sp-sample-t* sp-sample-t* sp-time-t sp-sample-t sp-sample-t*)
-  (sp-sample-sort-less? a b c) (uint8-t void* ssize-t ssize-t)
-  (sp-sample-sort-swap a b c) (void void* ssize-t ssize-t)
-  (sp-samples-range a size out-min out-max)
-  (sp-sample-t sp-sample-t* sp-time-t sp-sample-t* sp-sample-t*)
+  (sp-samples-sort-less? a b c) (uint8-t void* ssize-t ssize-t)
+  (sp-samples-sort-swap a b c) (void void* ssize-t ssize-t)
   (sp-samples-reverse a size out) (void sp-sample-t* sp-time-t sp-sample-t*)
   (sp-samples-set-unity-gain in in-size out) (void sp-sample-t* sp-time-t sp-sample-t*)
   (sp-samples-square a size out) (void sp-sample-t* sp-time-t sp-sample-t*)
@@ -173,14 +171,7 @@
   (sp-samples-xor a b size limit out)
   (void sp-sample-t* sp-sample-t* sp-time-t sp-sample-t sp-sample-t*)
   (sp-samples-copy a size out) (status-t sp-sample-t* sp-time-t sp-sample-t**)
-  (sp-samples-mean a size) (sp-sample-t sp-sample-t* sp-time-t)
-  (sp-samples-std-dev a size mean) (sp-sample-t sp-sample-t* sp-time-t sp-sample-t)
-  (sp-samples-covariance a size b) (sp-sample-t sp-sample-t* sp-time-t sp-sample-t*)
-  (sp-samples-correlation a size b) (sp-sample-t sp-sample-t* sp-time-t sp-sample-t*)
-  (sp-samples-autocorrelation a size lag) (sp-sample-t sp-sample-t* sp-time-t sp-time-t)
-  (sp-samples-center-of-mass a size) (sp-sample-t sp-sample-t* sp-time-t)
   (sp-samples-differences a size out) (void sp-sample-t* sp-time-t sp-sample-t*)
-  (sp-samples-median a size temp) (sp-sample-t sp-sample-t* sp-time-t sp-sample-t*)
   (sp-samples-additions start summand count out)
   (void sp-sample-t sp-sample-t sp-time-t sp-sample-t*)
   (sp-samples-divisions start n count out) (void sp-sample-t sp-sample-t sp-time-t sp-sample-t*)
@@ -199,20 +190,15 @@
   (sp-times-or a b size limit out) (void sp-time-t* sp-time-t* sp-time-t sp-time-t sp-time-t*)
   (sp-times-set-1 a size n out) (void sp-time-t* sp-time-t sp-time-t sp-time-t*)
   (sp-samples-set-1 a size n out) (void sp-sample-t* sp-time-t sp-sample-t sp-sample-t*)
-  (sp-time-sort-less? a b c) (uint8-t void* ssize-t ssize-t)
-  (sp-time-sort-swap a b c) (void void* ssize-t ssize-t)
-  (sp-times-range a size out-min out-max) (sp-time-t sp-time-t* sp-time-t sp-time-t* sp-time-t*)
+  (sp-times-sort-less? a b c) (uint8-t void* ssize-t ssize-t)
+  (sp-times-sort-swap a b c) (void void* ssize-t ssize-t)
   (sp-times-reverse a size out) (void sp-time-t* sp-time-t sp-time-t*)
   (sp-times-square a size out) (void sp-time-t* sp-time-t sp-time-t*)
   (sp-times-subtract-1 a size n out) (void sp-time-t* sp-time-t sp-time-t sp-time-t*)
   (sp-times-subtract a size b out) (void sp-time-t* sp-time-t sp-time-t* sp-time-t*)
   (sp-times-xor a b size limit out) (void sp-time-t* sp-time-t* sp-time-t sp-time-t sp-time-t*)
   (sp-times-copy a size out) (status-t sp-time-t sp-time-t sp-time-t**)
-  (sp-times-mean a size) (sp-sample-t sp-time-t* sp-time-t)
-  (sp-times-std-dev a size mean) (sp-sample-t sp-time-t* sp-time-t sp-time-t)
-  (sp-times-center-of-mass a size) (sp-sample-t sp-time-t* sp-time-t)
   (sp-times-differences a size out) (void sp-time-t* sp-time-t sp-time-t*)
-  (sp-times-median a size temp) (sp-sample-t sp-time-t* sp-time-t sp-time-t*)
   (sp-times-cusum a size out) (void sp-time-t* sp-time-t sp-time-t*)
   (sp-times-random-discrete state cudist cudist-size count out)
   (void sp-random-state-t* sp-time-t* sp-time-t sp-time-t sp-time-t*)
@@ -236,6 +222,49 @@
   (void sp-random-state-t* sp-time-t* sp-time-t sp-time-t* sp-time-t*)
   (sp-times-constant a size out) (status-t sp-time-t sp-time-t sp-time-t**)
   (sp-u64-from-array a size) (uint64-t uint8-t* sp-time-t))
+
+(sc-comment "statistics")
+(pre-define sp-stat-types-count (+ 1 (- sp-stat-range-max sp-stat-center)))
+
+(declare
+  sp-stat-type-t
+  (type
+    (enum
+      (sp-stat-center sp-stat-complexity sp-stat-complexity-width
+        sp-stat-deviation sp-stat-mean sp-stat-median
+        sp-stat-range sp-stat-range-min sp-stat-range-max)))
+  sp-stat-times-f-t (type (function-pointer uint8-t sp-time-t* sp-time-t sp-sample-t*))
+  sp-stat-samples-f-t (type (function-pointer uint8-t sp-sample-t* sp-time-t sp-sample-t*))
+  sp-stat2-times-f-t (type (function-pointer uint8-t sp-time-t* sp-time-t* sp-time-t sp-sample-t*))
+  sp-stat2-samples-f-t
+  (type (function-pointer uint8-t sp-sample-t* sp-sample-t* sp-time-t sp-sample-t*))
+  (sp-stat-times a a-size stats size out)
+  (status-t sp-time-t* sp-time-t sp-stat-type-t* sp-time-t sp-sample-t*)
+  (sp-stat-samples a a-size stats size out)
+  (status-t sp-sample-t* sp-time-t sp-stat-type-t* sp-time-t sp-sample-t*)
+  (sp-stat-times-range a size out) (uint8-t sp-time-t* sp-time-t sp-sample-t*)
+  (sp-stat-samples-range a size out) (uint8-t sp-sample-t* sp-time-t sp-sample-t*)
+  (sp-stat-times-complexity a size out) (uint8-t sp-time-t* sp-time-t sp-sample-t*)
+  (sp-stat-times-mean a size out) (uint8-t sp-time-t* sp-time-t sp-sample-t*)
+  (sp-stat-times-deviation a size out) (uint8-t sp-time-t* sp-time-t sp-sample-t*)
+  (sp-stat-times-median a size out) (uint8-t sp-time-t* sp-time-t sp-sample-t*)
+  (sp-stat-times-center a size out) (uint8-t sp-time-t* sp-time-t sp-sample-t*)
+  (sp-stat-samples-complexity a size out) (uint8-t sp-sample-t* sp-time-t sp-sample-t*)
+  (sp-stat-samples-mean a size out) (uint8-t sp-sample-t* sp-time-t sp-sample-t*)
+  (sp-stat-samples-deviation a size out) (uint8-t sp-sample-t* sp-time-t sp-sample-t*)
+  (sp-stat-samples-median a size out) (uint8-t sp-sample-t* sp-time-t sp-sample-t*)
+  (sp-stat-samples-center a size out) (uint8-t sp-sample-t* sp-time-t sp-sample-t*)
+  sp-stat-times-f-array
+  (array sp-stat-times-f-t sp-stat-types-count
+    sp-stat-times-center sp-stat-times-complexity sp-stat-times-complexity
+    sp-stat-times-deviation sp-stat-times-mean sp-stat-times-median
+    sp-stat-times-range sp-stat-times-range sp-stat-times-range)
+  sp-stat-samples-f-array
+  (array sp-stat-samples-f-t sp-stat-types-count
+    sp-stat-samples-center sp-stat-samples-complexity sp-stat-samples-complexity
+    sp-stat-samples-deviation sp-stat-samples-mean sp-stat-samples-median
+    sp-stat-samples-range sp-stat-samples-range sp-stat-samples-range)
+  (sp-samples-scale->times a size max out) (void sp-sample-t* sp-time-t sp-time-t sp-time-t*))
 
 (sc-comment "filter")
 

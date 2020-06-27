@@ -539,11 +539,6 @@ status_t test_times() {
   a_temp = 0;
   size = 8;
   s = sp_random_state_new(123);
-  test_helper_assert("mean", (feq((4.5), (sp_times_mean(a, size)))));
-  test_helper_assert("std-dev", (feq((5.5), (sp_times_std_dev(a, size, (sp_times_mean(a, size)))))));
-  test_helper_assert("center-of-mass", (feq((4.6), (sp_times_center_of_mass(a, size)))));
-  status_require((sp_times_new(size, (&a_temp))));
-  test_helper_assert("median", (feq((4.5), (sp_times_median(a, size, a_temp)))));
   sp_times_multiplications(1, 3, size, a);
   test_helper_assert("multiplications", (81 == a[4]));
   sp_times_additions(1, 3, size, a);
@@ -565,6 +560,23 @@ status_t test_times() {
   sp_times_extract_random((&s), a, size, b, (&b_size));
 exit:
   free(a_temp);
+  status_return;
+}
+status_t test_stats() {
+  status_declare;
+  sp_time_t size;
+  sp_time_t* a_temp;
+  sp_time_t a[8] = { 1, 2, 3, 4, 5, 6, 7, 8 };
+  sp_time_t b[8] = { 0, 0, 0, 0, 0, 0, 0, 0 };
+  sp_time_t b_size;
+  sp_stat_type_t stat_types[6] = { sp_stat_center, sp_stat_complexity, sp_stat_deviation, sp_stat_mean, sp_stat_median, sp_stat_range };
+  sp_sample_t stats[6] = { 0, 0, 0, 0, 0, 0 };
+  status_require((sp_stat_times(a, size, stat_types, 6, stats)));
+  test_helper_assert("mean", (feq((4.5), (stats[sp_stat_mean]))));
+  test_helper_assert("deviation", (feq((5.5), (stats[sp_stat_deviation]))));
+  test_helper_assert("center", (feq((4.6), (stats[sp_stat_center]))));
+  test_helper_assert("median", (feq((4.5), (stats[sp_stat_median]))));
+exit:
   status_return;
 }
 status_t test_simple_mappings() {
@@ -689,6 +701,8 @@ int main() {
   status_declare;
   rs = sp_random_state_new(3);
   sp_initialise(3, _rate);
+  test_helper_test_one(test_stats);
+  goto exit;
   test_helper_test_one(test_render_block);
   test_helper_test_one(test_wave_event);
   test_helper_test_one(test_wave);

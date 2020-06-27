@@ -72,17 +72,6 @@
       "a/out can not be the same pointer"
       (declare i sp-time-t)
       (for ((set i 0) (< i size) (set+ i 1)) (set (array-get out (- size i)) (array-get a i))))
-    (define ((pre-concat prefix _range) a size out-min out-max)
-      (value-t value-t* sp-time-t value-t* value-t*)
-      "set the minimum, maximum and return the differnce between them.
-       array length must be > 0"
-      (declare i sp-time-t min value-t max value-t b value-t)
-      (set min (array-get a 0) max min)
-      (for ((set i 1) (< i size) (set+ i 1))
-        (set b (array-get a i))
-        (if (> b max) (set max b) (if (< b min) (set min b))))
-      (set *out-min min *out-max max)
-      (return (- max min)))
     (define ((pre-concat prefix _equal-1) a size n) (uint8-t value-t* sp-time-t value-t)
       (declare i sp-time-t)
       (for ((set i 0) (< i size) (set+ i 1)) (if (not (= n (array-get a i))) (return 0)))
@@ -165,6 +154,8 @@
 (define-array-combinator-1 sp-samples-divide-1 sp-sample-t (/ (array-get a i) n))
 
 (define (sp-u64-from-array a size) (uint64-t uint8-t* sp-time-t)
+  "if array stores larger types and the system is little-endian then
+   the lower value parts of the larger types are preferred"
   (case = size
     (1 (return *a))
     (2 (return (pointer-get (convert-type a uint16-t*))))
@@ -207,50 +198,11 @@
   (set *out temp)
   (label exit status-return))
 
-(define (sp-samples-mean a size) (sp-sample-t sp-sample-t* sp-time-t)
-  (return (/ (sp-samples-sum a size) size)))
-
-(define (sp-samples-std-dev a size mean) (sp-sample-t sp-sample-t* sp-time-t sp-sample-t)
-  (declare i sp-time-t sum sp-sample-t dev sp-sample-t)
-  (set sum 0)
-  (for ((set i 0) (< i size) (set+ i 1)) (set dev (- mean (array-get a i)) sum (+ sum (* dev dev))))
-  (return (/ sum size)))
-
-(define (sp-samples-covariance a size b) (sp-sample-t sp-sample-t* sp-time-t sp-sample-t*)
-  "size of a must be equal or greater than b"
-  (declare i sp-time-t sum sp-sample-t mean-a sp-sample-t mean-b sp-sample-t)
-  (set mean-a (sp-samples-mean a size) mean-b (sp-samples-mean b size))
-  (for ((set i 0) (< i size) (set+ i 1))
-    (set+ sum (* (- (array-get a i) mean-a) (- (array-get b i) mean-b))))
-  (return (/ sum size)))
-
-(define (sp-samples-correlation a size b) (sp-sample-t sp-sample-t* sp-time-t sp-sample-t*)
-  (/ (sp-samples-covariance a size b)
-    (* (sp-samples-std-dev a size (sp-samples-mean a size))
-      (sp-samples-std-dev b size (sp-samples-mean b size)))))
-
-(define (sp-samples-autocorrelation a size lag) (sp-sample-t sp-sample-t* sp-time-t sp-time-t)
-  "lag must not be greater then the size of a"
-  (declare b sp-sample-t*)
-  (return (sp-samples-correlation a (- size lag) (+ a lag))))
-
-(define (sp-samples-center-of-mass a size) (sp-sample-t sp-sample-t* sp-time-t)
-  (declare i sp-time-t sum sp-sample-t index-sum sp-sample-t)
-  (set index-sum 0 sum (sp-samples-sum a size))
-  (for ((set i 1) (< i size) (set+ i 1)) (set+ index-sum (* i (array-get a i))))
-  (return (/ index-sum sum)))
-
 (define (sp-samples-differences a size out) (void sp-sample-t* sp-time-t sp-sample-t*)
   "size must be > 1"
   (declare i sp-time-t)
   (for ((set i 1) (< i size) (set+ i 1))
     (set (array-get out (- i 1)) (- (array-get a i) (array-get a (- i 1))))))
-
-(define (sp-samples-median a size temp) (sp-sample-t sp-sample-t* sp-time-t sp-sample-t*)
-  "a is copied to temp. size of temp must be >= size"
-  (memcpy temp a (* size (sizeof sp-sample-t)))
-  (quicksort sp-samples-sort-less? sp-samples-sort-swap temp 0 (- size 1))
-  (return (/ (+ (array-get temp (/ size 2)) (array-get temp (- (/ size 2) 1))) 2)))
 
 (sc-comment "times")
 
@@ -261,40 +213,11 @@
   (set *out temp)
   (label exit status-return))
 
-(define (sp-times-mean a size) (sp-sample-t sp-time-t* sp-time-t)
-  "calculate the arithmetic mean over all values in array.
-   array length must be > 0"
-  (declare i sp-time-t sum sp-time-t)
-  (set sum 0)
-  (for ((set i 0) (< i size) (set+ i 1)) (set+ sum (array-get a i)))
-  (return (/ sum (convert-type size sp-sample-t))))
-
-(define (sp-times-std-dev a size mean) (sp-sample-t sp-time-t* sp-time-t sp-time-t)
-  (declare i sp-time-t sum sp-time-t dev sp-time-t)
-  (set sum 0)
-  (for ((set i 0) (< i size) (set+ i 1))
-    (set dev (absolute-difference mean (array-get a i)) sum (+ sum (* dev dev))))
-  (return (/ sum (convert-type size sp-sample-t))))
-
-(define (sp-times-center-of-mass a size) (sp-sample-t sp-time-t* sp-time-t)
-  (declare i sp-time-t sum sp-time-t index-sum sp-time-t)
-  (set index-sum 0 sum (array-get a 0))
-  (for ((set i 1) (< i size) (set+ i 1)) (set+ sum (array-get a i) index-sum (* i (array-get a i))))
-  (return (/ index-sum (convert-type sum sp-sample-t))))
-
 (define (sp-times-differences a size out) (void sp-time-t* sp-time-t sp-time-t*)
   "a.size must be > 1. a.size minus 1 elements will be written to out"
   (declare i sp-time-t)
   (for ((set i 1) (< i size) (set+ i 1))
     (set (array-get out (- i 1)) (absolute-difference (array-get a i) (array-get a (- i 1))))))
-
-(define (sp-times-median a size temp) (sp-sample-t sp-time-t* sp-time-t sp-time-t*)
-  "a is copied to temp. size of temp must be >= size"
-  (memcpy temp a (* size (sizeof sp-time-t)))
-  (quicksort sp-times-sort-less? sp-times-sort-swap temp 0 (- size 1))
-  (return
-    (if* (bit-and size 1) (array-get temp (- (/ size 2) 1))
-      (/ (+ (array-get temp (/ size 2)) (array-get temp (- (/ size 2) 1))) 2.0))))
 
 (define (sp-times-cusum a size out) (void sp-time-t* sp-time-t sp-time-t*)
   "calculate cumulative sums from the given numbers.
@@ -437,13 +360,13 @@
   (for ((set i 0) (< i count) (set+ i 1)) (set (array-get out i) start) (set/ start n)))
 
 (define (sp-samples-scale a size n out) (void sp-sample-t* sp-time-t sp-sample-t sp-sample-t*)
-  "adjust all values, keeping relative sizes, so that the maximum value is not greater than n.
+  "adjust all values, keeping relative sizes, so that the maximum value is n.
    a/out can be the same pointer"
   (define max sp-sample-t (sp-samples-absolute-max a size))
   (sp-samples-multiply-1 a size (/ n max) a))
 
 (define (sp-samples-scale-sum a size n out) (void sp-sample-t* sp-time-t sp-sample-t sp-sample-t*)
-  "adjust all values, keeping relative sizes, so that the sum is not greater than n.
+  "adjust all values, keeping relative sizes, so that the sum is n.
    a/out can be the same pointer"
   (define sum sp-sample-t (sp-samples-sum a size))
   (sp-samples-multiply-1 a size (/ n sum) a))

@@ -506,7 +506,9 @@
 
 (define (u64-from-array-test size) (uint8-t sp-time-t)
   (declare bits-in uint64-t bits-out uint64-t)
-  (set bits-in 9838263505978427528u bits-out (sp-u64-from-array (convert-type &bits-in uint8-t*) size))
+  (set
+    bits-in 9838263505978427528u
+    bits-out (sp-u64-from-array (convert-type &bits-in uint8-t*) size))
   (return (= 0 (memcmp (convert-type &bits-in uint8-t*) (convert-type &bits-out uint8-t*) size))))
 
 (define (test-times) status-t
@@ -520,11 +522,6 @@
     bits sp-time-t*
     s sp-random-state-t)
   (set a-temp 0 size 8 s (sp-random-state-new 123))
-  (test-helper-assert "mean" (feq 4.5 (sp-times-mean a size)))
-  (test-helper-assert "std-dev" (feq 5.5 (sp-times-std-dev a size (sp-times-mean a size))))
-  (test-helper-assert "center-of-mass" (feq 4.6 (sp-times-center-of-mass a size)))
-  (status-require (sp-times-new size &a-temp))
-  (test-helper-assert "median" (feq 4.5 (sp-times-median a size a-temp)))
   (sp-times-multiplications 1 3 size a)
   (test-helper-assert "multiplications" (= 81 (array-get a 4)))
   (sp-times-additions 1 3 size a)
@@ -548,6 +545,25 @@
   (set s (sp-random-state-new 113))
   (sp-times-extract-random &s a size b &b-size)
   (label exit (free a-temp) status-return))
+
+(define (test-stats) status-t
+  status-declare
+  (declare
+    size sp-time-t
+    a-temp sp-time-t*
+    a (array sp-time-t 8 1 2 3 4 5 6 7 8)
+    b (array sp-time-t 8 0 0 0 0 0 0 0 0)
+    b-size sp-time-t
+    stat-types
+    (array sp-stat-type-t 6
+      sp-stat-center sp-stat-complexity sp-stat-deviation sp-stat-mean sp-stat-median sp-stat-range)
+    stats (array sp-sample-t 6 0 0 0 0 0 0))
+  (status-require (sp-stat-times a size stat-types 6 stats))
+  (test-helper-assert "mean" (feq 4.5 (array-get stats sp-stat-mean)))
+  (test-helper-assert "deviation" (feq 5.5 (array-get stats sp-stat-deviation)))
+  (test-helper-assert "center" (feq 4.6 (array-get stats sp-stat-center)))
+  (test-helper-assert "median" (feq 4.5 (array-get stats sp-stat-median)))
+  (label exit status-return))
 
 (define (test-simple-mappings) status-t
   status-declare
@@ -605,11 +621,7 @@
 
 (define (test-sequence-count) status-t
   status-declare
-  (declare
-    a (array sp-time-t 4 1 2 3 3)
-    size sp-time-t
-    count sp-time-t
-    i sp-time-t)
+  (declare a (array sp-time-t 4 1 2 3 3) size sp-time-t count sp-time-t i sp-time-t)
   (for ((set i 1) (<= i 8) (set i (+ 1 i)))
     (test-helper-assert "u64-from-array" (u64-from-array-test i)))
   (set size 4)
@@ -657,6 +669,8 @@
   status-declare
   (set rs (sp-random-state-new 3))
   (sp-initialise 3 _rate)
+  (test-helper-test-one test-stats)
+  (goto exit)
   (test-helper-test-one test-render-block)
   (test-helper-test-one test-wave-event)
   (test-helper-test-one test-wave)

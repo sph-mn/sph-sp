@@ -7,7 +7,8 @@ void sp_event_sort_swap(void* a, ssize_t b, ssize_t c) {
 uint8_t sp_event_sort_less_p(void* a, ssize_t b, ssize_t c) { return (((((sp_event_t*)(a))[b]).start < (((sp_event_t*)(a))[c]).start)); }
 void sp_seq_events_prepare(sp_event_t* data, sp_time_t size) { quicksort(sp_event_sort_less_p, sp_event_sort_swap, data, 0, (size - 1)); }
 /** event arrays must have been prepared/sorted with sp-seq-event-prepare for seq to work correctly.
-   event functions receive event relative start/end time and block has index 0 at start */
+   event functions receive event relative start/end time and block has index 0 at start.
+   as for paths, start is inclusive, end is exclusive, so that 0..100 and 100..200 attach seamless */
 void sp_seq(sp_time_t start, sp_time_t end, sp_block_t out, sp_event_t* events, sp_time_t size) {
   sp_time_t e_out_start;
   sp_event_t e;
@@ -176,7 +177,7 @@ void sp_noise_event_free(sp_event_t* a) {
   free((a->state));
 }
 /** an event for noise filtered by a windowed-sinc filter.
-   very processing intensive when parameters change with low resolution.
+   very processing intensive if parameters change with low resolution.
    memory for event.state will be allocated and then owned by the caller */
 status_t sp_noise_event(sp_time_t start, sp_time_t end, sp_sample_t** amp, sp_sample_t* cut_l, sp_sample_t* cut_h, sp_sample_t* trn_l, sp_sample_t* trn_h, uint8_t is_reject, sp_time_t resolution, sp_random_state_t random_state, sp_event_t* out_event) {
   status_declare;

@@ -16,7 +16,8 @@
 (define (sp-seq start end out events size)
   (void sp-time-t sp-time-t sp-block-t sp-event-t* sp-time-t)
   "event arrays must have been prepared/sorted with sp-seq-event-prepare for seq to work correctly.
-   event functions receive event relative start/end time and block has index 0 at start"
+   event functions receive event relative start/end time and block has index 0 at start.
+   as for paths, start is inclusive, end is exclusive, so that 0..100 and 100..200 attach seamless"
   (declare e-out-start sp-time-t e sp-event-t e-start sp-time-t e-end sp-time-t i sp-time-t)
   (for ((set i 0) (< i size) (set i (+ 1 i)))
     (set e (array-get events i))
@@ -173,7 +174,7 @@
   (sp-noise-event start end amp cut-l cut-h trn-l trn-h is-reject resolution random-state out-event)
   (status-t sp-time-t sp-time-t sp-sample-t** sp-sample-t* sp-sample-t* sp-sample-t* sp-sample-t* uint8-t sp-time-t sp-random-state-t sp-event-t*)
   "an event for noise filtered by a windowed-sinc filter.
-   very processing intensive when parameters change with low resolution.
+   very processing intensive if parameters change with low resolution.
    memory for event.state will be allocated and then owned by the caller"
   status-declare
   (declare
