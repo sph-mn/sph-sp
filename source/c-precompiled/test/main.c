@@ -576,11 +576,13 @@ status_t test_stats() {
   test_helper_assert("deviation", (feq((2.29), (stats_a[sp_stat_deviation]))));
   test_helper_assert("center", (feq((4.6), (stats_a[sp_stat_center]))));
   test_helper_assert("median", (feq((4.5), (stats_a[sp_stat_median]))));
+  test_helper_assert("complexity", (feq((1.0), (stats_a[sp_stat_complexity_width]))));
   status_require((sp_stat_samples(as, test_stats_a_size, stat_types, test_stats_stat_count, stats_as)));
   test_helper_assert("samples mean", (feq((4.5), (stats_as[sp_stat_mean]))));
   test_helper_assert("samples deviation", (feq((2.29), (stats_as[sp_stat_deviation]))));
   test_helper_assert("samples center", (feq((4.6), (stats_as[sp_stat_center]))));
   test_helper_assert("samples median", (feq((4.5), (stats_as[sp_stat_median]))));
+  test_helper_assert("samples complexity", (feq((1.0), (stats_as[sp_stat_complexity_width]))));
 exit:
   status_return;
 }

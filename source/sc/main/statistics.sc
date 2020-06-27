@@ -77,18 +77,21 @@
     count sp-time-t
     i sp-time-t
     ratio sp-sample-t)
-  (if (sequence-set-new size &known) (return 1))
-  (for-i key.size (+ size 1)
+  (if (sequence-set-new size &known) (return 1)) (set max-ratio 0 max-ratio-width 0)
+  (for ((set key.size 1) (< key.size size) (set+ key.size 1))
     (set count 0)
-    (for-i i (- size key.size)
+    (for-i i (- size (- key.size 1))
       (set key.data (convert-type (+ i a) uint8-t*) value (sequence-set-get known key))
       (if (not value)
         (begin
           (set+ count 1)
           (if (not (sequence-set-add known key)) (begin (sequence-set-free known) (return 1))))))
-    (set ratio (/ count (convert-type (- size key.size) sp-sample-t)))
-    (if (>= ratio max-ratio) (set max-ratio ratio max-ratio-width key.size))
+    (sc-comment
+      "one pattern per width is always unique, exclude because only repetition is counted")
+    (set ratio (/ (- count 1) (convert-type (- size (- key.size 1)) sp-sample-t)))
+    (if (> ratio max-ratio) (set max-ratio ratio max-ratio-width key.size))
     (sequence-set-clear known))
+  (if (not max-ratio-width) (set max-ratio 1 max-ratio-width size))
   (set (array-get out 0) max-ratio (array-get out 1) max-ratio-width) (sequence-set-free known)
   (return 0))
 

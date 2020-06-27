@@ -563,11 +563,13 @@
   (test-helper-assert "deviation" (feq 2.29 (array-get stats-a sp-stat-deviation)))
   (test-helper-assert "center" (feq 4.6 (array-get stats-a sp-stat-center)))
   (test-helper-assert "median" (feq 4.5 (array-get stats-a sp-stat-median)))
+  (test-helper-assert "complexity" (feq 1.0 (array-get stats-a sp-stat-complexity-width)))
   (status-require (sp-stat-samples as test-stats-a-size stat-types test-stats-stat-count stats-as))
   (test-helper-assert "samples mean" (feq 4.5 (array-get stats-as sp-stat-mean)))
   (test-helper-assert "samples deviation" (feq 2.29 (array-get stats-as sp-stat-deviation)))
   (test-helper-assert "samples center" (feq 4.6 (array-get stats-as sp-stat-center)))
   (test-helper-assert "samples median" (feq 4.5 (array-get stats-as sp-stat-median)))
+  (test-helper-assert "samples complexity" (feq 1.0 (array-get stats-as sp-stat-complexity-width)))
   (label exit status-return))
 
 (define (test-simple-mappings) status-t

@@ -92,9 +92,11 @@ define_sp_stat_range(sp_stat_times_range, sp_time_t)
   if (sequence_set_new(size, (&known))) {
     return (1);
   };
-  for (key.size = 0; (key.size < (size + 1)); key.size += 1) {
+  max_ratio = 0;
+  max_ratio_width = 0;
+  for (key.size = 1; (key.size < size); key.size += 1) {
     count = 0;
-    for (i = 0; (i < (size - key.size)); i += 1) {
+    for (i = 0; (i < (size - (key.size - 1))); i += 1) {
       key.data = ((uint8_t*)((i + a)));
       value = sequence_set_get(known, key);
       if (!value) {
@@ -105,12 +107,17 @@ define_sp_stat_range(sp_stat_times_range, sp_time_t)
         };
       };
     };
-    ratio = (count / ((sp_sample_t)((size - key.size))));
-    if (ratio >= max_ratio) {
+    /* one pattern per width is always unique, exclude because only repetition is counted */
+    ratio = ((count - 1) / ((sp_sample_t)((size - (key.size - 1)))));
+    if (ratio > max_ratio) {
       max_ratio = ratio;
       max_ratio_width = key.size;
     };
     sequence_set_clear(known);
+  };
+  if (!max_ratio_width) {
+    max_ratio = 1;
+    max_ratio_width = size;
   };
   out[0] = max_ratio;
   out[1] = max_ratio_width;
