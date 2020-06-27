@@ -567,13 +567,20 @@ exit:
 status_t test_stats() {
   status_declare;
   sp_time_t a[test_stats_a_size] = { 1, 2, 3, 4, 5, 6, 7, 8 };
+  sp_sample_t as[test_stats_a_size] = { 1, 2, 3, 4, 5, 6, 7, 8 };
   sp_stat_type_t stat_types[test_stats_stat_count] = { sp_stat_center, sp_stat_complexity, sp_stat_deviation, sp_stat_mean, sp_stat_median, sp_stat_range };
-  sp_sample_t stats[sp_stat_types_count];
-  status_require((sp_stat_times(a, test_stats_a_size, stat_types, test_stats_stat_count, stats)));
-  test_helper_assert("mean", (feq((4.5), (stats[sp_stat_mean]))));
-  test_helper_assert("deviation", (feq((2.29), (stats[sp_stat_deviation]))));
-  test_helper_assert("center", (feq((4.6), (stats[sp_stat_center]))));
-  test_helper_assert("median", (feq((4.5), (stats[sp_stat_median]))));
+  sp_sample_t stats_a[sp_stat_types_count];
+  sp_sample_t stats_as[sp_stat_types_count];
+  status_require((sp_stat_times(a, test_stats_a_size, stat_types, test_stats_stat_count, stats_a)));
+  test_helper_assert("mean", (feq((4.5), (stats_a[sp_stat_mean]))));
+  test_helper_assert("deviation", (feq((2.29), (stats_a[sp_stat_deviation]))));
+  test_helper_assert("center", (feq((4.6), (stats_a[sp_stat_center]))));
+  test_helper_assert("median", (feq((4.5), (stats_a[sp_stat_median]))));
+  status_require((sp_stat_samples(as, test_stats_a_size, stat_types, test_stats_stat_count, stats_as)));
+  test_helper_assert("samples mean", (feq((4.5), (stats_as[sp_stat_mean]))));
+  test_helper_assert("samples deviation", (feq((2.29), (stats_as[sp_stat_deviation]))));
+  test_helper_assert("samples center", (feq((4.6), (stats_as[sp_stat_center]))));
+  test_helper_assert("samples median", (feq((4.5), (stats_as[sp_stat_median]))));
 exit:
   status_return;
 }

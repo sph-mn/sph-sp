@@ -69,7 +69,7 @@ void sp_samples_set_unity_gain(sp_sample_t* in, sp_time_t in_size, sp_sample_t* 
     ((value_t*)(a))[b] = ((value_t*)(a))[c]; \
     ((value_t*)(a))[c] = d; \
   } \
-  uint8_t prefix##_sort_less_p(void* a, ssize_t b, ssize_t c) { return ((((value_t*)(a))[b] < ((value_t*)(a))[c])); }
+  uint8_t prefix##_sort_less(void* a, ssize_t b, ssize_t c) { return ((((value_t*)(a))[b] < ((value_t*)(a))[c])); }
 /** functions that work on sp-samples-t and sp-times-t */
 #define define_array_functions(prefix, value_t) \
   /** a/out can not be the same pointer */ \

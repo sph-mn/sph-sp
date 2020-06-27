@@ -552,15 +552,22 @@
   status-declare
   (declare
     a (array sp-time-t test-stats-a-size 1 2 3 4 5 6 7 8)
+    as (array sp-sample-t test-stats-a-size 1 2 3 4 5 6 7 8)
     stat-types
     (array sp-stat-type-t test-stats-stat-count
       sp-stat-center sp-stat-complexity sp-stat-deviation sp-stat-mean sp-stat-median sp-stat-range)
-    stats (array sp-sample-t sp-stat-types-count))
-  (status-require (sp-stat-times a test-stats-a-size stat-types test-stats-stat-count stats))
-  (test-helper-assert "mean" (feq 4.5 (array-get stats sp-stat-mean)))
-  (test-helper-assert "deviation" (feq 2.29 (array-get stats sp-stat-deviation)))
-  (test-helper-assert "center" (feq 4.6 (array-get stats sp-stat-center)))
-  (test-helper-assert "median" (feq 4.5 (array-get stats sp-stat-median)))
+    stats-a (array sp-sample-t sp-stat-types-count)
+    stats-as (array sp-sample-t sp-stat-types-count))
+  (status-require (sp-stat-times a test-stats-a-size stat-types test-stats-stat-count stats-a))
+  (test-helper-assert "mean" (feq 4.5 (array-get stats-a sp-stat-mean)))
+  (test-helper-assert "deviation" (feq 2.29 (array-get stats-a sp-stat-deviation)))
+  (test-helper-assert "center" (feq 4.6 (array-get stats-a sp-stat-center)))
+  (test-helper-assert "median" (feq 4.5 (array-get stats-a sp-stat-median)))
+  (status-require (sp-stat-samples as test-stats-a-size stat-types test-stats-stat-count stats-as))
+  (test-helper-assert "samples mean" (feq 4.5 (array-get stats-as sp-stat-mean)))
+  (test-helper-assert "samples deviation" (feq 2.29 (array-get stats-as sp-stat-deviation)))
+  (test-helper-assert "samples center" (feq 4.6 (array-get stats-as sp-stat-center)))
+  (test-helper-assert "samples median" (feq 4.5 (array-get stats-as sp-stat-median)))
   (label exit status-return))
 
 (define (test-simple-mappings) status-t

@@ -63,7 +63,7 @@
         d (array-get (convert-type a value-t*) b)
         (array-get (convert-type a value-t*) b) (array-get (convert-type a value-t*) c)
         (array-get (convert-type a value-t*) c) d))
-    (define ((pre-concat prefix _sort-less?) a b c) (uint8-t void* ssize-t ssize-t)
+    (define ((pre-concat prefix _sort-less) a b c) (uint8-t void* ssize-t ssize-t)
       (return (< (array-get (convert-type a value-t*) b) (array-get (convert-type a value-t*) c)))))
   (define-array-functions prefix value-t)
   (begin

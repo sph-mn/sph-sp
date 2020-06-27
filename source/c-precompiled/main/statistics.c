@@ -40,6 +40,18 @@
     *out = sqrt((sum / size)); \
     return (0); \
   }
+#define define_sp_stat_median(name, sort_less, sort_swap, value_t) \
+  uint8_t name(value_t* a, sp_time_t size, sp_sample_t* out) { \
+    value_t* temp; \
+    temp = malloc((size * sizeof(value_t))); \
+    if (!temp) { \
+      return (1); \
+    }; \
+    memcpy(temp, a, (size * sizeof(value_t))); \
+    quicksort(sort_less, sort_swap, temp, 0, (size - 1)); \
+    *out = ((size & 1) ? temp[((size / 2) - 1)] : ((temp[(size / 2)] + temp[((size / 2) - 1)]) / 2.0)); \
+    return (0); \
+  }
 #define define_sp_stat(name, f_array, value_t) \
   /** write to out the statistics requested with sp-stat-type-t indices in stats. \
        out size is expected to be at least sp-stat-types-count */ \
@@ -67,7 +79,8 @@ uint8_t sp_stat_times_center(sp_time_t* a, sp_time_t size, sp_sample_t* out) {
   *out = (index_sum / ((sp_sample_t)(sum)));
   return (0);
 }
-uint8_t sp_stat_times_complexity(sp_time_t* a, sp_time_t size, sp_sample_t* out) {
+define_sp_stat_range(sp_stat_times_range, sp_time_t)
+  uint8_t sp_stat_times_complexity(sp_time_t* a, sp_time_t size, sp_sample_t* out) {
   sequence_set_t known;
   sequence_set_key_t key;
   sp_sample_t max_ratio;
@@ -115,19 +128,8 @@ uint8_t sp_stat_times_mean(sp_time_t* a, sp_time_t size, sp_sample_t* out) {
   return (0);
 }
 define_sp_stat_deviation(sp_stat_times_deviation, sp_stat_times_mean, sp_time_t)
-  uint8_t sp_stat_times_median(sp_time_t* a, sp_time_t size, sp_sample_t* out) {
-  sp_time_t* temp;
-  temp = malloc((size * sizeof(sp_time_t)));
-  if (!temp) {
-    return (1);
-  };
-  memcpy(temp, a, (size * sizeof(sp_time_t)));
-  quicksort(sp_times_sort_less_p, sp_times_sort_swap, temp, 0, (size - 1));
-  *out = ((size & 1) ? temp[((size / 2) - 1)] : ((temp[(size / 2)] + temp[((size / 2) - 1)]) / 2.0));
-  return (0);
-}
-define_sp_stat_range(sp_stat_times_range, sp_time_t)
-  uint8_t sp_stat_samples_center(sp_sample_t* a, sp_time_t size, sp_sample_t* out) {
+  define_sp_stat_median(sp_stat_times_median, sp_times_sort_less, sp_times_sort_swap, sp_time_t)
+    uint8_t sp_stat_samples_center(sp_sample_t* a, sp_time_t size, sp_sample_t* out) {
   sp_time_t i;
   sp_sample_t sum;
   sp_sample_t index_sum;
@@ -168,17 +170,7 @@ uint8_t sp_stat_samples_mean(sp_sample_t* a, sp_time_t size, sp_sample_t* out) {
   return (0);
 }
 define_sp_stat_deviation(sp_stat_samples_deviation, sp_stat_samples_mean, sp_sample_t)
-  uint8_t sp_stat_samples_median(sp_sample_t* a, sp_time_t size, sp_sample_t* out) {
-  sp_time_t* temp;
-  temp = malloc((size * sizeof(sp_sample_t)));
-  if (!temp) {
-    return (1);
-  };
-  memcpy(temp, a, (size * sizeof(sp_sample_t)));
-  quicksort(sp_samples_sort_less_p, sp_samples_sort_swap, temp, 0, (size - 1));
-  *out = ((temp[(size / 2)] + temp[((size / 2) - 1)]) / 2);
-  return (0);
-}
-/* f-array maps sp-stat-type-t indices to the functions that calculate the corresponding values */
-define_sp_stat(sp_stat_times, sp_stat_times_f_array, sp_time_t)
-  define_sp_stat(sp_stat_samples, sp_stat_samples_f_array, sp_sample_t)
+  define_sp_stat_median(sp_stat_samples_median, sp_samples_sort_less, sp_samples_sort_swap, sp_sample_t)
+  /* f-array maps sp-stat-type-t indices to the functions that calculate the corresponding values */
+  define_sp_stat(sp_stat_times, sp_stat_times_f_array, sp_time_t)
+    define_sp_stat(sp_stat_samples, sp_stat_samples_f_array, sp_sample_t)

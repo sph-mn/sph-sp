@@ -35,6 +35,17 @@
     (for-i i size (set dev (- (array-get a i) mean) sum (+ sum (* dev dev))))
     (set *out (sqrt (/ sum size)))
     (return 0))
+  (define-sp-stat-median name sort-less sort-swap value-t)
+  (define (name a size out) (uint8-t value-t* sp-time-t sp-sample-t*)
+    (declare temp value-t*)
+    (set temp (malloc (* size (sizeof value-t))))
+    (if (not temp) (return 1))
+    (memcpy temp a (* size (sizeof value-t)))
+    (quicksort sort-less sort-swap temp 0 (- size 1))
+    (set *out
+      (if* (bit-and size 1) (array-get temp (- (/ size 2) 1))
+        (/ (+ (array-get temp (/ size 2)) (array-get temp (- (/ size 2) 1))) 2.0)))
+    (return 0))
   (define-sp-stat name f-array value-t)
   (define (name a a-size stats size out)
     (status-t value-t* sp-time-t sp-stat-type-t* sp-time-t sp-sample-t*)
@@ -53,6 +64,8 @@
   (set index-sum 0 sum (array-get a 0))
   (for-i i size (set+ sum (array-get a i) index-sum (* i (array-get a i))))
   (set *out (/ index-sum (convert-type sum sp-sample-t))) (return 0))
+
+(define-sp-stat-range sp-stat-times-range sp-time-t)
 
 (define-sp-stat-times sp-stat-times-complexity
   (declare
@@ -84,17 +97,7 @@
   (set *out (/ sum (convert-type size sp-sample-t))) (return 0))
 
 (define-sp-stat-deviation sp-stat-times-deviation sp-stat-times-mean sp-time-t)
-
-(define-sp-stat-times sp-stat-times-median (declare temp sp-time-t*)
-  (set temp (malloc (* size (sizeof sp-time-t)))) (if (not temp) (return 1))
-  (memcpy temp a (* size (sizeof sp-time-t)))
-  (quicksort sp-times-sort-less? sp-times-sort-swap temp 0 (- size 1))
-  (set *out
-    (if* (bit-and size 1) (array-get temp (- (/ size 2) 1))
-      (/ (+ (array-get temp (/ size 2)) (array-get temp (- (/ size 2) 1))) 2.0)))
-  (return 0))
-
-(define-sp-stat-range sp-stat-times-range sp-time-t)
+(define-sp-stat-median sp-stat-times-median sp-times-sort-less sp-times-sort-swap sp-time-t)
 
 (define-sp-stat-samples sp-stat-samples-center
   (declare i sp-time-t sum sp-sample-t index-sum sp-sample-t)
@@ -120,12 +123,7 @@
 
 (define-sp-stat-samples sp-stat-samples-mean (set *out (/ (sp-samples-sum a size) size)) (return 0))
 (define-sp-stat-deviation sp-stat-samples-deviation sp-stat-samples-mean sp-sample-t)
-
-(define-sp-stat-samples sp-stat-samples-median (declare temp sp-time-t*)
-  (set temp (malloc (* size (sizeof sp-sample-t)))) (if (not temp) (return 1))
-  (memcpy temp a (* size (sizeof sp-sample-t)))
-  (quicksort sp-samples-sort-less? sp-samples-sort-swap temp 0 (- size 1))
-  (set *out (/ (+ (array-get temp (/ size 2)) (array-get temp (- (/ size 2) 1))) 2)) (return 0))
+(define-sp-stat-median sp-stat-samples-median sp-samples-sort-less sp-samples-sort-swap sp-sample-t)
 
 (sc-comment
   "f-array maps sp-stat-type-t indices to the functions that calculate the corresponding values")

@@ -183,7 +183,7 @@ void sp_samples_multiply_1(sp_sample_t* a, sp_time_t size, sp_sample_t n, sp_sam
 void sp_samples_multiply(sp_sample_t* a, sp_time_t size, sp_sample_t* b, sp_sample_t* out);
 status_t sp_samples_new(sp_time_t size, sp_sample_t** out);
 void sp_samples_or(sp_sample_t* a, sp_sample_t* b, sp_time_t size, sp_sample_t limit, sp_sample_t* out);
-uint8_t sp_samples_sort_less_p(void* a, ssize_t b, ssize_t c);
+uint8_t sp_samples_sort_less(void* a, ssize_t b, ssize_t c);
 void sp_samples_sort_swap(void* a, ssize_t b, ssize_t c);
 void sp_samples_reverse(sp_sample_t* a, sp_time_t size, sp_sample_t* out);
 void sp_samples_set_unity_gain(sp_sample_t* in, sp_time_t in_size, sp_sample_t* out);
@@ -211,7 +211,7 @@ status_t sp_times_new(sp_time_t size, sp_time_t** out);
 void sp_times_or(sp_time_t* a, sp_time_t* b, sp_time_t size, sp_time_t limit, sp_time_t* out);
 void sp_times_set_1(sp_time_t* a, sp_time_t size, sp_time_t n, sp_time_t* out);
 void sp_samples_set_1(sp_sample_t* a, sp_time_t size, sp_sample_t n, sp_sample_t* out);
-uint8_t sp_times_sort_less_p(void* a, ssize_t b, ssize_t c);
+uint8_t sp_times_sort_less(void* a, ssize_t b, ssize_t c);
 void sp_times_sort_swap(void* a, ssize_t b, ssize_t c);
 void sp_times_reverse(sp_time_t* a, sp_time_t size, sp_time_t* out);
 void sp_times_square(sp_time_t* a, sp_time_t size, sp_time_t* out);
