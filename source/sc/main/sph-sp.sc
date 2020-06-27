@@ -230,7 +230,7 @@
   sp-stat-type-t
   (type
     (enum
-      (sp-stat-center sp-stat-complexity sp-stat-complexity-width
+      ((sp-stat-center 0u) sp-stat-complexity sp-stat-complexity-width
         sp-stat-deviation sp-stat-mean sp-stat-median
         sp-stat-range sp-stat-range-min sp-stat-range-max)))
   sp-stat-times-f-t (type (function-pointer uint8-t sp-time-t* sp-time-t sp-sample-t*))

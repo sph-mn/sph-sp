@@ -239,7 +239,7 @@ status_t sp_times_constant(sp_time_t a, sp_time_t size, sp_time_t** out);
 uint64_t sp_u64_from_array(uint8_t* a, sp_time_t size);
 /* statistics */
 #define sp_stat_types_count (1 + (sp_stat_range_max - sp_stat_center))
-typedef enum { sp_stat_center,
+typedef enum { sp_stat_center = 0u,
   sp_stat_complexity,
   sp_stat_complexity_width,
   sp_stat_deviation,

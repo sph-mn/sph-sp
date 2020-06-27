@@ -546,21 +546,19 @@
   (sp-times-extract-random &s a size b &b-size)
   (label exit (free a-temp) status-return))
 
+(pre-define test-stats-a-size 8 test-stats-stat-count 6)
+
 (define (test-stats) status-t
   status-declare
   (declare
-    size sp-time-t
-    a-temp sp-time-t*
-    a (array sp-time-t 8 1 2 3 4 5 6 7 8)
-    b (array sp-time-t 8 0 0 0 0 0 0 0 0)
-    b-size sp-time-t
+    a (array sp-time-t test-stats-a-size 1 2 3 4 5 6 7 8)
     stat-types
-    (array sp-stat-type-t 6
+    (array sp-stat-type-t test-stats-stat-count
       sp-stat-center sp-stat-complexity sp-stat-deviation sp-stat-mean sp-stat-median sp-stat-range)
-    stats (array sp-sample-t 6 0 0 0 0 0 0))
-  (status-require (sp-stat-times a size stat-types 6 stats))
+    stats (array sp-sample-t sp-stat-types-count))
+  (status-require (sp-stat-times a test-stats-a-size stat-types test-stats-stat-count stats))
   (test-helper-assert "mean" (feq 4.5 (array-get stats sp-stat-mean)))
-  (test-helper-assert "deviation" (feq 5.5 (array-get stats sp-stat-deviation)))
+  (test-helper-assert "deviation" (feq 2.29 (array-get stats sp-stat-deviation)))
   (test-helper-assert "center" (feq 4.6 (array-get stats sp-stat-center)))
   (test-helper-assert "median" (feq 4.5 (array-get stats sp-stat-median)))
   (label exit status-return))
@@ -670,7 +668,6 @@
   (set rs (sp-random-state-new 3))
   (sp-initialise 3 _rate)
   (test-helper-test-one test-stats)
-  (goto exit)
   (test-helper-test-one test-render-block)
   (test-helper-test-one test-wave-event)
   (test-helper-test-one test-wave)

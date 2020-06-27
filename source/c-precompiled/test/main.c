@@ -562,18 +562,16 @@ exit:
   free(a_temp);
   status_return;
 }
+#define test_stats_a_size 8
+#define test_stats_stat_count 6
 status_t test_stats() {
   status_declare;
-  sp_time_t size;
-  sp_time_t* a_temp;
-  sp_time_t a[8] = { 1, 2, 3, 4, 5, 6, 7, 8 };
-  sp_time_t b[8] = { 0, 0, 0, 0, 0, 0, 0, 0 };
-  sp_time_t b_size;
-  sp_stat_type_t stat_types[6] = { sp_stat_center, sp_stat_complexity, sp_stat_deviation, sp_stat_mean, sp_stat_median, sp_stat_range };
-  sp_sample_t stats[6] = { 0, 0, 0, 0, 0, 0 };
-  status_require((sp_stat_times(a, size, stat_types, 6, stats)));
+  sp_time_t a[test_stats_a_size] = { 1, 2, 3, 4, 5, 6, 7, 8 };
+  sp_stat_type_t stat_types[test_stats_stat_count] = { sp_stat_center, sp_stat_complexity, sp_stat_deviation, sp_stat_mean, sp_stat_median, sp_stat_range };
+  sp_sample_t stats[sp_stat_types_count];
+  status_require((sp_stat_times(a, test_stats_a_size, stat_types, test_stats_stat_count, stats)));
   test_helper_assert("mean", (feq((4.5), (stats[sp_stat_mean]))));
-  test_helper_assert("deviation", (feq((5.5), (stats[sp_stat_deviation]))));
+  test_helper_assert("deviation", (feq((2.29), (stats[sp_stat_deviation]))));
   test_helper_assert("center", (feq((4.6), (stats[sp_stat_center]))));
   test_helper_assert("median", (feq((4.5), (stats[sp_stat_median]))));
 exit:
@@ -702,7 +700,6 @@ int main() {
   rs = sp_random_state_new(3);
   sp_initialise(3, _rate);
   test_helper_test_one(test_stats);
-  goto exit;
   test_helper_test_one(test_render_block);
   test_helper_test_one(test_wave_event);
   test_helper_test_one(test_wave);

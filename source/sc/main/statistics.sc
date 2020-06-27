@@ -1,4 +1,7 @@
-(sc-comment "deviation: standard deviation. complexity: count of unique subsequences")
+(sc-comment
+  "calculate statistics for arrays, with the statistics to calculate being selected by an array of identifiers.
+   deviation: standard deviation
+   complexity: subsequence width with the highest proportion of equal-size unique subsequences")
 
 (sc-define-syntax (for-i index limit body ...)
   (for ((set index 0) (< index limit) (set+ index 1)) body ...))
@@ -24,6 +27,14 @@
     (for-i i size (set b (array-get a i)) (if (> b max) (set max b) (if (< b min) (set min b))))
     (set (array-get out 0) min (array-get out 1) max (array-get out 2) (- max min))
     (return 0))
+  (define-sp-stat-deviation name stat-mean value-t)
+  (define (name a size out) (uint8-t value-t* sp-time-t sp-sample-t*)
+    (declare i sp-time-t sum sp-sample-t dev sp-sample-t mean sp-sample-t)
+    (stat-mean a size &mean)
+    (set sum 0)
+    (for-i i size (set dev (- (array-get a i) mean) sum (+ sum (* dev dev))))
+    (set *out (sqrt (/ sum size)))
+    (return 0))
   (define-sp-stat name f-array value-t)
   (define (name a a-size stats size out)
     (status-t value-t* sp-time-t sp-stat-type-t* sp-time-t sp-sample-t*)
@@ -42,10 +53,6 @@
   (set index-sum 0 sum (array-get a 0))
   (for-i i size (set+ sum (array-get a i) index-sum (* i (array-get a i))))
   (set *out (/ index-sum (convert-type sum sp-sample-t))) (return 0))
-
-(sc-comment
-  "sp-stat-times-complexity returns the subsequence width with the highest proportion of unique sequences and the ratio (unique-count / possible).
-   out: complexity-ratio, complexity-ratio-width")
 
 (define-sp-stat-times sp-stat-times-complexity
   (declare
@@ -76,11 +83,7 @@
   (set sum 0) (for-i i size (set+ sum (array-get a i)))
   (set *out (/ sum (convert-type size sp-sample-t))) (return 0))
 
-(define-sp-stat-times sp-stat-times-deviation
-  (declare i sp-time-t sum sp-time-t dev sp-time-t mean sp-sample-t)
-  (sp-stat-times-mean a size &mean) (set sum 0)
-  (for-i i size (set dev (absolute-difference mean (array-get a i)) sum (+ sum (* dev dev))))
-  (set *out (/ sum (convert-type size sp-sample-t))) (return 0))
+(define-sp-stat-deviation sp-stat-times-deviation sp-stat-times-mean sp-time-t)
 
 (define-sp-stat-times sp-stat-times-median (declare temp sp-time-t*)
   (set temp (malloc (* size (sizeof sp-time-t)))) (if (not temp) (return 1))
@@ -116,12 +119,7 @@
   (sp-stat-times-complexity b size out) (free b) (label exit (return status.id)))
 
 (define-sp-stat-samples sp-stat-samples-mean (set *out (/ (sp-samples-sum a size) size)) (return 0))
-
-(define-sp-stat-samples sp-stat-samples-deviation
-  (declare i sp-time-t sum sp-sample-t dev sp-sample-t mean sp-sample-t)
-  (sp-stat-samples-mean a size &mean) (set sum 0)
-  (for-i i size (set dev (- mean (array-get a i)) sum (+ sum (* dev dev)))) (set *out (/ sum size))
-  (return 0))
+(define-sp-stat-deviation sp-stat-samples-deviation sp-stat-samples-mean sp-sample-t)
 
 (define-sp-stat-samples sp-stat-samples-median (declare temp sp-time-t*)
   (set temp (malloc (* size (sizeof sp-sample-t)))) (if (not temp) (return 1))

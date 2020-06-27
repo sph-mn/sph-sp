@@ -1,4 +1,6 @@
-/* deviation: standard deviation. complexity: count of unique subsequences */
+/* calculate statistics for arrays, with the statistics to calculate being selected by an array of identifiers.
+   deviation: standard deviation
+   complexity: subsequence width with the highest proportion of equal-size unique subsequences */
 #define define_sp_stat_range(name, value_t) \
   /** out: min, max, range */ \
   uint8_t name(value_t* a, sp_time_t size, sp_sample_t* out) { \
@@ -21,6 +23,21 @@
     out[0] = min; \
     out[1] = max; \
     out[2] = (max - min); \
+    return (0); \
+  }
+#define define_sp_stat_deviation(name, stat_mean, value_t) \
+  uint8_t name(value_t* a, sp_time_t size, sp_sample_t* out) { \
+    sp_time_t i; \
+    sp_sample_t sum; \
+    sp_sample_t dev; \
+    sp_sample_t mean; \
+    stat_mean(a, size, (&mean)); \
+    sum = 0; \
+    for (i = 0; (i < size); i += 1) { \
+      dev = (a[i] - mean); \
+      sum = (sum + (dev * dev)); \
+    }; \
+    *out = sqrt((sum / size)); \
     return (0); \
   }
 #define define_sp_stat(name, f_array, value_t) \
@@ -50,8 +67,6 @@ uint8_t sp_stat_times_center(sp_time_t* a, sp_time_t size, sp_sample_t* out) {
   *out = (index_sum / ((sp_sample_t)(sum)));
   return (0);
 }
-/* sp-stat-times-complexity returns the subsequence width with the highest proportion of unique sequences and the ratio (unique-count / possible).
-   out: complexity-ratio, complexity-ratio-width */
 uint8_t sp_stat_times_complexity(sp_time_t* a, sp_time_t size, sp_sample_t* out) {
   sequence_set_t known;
   sequence_set_key_t key;
@@ -99,21 +114,8 @@ uint8_t sp_stat_times_mean(sp_time_t* a, sp_time_t size, sp_sample_t* out) {
   *out = (sum / ((sp_sample_t)(size)));
   return (0);
 }
-uint8_t sp_stat_times_deviation(sp_time_t* a, sp_time_t size, sp_sample_t* out) {
-  sp_time_t i;
-  sp_time_t sum;
-  sp_time_t dev;
-  sp_sample_t mean;
-  sp_stat_times_mean(a, size, (&mean));
-  sum = 0;
-  for (i = 0; (i < size); i += 1) {
-    dev = absolute_difference(mean, (a[i]));
-    sum = (sum + (dev * dev));
-  };
-  *out = (sum / ((sp_sample_t)(size)));
-  return (0);
-}
-uint8_t sp_stat_times_median(sp_time_t* a, sp_time_t size, sp_sample_t* out) {
+define_sp_stat_deviation(sp_stat_times_deviation, sp_stat_times_mean, sp_time_t)
+  uint8_t sp_stat_times_median(sp_time_t* a, sp_time_t size, sp_sample_t* out) {
   sp_time_t* temp;
   temp = malloc((size * sizeof(sp_time_t)));
   if (!temp) {
@@ -165,21 +167,8 @@ uint8_t sp_stat_samples_mean(sp_sample_t* a, sp_time_t size, sp_sample_t* out) {
   *out = (sp_samples_sum(a, size) / size);
   return (0);
 }
-uint8_t sp_stat_samples_deviation(sp_sample_t* a, sp_time_t size, sp_sample_t* out) {
-  sp_time_t i;
-  sp_sample_t sum;
-  sp_sample_t dev;
-  sp_sample_t mean;
-  sp_stat_samples_mean(a, size, (&mean));
-  sum = 0;
-  for (i = 0; (i < size); i += 1) {
-    dev = (mean - a[i]);
-    sum = (sum + (dev * dev));
-  };
-  *out = (sum / size);
-  return (0);
-}
-uint8_t sp_stat_samples_median(sp_sample_t* a, sp_time_t size, sp_sample_t* out) {
+define_sp_stat_deviation(sp_stat_samples_deviation, sp_stat_samples_mean, sp_sample_t)
+  uint8_t sp_stat_samples_median(sp_sample_t* a, sp_time_t size, sp_sample_t* out) {
   sp_time_t* temp;
   temp = malloc((size * sizeof(sp_sample_t)));
   if (!temp) {
