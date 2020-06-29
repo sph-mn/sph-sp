@@ -61,7 +61,7 @@ void sp_samples_set_unity_gain(sp_sample_t* in, sp_time_t in_size, sp_sample_t* 
 #define absolute_difference(a, b) ((a > b) ? (a - b) : (b - a))
 #define no_underflow_subtract(a, b) ((a > b) ? (a - b) : 0)
 #define no_zero_divide(a, b) ((0 == b) ? 0 : (a / b))
-/** functions that work on sp-sample-t and sp-time-t */
+/** functions that work on single sp-sample-t and sp-time-t */
 #define define_value_functions(prefix, value_t) \
   void prefix##_sort_swap(void* a, ssize_t b, ssize_t c) { \
     value_t d; \
@@ -70,7 +70,7 @@ void sp_samples_set_unity_gain(sp_sample_t* in, sp_time_t in_size, sp_sample_t* 
     ((value_t*)(a))[c] = d; \
   } \
   uint8_t prefix##_sort_less(void* a, ssize_t b, ssize_t c) { return ((((value_t*)(a))[b] < ((value_t*)(a))[c])); }
-/** functions that work on sp-samples-t and sp-times-t */
+/** functions that work on sp-sample-t* and sp-time-t* */
 #define define_array_functions(prefix, value_t) \
   /** a/out can not be the same pointer */ \
   void prefix##_reverse(value_t* a, sp_time_t size, value_t* out) { \
@@ -193,8 +193,8 @@ define_value_functions(sp_times, sp_time_t)
                                           define_array_combinator_1(sp_samples_set_1, sp_sample_t, n)
                                             define_array_combinator_1(sp_samples_multiply_1, sp_sample_t, (a[i] * n))
                                               define_array_combinator_1(sp_samples_divide_1, sp_sample_t, (a[i] / n))
-  /** if array stores larger types and the system is little-endian then
-   the lower value parts of the larger types are preferred */
+  /** lower value parts of large types are preferred if
+   the system byte order is as expected little-endian */
   uint64_t sp_u64_from_array(uint8_t* a, sp_time_t size) {
   if (1 == size) {
     return ((*a));
@@ -231,7 +231,8 @@ status_t sp_samples_copy(sp_sample_t* a, sp_time_t size, sp_sample_t** out) {
 exit:
   status_return;
 }
-/** size must be > 1 */
+/** write to out the differences between subsequent values of a.
+   size must be > 1 */
 void sp_samples_differences(sp_sample_t* a, sp_time_t size, sp_sample_t* out) {
   sp_time_t i;
   for (i = 1; (i < size); i += 1) {
@@ -266,7 +267,8 @@ void sp_times_cusum(sp_time_t* a, sp_time_t size, sp_time_t* out) {
     out[i] = sum;
   };
 }
-/** create random numbers with a given probability distribution */
+/** generate random integers in the range 0..(cudist-size - 1)
+   with probability distribution given via cudist, the cumulative sums of the distribution */
 void sp_times_random_discrete(sp_random_state_t* state, sp_time_t* cudist, sp_time_t cudist_size, sp_time_t count, sp_time_t* out) {
   sp_time_t deviate;
   sp_time_t sum;
@@ -283,36 +285,6 @@ void sp_times_random_discrete(sp_random_state_t* state, sp_time_t* cudist, sp_ti
       };
     };
   };
-}
-/** count unique subsequences */
-status_t sp_times_sequence_count(sp_time_t* a, sp_time_t size, sp_time_t min_width, sp_time_t max_width, sp_time_t step_width, sp_time_t* out) {
-  status_declare;
-  sp_time_t width;
-  sp_time_t i;
-  sequence_set_t known;
-  sequence_set_key_t key;
-  sequence_set_key_t* value;
-  sp_time_t result;
-  if (sequence_set_new(size, (&known))) {
-    sp_memory_error;
-  };
-  for (width = min_width, result = 0; (width <= max_width); width += step_width) {
-    key.size = width;
-    for (i = 0; (i <= (size - width)); i += 1) {
-      key.data = ((uint8_t*)((i + a)));
-      value = sequence_set_get(known, key);
-      if (!value) {
-        result += 1;
-        if (!sequence_set_add(known, key)) {
-          status_set_goto(sp_s_group_sp, sp_s_id_undefined);
-        };
-      };
-    };
-    sequence_set_clear(known);
-  };
-  *out = result;
-exit:
-  status_return;
 }
 void sp_times_swap(sp_time_t* a, ssize_t i1, ssize_t i2) {
   sp_time_t temp;
@@ -531,7 +503,8 @@ void sp_times_bits_to_times(sp_time_t* a, sp_time_t size, sp_time_t* out) {
     a_i += 1;
   };
 }
-/** https://en.wikipedia.org/wiki/Fisher%E2%80%93Yates_shuffle#The_modern_algorithm */
+/** modern yates shuffle.
+   https://en.wikipedia.org/wiki/Fisher%E2%80%93Yates_shuffle#The_modern_algorithm */
 void sp_times_shuffle(sp_random_state_t* state, sp_time_t* a, sp_time_t size) {
   sp_time_t i;
   sp_time_t j;

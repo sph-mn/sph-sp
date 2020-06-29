@@ -324,7 +324,7 @@
 (define
   (sp-filter in in-size cutoff-l cutoff-h transition-l transition-h is-reject out-state out-samples)
   (status-t sp-sample-t* sp-time-t sp-float-t sp-float-t sp-float-t sp-float-t boolean sp-filter-state-t** sp-sample-t*)
-  "the sph-sp default precise filter. processing intensive if parameters are change frequently.
+  "the sph-sp default precise filter. processing intensive if parameters change frequently.
    memory for out-state will be allocated and has to be freed with sp-filter-state-free"
   (sp-windowed-sinc-bp-br in in-size
     cutoff-l cutoff-h transition-l transition-h is-reject out-state out-samples))
@@ -353,7 +353,8 @@
 
 (define (sp-cheap-filter type in in-size cutoff passes q-factor unity-gain state out)
   (void sp-state-variable-filter-t sp-sample-t* sp-time-t sp-float-t sp-time-t sp-float-t uint8-t sp-cheap-filter-state-t* sp-sample-t*)
-  "the sph-sp default fast filter. caller has to manage the state object with sp-cheap-filter-state-new sp-cheap-filter-state-free"
+  "the sph-sp default fast filter. caller has to manage the state object with
+   sp-cheap-filter-state-new and sp-cheap-filter-state-free"
   status-declare
   (declare in-swap sp-sample-t* in-temp sp-sample-t* out-temp sp-sample-t*)
   (if (= 1 passes) (type out in in-size cutoff q-factor state:svf-state)

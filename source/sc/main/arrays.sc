@@ -56,7 +56,7 @@
   (no-zero-divide a b) (if* (= 0 b) 0 (/ a b))
   (define-value-functions prefix value-t)
   (begin
-    "functions that work on sp-sample-t and sp-time-t"
+    "functions that work on single sp-sample-t and sp-time-t"
     (define ((pre-concat prefix _sort-swap) a b c) (void void* ssize-t ssize-t)
       (declare d value-t)
       (set
@@ -67,7 +67,7 @@
       (return (< (array-get (convert-type a value-t*) b) (array-get (convert-type a value-t*) c)))))
   (define-array-functions prefix value-t)
   (begin
-    "functions that work on sp-samples-t and sp-times-t"
+    "functions that work on sp-sample-t* and sp-time-t*"
     (define ((pre-concat prefix _reverse) a size out) (void value-t* sp-time-t value-t*)
       "a/out can not be the same pointer"
       (declare i sp-time-t)
@@ -154,8 +154,8 @@
 (define-array-combinator-1 sp-samples-divide-1 sp-sample-t (/ (array-get a i) n))
 
 (define (sp-u64-from-array a size) (uint64-t uint8-t* sp-time-t)
-  "if array stores larger types and the system is little-endian then
-   the lower value parts of the larger types are preferred"
+  "lower value parts of large types are preferred if
+   the system byte order is as expected little-endian"
   (case = size
     (1 (return *a))
     (2 (return (pointer-get (convert-type a uint16-t*))))
@@ -199,7 +199,8 @@
   (label exit status-return))
 
 (define (sp-samples-differences a size out) (void sp-sample-t* sp-time-t sp-sample-t*)
-  "size must be > 1"
+  "write to out the differences between subsequent values of a.
+   size must be > 1"
   (declare i sp-time-t)
   (for ((set i 1) (< i size) (set+ i 1))
     (set (array-get out (- i 1)) (- (array-get a i) (array-get a (- i 1))))))
@@ -228,7 +229,8 @@
 
 (define (sp-times-random-discrete state cudist cudist-size count out)
   (void sp-random-state-t* sp-time-t* sp-time-t sp-time-t sp-time-t*)
-  "create random numbers with a given probability distribution"
+  "generate random integers in the range 0..(cudist-size - 1)
+   with probability distribution given via cudist, the cumulative sums of the distribution"
   (declare deviate sp-time-t sum sp-time-t i sp-time-t i1 sp-time-t)
   (set sum (array-get cudist (- cudist-size 1)))
   (for ((set i 0) (< i count) (set+ i 1))
@@ -236,30 +238,6 @@
     (set deviate (modulo deviate sum))
     (for ((set i1 0) (< i1 cudist-size) (set+ i1 1))
       (if (< deviate (array-get cudist i1)) (begin (set (array-get out i) i1) break)))))
-
-(define (sp-times-sequence-count a size min-width max-width step-width out)
-  (status-t sp-time-t* sp-time-t sp-time-t sp-time-t sp-time-t sp-time-t*)
-  "count unique subsequences"
-  status-declare
-  (declare
-    width sp-time-t
-    i sp-time-t
-    known sequence-set-t
-    key sequence-set-key-t
-    value sequence-set-key-t*
-    result sp-time-t)
-  (if (sequence-set-new size &known) sp-memory-error)
-  (for ((set width min-width result 0) (<= width max-width) (set+ width step-width))
-    (set key.size width)
-    (for ((set i 0) (<= i (- size width)) (set+ i 1))
-      (set key.data (convert-type (+ i a) uint8-t*) value (sequence-set-get known key))
-      (if (not value)
-        (begin
-          (set+ result 1)
-          (if (not (sequence-set-add known key)) (status-set-goto sp-s-group-sp sp-s-id-undefined)))))
-    (sequence-set-clear known))
-  (set *out result)
-  (label exit status-return))
 
 (define (sp-times-swap a i1 i2) (void sp-time-t* ssize-t ssize-t)
   (declare temp sp-time-t)
@@ -412,7 +390,8 @@
     (set+ a-i 1)))
 
 (define (sp-times-shuffle state a size) (void sp-random-state-t* sp-time-t* sp-time-t)
-  "https://en.wikipedia.org/wiki/Fisher%E2%80%93Yates_shuffle#The_modern_algorithm"
+  "modern yates shuffle.
+   https://en.wikipedia.org/wiki/Fisher%E2%80%93Yates_shuffle#The_modern_algorithm"
   (declare i sp-time-t j sp-time-t t sp-time-t)
   (for ((set i 0) (< i size) (set+ i 1))
     (set

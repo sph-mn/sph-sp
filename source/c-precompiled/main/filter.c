@@ -331,7 +331,7 @@ define_sp_state_variable_filter(lp, v2)
       define_sp_state_variable_filter(br, (v0 - (k * v1)))
         define_sp_state_variable_filter(peak, (((2 * v2) - v0) + (k * v1)))
           define_sp_state_variable_filter(all, (v0 - (2 * k * v1)))
-  /** the sph-sp default precise filter. processing intensive if parameters are change frequently.
+  /** the sph-sp default precise filter. processing intensive if parameters change frequently.
    memory for out-state will be allocated and has to be freed with sp-filter-state-free */
   status_t sp_filter(sp_sample_t* in, sp_time_t in_size, sp_float_t cutoff_l, sp_float_t cutoff_h, sp_float_t transition_l, sp_float_t transition_h, boolean is_reject, sp_filter_state_t** out_state, sp_sample_t* out_samples) { sp_windowed_sinc_bp_br(in, in_size, cutoff_l, cutoff_h, transition_l, transition_h, is_reject, out_state, out_samples); }
 status_t sp_cheap_filter_state_new(sp_time_t max_size, sp_time_t max_passes, sp_cheap_filter_state_t* out_state) {
@@ -361,7 +361,8 @@ void sp_cheap_filter_state_free(sp_cheap_filter_state_t* a) {
   free((a->in_temp));
   free((a->out_temp));
 }
-/** the sph-sp default fast filter. caller has to manage the state object with sp-cheap-filter-state-new sp-cheap-filter-state-free */
+/** the sph-sp default fast filter. caller has to manage the state object with
+   sp-cheap-filter-state-new and sp-cheap-filter-state-free */
 void sp_cheap_filter(sp_state_variable_filter_t type, sp_sample_t* in, sp_time_t in_size, sp_float_t cutoff, sp_time_t passes, sp_float_t q_factor, uint8_t unity_gain, sp_cheap_filter_state_t* state, sp_sample_t* out) {
   status_declare;
   sp_sample_t* in_swap;

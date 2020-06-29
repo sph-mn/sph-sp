@@ -93,7 +93,7 @@
     return (0); \
   }
 #define define_sp_stat_inharmonicity(name, value_t) \
-  /** n1: 0..n; n2 = 0..n; half_offset(x) = 0.5 >= x ? x : x - 1; \
+  /** n1: 0..n; n2: 0..n; half_offset(x) = 0.5 >= x ? x : x - 1; \
        min(map(n1, mean(map(n2, half_offset(x(n2) / x(n1)))))) */ \
   uint8_t name(value_t* a, sp_time_t size, sp_sample_t* out) { \
     sp_time_t i; \
@@ -136,6 +136,9 @@
     status_return; \
   }
 /* times */
+/** center of mass. the distribution of mass is balanced around the center of mass, and the average of
+   the weighted position coordinates of the distributed mass defines its coordinates.
+   sum(n * x(n)) / sum(x(n)) */
 uint8_t sp_stat_times_center(sp_time_t* a, sp_time_t size, sp_sample_t* out) {
   sp_time_t i;
   sp_time_t sum;
@@ -231,17 +234,19 @@ define_sp_stat_deviation(sp_stat_times_deviation, sp_stat_times_mean, sp_time_t)
 }
 define_sp_stat_range(sp_stat_samples_range, sp_sample_t)
   define_sp_stat_inharmonicity(sp_stat_times_inharmonicity, sp_time_t)
-  /** make all values positive then scale by multiplication so that the largest value is max
-   then round to integer */
+  /** map input samples into the time range 0..max.
+   makes all values positive by adding the absolute minimum
+   then scales with multiplication so that the largest value is max
+   then rounds to sp-time-t */
   void sp_samples_scale_to_times(sp_sample_t* a, sp_time_t size, sp_time_t max, sp_time_t* out) {
   sp_time_t i;
   sp_sample_t range[3];
   sp_sample_t addition;
-  /* returns range, min, max */
+  /* returns min, max, range */
   sp_stat_samples_range(a, size, range);
-  addition = ((0 > range[1]) ? fabs((range[1])) : 0);
+  addition = ((0 > range[0]) ? fabs((range[0])) : 0);
   for (i = 0; (i < size); i += 1) {
-    out[i] = sp_cheap_round_positive(((a[i] + addition) * (max / range[0])));
+    out[i] = sp_cheap_round_positive(((a[i] + addition) * (max / range[2])));
   };
 }
 uint8_t sp_stat_samples_complexity(sp_sample_t* a, sp_time_t size, sp_sample_t* out) {

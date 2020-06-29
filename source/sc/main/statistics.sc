@@ -62,7 +62,7 @@
     (return 0))
   (define-sp-stat-inharmonicity name value-t)
   (define (name a size out) (uint8-t value-t* sp-time-t sp-sample-t*)
-    "n1: 0..n; n2 = 0..n; half_offset(x) = 0.5 >= x ? x : x - 1;
+    "n1: 0..n; n2: 0..n; half_offset(x) = 0.5 >= x ? x : x - 1;
      min(map(n1, mean(map(n2, half_offset(x(n2) / x(n1))))))"
     (declare i sp-time-t i2 sp-time-t b sp-sample-t sum sp-sample-t min sp-sample-t)
     (set sum 0 min size)
@@ -96,10 +96,15 @@
 
 (sc-comment "times")
 
-(define-sp-stat-times sp-stat-times-center (declare i sp-time-t sum sp-time-t index-sum sp-time-t)
+(define (sp-stat-times-center a size out) (uint8-t sp-time-t* sp-time-t sp-sample-t*)
+  "center of mass. the distribution of mass is balanced around the center of mass, and the average of
+   the weighted position coordinates of the distributed mass defines its coordinates.
+   sum(n * x(n)) / sum(x(n))"
+  (declare i sp-time-t sum sp-time-t index-sum sp-time-t)
   (set index-sum 0 sum (array-get a 0))
   (for-i i size (set+ sum (array-get a i) index-sum (* i (array-get a i))))
-  (set *out (/ index-sum (convert-type sum sp-sample-t))) (return 0))
+  (set *out (/ index-sum (convert-type sum sp-sample-t)))
+  (return 0))
 
 (define-sp-stat-range sp-stat-times-range sp-time-t)
 
@@ -160,15 +165,17 @@
 (define-sp-stat-inharmonicity sp-stat-times-inharmonicity sp-time-t)
 
 (define (sp-samples-scale->times a size max out) (void sp-sample-t* sp-time-t sp-time-t sp-time-t*)
-  "make all values positive then scale by multiplication so that the largest value is max
-   then round to integer"
+  "map input samples into the time range 0..max.
+   makes all values positive by adding the absolute minimum
+   then scales with multiplication so that the largest value is max
+   then rounds to sp-time-t"
   (declare i sp-time-t range (array sp-sample-t 3) addition sp-sample-t)
-  (sc-comment "returns range, min, max")
+  (sc-comment "returns min, max, range")
   (sp-stat-samples-range a size range)
-  (set addition (if* (> 0 (array-get range 1)) (fabs (array-get range 1)) 0))
+  (set addition (if* (> 0 (array-get range 0)) (fabs (array-get range 0)) 0))
   (for-i i size
     (set (array-get out i)
-      (sp-cheap-round-positive (* (+ (array-get a i) addition) (/ max (array-get range 0)))))))
+      (sp-cheap-round-positive (* (+ (array-get a i) addition) (/ max (array-get range 2)))))))
 
 (define-sp-stat-samples sp-stat-samples-complexity (declare b sp-time-t*)
   status-declare (status-require (sp-times-new size &b)) (sp-samples-scale->times a size 1000 b)

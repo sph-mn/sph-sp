@@ -662,33 +662,6 @@ status_t test_random_discrete() {
 exit:
   status_return;
 }
-status_t test_sequence_count() {
-  status_declare;
-  sp_time_t a[4] = { 1, 2, 3, 3 };
-  sp_time_t size;
-  sp_time_t count;
-  sp_time_t i;
-  for (i = 1; (i <= 8); i = (1 + i)) {
-    test_helper_assert("u64-from-array", (u64_from_array_test(i)));
-  };
-  size = 4;
-  status_require((sp_times_sequence_count(a, size, 1, size, 1, (&count))));
-  test_helper_assert("sequence-count", (9 == count));
-  test_helper_assert("sequence-max 1", (0 == sp_sequence_max(0, 1)));
-  test_helper_assert("sequence-max 2", (1 == sp_sequence_max(1, 1)));
-  test_helper_assert("sequence-max 3", (3 == sp_sequence_max(2, 1)));
-  test_helper_assert("sequence-max 4", (6 == sp_sequence_max(3, 1)));
-  test_helper_assert("sequence-max 5", (1 == sp_sequence_max(3, 3)));
-  test_helper_assert("sequence-max 6", (1 == sp_sequence_max(2, 2)));
-  test_helper_assert("sequence-max 7", (3 == sp_sequence_max(2, 1)));
-  test_helper_assert("sequence-max 8", (6 == sp_sequence_max(3, 1)));
-  test_helper_assert("sequence-max 9", (10 == sp_sequence_max(4, 1)));
-  test_helper_assert("set-sequence-max 1", (0 == sp_set_sequence_max(0, 1)));
-  test_helper_assert("set-sequence-max 2", (1 == sp_set_sequence_max(1, 1)));
-  test_helper_assert("set-sequence-max 3", (16 == sp_set_sequence_max(2, 4)));
-exit:
-  status_return;
-}
 status_t test_compositions() {
   sp_time_t** out;
   sp_time_t out_size;
@@ -751,7 +724,6 @@ int main() {
   test_helper_test_one(test_times);
   test_helper_test_one(test_permutations);
   test_helper_test_one(test_compositions);
-  test_helper_test_one(test_sequence_count);
   test_helper_test_one(test_simple_mappings);
   test_helper_test_one(test_random_discrete);
 exit:

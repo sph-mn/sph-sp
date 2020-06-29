@@ -240,7 +240,6 @@ sp_times_permutations :: sp_time_t:size sp_time_t*:set sp_time_t:set_size sp_tim
 sp_times_random_binary :: sp_random_state_t*:state sp_time_t:size sp_time_t*:out -> status_t
 sp_times_random_discrete :: sp_random_state_t*:state sp_time_t*:cudist sp_time_t:cudist_size sp_time_t:count sp_time_t*:out -> void
 sp_times_reverse :: sp_time_t*:a sp_time_t:size sp_time_t*:out -> void
-sp_times_sequence_count :: sp_time_t*:a sp_time_t:size sp_time_t:min_width sp_time_t:max_width sp_time_t:step_width sp_time_t*:out -> status_t
 sp_times_sequence_increment_le :: sp_time_t*:a sp_time_t:size sp_time_t:set_size -> void
 sp_times_set_1 :: sp_time_t*:a sp_time_t:size sp_time_t:n sp_time_t*:out -> void
 sp_times_shuffle :: sp_random_state_t*:state sp_time_t*:a sp_time_t:size -> void

@@ -649,28 +649,6 @@
     (test-helper-assert "random-discrete" (or (= 1 (array-get a i)) (= 3 (array-get a i)))))
   (label exit status-return))
 
-(define (test-sequence-count) status-t
-  status-declare
-  (declare a (array sp-time-t 4 1 2 3 3) size sp-time-t count sp-time-t i sp-time-t)
-  (for ((set i 1) (<= i 8) (set i (+ 1 i)))
-    (test-helper-assert "u64-from-array" (u64-from-array-test i)))
-  (set size 4)
-  (status-require (sp-times-sequence-count a size 1 size 1 &count))
-  (test-helper-assert "sequence-count" (= 9 count))
-  (test-helper-assert "sequence-max 1" (= 0 (sp-sequence-max 0 1)))
-  (test-helper-assert "sequence-max 2" (= 1 (sp-sequence-max 1 1)))
-  (test-helper-assert "sequence-max 3" (= 3 (sp-sequence-max 2 1)))
-  (test-helper-assert "sequence-max 4" (= 6 (sp-sequence-max 3 1)))
-  (test-helper-assert "sequence-max 5" (= 1 (sp-sequence-max 3 3)))
-  (test-helper-assert "sequence-max 6" (= 1 (sp-sequence-max 2 2)))
-  (test-helper-assert "sequence-max 7" (= 3 (sp-sequence-max 2 1)))
-  (test-helper-assert "sequence-max 8" (= 6 (sp-sequence-max 3 1)))
-  (test-helper-assert "sequence-max 9" (= 10 (sp-sequence-max 4 1)))
-  (test-helper-assert "set-sequence-max 1" (= 0 (sp-set-sequence-max 0 1)))
-  (test-helper-assert "set-sequence-max 2" (= 1 (sp-set-sequence-max 1 1)))
-  (test-helper-assert "set-sequence-max 3" (= 16 (sp-set-sequence-max 2 4)))
-  (label exit status-return))
-
 (define (test-compositions) status-t
   (declare out sp-time-t** out-size sp-time-t out-sizes sp-time-t* i sp-time-t b sp-time-t*)
   status-declare
@@ -722,7 +700,6 @@
   (test-helper-test-one test-times)
   (test-helper-test-one test-permutations)
   (test-helper-test-one test-compositions)
-  (test-helper-test-one test-sequence-count)
   (test-helper-test-one test-simple-mappings)
   (test-helper-test-one test-random-discrete)
   (label exit (test-helper-display-summary) (return status.id)))

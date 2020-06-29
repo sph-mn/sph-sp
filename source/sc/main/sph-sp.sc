@@ -202,8 +202,6 @@
   (sp-times-cusum a size out) (void sp-time-t* sp-time-t sp-time-t*)
   (sp-times-random-discrete state cudist cudist-size count out)
   (void sp-random-state-t* sp-time-t* sp-time-t sp-time-t sp-time-t*)
-  (sp-times-sequence-count a size min-width max-width step-width out)
-  (status-t sp-time-t* sp-time-t sp-time-t sp-time-t sp-time-t sp-time-t*)
   (sp-times-swap a i1 i2) (void sp-time-t* ssize-t ssize-t)
   (sp-times-sequence-increment-le a size set-size) (void sp-time-t* sp-time-t sp-time-t)
   (sp-times-compositions sum out out-size out-sizes)
