@@ -224,15 +224,16 @@
   (sp-u64-from-array a size) (uint64-t uint8-t* sp-time-t))
 
 (sc-comment "statistics")
-(pre-define sp-stat-types-count (+ 1 (- sp-stat-range-max sp-stat-center)))
+(pre-define sp-stat-types-count (+ 1 (- sp-stat-skewness sp-stat-center)))
 
 (declare
   sp-stat-type-t
   (type
     (enum
-      ((sp-stat-center 0u) sp-stat-complexity sp-stat-complexity-width
-        sp-stat-deviation sp-stat-mean sp-stat-median
-        sp-stat-range sp-stat-range-min sp-stat-range-max)))
+      ( (sp-stat-center 0u) sp-stat-complexity sp-stat-complexity-width
+        sp-stat-deviation sp-stat-inharmonicity sp-stat-kurtosis
+        sp-stat-mean sp-stat-median sp-stat-range
+        sp-stat-range-min sp-stat-range-max sp-stat-skewness)))
   sp-stat-times-f-t (type (function-pointer uint8-t sp-time-t* sp-time-t sp-sample-t*))
   sp-stat-samples-f-t (type (function-pointer uint8-t sp-sample-t* sp-time-t sp-sample-t*))
   sp-stat2-times-f-t (type (function-pointer uint8-t sp-time-t* sp-time-t* sp-time-t sp-sample-t*))
@@ -243,27 +244,35 @@
   (sp-stat-samples a a-size stats size out)
   (status-t sp-sample-t* sp-time-t sp-stat-type-t* sp-time-t sp-sample-t*)
   (sp-stat-times-range a size out) (uint8-t sp-time-t* sp-time-t sp-sample-t*)
-  (sp-stat-samples-range a size out) (uint8-t sp-sample-t* sp-time-t sp-sample-t*)
   (sp-stat-times-complexity a size out) (uint8-t sp-time-t* sp-time-t sp-sample-t*)
   (sp-stat-times-mean a size out) (uint8-t sp-time-t* sp-time-t sp-sample-t*)
   (sp-stat-times-deviation a size out) (uint8-t sp-time-t* sp-time-t sp-sample-t*)
   (sp-stat-times-median a size out) (uint8-t sp-time-t* sp-time-t sp-sample-t*)
   (sp-stat-times-center a size out) (uint8-t sp-time-t* sp-time-t sp-sample-t*)
+  (sp-stat-times-inharmonicity a size out) (uint8-t sp-time-t* sp-time-t sp-sample-t*)
+  (sp-stat-times-kurtosis a size out) (uint8-t sp-time-t* sp-time-t sp-sample-t*)
+  (sp-stat-times-skewness a size out) (uint8-t sp-time-t* sp-time-t sp-sample-t*)
   (sp-stat-samples-complexity a size out) (uint8-t sp-sample-t* sp-time-t sp-sample-t*)
   (sp-stat-samples-mean a size out) (uint8-t sp-sample-t* sp-time-t sp-sample-t*)
   (sp-stat-samples-deviation a size out) (uint8-t sp-sample-t* sp-time-t sp-sample-t*)
+  (sp-stat-samples-inharmonicity a size out) (uint8-t sp-sample-t* sp-time-t sp-sample-t*)
   (sp-stat-samples-median a size out) (uint8-t sp-sample-t* sp-time-t sp-sample-t*)
   (sp-stat-samples-center a size out) (uint8-t sp-sample-t* sp-time-t sp-sample-t*)
+  (sp-stat-samples-range a size out) (uint8-t sp-sample-t* sp-time-t sp-sample-t*)
+  (sp-stat-samples-kurtosis a size out) (uint8-t sp-sample-t* sp-time-t sp-sample-t*)
+  (sp-stat-samples-skewness a size out) (uint8-t sp-sample-t* sp-time-t sp-sample-t*)
   sp-stat-times-f-array
   (array sp-stat-times-f-t sp-stat-types-count
     sp-stat-times-center sp-stat-times-complexity sp-stat-times-complexity
-    sp-stat-times-deviation sp-stat-times-mean sp-stat-times-median
-    sp-stat-times-range sp-stat-times-range sp-stat-times-range)
+    sp-stat-times-deviation sp-stat-times-inharmonicity sp-stat-times-kurtosis
+    sp-stat-times-mean sp-stat-times-median sp-stat-times-range
+    sp-stat-times-range sp-stat-times-range sp-stat-times-skewness)
   sp-stat-samples-f-array
   (array sp-stat-samples-f-t sp-stat-types-count
     sp-stat-samples-center sp-stat-samples-complexity sp-stat-samples-complexity
-    sp-stat-samples-deviation sp-stat-samples-mean sp-stat-samples-median
-    sp-stat-samples-range sp-stat-samples-range sp-stat-samples-range)
+    sp-stat-samples-deviation sp-stat-samples-inharmonicity sp-stat-samples-kurtosis
+    sp-stat-samples-mean sp-stat-samples-median sp-stat-samples-range
+    sp-stat-samples-range sp-stat-samples-range sp-stat-samples-skewness)
   (sp-samples-scale->times a size max out) (void sp-sample-t* sp-time-t sp-time-t sp-time-t*))
 
 (sc-comment "filter")

@@ -35,6 +35,24 @@
     (for-i i size (set dev (- (array-get a i) mean) sum (+ sum (* dev dev))))
     (set *out (sqrt (/ sum size)))
     (return 0))
+  (define-sp-stat-skewness name stat-mean value-t)
+  (define (name a size out) (uint8-t value-t* sp-time-t sp-sample-t*)
+    "mean((x - mean(data)) ** 3) / (mean((x - mean(data)) ** 2) ** 3/2)"
+    (declare i sp-time-t mean sp-sample-t m3 sp-sample-t m2 sp-sample-t b sp-sample-t)
+    (set m2 0 m3 0)
+    (stat-mean a size &mean)
+    (for-i i size (set b (- (array-get a i) mean) m2 (+ m2 (* b b)) m3 (+ m3 (* b b b))))
+    (set m3 (/ m3 size) m2 (/ m2 size) *out (/ m3 (sqrt (* m2 m2 m2))))
+    (return 0))
+  (define-sp-stat-kurtosis name stat-mean value-t)
+  (define (name a size out) (uint8-t value-t* sp-time-t sp-sample-t*)
+    "mean((x - mean(data)) ** 4) / (mean((x - mean(data)) ** 2) ** 2)"
+    (declare b sp-sample-t i sp-time-t mean sp-sample-t m2 sp-sample-t m4 sp-sample-t)
+    (set m2 0 m4 0)
+    (stat-mean a size &mean)
+    (for-i i size (set b (- (array-get a i) mean) m2 (+ m2 (* b b)) m4 (+ m4 (* b b b b))))
+    (set m4 (/ m4 size) m2 (/ m2 size) *out (/ m4 (* m2 m2)))
+    (return 0))
   (define-sp-stat-median name sort-less sort-swap value-t)
   (define (name a size out) (uint8-t value-t* sp-time-t sp-sample-t*)
     (declare temp value-t*)
@@ -45,6 +63,24 @@
     (set *out
       (if* (bit-and size 1) (array-get temp (- (/ size 2) 1))
         (/ (+ (array-get temp (/ size 2)) (array-get temp (- (/ size 2) 1))) 2.0)))
+    (return 0))
+  (define-sp-stat-inharmonicity name value-t)
+  (define (name a size out) (uint8-t value-t* sp-time-t sp-sample-t*)
+    "n1: 0..n; n2 = 0..n; half_offset(x) = 0.5 >= x ? x : x - 1;
+     min(for(n1, mean(for(n2, half_offset(x(n2) / x(n1))))))"
+    (declare i sp-time-t i2 sp-time-t b sp-sample-t sum sp-sample-t min sp-sample-t)
+    (set sum 0 min size)
+    (for ((set i 0) (< i size) (set+ i 1))
+      (set sum 0)
+      (for-i i2 size
+        (set
+          b (/ (array-get a i2) (convert-type (array-get a i) sp-sample-t))
+          b (- b (sp-cheap-floor-positive b))
+          b (if* (>= 0.5 b) b (- 1 b))
+          sum (+ sum b)))
+      (set sum (/ sum size))
+      (if (< sum min) (set min sum)))
+    (set *out min)
     (return 0))
   (define-sp-stat name f-array value-t)
   (define (name a a-size stats size out)
@@ -58,7 +94,7 @@
         ((array-get f-array (array-get stats i)) a a-size (+ out (array-get stats i)))))
     (label exit status-return)))
 
-(sc-comment sp-stat-exponential sp-stat-harmonicity)
+(sc-comment "times")
 
 (define-sp-stat-times sp-stat-times-center (declare i sp-time-t sum sp-time-t index-sum sp-time-t)
   (set index-sum 0 sum (array-get a 0))
@@ -101,6 +137,9 @@
 
 (define-sp-stat-deviation sp-stat-times-deviation sp-stat-times-mean sp-time-t)
 (define-sp-stat-median sp-stat-times-median sp-times-sort-less sp-times-sort-swap sp-time-t)
+(define-sp-stat-skewness sp-stat-times-skewness sp-stat-times-mean sp-time-t)
+(define-sp-stat-kurtosis sp-stat-times-kurtosis sp-stat-times-mean sp-time-t)
+(sc-comment "samples")
 
 (define-sp-stat-samples sp-stat-samples-center
   (declare i sp-time-t sum sp-sample-t index-sum sp-sample-t)
@@ -108,6 +147,7 @@
   (set *out (/ index-sum sum)) (return 0))
 
 (define-sp-stat-range sp-stat-samples-range sp-sample-t)
+(define-sp-stat-inharmonicity sp-stat-times-inharmonicity sp-time-t)
 
 (define (sp-samples-scale->times a size max out) (void sp-sample-t* sp-time-t sp-time-t sp-time-t*)
   "make all values positive then scale by multiplication so that the largest value is max
@@ -127,6 +167,9 @@
 (define-sp-stat-samples sp-stat-samples-mean (set *out (/ (sp-samples-sum a size) size)) (return 0))
 (define-sp-stat-deviation sp-stat-samples-deviation sp-stat-samples-mean sp-sample-t)
 (define-sp-stat-median sp-stat-samples-median sp-samples-sort-less sp-samples-sort-swap sp-sample-t)
+(define-sp-stat-skewness sp-stat-samples-skewness sp-stat-samples-mean sp-sample-t)
+(define-sp-stat-kurtosis sp-stat-samples-kurtosis sp-stat-samples-mean sp-sample-t)
+(define-sp-stat-inharmonicity sp-stat-samples-inharmonicity sp-sample-t)
 
 (sc-comment
   "f-array maps sp-stat-type-t indices to the functions that calculate the corresponding values")

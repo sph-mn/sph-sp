@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/sh -e
 
 optimisation=0
 target_dir=temp
@@ -21,6 +21,6 @@ compile_test_sph_sp() {
   gcc "$c_sc/test/main.c" -o temp/test-libsph-sp -lsph-sp -lm $gcc_options_test
 }
 
-mkdir -p "$target_dir" &&
-compile_sph_sp &&
+mkdir -p "$target_dir"
+compile_sph_sp
 compile_test_sph_sp

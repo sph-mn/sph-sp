@@ -500,7 +500,7 @@
 (pre-define
   sp-sample-nearly-equal f64-nearly-equal
   sp-sample-array-nearly-equal f64-array-nearly-equal
-  (feq a b) (sp-sample-nearly-equal a b 0.1))
+  (feq a b) (sp-sample-nearly-equal a b 0.01))
 
 (declare rs sp-random-state-t)
 
@@ -546,30 +546,53 @@
   (sp-times-extract-random &s a size b &b-size)
   (label exit (free a-temp) status-return))
 
-(pre-define test-stats-a-size 8 test-stats-stat-count 6)
+(pre-define test-stats-a-size 8 test-stats-types-count (- sp-stat-types-count 3))
 
 (define (test-stats) status-t
   status-declare
   (declare
     a (array sp-time-t test-stats-a-size 1 2 3 4 5 6 7 8)
     as (array sp-sample-t test-stats-a-size 1 2 3 4 5 6 7 8)
+    inhar-1 (array sp-time-t test-stats-a-size 2 4 6 8 10 12 14 16)
+    inhar-2 (array sp-time-t test-stats-a-size 2 4 6 8 10 12 13 16)
+    inhar-3 (array sp-time-t test-stats-a-size 2 3 6 8 10 12 13 16)
+    inhar-results (array sp-sample-t 3)
     stat-types
-    (array sp-stat-type-t test-stats-stat-count
-      sp-stat-center sp-stat-complexity sp-stat-deviation sp-stat-mean sp-stat-median sp-stat-range)
+    (array sp-stat-type-t test-stats-types-count
+      sp-stat-center sp-stat-complexity sp-stat-deviation
+      sp-stat-inharmonicity sp-stat-kurtosis sp-stat-mean
+      sp-stat-median sp-stat-range sp-stat-skewness)
     stats-a (array sp-sample-t sp-stat-types-count)
     stats-as (array sp-sample-t sp-stat-types-count))
-  (status-require (sp-stat-times a test-stats-a-size stat-types test-stats-stat-count stats-a))
+  (status-require (sp-stat-times a test-stats-a-size stat-types test-stats-types-count stats-a))
   (test-helper-assert "mean" (feq 4.5 (array-get stats-a sp-stat-mean)))
   (test-helper-assert "deviation" (feq 2.29 (array-get stats-a sp-stat-deviation)))
-  (test-helper-assert "center" (feq 4.6 (array-get stats-a sp-stat-center)))
+  (test-helper-assert "center" (feq 4.54 (array-get stats-a sp-stat-center)))
   (test-helper-assert "median" (feq 4.5 (array-get stats-a sp-stat-median)))
   (test-helper-assert "complexity" (feq 1.0 (array-get stats-a sp-stat-complexity-width)))
-  (status-require (sp-stat-samples as test-stats-a-size stat-types test-stats-stat-count stats-as))
+  (test-helper-assert "skewness" (feq 0.0 (array-get stats-a sp-stat-skewness)))
+  (test-helper-assert "kurtosis" (feq 1.76 (array-get stats-a sp-stat-kurtosis)))
+  (status-require (sp-stat-samples as test-stats-a-size stat-types test-stats-types-count stats-as))
   (test-helper-assert "samples mean" (feq 4.5 (array-get stats-as sp-stat-mean)))
   (test-helper-assert "samples deviation" (feq 2.29 (array-get stats-as sp-stat-deviation)))
-  (test-helper-assert "samples center" (feq 4.6 (array-get stats-as sp-stat-center)))
+  (test-helper-assert "samples center" (feq 4.66 (array-get stats-as sp-stat-center)))
   (test-helper-assert "samples median" (feq 4.5 (array-get stats-as sp-stat-median)))
   (test-helper-assert "samples complexity" (feq 1.0 (array-get stats-as sp-stat-complexity-width)))
+  (test-helper-assert "samples skewness" (feq 0.0 (array-get stats-as sp-stat-skewness)))
+  (test-helper-assert "samples kurtosis" (feq 1.76 (array-get stats-as sp-stat-kurtosis)))
+  (sc-comment "inharmonicity")
+  (set (array-get stat-types 0) sp-stat-inharmonicity)
+  (status-require (sp-stat-times inhar-1 test-stats-a-size stat-types 1 stats-a))
+  (set (array-get inhar-results 0) (array-get stats-a sp-stat-inharmonicity))
+  (status-require (sp-stat-times inhar-2 test-stats-a-size stat-types 1 stats-a))
+  (set (array-get inhar-results 1) (array-get stats-a sp-stat-inharmonicity))
+  (status-require (sp-stat-times inhar-3 test-stats-a-size stat-types 1 stats-a))
+  (set (array-get inhar-results 2) (array-get stats-a sp-stat-inharmonicity))
+  (test-helper-assert "inharmonicity relations"
+    (< (array-get inhar-results 0) (array-get inhar-results 1) (array-get inhar-results 2)))
+  (test-helper-assert "inharmonicity 1" (feq 0.0 (array-get inhar-results 0)))
+  (test-helper-assert "inharmonicity 2" (feq 0.0625 (array-get inhar-results 1)))
+  (test-helper-assert "inharmonicity 3" (feq 0.125 (array-get inhar-results 2)))
   (label exit status-return))
 
 (define (test-simple-mappings) status-t

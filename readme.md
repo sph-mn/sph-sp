@@ -21,8 +21,8 @@ c code and shared library for sound synthesis and sequencing. the sound processo
   * event renderer for parallel processing with custom routines
   * events for filtered noise and synth output
   * event groups that compose for riffs and songs
-* array manipulation
-  * array arithmetic, shuffle, permutations, compositions, statistical functions and more
+* array processing
+  * arithmetic, shuffle, permutations, compositions, statistics such as median, deviation, skewness, inharmonicity and more
 
 # dependencies
 * run-time
@@ -168,7 +168,7 @@ sp_samples_scale_to_times :: sp_sample_t*:a sp_time_t:size sp_time_t:max sp_time
 sp_samples_scale_sum :: sp_sample_t*:a sp_time_t:size sp_sample_t:n sp_sample_t*:out -> void
 sp_samples_set_1 :: sp_sample_t*:a sp_time_t:size sp_sample_t:n sp_sample_t*:out -> void
 sp_samples_set_unity_gain :: sp_sample_t*:in sp_time_t:in_size sp_sample_t*:out -> void
-sp_samples_sort_less_p :: void*:a ssize_t:b ssize_t:c -> uint8_t
+sp_samples_sort_less :: void*:a ssize_t:b ssize_t:c -> uint8_t
 sp_samples_sort_swap :: void*:a ssize_t:b ssize_t:c -> void
 sp_samples_square :: sp_sample_t*:a sp_time_t:size sp_sample_t*:out -> void
 sp_samples_subtract :: sp_sample_t*:a sp_time_t:size sp_sample_t*:b sp_sample_t*:out -> void
@@ -189,16 +189,22 @@ sp_stat_samples :: sp_sample_t*:a sp_time_t:a_size sp_stat_type_t*:stats sp_time
 sp_stat_samples_center :: sp_sample_t*:a sp_time_t:size sp_sample_t*:out -> uint8_t
 sp_stat_samples_complexity :: sp_sample_t*:a sp_time_t:size sp_sample_t*:out -> uint8_t
 sp_stat_samples_deviation :: sp_sample_t*:a sp_time_t:size sp_sample_t*:out -> uint8_t
+sp_stat_samples_inharmonicity :: sp_sample_t*:a sp_time_t:size sp_sample_t*:out -> uint8_t
+sp_stat_samples_kurtosis :: sp_sample_t*:a sp_time_t:size sp_sample_t*:out -> uint8_t
 sp_stat_samples_mean :: sp_sample_t*:a sp_time_t:size sp_sample_t*:out -> uint8_t
 sp_stat_samples_median :: sp_sample_t*:a sp_time_t:size sp_sample_t*:out -> uint8_t
 sp_stat_samples_range :: sp_sample_t*:a sp_time_t:size sp_sample_t*:out -> uint8_t
+sp_stat_samples_skewness :: sp_sample_t*:a sp_time_t:size sp_sample_t*:out -> uint8_t
 sp_stat_times :: sp_time_t*:a sp_time_t:a_size sp_stat_type_t*:stats sp_time_t:size sp_sample_t*:out -> status_t
 sp_stat_times_center :: sp_time_t*:a sp_time_t:size sp_sample_t*:out -> uint8_t
 sp_stat_times_complexity :: sp_time_t*:a sp_time_t:size sp_sample_t*:out -> uint8_t
 sp_stat_times_deviation :: sp_time_t*:a sp_time_t:size sp_sample_t*:out -> uint8_t
+sp_stat_times_inharmonicity :: sp_time_t*:a sp_time_t:size sp_sample_t*:out -> uint8_t
+sp_stat_times_kurtosis :: sp_time_t*:a sp_time_t:size sp_sample_t*:out -> uint8_t
 sp_stat_times_mean :: sp_time_t*:a sp_time_t:size sp_sample_t*:out -> uint8_t
 sp_stat_times_median :: sp_time_t*:a sp_time_t:size sp_sample_t*:out -> uint8_t
 sp_stat_times_range :: sp_time_t*:a sp_time_t:size sp_sample_t*:out -> uint8_t
+sp_stat_times_skewness :: sp_time_t*:a sp_time_t:size sp_sample_t*:out -> uint8_t
 sp_state_variable_filter_all :: sp_sample_t*:out sp_sample_t*:in sp_float_t:in_count sp_float_t:cutoff sp_time_t:q_factor sp_sample_t*:state -> void
 sp_state_variable_filter_bp :: sp_sample_t*:out sp_sample_t*:in sp_float_t:in_count sp_float_t:cutoff sp_time_t:q_factor sp_sample_t*:state -> void
 sp_state_variable_filter_br :: sp_sample_t*:out sp_sample_t*:in sp_float_t:in_count sp_float_t:cutoff sp_time_t:q_factor sp_sample_t*:state -> void
@@ -239,7 +245,7 @@ sp_times_sequence_count :: sp_time_t*:a sp_time_t:size sp_time_t:min_width sp_ti
 sp_times_sequence_increment_le :: sp_time_t*:a sp_time_t:size sp_time_t:set_size -> void
 sp_times_set_1 :: sp_time_t*:a sp_time_t:size sp_time_t:n sp_time_t*:out -> void
 sp_times_shuffle :: sp_random_state_t*:state sp_time_t*:a sp_time_t:size -> void
-sp_times_sort_less_p :: void*:a ssize_t:b ssize_t:c -> uint8_t
+sp_times_sort_less :: void*:a ssize_t:b ssize_t:c -> uint8_t
 sp_times_sort_swap :: void*:a ssize_t:b ssize_t:c -> void
 sp_times_square :: sp_time_t*:a sp_time_t:size sp_time_t*:out -> void
 sp_times_subtract :: sp_time_t*:a sp_time_t:size sp_time_t*:b sp_time_t*:out -> void
@@ -380,7 +386,7 @@ uint32_t sp_cpu_count
 
 ## types
 ```
-sp_stat_type_t: enum sp_stat_center 0u sp_stat_complexity sp_stat_complexity_width sp_stat_deviation sp_stat_mean sp_stat_median sp_stat_range sp_stat_range_min sp_stat_range_max
+sp_stat_type_t: enum sp_stat_center 0u sp_stat_complexity sp_stat_complexity_width sp_stat_deviation sp_stat_inharmonicity sp_stat_kurtosis sp_stat_mean sp_stat_median sp_stat_range sp_stat_range_min sp_stat_range_max sp_stat_skewness
 sp_convolution_filter_ir_f_t: void* sp_sample_t** sp_time_t* -> status_t
 sp_event_f_t: sp_time_t sp_time_t sp_block_t sp_event_t* -> void
 sp_stat_samples_f_t: sp_sample_t* sp_time_t sp_sample_t* -> uint8_t

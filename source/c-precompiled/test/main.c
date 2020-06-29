@@ -518,7 +518,7 @@ exit:
 }
 #define sp_sample_nearly_equal f64_nearly_equal
 #define sp_sample_array_nearly_equal f64_array_nearly_equal
-#define feq(a, b) sp_sample_nearly_equal(a, b, (0.1))
+#define feq(a, b) sp_sample_nearly_equal(a, b, (0.01))
 sp_random_state_t rs;
 uint8_t u64_from_array_test(sp_time_t size) {
   uint64_t bits_in;
@@ -563,26 +563,46 @@ exit:
   status_return;
 }
 #define test_stats_a_size 8
-#define test_stats_stat_count 6
+#define test_stats_types_count (sp_stat_types_count - 3)
 status_t test_stats() {
   status_declare;
   sp_time_t a[test_stats_a_size] = { 1, 2, 3, 4, 5, 6, 7, 8 };
   sp_sample_t as[test_stats_a_size] = { 1, 2, 3, 4, 5, 6, 7, 8 };
-  sp_stat_type_t stat_types[test_stats_stat_count] = { sp_stat_center, sp_stat_complexity, sp_stat_deviation, sp_stat_mean, sp_stat_median, sp_stat_range };
+  sp_time_t inhar_1[test_stats_a_size] = { 2, 4, 6, 8, 10, 12, 14, 16 };
+  sp_time_t inhar_2[test_stats_a_size] = { 2, 4, 6, 8, 10, 12, 13, 16 };
+  sp_time_t inhar_3[test_stats_a_size] = { 2, 3, 6, 8, 10, 12, 13, 16 };
+  sp_sample_t inhar_results[3];
+  sp_stat_type_t stat_types[test_stats_types_count] = { sp_stat_center, sp_stat_complexity, sp_stat_deviation, sp_stat_inharmonicity, sp_stat_kurtosis, sp_stat_mean, sp_stat_median, sp_stat_range, sp_stat_skewness };
   sp_sample_t stats_a[sp_stat_types_count];
   sp_sample_t stats_as[sp_stat_types_count];
-  status_require((sp_stat_times(a, test_stats_a_size, stat_types, test_stats_stat_count, stats_a)));
+  status_require((sp_stat_times(a, test_stats_a_size, stat_types, test_stats_types_count, stats_a)));
   test_helper_assert("mean", (feq((4.5), (stats_a[sp_stat_mean]))));
   test_helper_assert("deviation", (feq((2.29), (stats_a[sp_stat_deviation]))));
-  test_helper_assert("center", (feq((4.6), (stats_a[sp_stat_center]))));
+  test_helper_assert("center", (feq((4.54), (stats_a[sp_stat_center]))));
   test_helper_assert("median", (feq((4.5), (stats_a[sp_stat_median]))));
   test_helper_assert("complexity", (feq((1.0), (stats_a[sp_stat_complexity_width]))));
-  status_require((sp_stat_samples(as, test_stats_a_size, stat_types, test_stats_stat_count, stats_as)));
+  test_helper_assert("skewness", (feq((0.0), (stats_a[sp_stat_skewness]))));
+  test_helper_assert("kurtosis", (feq((1.76), (stats_a[sp_stat_kurtosis]))));
+  status_require((sp_stat_samples(as, test_stats_a_size, stat_types, test_stats_types_count, stats_as)));
   test_helper_assert("samples mean", (feq((4.5), (stats_as[sp_stat_mean]))));
   test_helper_assert("samples deviation", (feq((2.29), (stats_as[sp_stat_deviation]))));
-  test_helper_assert("samples center", (feq((4.6), (stats_as[sp_stat_center]))));
+  test_helper_assert("samples center", (feq((4.66), (stats_as[sp_stat_center]))));
   test_helper_assert("samples median", (feq((4.5), (stats_as[sp_stat_median]))));
   test_helper_assert("samples complexity", (feq((1.0), (stats_as[sp_stat_complexity_width]))));
+  test_helper_assert("samples skewness", (feq((0.0), (stats_as[sp_stat_skewness]))));
+  test_helper_assert("samples kurtosis", (feq((1.76), (stats_as[sp_stat_kurtosis]))));
+  /* inharmonicity */
+  stat_types[0] = sp_stat_inharmonicity;
+  status_require((sp_stat_times(inhar_1, test_stats_a_size, stat_types, 1, stats_a)));
+  inhar_results[0] = stats_a[sp_stat_inharmonicity];
+  status_require((sp_stat_times(inhar_2, test_stats_a_size, stat_types, 1, stats_a)));
+  inhar_results[1] = stats_a[sp_stat_inharmonicity];
+  status_require((sp_stat_times(inhar_3, test_stats_a_size, stat_types, 1, stats_a)));
+  inhar_results[2] = stats_a[sp_stat_inharmonicity];
+  test_helper_assert("inharmonicity relations", ((inhar_results[0] < inhar_results[1]) && (inhar_results[1] < inhar_results[2])));
+  test_helper_assert("inharmonicity 1", (feq((0.0), (inhar_results[0]))));
+  test_helper_assert("inharmonicity 2", (feq((0.0625), (inhar_results[1]))));
+  test_helper_assert("inharmonicity 3", (feq((0.125), (inhar_results[2]))));
 exit:
   status_return;
 }
