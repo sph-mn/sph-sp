@@ -15,14 +15,14 @@ c code and shared library for sound synthesis and sequencing. the sound processo
   * convolution
 * synthesis
   * paths created from interpolation between given points. can be used for amplitude, wavelength and other controls
-  * additive fm synthesizer with parameters per channel and start/end time for partials
+  * lookup-table oscillator for sines and other wave shapes with a stable phase, an array for frequency changes and arrays per channel for amplitude changes
   * sine/triangle/square/sawtooth-wave and noise generator
 * sequencing
   * event renderer for parallel processing with custom routines
-  * events for filtered noise and synth output
+  * events for filtered noise and wave output
   * event groups that compose for riffs and songs
 * array processing
-  * arithmetic, shuffle, permutations, compositions, statistics such as median, deviation, skewness, inharmonicity and more
+  * utilities like array arithmetic, shuffle, permutations, compositions, statistics such as median, deviation, skewness, inharmonicity and more
 
 # dependencies
 * run-time
@@ -51,7 +51,7 @@ installed files
 * /usr/lib/libsph-sp.so
 
 # compile-time configuration options
-the file `source/c-precompiled/main/sph-sp.h` can be edited before compilation to set the following options. the values must be defined before including the header or the edited header must then be used with the shared library.
+the ifndefs at the top of `source/c-precompiled/main/sph-sp.h` can be customised before compilation, or macro defines before code inclusion, to set the following options. the values must be defined before including the header or the edited header must then be used with the shared library.
 
 | name | default | description |
 | --- | --- | --- |
@@ -61,19 +61,16 @@ the file `source/c-precompiled/main/sph-sp.h` can be edited before compilation t
 |sp_float_t|double|data type for floating point values other than samples|
 |sp_sample_rate_t|uint32_t|data type for sample rates|
 |sp_samples_sum|f64_sum|function (sp_sample_t* size_t -> sp_sample_t) that sums samples, by default with kahan error compensation|
-|sp_sample_t|double|sample format. f32 should be possible but integer formats are currently not possible because most processors dont work with them|
-|sp_sf_read|sf_readf_double|libsndfile file reader function to use|
+|sp_sample_t|double|float data type for samples (quasi continuous). for example 64 bit or 32 bit|
+|sp_sf_read|sf_readf_double|libsndfile file reader function to use, corresponding to sp_sample_t|
 |sp_sf_write|sf_writef_double|libsndfile file writer function to use|
-|sp_synth_count_t|uint16_t|the datatype for the number of partials for sp_synth|
-|sp_synth_partial_limit|128|maximum number of partials sp_synth will be able to process|
-|sp_synth_sine|sp_sine_96||
-|sp_time_t|uint64_t|data type for sample counts|
+|sp_time_t|uint64_t|integer data type for sample counts (discrete)|
 
 # c usage
 ```
 #include <sph-sp.h>
 ```
-call sp_initialise(cpu-count) once somewhere
+call sp_initialise(cpu_count, default_sample_rate) once somewhere. for example sp_initialise(2, 96000).
 
 compilation with gcc
 ```
@@ -459,7 +456,7 @@ sp_wave_state_t: struct
 * rest: lgpl3+
 
 # possible enhancements
-* split header into a core and a extra header
+* split header into a core and an extra header
 
 # thanks to
 * [tom roelandts](https://tomroelandts.com/) on whose information the windowed sinc filters are based on
