@@ -1,8 +1,3 @@
-(sc-comment
-  "calculate statistics for arrays, with the statistics to calculate being selected by an array of identifiers.
-   deviation: standard deviation
-   complexity: subsequence width with the highest proportion of equal-size unique subsequences")
-
 (sc-define-syntax (for-i index limit body ...)
   (for ((set index 0) (< index limit) (set+ index 1)) body ...))
 
@@ -29,6 +24,7 @@
     (return 0))
   (define-sp-stat-deviation name stat-mean value-t)
   (define (name a size out) (uint8-t value-t* sp-time-t sp-sample-t*)
+    "standard deviation"
     (declare i sp-time-t sum sp-sample-t dev sp-sample-t mean sp-sample-t)
     (stat-mean a size &mean)
     (set sum 0)
@@ -67,7 +63,7 @@
   (define-sp-stat-inharmonicity name value-t)
   (define (name a size out) (uint8-t value-t* sp-time-t sp-sample-t*)
     "n1: 0..n; n2 = 0..n; half_offset(x) = 0.5 >= x ? x : x - 1;
-     min(for(n1, mean(for(n2, half_offset(x(n2) / x(n1))))))"
+     min(map(n1, mean(map(n2, half_offset(x(n2) / x(n1))))))"
     (declare i sp-time-t i2 sp-time-t b sp-sample-t sum sp-sample-t min sp-sample-t)
     (set sum 0 min size)
     (for ((set i 0) (< i size) (set+ i 1))
@@ -85,8 +81,12 @@
   (define-sp-stat name f-array value-t)
   (define (name a a-size stats size out)
     (status-t value-t* sp-time-t sp-stat-type-t* sp-time-t sp-sample-t*)
-    "write to out the statistics requested with sp-stat-type-t indices in stats.
-     out size is expected to be at least sp-stat-types-count"
+    "calculate statistics for arrays, with the statistics to calculate being selected by an array of identifiers.
+     the identifiers are sp-stat-type-t and are also used to access the results.
+     out size is expected to be at least sp-stat-types-count or the largest sp-stat-type-t index used.
+     some stat-types create multiple output values (sp-stat-range and sp-stat-complexity) and
+     the dependent sp-stat-types (named with the full prefix, for example sp-stat-range-min) are only for access from the output array written by
+     sp-stat-times/samples and should not be used for the list of statistics to calculate because that would lead to results stored at mismatching indices"
     (declare i sp-time-t)
     status-declare
     (for-i i size
@@ -102,6 +102,16 @@
   (set *out (/ index-sum (convert-type sum sp-sample-t))) (return 0))
 
 (define-sp-stat-range sp-stat-times-range sp-time-t)
+
+(sc-comment
+  "complexity:
+   * out: ratio, width
+   * count the repetitions of overlapping subsequences of widths 0..n
+   * return the width and proportion for the width with the highest proportion of
+     unique sequences relative to the number of possible unique sequences
+   * examples
+     * low: 11111 112112
+     * high: 12345 112212")
 
 (define-sp-stat-times sp-stat-times-complexity
   (declare
@@ -172,7 +182,8 @@
 (define-sp-stat-inharmonicity sp-stat-samples-inharmonicity sp-sample-t)
 
 (sc-comment
-  "f-array maps sp-stat-type-t indices to the functions that calculate the corresponding values")
+  "f-array maps sp-stat-type-t indices to the functions that calculate the corresponding values.
+   some functions create multiple output values and can be repeated or set to zero for the corresponding sp-stat-type-t indices")
 
 (define-sp-stat sp-stat-times sp-stat-times-f-array sp-time-t)
 (define-sp-stat sp-stat-samples sp-stat-samples-f-array sp-sample-t)
