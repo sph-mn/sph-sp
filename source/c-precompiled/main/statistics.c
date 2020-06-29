@@ -1,6 +1,3 @@
-/* calculate statistics for arrays, with the statistics to calculate being selected by an array of identifiers.
-   deviation: standard deviation
-   complexity: subsequence width with the highest proportion of equal-size unique subsequences */
 #define define_sp_stat_range(name, value_t) \
   /** out: min, max, range */ \
   uint8_t name(value_t* a, sp_time_t size, sp_sample_t* out) { \
@@ -26,6 +23,7 @@
     return (0); \
   }
 #define define_sp_stat_deviation(name, stat_mean, value_t) \
+  /** standard deviation */ \
   uint8_t name(value_t* a, sp_time_t size, sp_sample_t* out) { \
     sp_time_t i; \
     sp_sample_t sum; \
@@ -96,7 +94,7 @@
   }
 #define define_sp_stat_inharmonicity(name, value_t) \
   /** n1: 0..n; n2 = 0..n; half_offset(x) = 0.5 >= x ? x : x - 1; \
-       min(for(n1, mean(for(n2, half_offset(x(n2) / x(n1)))))) */ \
+       min(map(n1, mean(map(n2, half_offset(x(n2) / x(n1)))))) */ \
   uint8_t name(value_t* a, sp_time_t size, sp_sample_t* out) { \
     sp_time_t i; \
     sp_time_t i2; \
@@ -122,8 +120,12 @@
     return (0); \
   }
 #define define_sp_stat(name, f_array, value_t) \
-  /** write to out the statistics requested with sp-stat-type-t indices in stats. \
-       out size is expected to be at least sp-stat-types-count */ \
+  /** calculate statistics for arrays, with the statistics to calculate being selected by an array of identifiers. \
+       the identifiers are sp-stat-type-t and are also used to access the results. \
+       out size is expected to be at least sp-stat-types-count or the largest sp-stat-type-t index used. \
+       some stat-types create multiple output values (sp-stat-range and sp-stat-complexity) and \
+       the dependent sp-stat-types (named with the full prefix, for example sp-stat-range-min) are only for access from the output array written by \
+       sp-stat-times/samples and should not be used for the list of statistics to calculate because that would lead to results stored at mismatching indices */ \
   status_t name(value_t* a, sp_time_t a_size, sp_stat_type_t* stats, sp_time_t size, sp_sample_t* out) { \
     sp_time_t i; \
     status_declare; \
@@ -148,6 +150,14 @@ uint8_t sp_stat_times_center(sp_time_t* a, sp_time_t size, sp_sample_t* out) {
   return (0);
 }
 define_sp_stat_range(sp_stat_times_range, sp_time_t)
+  /* complexity:
+   * out: ratio, width
+   * count the repetitions of overlapping subsequences of widths 0..n
+   * return the width and proportion for the width with the highest proportion of
+     unique sequences relative to the number of possible unique sequences
+   * examples
+     * low: 11111 112112
+     * high: 12345 112212 */
   uint8_t sp_stat_times_complexity(sp_time_t* a, sp_time_t size, sp_sample_t* out) {
   sequence_set_t known;
   sequence_set_key_t key;
@@ -253,6 +263,7 @@ define_sp_stat_deviation(sp_stat_samples_deviation, sp_stat_samples_mean, sp_sam
     define_sp_stat_skewness(sp_stat_samples_skewness, sp_stat_samples_mean, sp_sample_t)
       define_sp_stat_kurtosis(sp_stat_samples_kurtosis, sp_stat_samples_mean, sp_sample_t)
         define_sp_stat_inharmonicity(sp_stat_samples_inharmonicity, sp_sample_t)
-  /* f-array maps sp-stat-type-t indices to the functions that calculate the corresponding values */
+  /* f-array maps sp-stat-type-t indices to the functions that calculate the corresponding values.
+   some functions create multiple output values and can be repeated or set to zero for the corresponding sp-stat-type-t indices */
   define_sp_stat(sp_stat_times, sp_stat_times_f_array, sp_time_t)
     define_sp_stat(sp_stat_samples, sp_stat_samples_f_array, sp_sample_t)
