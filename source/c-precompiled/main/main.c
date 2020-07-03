@@ -189,7 +189,7 @@ sp_wave_state_t sp_wave_state_1(sp_sample_t* wvf, sp_time_t wvf_size, sp_time_t 
 }
 sp_wave_state_t sp_wave_state_2(sp_sample_t* wvf, sp_time_t wvf_size, sp_time_t size, sp_time_t* frq, sp_sample_t* amp1, sp_sample_t* amp2, sp_time_t phs1, sp_time_t phs2) {
   sp_wave_state_t a;
-  a.channels = 1;
+  a.channels = 2;
   a.size = size;
   a.frq = frq;
   a.wvf = wvf;
