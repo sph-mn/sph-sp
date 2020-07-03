@@ -445,11 +445,11 @@ status_t test_wave() {
   sp_wave_state_t state;
   sp_block_t out1;
   sp_block_t out2;
-  sp_time_t spd[4] = { 48000, 48000, 48000, 48000 };
+  sp_time_t frq[4] = { 48000, 48000, 48000, 48000 };
   sp_sample_t amp[4] = { 0.1, 0.2, 0.3, 0.4 };
   status_require((sp_block_new(test_wave_channels, test_wave_duration, (&out1))));
   status_require((sp_block_new(test_wave_channels, test_wave_duration, (&out2))));
-  state = sp_wave_state_2(sp_sine_table, _rate, spd, amp, amp, 0, 0);
+  state = sp_wave_state_2(sp_sine_table, _rate, test_wave_duration, frq, amp, amp, 0, 0);
   sp_wave(0, test_wave_duration, (&state), out1);
   sp_wave(0, test_wave_duration, (&state), out2);
   test_helper_assert("zeros", ((0 == (out1.samples)[0][0]) && ((out1.samples)[0][0] == (out1.samples)[0][2])));
@@ -466,16 +466,16 @@ status_t test_wave_event() {
   status_declare;
   sp_event_t event;
   sp_block_t out;
-  sp_time_t spd[sp_wave_event_duration];
+  sp_time_t frq[sp_wave_event_duration];
   sp_sample_t amp1[sp_wave_event_duration];
   sp_sample_t amp2[sp_wave_event_duration];
   sp_time_t i;
   for (i = 0; (i < sp_wave_event_duration); i += 1) {
-    spd[i] = 2000;
+    frq[i] = 2000;
     amp1[i] = 1;
     amp2[i] = 0.5;
   };
-  status_require((sp_wave_event(0, sp_wave_event_duration, (sp_wave_state_2(sp_sine_table, _rate, spd, amp1, amp2, 0, 0)), (&event))));
+  status_require((sp_wave_event(0, sp_wave_event_duration, (sp_wave_state_2(sp_sine_table, _rate, sp_wave_event_duration, frq, amp1, amp2, 0, 0)), (&event))));
   status_require((sp_block_new(2, sp_wave_event_duration, (&out))));
   (event.f)(0, 30, out, (&event));
   (event.f)(30, sp_wave_event_duration, (sp_block_with_offset(out, 30)), (&event));
@@ -488,16 +488,16 @@ status_t test_render_block() {
   status_declare;
   sp_event_t event;
   sp_block_t out;
-  sp_time_t spd[sp_wave_event_duration];
+  sp_time_t frq[sp_wave_event_duration];
   sp_sample_t amp[sp_wave_event_duration];
   sp_time_t i;
   sp_render_config_declare(rc);
   rc.block_size = 40;
   for (i = 0; (i < sp_wave_event_duration); i += 1) {
-    spd[i] = 1500;
+    frq[i] = 1500;
     amp[i] = 1;
   };
-  status_require((sp_wave_event(0, sp_wave_event_duration, (sp_sine_state_2(spd, amp, amp, 0, 0)), (&event))));
+  status_require((sp_wave_event(0, sp_wave_event_duration, (sp_sine_state_2(sp_wave_event_duration, frq, amp, amp, 0, 0)), (&event))));
   status_require((sp_block_new(2, sp_wave_event_duration, (&out))));
   sp_render_file(event, 0, sp_wave_event_duration, rc, ("/tmp/test.wav"));
   /* (sp-render-block event 0 sp-wave-event-duration rc &out) */

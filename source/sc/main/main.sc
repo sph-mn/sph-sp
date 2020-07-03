@@ -55,7 +55,7 @@
   (return b))
 
 (define (sp-status-name a) (uint8-t* status-t)
-  "get a single word identifier for a status id in a status-t"
+  "get a one word identifier for a status id in a status-t"
   (declare b uint8-t*)
   (cond
     ( (= 0 (strcmp sp-s-group-sp a.group))
@@ -108,7 +108,7 @@
 
 (define (sp-wave start duration state out) (void sp-time-t sp-time-t sp-wave-state-t* sp-block-t)
   "* sums into out
-   * state.spd (speed): array with hertz values
+   * state.frq (frequency): array with hertz values
    * state.wvf (waveform): array with waveform samples
    * state.wvf-size: size of state.wvf
    * state.phs (phase): value per channel
@@ -119,25 +119,25 @@
     (for ((set i 0) (< i duration) (set i (+ 1 i)))
       (set+ (array-get out.samples channel-i i)
         (* (array-get state:amp channel-i (+ start i)) (array-get state:wvf phs)) phs
-        (array-get state:spd (+ start i)))
+        (array-get state:frq (+ start i)))
       (if (>= phs state:wvf-size) (set phs (modulo phs state:wvf-size))))
     (set (array-get state:phs channel-i) phs)))
 
 (pre-define (sp-wave-state-set-channel a channel amp-array phs-value)
   (set (array-get a.amp channel) amp-array (array-get a.phs channel) phs-value))
 
-(define (sp-wave-state-1 wvf wvf-size spd amp phs)
-  (sp-wave-state-t sp-sample-t* sp-time-t sp-time-t* sp-sample-t* sp-time-t)
+(define (sp-wave-state-1 wvf wvf-size size frq amp phs)
+  (sp-wave-state-t sp-sample-t* sp-time-t sp-time-t sp-time-t* sp-sample-t* sp-time-t)
   "setup a single channel wave config"
   (declare a sp-wave-state-t)
-  (set a.spd spd a.wvf wvf a.wvf-size wvf-size)
+  (set a.channels 1 a.size size a.frq frq a.wvf wvf a.wvf-size wvf-size)
   (sp-wave-state-set-channel a 0 amp phs)
   (return a))
 
-(define (sp-wave-state-2 wvf wvf-size spd amp1 amp2 phs1 phs2)
-  (sp-wave-state-t sp-sample-t* sp-time-t sp-time-t* sp-sample-t* sp-sample-t* sp-time-t sp-time-t)
+(define (sp-wave-state-2 wvf wvf-size size frq amp1 amp2 phs1 phs2)
+  (sp-wave-state-t sp-sample-t* sp-time-t sp-time-t sp-time-t* sp-sample-t* sp-sample-t* sp-time-t sp-time-t)
   (declare a sp-wave-state-t)
-  (set a.spd spd a.wvf wvf a.wvf-size wvf-size)
+  (set a.channels 2 a.size size a.frq frq a.wvf wvf a.wvf-size wvf-size)
   (sp-wave-state-set-channel a 0 amp1 phs1)
   (sp-wave-state-set-channel a 1 amp2 phs2)
   (return a))

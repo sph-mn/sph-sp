@@ -77,7 +77,7 @@ define_sp_interleave(sp_interleave, sp_sample_t, (b[b_size] = (a[channel])[a_siz
   };
   return (b);
 }
-/** get a single word identifier for a status id in a status-t */
+/** get a one word identifier for a status id in a status-t */
 uint8_t* sp_status_name(status_t a) {
   uint8_t* b;
   if (0 == strcmp(sp_s_group_sp, (a.group))) {
@@ -151,7 +151,7 @@ sp_time_t sp_phase_float(sp_time_t current, sp_sample_t change, sp_time_t cycle)
   return (((a < cycle) ? a : (a % cycle)));
 }
 /** * sums into out
-   * state.spd (speed): array with hertz values
+   * state.frq (frequency): array with hertz values
    * state.wvf (waveform): array with waveform samples
    * state.wvf-size: size of state.wvf
    * state.phs (phase): value per channel
@@ -165,7 +165,7 @@ void sp_wave(sp_time_t start, sp_time_t duration, sp_wave_state_t* state, sp_blo
     phs = (state->phs)[channel_i];
     for (i = 0; (i < duration); i = (1 + i)) {
       (out.samples)[channel_i][i] += ((state->amp)[channel_i][(start + i)] * (state->wvf)[phs]);
-      phs += (state->spd)[(start + i)];
+      phs += (state->frq)[(start + i)];
       if (phs >= state->wvf_size) {
         phs = (phs % state->wvf_size);
       };
@@ -177,17 +177,21 @@ void sp_wave(sp_time_t start, sp_time_t duration, sp_wave_state_t* state, sp_blo
   (a.amp)[channel] = amp_array; \
   (a.phs)[channel] = phs_value
 /** setup a single channel wave config */
-sp_wave_state_t sp_wave_state_1(sp_sample_t* wvf, sp_time_t wvf_size, sp_time_t* spd, sp_sample_t* amp, sp_time_t phs) {
+sp_wave_state_t sp_wave_state_1(sp_sample_t* wvf, sp_time_t wvf_size, sp_time_t size, sp_time_t* frq, sp_sample_t* amp, sp_time_t phs) {
   sp_wave_state_t a;
-  a.spd = spd;
+  a.channels = 1;
+  a.size = size;
+  a.frq = frq;
   a.wvf = wvf;
   a.wvf_size = wvf_size;
   sp_wave_state_set_channel(a, 0, amp, phs);
   return (a);
 }
-sp_wave_state_t sp_wave_state_2(sp_sample_t* wvf, sp_time_t wvf_size, sp_time_t* spd, sp_sample_t* amp1, sp_sample_t* amp2, sp_time_t phs1, sp_time_t phs2) {
+sp_wave_state_t sp_wave_state_2(sp_sample_t* wvf, sp_time_t wvf_size, sp_time_t size, sp_time_t* frq, sp_sample_t* amp1, sp_sample_t* amp2, sp_time_t phs1, sp_time_t phs2) {
   sp_wave_state_t a;
-  a.spd = spd;
+  a.channels = 1;
+  a.size = size;
+  a.frq = frq;
   a.wvf = wvf;
   a.wvf_size = wvf_size;
   sp_wave_state_set_channel(a, 0, amp1, phs1);

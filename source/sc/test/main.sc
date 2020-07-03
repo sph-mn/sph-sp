@@ -430,11 +430,11 @@
     state sp-wave-state-t
     out1 sp-block-t
     out2 sp-block-t
-    spd (array sp-time-t 4 48000 48000 48000 48000)
+    frq (array sp-time-t 4 48000 48000 48000 48000)
     amp (array sp-sample-t 4 0.1 0.2 0.3 0.4))
   (status-require (sp-block-new test-wave-channels test-wave-duration &out1))
   (status-require (sp-block-new test-wave-channels test-wave-duration &out2))
-  (set state (sp-wave-state-2 sp-sine-table _rate spd amp amp 0 0))
+  (set state (sp-wave-state-2 sp-sine-table _rate test-wave-duration frq amp amp 0 0))
   (sp-wave 0 test-wave-duration &state out1)
   (sp-wave 0 test-wave-duration &state out2)
   (test-helper-assert "zeros" (= 0 (array-get out1.samples 0 0) (array-get out1.samples 0 2)))
@@ -453,15 +453,15 @@
   (declare
     event sp-event-t
     out sp-block-t
-    spd (array sp-time-t sp-wave-event-duration)
+    frq (array sp-time-t sp-wave-event-duration)
     amp1 (array sp-sample-t sp-wave-event-duration)
     amp2 (array sp-sample-t sp-wave-event-duration)
     i sp-time-t)
   (for ((set i 0) (< i sp-wave-event-duration) (set+ i 1))
-    (set (array-get spd i) 2000 (array-get amp1 i) 1 (array-get amp2 i) 0.5))
+    (set (array-get frq i) 2000 (array-get amp1 i) 1 (array-get amp2 i) 0.5))
   (status-require
     (sp-wave-event 0 sp-wave-event-duration
-      (sp-wave-state-2 sp-sine-table _rate spd amp1 amp2 0 0) &event))
+      (sp-wave-state-2 sp-sine-table _rate sp-wave-event-duration frq amp1 amp2 0 0) &event))
   (status-require (sp-block-new 2 sp-wave-event-duration &out))
   (event.f 0 30 out &event)
   (event.f 30 sp-wave-event-duration (sp-block-with-offset out 30) &event)
@@ -474,14 +474,16 @@
   (declare
     event sp-event-t
     out sp-block-t
-    spd (array sp-time-t sp-wave-event-duration)
+    frq (array sp-time-t sp-wave-event-duration)
     amp (array sp-sample-t sp-wave-event-duration)
     i sp-time-t)
   (sp-render-config-declare rc)
   (set rc.block-size 40)
   (for ((set i 0) (< i sp-wave-event-duration) (set+ i 1))
-    (set (array-get spd i) 1500 (array-get amp i) 1))
-  (status-require (sp-wave-event 0 sp-wave-event-duration (sp-sine-state-2 spd amp amp 0 0) &event))
+    (set (array-get frq i) 1500 (array-get amp i) 1))
+  (status-require
+    (sp-wave-event 0 sp-wave-event-duration
+      (sp-sine-state-2 sp-wave-event-duration frq amp amp 0 0) &event))
   (status-require (sp-block-new 2 sp-wave-event-duration &out))
   (sp-render-file event 0 sp-wave-event-duration rc "/tmp/test.wav")
   (sc-comment (sp-render-block event 0 sp-wave-event-duration rc &out))

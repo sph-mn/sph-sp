@@ -255,8 +255,8 @@ sp_u64_from_array :: uint8_t*:a sp_time_t:size -> uint64_t
 sp_wave :: sp_time_t:start sp_time_t:duration sp_wave_state_t*:state sp_block_t:out -> void
 sp_wave_event :: sp_time_t:start sp_time_t:end sp_wave_state_t:state sp_event_t*:out -> status_t
 sp_wave_event_f :: sp_time_t:start sp_time_t:end sp_block_t:out sp_event_t*:event -> void
-sp_wave_state_1 :: sp_sample_t*:wvf sp_time_t:wvf_size sp_time_t*:spd sp_sample_t*:amp sp_time_t:phs -> sp_wave_state_t
-sp_wave_state_2 :: sp_sample_t*:wvf sp_time_t:wvf_size sp_time_t*:spd sp_sample_t*:amp1 sp_sample_t*:amp2 sp_time_t:phs1 sp_time_t:phs2 -> sp_wave_state_t
+sp_wave_state_1 :: sp_sample_t*:wvf sp_time_t:wvf_size sp_time_t*:frq sp_sample_t*:amp sp_time_t:phs -> sp_wave_state_t
+sp_wave_state_2 :: sp_sample_t*:wvf sp_time_t:wvf_size sp_time_t*:frq sp_sample_t*:amp1 sp_sample_t*:amp2 sp_time_t:phs1 sp_time_t:phs2 -> sp_wave_state_t
 sp_window_blackman :: sp_float_t:a sp_time_t:width -> sp_float_t
 sp_windowed_sinc_bp_br :: sp_sample_t*:in sp_time_t:in_len sp_float_t:cutoff_l sp_float_t:cutoff_h sp_float_t:transition_l sp_float_t:transition_h boolean:is_reject sp_convolution_filter_state_t**:out_state sp_sample_t*:out_samples -> status_t
 sp_windowed_sinc_bp_br_ir :: sp_float_t:cutoff_l sp_float_t:cutoff_h sp_float_t:transition_l sp_float_t:transition_h boolean:is_reject sp_sample_t**:out_ir sp_time_t*:out_len -> status_t
@@ -361,8 +361,8 @@ sp_samples_sum
 sp_samples_zero(a, size)
 sp_sf_read
 sp_sf_write
-sp_sine_state_1(spd, amp, phs)
-sp_sine_state_2(spd, amp1, amp2, phs1, phs2)
+sp_sine_state_1(frq, amp, phs)
+sp_sine_state_2(frq, amp1, amp2, phs1, phs2)
 sp_stat_types_count
 sp_time_random
 sp_time_random_bounded
@@ -447,7 +447,7 @@ sp_times_t: struct
 sp_wave_state_t: struct
   amp: array sp_sample_t* sp_channel_limit
   phs: array sp_time_t sp_channel_limit
-  spd: sp_time_t*
+  frq: sp_time_t*
   wvf_size: sp_time_t
   wvf: sp_sample_t*
 ```
