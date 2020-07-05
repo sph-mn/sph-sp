@@ -249,8 +249,17 @@
   (sp-time-t sp-random-state-t* sp-time-t* sp-time-t sp-time-t)
   "get a random number in range with a custom probability distribution given by cudist,
    the cumulative sums of the distribution. the resulting number resolution is proportional to cudist-size"
-  (* range
-    (/ (sp-time-random-discrete state cudist cudist-size) (convert-type cudist-size sp-sample-t))))
+  (return
+    (sp-cheap-round-positive
+      (* range
+        (/ (sp-time-random-discrete state cudist cudist-size)
+          (convert-type cudist-size sp-sample-t))))))
+
+(define (sp-sample-random-custom state cudist cudist-size range)
+  (sp-sample-t sp-random-state-t* sp-time-t* sp-time-t sp-sample-t)
+  (return
+    (* range
+      (/ (sp-time-random-discrete state cudist cudist-size) (convert-type cudist-size sp-sample-t)))))
 
 (define (sp-times-swap a i1 i2) (void sp-time-t* ssize-t ssize-t)
   (declare temp sp-time-t)

@@ -210,6 +210,8 @@
   (sp-time-t sp-random-state-t* sp-time-t* sp-time-t)
   (sp-times-random-discrete state cudist cudist-size count out)
   (void sp-random-state-t* sp-time-t* sp-time-t sp-time-t sp-time-t*)
+  (sp-sample-random-custom state cudist cudist-size range)
+  (sp-sample-t sp-random-state-t* sp-time-t* sp-time-t sp-sample-t)
   (sp-times-swap a i1 i2) (void sp-time-t* ssize-t ssize-t)
   (sp-times-sequence-increment-le a size set-size) (void sp-time-t* sp-time-t sp-time-t)
   (sp-times-compositions sum out out-size out-sizes)
@@ -463,17 +465,14 @@
   sp-path-i-bezier spline-path-i-bezier
   sp-path-i-constant spline-path-i-constant
   sp-path-i-path spline-path-i-path
-  (sp-path-segments-declare-stack name size)
-  (array3-declare-stack name size sp-path-segments-t sp-path-segment-t)
   (sp-path-times-constant out size value)
   (sp-path-times-2 out size (sp-path-move 0 value) (sp-path-constant))
   (sp-path-samples-constant out size value)
   (sp-path-samples-2 out size (sp-path-move 0 value) (sp-path-constant)))
 
-(array3-declare-type sp-path-segments spline-path-segment-t)
-
 (declare
-  (sp-path-samples segments size out) (status-t sp-path-segments-t sp-time-t sp-sample-t**)
+  (sp-path-samples segments segments-size size out)
+  (status-t sp-path-segment-t* sp-time-t sp-time-t sp-sample-t**)
   (sp-path-samples-1 out size s1) (status-t sp-sample-t** sp-time-t sp-path-segment-t)
   (sp-path-samples-2 out size s1 s2)
   (status-t sp-sample-t** sp-time-t sp-path-segment-t sp-path-segment-t)
@@ -482,7 +481,8 @@
   (sp-path-samples-4 out size s1 s2 s3 s4)
   (status-t sp-sample-t** sp-time-t
     sp-path-segment-t sp-path-segment-t sp-path-segment-t sp-path-segment-t)
-  (sp-path-times segments size out) (status-t sp-path-segments-t sp-time-t sp-time-t**)
+  (sp-path-times segments segments-size size out)
+  (status-t sp-path-segment-t* sp-time-t sp-time-t sp-time-t**)
   (sp-path-times-1 out size s1) (status-t sp-time-t** sp-time-t sp-path-segment-t)
   (sp-path-times-2 out size s1 s2)
   (status-t sp-time-t** sp-time-t sp-path-segment-t sp-path-segment-t)

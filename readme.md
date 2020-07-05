@@ -120,12 +120,12 @@ sp_moving_average :: sp_sample_t*:in sp_sample_t*:in_end sp_sample_t*:in_window 
 sp_noise_event :: sp_time_t:start sp_time_t:end sp_sample_t**:amp sp_sample_t*:cut_l sp_sample_t*:cut_h sp_sample_t*:trn_l sp_sample_t*:trn_h uint8_t:is_reject sp_time_t:resolution sp_random_state_t:random_state sp_event_t*:out_event -> status_t
 sp_null_ir :: sp_sample_t**:out_ir sp_time_t*:out_len -> status_t
 sp_passthrough_ir :: sp_sample_t**:out_ir sp_time_t*:out_len -> status_t
-sp_path_samples :: sp_path_segments_t:segments sp_time_t:size sp_sample_t**:out -> status_t
+sp_path_samples :: sp_path_segment_t*:segments sp_time_t:segments_size sp_time_t:size sp_sample_t**:out -> status_t
 sp_path_samples_1 :: sp_sample_t**:out sp_time_t:size sp_path_segment_t:s1 -> status_t
 sp_path_samples_2 :: sp_sample_t**:out sp_time_t:size sp_path_segment_t:s1 sp_path_segment_t:s2 -> status_t
 sp_path_samples_3 :: sp_sample_t**:out sp_time_t:size sp_path_segment_t:s1 sp_path_segment_t:s2 sp_path_segment_t:s3 -> status_t
 sp_path_samples_4 :: sp_sample_t**:out sp_time_t:size sp_path_segment_t:s1 sp_path_segment_t:s2 sp_path_segment_t:s3 sp_path_segment_t:s4 -> status_t
-sp_path_times :: sp_path_segments_t:segments sp_time_t:size sp_time_t**:out -> status_t
+sp_path_times :: sp_path_segment_t*:segments sp_time_t:segments_size sp_time_t:size sp_time_t**:out -> status_t
 sp_path_times_1 :: sp_time_t**:out sp_time_t:size sp_path_segment_t:s1 -> status_t
 sp_path_times_2 :: sp_time_t**:out sp_time_t:size sp_path_segment_t:s1 sp_path_segment_t:s2 -> status_t
 sp_path_times_3 :: sp_time_t**:out sp_time_t:size sp_path_segment_t:s1 sp_path_segment_t:s2 sp_path_segment_t:s3 -> status_t
@@ -143,6 +143,7 @@ sp_plot_times :: sp_time_t*:a sp_time_t:a_size -> void
 sp_plot_times_to_file :: sp_time_t*:a sp_time_t:a_size uint8_t*:path -> void
 sp_render_block :: sp_event_t:event sp_time_t:start sp_time_t:end sp_render_config_t:config sp_block_t*:out -> status_t
 sp_render_file :: sp_event_t:event sp_time_t:start sp_time_t:end sp_render_config_t:config uint8_t*:path -> status_t
+sp_sample_random_custom :: sp_random_state_t*:state sp_time_t*:cudist sp_time_t:cudist_size sp_sample_t:range -> sp_sample_t
 sp_samples_to_times :: sp_sample_t*:in sp_time_t:in_size sp_time_t*:out -> void
 sp_samples_absolute_max :: sp_sample_t*:in sp_time_t:in_size -> sp_sample_t
 sp_samples_add :: sp_sample_t*:a sp_time_t:size sp_sample_t*:b sp_sample_t*:out -> void
@@ -214,6 +215,8 @@ sp_status_description :: status_t:a -> uint8_t*
 sp_status_name :: status_t:a -> uint8_t*
 sp_time_expt :: sp_time_t:base sp_time_t:exp -> sp_time_t
 sp_time_factorial :: sp_time_t:a -> sp_time_t
+sp_time_random_custom :: sp_random_state_t*:state sp_time_t*:cudist sp_time_t:cudist_size sp_time_t:range -> sp_time_t
+sp_time_random_discrete :: sp_random_state_t*:state sp_time_t*:cudist sp_time_t:cudist_size -> sp_time_t
 sp_times_add :: sp_time_t*:a sp_time_t:size sp_time_t*:b sp_time_t*:out -> void
 sp_times_add_1 :: sp_time_t*:a sp_time_t:size sp_time_t:n sp_time_t*:out -> void
 sp_times_additions :: sp_time_t:start sp_time_t:summand sp_time_t:count sp_time_t*:out -> void
@@ -255,8 +258,8 @@ sp_u64_from_array :: uint8_t*:a sp_time_t:size -> uint64_t
 sp_wave :: sp_time_t:start sp_time_t:duration sp_wave_state_t*:state sp_block_t:out -> void
 sp_wave_event :: sp_time_t:start sp_time_t:end sp_wave_state_t:state sp_event_t*:out -> status_t
 sp_wave_event_f :: sp_time_t:start sp_time_t:end sp_block_t:out sp_event_t*:event -> void
-sp_wave_state_1 :: sp_sample_t*:wvf sp_time_t:wvf_size sp_time_t*:frq sp_sample_t*:amp sp_time_t:phs -> sp_wave_state_t
-sp_wave_state_2 :: sp_sample_t*:wvf sp_time_t:wvf_size sp_time_t*:frq sp_sample_t*:amp1 sp_sample_t*:amp2 sp_time_t:phs1 sp_time_t:phs2 -> sp_wave_state_t
+sp_wave_state_1 :: sp_sample_t*:wvf sp_time_t:wvf_size sp_time_t:size sp_time_t*:frq sp_sample_t*:amp sp_time_t:phs -> sp_wave_state_t
+sp_wave_state_2 :: sp_sample_t*:wvf sp_time_t:wvf_size sp_time_t:size sp_time_t*:frq sp_sample_t*:amp1 sp_sample_t*:amp2 sp_time_t:phs1 sp_time_t:phs2 -> sp_wave_state_t
 sp_window_blackman :: sp_float_t:a sp_time_t:width -> sp_float_t
 sp_windowed_sinc_bp_br :: sp_sample_t*:in sp_time_t:in_len sp_float_t:cutoff_l sp_float_t:cutoff_h sp_float_t:transition_l sp_float_t:transition_h boolean:is_reject sp_convolution_filter_state_t**:out_state sp_sample_t*:out_samples -> status_t
 sp_windowed_sinc_bp_br_ir :: sp_float_t:cutoff_l sp_float_t:cutoff_h sp_float_t:transition_l sp_float_t:transition_h boolean:is_reject sp_sample_t**:out_ir sp_time_t*:out_len -> status_t
@@ -329,7 +332,6 @@ sp_path_point_t
 sp_path_samples_constant(out, size, value)
 sp_path_segment_count_t
 sp_path_segment_t
-sp_path_segments_declare_stack(name, size)
 sp_path_t
 sp_path_times_constant(out, size, value)
 sp_random_state_new
@@ -361,8 +363,8 @@ sp_samples_sum
 sp_samples_zero(a, size)
 sp_sf_read
 sp_sf_write
-sp_sine_state_1(frq, amp, phs)
-sp_sine_state_2(frq, amp1, amp2, phs1, phs2)
+sp_sine_state_1(size, frq, amp, phs)
+sp_sine_state_2(size, frq, amp1, amp2, phs1, phs2)
 sp_stat_types_count
 sp_time_random
 sp_time_random_bounded
@@ -450,6 +452,8 @@ sp_wave_state_t: struct
   frq: sp_time_t*
   wvf_size: sp_time_t
   wvf: sp_sample_t*
+  size: sp_time_t
+  channels: sp_channels_t
 ```
 
 # license

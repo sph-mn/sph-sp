@@ -298,7 +298,8 @@ sp_time_t sp_time_random_discrete(sp_random_state_t* state, sp_time_t* cudist, s
 }
 /** get a random number in range with a custom probability distribution given by cudist,
    the cumulative sums of the distribution. the resulting number resolution is proportional to cudist-size */
-sp_time_t sp_time_random_custom(sp_random_state_t* state, sp_time_t* cudist, sp_time_t cudist_size, sp_time_t range) { (range * (sp_time_random_discrete(state, cudist, cudist_size) / ((sp_sample_t)(cudist_size)))); }
+sp_time_t sp_time_random_custom(sp_random_state_t* state, sp_time_t* cudist, sp_time_t cudist_size, sp_time_t range) { return ((sp_cheap_round_positive((range * (sp_time_random_discrete(state, cudist, cudist_size) / ((sp_sample_t)(cudist_size))))))); }
+sp_sample_t sp_sample_random_custom(sp_random_state_t* state, sp_time_t* cudist, sp_time_t cudist_size, sp_sample_t range) { return ((range * (sp_time_random_discrete(state, cudist, cudist_size) / ((sp_sample_t)(cudist_size))))); }
 void sp_times_swap(sp_time_t* a, ssize_t i1, ssize_t i2) {
   sp_time_t temp;
   temp = a[i1];
