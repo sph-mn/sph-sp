@@ -234,10 +234,23 @@
   (declare deviate sp-time-t sum sp-time-t i sp-time-t i1 sp-time-t)
   (set sum (array-get cudist (- cudist-size 1)))
   (for ((set i 0) (< i count) (set+ i 1))
-    (sp-times-random state 1 &deviate)
-    (set deviate (modulo deviate sum))
+    (set deviate (sp-time-random-bounded state sum))
     (for ((set i1 0) (< i1 cudist-size) (set+ i1 1))
       (if (< deviate (array-get cudist i1)) (begin (set (array-get out i) i1) break)))))
+
+(define (sp-time-random-discrete state cudist cudist-size)
+  (sp-time-t sp-random-state-t* sp-time-t* sp-time-t)
+  (declare deviate sp-time-t i sp-time-t)
+  (set deviate (sp-time-random-bounded state (array-get cudist (- cudist-size 1))))
+  (for ((set i 0) (< i cudist-size) (set+ i 1)) (if (< deviate (array-get cudist i)) (return i)))
+  (return cudist-size))
+
+(define (sp-time-random-custom state cudist cudist-size range)
+  (sp-time-t sp-random-state-t* sp-time-t* sp-time-t sp-time-t)
+  "get a random number in range with a custom probability distribution given by cudist,
+   the cumulative sums of the distribution. the resulting number resolution is proportional to cudist-size"
+  (* range
+    (/ (sp-time-random-discrete state cudist cudist-size) (convert-type cudist-size sp-sample-t))))
 
 (define (sp-times-swap a i1 i2) (void sp-time-t* ssize-t ssize-t)
   (declare temp sp-time-t)

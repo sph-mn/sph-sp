@@ -223,6 +223,8 @@ void sp_times_xor(sp_time_t* a, sp_time_t* b, sp_time_t size, sp_time_t limit, s
 status_t sp_times_copy(sp_time_t a, sp_time_t size, sp_time_t** out);
 void sp_times_differences(sp_time_t* a, sp_time_t size, sp_time_t* out);
 void sp_times_cusum(sp_time_t* a, sp_time_t size, sp_time_t* out);
+sp_time_t sp_time_random_custom(sp_random_state_t* state, sp_time_t* cudist, sp_time_t cudist_size, sp_time_t range);
+sp_time_t sp_time_random_discrete(sp_random_state_t* state, sp_time_t* cudist, sp_time_t cudist_size);
 void sp_times_random_discrete(sp_random_state_t* state, sp_time_t* cudist, sp_time_t cudist_size, sp_time_t count, sp_time_t* out);
 void sp_times_swap(sp_time_t* a, ssize_t i1, ssize_t i2);
 void sp_times_sequence_increment_le(sp_time_t* a, sp_time_t size, sp_time_t set_size);
