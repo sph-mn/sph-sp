@@ -17,7 +17,8 @@
   (void sp-time-t sp-time-t sp-block-t sp-event-t* sp-time-t)
   "event arrays must have been prepared/sorted with sp-seq-event-prepare for seq to work correctly.
    event functions receive event relative start/end time and block has index 0 at start.
-   as for paths, start is inclusive, end is exclusive, so that 0..100 and 100..200 attach seamless"
+   as for paths, start is inclusive, end is exclusive, so that 0..100 and 100..200 attach seamless.
+   size is events size"
   (declare e-out-start sp-time-t e sp-event-t e-start sp-time-t e-end sp-time-t i sp-time-t)
   (for ((set i 0) (< i size) (set i (+ 1 i)))
     (set e (array-get events i))
@@ -73,25 +74,31 @@
       (else (set events-count (+ 1 events-count)))))
   (status-require (sph-helper-malloc (* events-count (sizeof sp-seq-future-t)) &seq-futures))
   (sc-comment "parallelise")
+  (printf "parallelise\n")
   (for ((set i 0) (< i events-count) (set i (+ 1 i)))
-    (set e (array-get events (+ events-start i)) sf (+ i seq-futures))
     (set
+      e (array-get events (+ events-start i))
+      sf (+ i seq-futures)
       e-out-start (if* (> e.start start) (- e.start start) 0)
       e-start (if* (> start e.start) (- start e.start) 0)
-      e-end (- (if* (< e.end end) e.end end) e.start))
+      e-end (- (sp-min e.end end) e.start))
+    (printf "block %lu %lu\n" out.channels (- e-end e-start))
     (status-require (sp-block-new out.channels (- e-end e-start) &sf:out))
     (set sf:start e-start sf:end e-end sf:out-start e-out-start sf:event (+ events-start i events))
     (future-new sp-seq-parallel-future-f sf &sf:future))
   (sc-comment "merge")
+  (printf "merge\n")
   (for ((set e-i 0) (< e-i events-count) (set e-i (+ 1 e-i)))
     (set sf (+ e-i seq-futures))
     (touch &sf:future)
     (for ((set channel-i 0) (< channel-i out.channels) (set channel-i (+ 1 channel-i)))
+      (printf "channel %lu %lu %lu\n" channel-i sf:out.size sf:out-start)
+      (if (< 3294873886 sf:out.size) (begin (printf "!out size is too large!") (goto exit)))
       (for ((set i 0) (< i sf:out.size) (set i (+ 1 i)))
-        (set (array-get (array-get out.samples channel-i) (+ sf:out-start i))
-          (+ (array-get (array-get out.samples channel-i) (+ sf:out-start i))
-            (array-get (array-get sf:out.samples channel-i) i)))))
+        (set+ (array-get (array-get out.samples channel-i) (+ sf:out-start i))
+          (array-get (array-get sf:out.samples channel-i) i))))
     (sp-block-free sf:out))
+  (printf "merged\n")
   (label exit (free seq-futures) status-return))
 
 (define (sp-wave-event-f start end out event) (void sp-time-t sp-time-t sp-block-t sp-event-t*)
@@ -183,7 +190,7 @@
     ir-len sp-time-t
     e sp-event-t
     s sp-noise-event-state-t*)
-  (set resolution (if* resolution (min resolution (- end start)) 96))
+  (set resolution (if* resolution (sp-min resolution (- end start)) 96))
   (status-require (sph-helper-malloc (sizeof sp-noise-event-state-t) &s))
   (status-require (sph-helper-malloc (* resolution (sizeof sp-sample-t)) &s:noise))
   (status-require (sph-helper-malloc (* resolution (sizeof sp-sample-t)) &s:temp))
@@ -191,7 +198,7 @@
     "the result shows a small delay, circa 40 samples for transition 0.07. the size seems to be related to ir-len."
     "the state is initialised with one unused call to skip the delay."
     "an added benefit is that the filter-state setup malloc is checked")
-  (set ir-len (sp-windowed-sinc-lp-hp-ir-length (min *trn-l *trn-h)) s:filter-state 0)
+  (set ir-len (sp-windowed-sinc-lp-hp-ir-length (sp-min *trn-l *trn-h)) s:filter-state 0)
   (status-require (sph-helper-malloc (* ir-len (sizeof sp-sample-t)) &temp))
   (status-require (sph-helper-malloc (* ir-len (sizeof sp-sample-t)) &temp-noise))
   (sp-samples-random &random-state ir-len temp-noise)
@@ -280,7 +287,7 @@
    memory for event.state will be allocated and then owned by the caller"
   status-declare
   (declare e sp-event-t s sp-cheap-noise-event-state-t*)
-  (set resolution (if* resolution (min resolution (- end start)) 96))
+  (set resolution (if* resolution (sp-min resolution (- end start)) 96))
   (status-require (sph-helper-malloc (sizeof sp-cheap-noise-event-state-t) &s))
   (status-require (sph-helper-malloc (* resolution (sizeof sp-sample-t)) &s:noise))
   (status-require (sph-helper-malloc (* resolution (sizeof sp-sample-t)) &s:temp))

@@ -225,7 +225,7 @@
    (a b c ...) -> (a (+ a b) (+ a b c) ...)"
   (declare i sp-time-t sum sp-time-t)
   (set sum (array-get a 0) (array-get out 0) sum)
-  (for ((set i 0) (< i size) (set+ i 1)) (set sum (+ sum (array-get a i)) (array-get out i) sum)))
+  (for ((set i 1) (< i size) (set+ i 1)) (set sum (+ sum (array-get a i)) (array-get out i) sum)))
 
 (define (sp-times-random-discrete state cudist cudist-size count out)
   (void sp-random-state-t* sp-time-t* sp-time-t sp-time-t sp-time-t*)
@@ -249,11 +249,12 @@
   (sp-time-t sp-random-state-t* sp-time-t* sp-time-t sp-time-t)
   "get a random number in range with a custom probability distribution given by cudist,
    the cumulative sums of the distribution. the resulting number resolution is proportional to cudist-size"
+  (sc-comment "cudist-size minus one because range end is exclusive")
   (return
     (sp-cheap-round-positive
       (* range
         (/ (sp-time-random-discrete state cudist cudist-size)
-          (convert-type cudist-size sp-sample-t))))))
+          (convert-type (- cudist-size 1) sp-sample-t))))))
 
 (define (sp-sample-random-custom state cudist cudist-size range)
   (sp-sample-t sp-random-state-t* sp-time-t* sp-time-t sp-sample-t)
@@ -410,6 +411,13 @@
         mask (bit-shift-left mask 1))
       (set+ i 1 bits-i 1))
     (set+ a-i 1)))
+
+(define (sp-shuffle state swap a size)
+  (void sp-random-state-t* (function-pointer void void* size-t size-t) void* size-t)
+  (declare i size-t j size-t)
+  (for ((set i 0) (< i size) (set+ i 1))
+    (set j (+ i (sp-time-random-bounded state (- size i))))
+    (swap a i j)))
 
 (define (sp-times-shuffle state a size) (void sp-random-state-t* sp-time-t* sp-time-t)
   "modern yates shuffle.

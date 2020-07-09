@@ -398,14 +398,14 @@
       (array-get sums 0) 0
       (array-get sums 1) 0
       (array-get sums 2) 0
-      in-left (max in (- in-window radius))
-      in-right (min in-end (+ in-window radius))
+      in-left (sp-max in (- in-window radius))
+      in-right (sp-min in-end (+ in-window radius))
       (array-get sums 1) (sp-samples-sum in-left (+ 1 (- in-right in-left))))
     (if (and (< (- in-window in-left) radius) prev)
       (begin
         (set
           in-missing (- radius (- in-window in-left))
-          outside (max prev (- prev-end in-missing))
+          outside (sp-max prev (- prev-end in-missing))
           outside-count (- prev-end outside)
           (array-get sums 0) (sp-samples-sum outside outside-count))))
     (if (and (< (- in-right in-window) radius) next)
@@ -413,7 +413,7 @@
         (set
           in-missing (- radius (- in-right in-window))
           outside next
-          outside-count (min (- next-end next) in-missing)
+          outside-count (sp-min (- next-end next) in-missing)
           (array-get sums 2) (sp-samples-sum outside outside-count))))
     (set
       (pointer-get out) (/ (sp-samples-sum sums 3) width)

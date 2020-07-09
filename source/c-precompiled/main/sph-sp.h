@@ -106,6 +106,8 @@
 #define sp_cheap_ceiling_positive(a) (((sp_time_t)(a)) + (((sp_time_t)(a)) < a))
 #define sp_sine_state_1(size, frq, amp, phs) sp_wave_state_1(sp_sine_table, sp_sine_table_size, size, frq, amp, phs)
 #define sp_sine_state_2(size, frq, amp1, amp2, phs1, phs2) sp_wave_state_2(sp_sine_table, sp_sine_table_size, size, frq, amp1, amp2, phs1, phs2)
+#define sp_max(a, b) ((a > b) ? a : b)
+#define sp_min(a, b) ((a < b) ? a : b)
 typedef struct {
   sp_channels_t channels;
   sp_time_t size;
@@ -241,6 +243,7 @@ void sp_times_gt_indices(sp_time_t* a, sp_time_t size, sp_time_t n, sp_time_t* o
 void sp_times_extract_random(sp_random_state_t* state, sp_time_t* a, sp_time_t size, sp_time_t* out, sp_time_t* out_size);
 status_t sp_times_constant(sp_time_t a, sp_time_t size, sp_time_t** out);
 uint64_t sp_u64_from_array(uint8_t* a, sp_time_t size);
+void sp_shuffle(sp_random_state_t* state, void (*swap)(void*, size_t, size_t), void* a, size_t size);
 /* statistics */
 #define sp_stat_types_count (1 + (sp_stat_skewness - sp_stat_center))
 typedef enum { sp_stat_center = 0u,
@@ -406,6 +409,7 @@ typedef struct {
 status_t sp_group_new(sp_time_t start, sp_group_size_t event_size, sp_group_size_t memory_size, sp_event_t* out);
 void sp_group_append(sp_event_t* a, sp_event_t event);
 void sp_group_event_f(sp_time_t start, sp_time_t end, sp_block_t out, sp_event_t* event);
+void sp_group_event_parallel_f(sp_time_t start, sp_time_t end, sp_block_t out, sp_event_t* event);
 void sp_group_event_free(sp_event_t* a);
 /* path */
 #define sp_path_t spline_path_t

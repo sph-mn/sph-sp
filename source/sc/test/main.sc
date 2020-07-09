@@ -674,6 +674,31 @@
   (free out)
   (label exit status-return))
 
+(define (test-sp-seq-parallel) status-t
+  (declare
+    i sp-time-t
+    step-size sp-time-t
+    amp sp-sample-t*
+    frq sp-time-t*
+    size sp-time-t
+    block sp-block-t
+    events (array sp-event-t 10))
+  status-declare
+  (set size (* 100 _rate))
+  (status-require (sp-path-samples-2 &amp size (sp-path-move 0 1.0) (sp-path-constant)))
+  (status-require (sp-path-times-2 &frq size (sp-path-move 0 200) (sp-path-constant)))
+  (for ((set i 0) (< i 10) (set+ i 1))
+    (status-require (sp-wave-event 0 size (sp-sine-state-1 size frq amp 1) (+ events i))))
+  (status-require (sp-block-new 1 size &block))
+  (set step-size _rate)
+  (for ((set i 0) (< i size) (set+ i step-size))
+    (sp-seq-parallel i size (sp-block-with-offset block i) events 10))
+  (for ((set i 0) (< i 10) (set+ i 1)) ((struct-get (array-get events i) free) (+ events i)))
+  (free amp)
+  (free frq)
+  (sp-block-free block)
+  (label exit status-return))
+
 (define (main) int
   "\"goto exit\" can skip events"
   status-declare
@@ -704,4 +729,5 @@
   (test-helper-test-one test-compositions)
   (test-helper-test-one test-simple-mappings)
   (test-helper-test-one test-random-discrete)
+  (test-helper-test-one test-sp-seq-parallel)
   (label exit (test-helper-display-summary) (return status.id)))

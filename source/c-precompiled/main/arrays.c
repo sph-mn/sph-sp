@@ -262,7 +262,7 @@ void sp_times_cusum(sp_time_t* a, sp_time_t size, sp_time_t* out) {
   sp_time_t sum;
   sum = a[0];
   out[0] = sum;
-  for (i = 0; (i < size); i += 1) {
+  for (i = 1; (i < size); i += 1) {
     sum = (sum + a[i]);
     out[i] = sum;
   };
@@ -298,7 +298,10 @@ sp_time_t sp_time_random_discrete(sp_random_state_t* state, sp_time_t* cudist, s
 }
 /** get a random number in range with a custom probability distribution given by cudist,
    the cumulative sums of the distribution. the resulting number resolution is proportional to cudist-size */
-sp_time_t sp_time_random_custom(sp_random_state_t* state, sp_time_t* cudist, sp_time_t cudist_size, sp_time_t range) { return ((sp_cheap_round_positive((range * (sp_time_random_discrete(state, cudist, cudist_size) / ((sp_sample_t)(cudist_size))))))); }
+sp_time_t sp_time_random_custom(sp_random_state_t* state, sp_time_t* cudist, sp_time_t cudist_size, sp_time_t range) {
+  /* cudist-size minus one because range end is exclusive */
+  return ((sp_cheap_round_positive((range * (sp_time_random_discrete(state, cudist, cudist_size) / ((sp_sample_t)((cudist_size - 1))))))));
+}
 sp_sample_t sp_sample_random_custom(sp_random_state_t* state, sp_time_t* cudist, sp_time_t cudist_size, sp_sample_t range) { return ((range * (sp_time_random_discrete(state, cudist, cudist_size) / ((sp_sample_t)(cudist_size))))); }
 void sp_times_swap(sp_time_t* a, ssize_t i1, ssize_t i2) {
   sp_time_t temp;
@@ -515,6 +518,14 @@ void sp_times_bits_to_times(sp_time_t* a, sp_time_t size, sp_time_t* out) {
       bits_i += 1;
     };
     a_i += 1;
+  };
+}
+void sp_shuffle(sp_random_state_t* state, void (*swap)(void*, size_t, size_t), void* a, size_t size) {
+  size_t i;
+  size_t j;
+  for (i = 0; (i < size); i += 1) {
+    j = (i + sp_time_random_bounded(state, (size - i)));
+    swap(a, i, j);
   };
 }
 /** modern yates shuffle.

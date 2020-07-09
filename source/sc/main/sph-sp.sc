@@ -64,7 +64,9 @@
   (sp-sine-state-1 size frq amp phs)
   (sp-wave-state-1 sp-sine-table sp-sine-table-size size frq amp phs)
   (sp-sine-state-2 size frq amp1 amp2 phs1 phs2)
-  (sp-wave-state-2 sp-sine-table sp-sine-table-size size frq amp1 amp2 phs1 phs2))
+  (sp-wave-state-2 sp-sine-table sp-sine-table-size size frq amp1 amp2 phs1 phs2)
+  (sp-max a b) (if* (> a b) a b)
+  (sp-min a b) (if* (< a b) a b))
 
 (declare
   sp-block-t
@@ -229,7 +231,9 @@
   (sp-times-extract-random state a size out out-size)
   (void sp-random-state-t* sp-time-t* sp-time-t sp-time-t* sp-time-t*)
   (sp-times-constant a size out) (status-t sp-time-t sp-time-t sp-time-t**)
-  (sp-u64-from-array a size) (uint64-t uint8-t* sp-time-t))
+  (sp-u64-from-array a size) (uint64-t uint8-t* sp-time-t)
+  (sp-shuffle state swap a size)
+  (void sp-random-state-t* (function-pointer void void* size-t size-t) void* size-t))
 
 (sc-comment "statistics")
 (pre-define sp-stat-types-count (+ 1 (- sp-stat-skewness sp-stat-center)))
@@ -446,6 +450,7 @@
   (status-t sp-time-t sp-group-size-t sp-group-size-t sp-event-t*)
   (sp-group-append a event) (void sp-event-t* sp-event-t)
   (sp-group-event-f start end out event) (void sp-time-t sp-time-t sp-block-t sp-event-t*)
+  (sp-group-event-parallel-f start end out event) (void sp-time-t sp-time-t sp-block-t sp-event-t*)
   (sp-group-event-free a) (void sp-event-t*))
 
 (sc-comment "path")

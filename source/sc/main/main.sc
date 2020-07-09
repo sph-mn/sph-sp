@@ -8,8 +8,6 @@
 
 (pre-define
   sp-status-declare (status-declare-group sp-s-group-sp)
-  (max a b) (if* (> a b) a b)
-  (min a b) (if* (< a b) a b)
   (sp-libc-s-id id) (if (< id 0) (status-set-goto sp-s-group-libc id))
   (sp-libc-s expression)
   (begin
@@ -113,6 +111,7 @@
    * state.wvf-size: size of state.wvf
    * state.phs (phase): value per channel
    * state.amp (amplitude): array per channel"
+  (sc-comment "temp debug")
   (declare amp sp-sample-t channel-i sp-time-t phs sp-time-t i sp-time-t)
   (for ((set channel-i 0) (< channel-i out.channels) (set channel-i (+ 1 channel-i)))
     (set phs (array-get state:phs channel-i))
@@ -373,7 +372,7 @@
     block-end (* config.block-size (/ (- end start) config.block-size)))
   (for ((set i 0) (< i block-end) (set+ i config.block-size))
     (sp-seq i (+ i config.block-size) block &event 1)
-    (status-require (sp-file-write &file block.samples config.block-size &written))
+    (sc-comment (status-require (sp-file-write &file block.samples config.block-size &written)))
     (sp-block-zero block))
   (if remainder
     (begin
@@ -383,7 +382,7 @@
 
 (define (sp-render-block event start end config out)
   (status-t sp-event-t sp-time-t sp-time-t sp-render-config-t sp-block-t*)
-  "render a single event to file. event can be a group"
+  "render a single event to block arrays. event can be a group"
   status-declare
   (declare block sp-block-t i sp-time-t)
   (status-require (sp-block-new config.channels (- end start) &block))

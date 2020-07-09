@@ -696,6 +696,35 @@ status_t test_permutations() {
 exit:
   status_return;
 }
+status_t test_sp_seq_parallel() {
+  sp_time_t i;
+  sp_time_t step_size;
+  sp_sample_t* amp;
+  sp_time_t* frq;
+  sp_time_t size;
+  sp_block_t block;
+  sp_event_t events[10];
+  status_declare;
+  size = (100 * _rate);
+  status_require((sp_path_samples_2((&amp), size, (sp_path_move(0, (1.0))), (sp_path_constant()))));
+  status_require((sp_path_times_2((&frq), size, (sp_path_move(0, 200)), (sp_path_constant()))));
+  for (i = 0; (i < 10); i += 1) {
+    status_require((sp_wave_event(0, size, (sp_sine_state_1(size, frq, amp, 1)), (events + i))));
+  };
+  status_require((sp_block_new(1, size, (&block))));
+  step_size = _rate;
+  for (i = 0; (i < size); i += step_size) {
+    sp_seq_parallel(i, size, (sp_block_with_offset(block, i)), events, 10);
+  };
+  for (i = 0; (i < 10); i += 1) {
+    ((events[i]).free)((events + i));
+  };
+  free(amp);
+  free(frq);
+  sp_block_free(block);
+exit:
+  status_return;
+}
 /** "goto exit" can skip events */
 int main() {
   status_declare;
@@ -726,6 +755,7 @@ int main() {
   test_helper_test_one(test_compositions);
   test_helper_test_one(test_simple_mappings);
   test_helper_test_one(test_random_discrete);
+  test_helper_test_one(test_sp_seq_parallel);
 exit:
   test_helper_display_summary();
   return ((status.id));

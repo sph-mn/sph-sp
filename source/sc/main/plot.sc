@@ -19,7 +19,7 @@
 (define (sp-plot-times->file a a-size path) (void sp-time-t* sp-time-t uint8-t*)
   (declare file FILE* i sp-time-t)
   (set file (fopen path "w"))
-  (for ((set i 0) (< i a-size) (set i (+ 1 i))) (fprintf file "%lu\n" (array-get a i)))
+  (for ((set i 0) (< i a-size) (set+ i 1)) (fprintf file "%lu\n" (array-get a i)))
   (fclose file))
 
 (define (sp-plot-samples-file path use-steps) (void uint8-t* uint8-t)
@@ -61,7 +61,7 @@
   (snprintf path path-size "%s-%lu" sp-plot-temp-path sp-plot-temp-file-index)
   (set sp-plot-temp-file-index (+ 1 sp-plot-temp-file-index))
   (sp-plot-times->file a a-size path)
-  (sp-plot-times-file path #f)
+  (sp-plot-times-file path #t)
   (free path))
 
 (define (sp-plot-spectrum->file a a-size path) (void sp-sample-t* sp-time-t uint8-t*)

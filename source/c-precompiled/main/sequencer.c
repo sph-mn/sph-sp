@@ -8,7 +8,8 @@ uint8_t sp_event_sort_less_p(void* a, ssize_t b, ssize_t c) { return (((((sp_eve
 void sp_seq_events_prepare(sp_event_t* data, sp_time_t size) { quicksort(sp_event_sort_less_p, sp_event_sort_swap, data, 0, (size - 1)); }
 /** event arrays must have been prepared/sorted with sp-seq-event-prepare for seq to work correctly.
    event functions receive event relative start/end time and block has index 0 at start.
-   as for paths, start is inclusive, end is exclusive, so that 0..100 and 100..200 attach seamless */
+   as for paths, start is inclusive, end is exclusive, so that 0..100 and 100..200 attach seamless.
+   size is events size */
 void sp_seq(sp_time_t start, sp_time_t end, sp_block_t out, sp_event_t* events, sp_time_t size) {
   sp_time_t e_out_start;
   sp_event_t e;
@@ -79,12 +80,14 @@ status_t sp_seq_parallel(sp_time_t start, sp_time_t end, sp_block_t out, sp_even
   };
   status_require((sph_helper_malloc((events_count * sizeof(sp_seq_future_t)), (&seq_futures))));
   /* parallelise */
+  printf("parallelise\n");
   for (i = 0; (i < events_count); i = (1 + i)) {
     e = events[(events_start + i)];
     sf = (i + seq_futures);
     e_out_start = ((e.start > start) ? (e.start - start) : 0);
     e_start = ((start > e.start) ? (start - e.start) : 0);
-    e_end = (((e.end < end) ? e.end : end) - e.start);
+    e_end = (sp_min((e.end), end) - e.start);
+    printf("block %lu %lu\n", (out.channels), (e_end - e_start));
     status_require((sp_block_new((out.channels), (e_end - e_start), (&(sf->out)))));
     sf->start = e_start;
     sf->end = e_end;
@@ -93,16 +96,23 @@ status_t sp_seq_parallel(sp_time_t start, sp_time_t end, sp_block_t out, sp_even
     future_new(sp_seq_parallel_future_f, sf, (&(sf->future)));
   };
   /* merge */
+  printf("merge\n");
   for (e_i = 0; (e_i < events_count); e_i = (1 + e_i)) {
     sf = (e_i + seq_futures);
     touch((&(sf->future)));
     for (channel_i = 0; (channel_i < out.channels); channel_i = (1 + channel_i)) {
+      printf("channel %lu %lu %lu\n", channel_i, (sf->out.size), (sf->out_start));
+      if (3294873886 < sf->out.size) {
+        printf("!out size is too large!");
+        goto exit;
+      };
       for (i = 0; (i < sf->out.size); i = (1 + i)) {
-        ((out.samples)[channel_i])[(sf->out_start + i)] = (((out.samples)[channel_i])[(sf->out_start + i)] + ((sf->out.samples)[channel_i])[i]);
+        ((out.samples)[channel_i])[(sf->out_start + i)] += ((sf->out.samples)[channel_i])[i];
       };
     };
     sp_block_free((sf->out));
   };
+  printf("merged\n");
 exit:
   free(seq_futures);
   status_return;
@@ -186,14 +196,14 @@ status_t sp_noise_event(sp_time_t start, sp_time_t end, sp_sample_t** amp, sp_sa
   sp_time_t ir_len;
   sp_event_t e;
   sp_noise_event_state_t* s;
-  resolution = (resolution ? min(resolution, (end - start)) : 96);
+  resolution = (resolution ? sp_min(resolution, (end - start)) : 96);
   status_require((sph_helper_malloc((sizeof(sp_noise_event_state_t)), (&s))));
   status_require((sph_helper_malloc((resolution * sizeof(sp_sample_t)), (&(s->noise)))));
   status_require((sph_helper_malloc((resolution * sizeof(sp_sample_t)), (&(s->temp)))));
   /* the result shows a small delay, circa 40 samples for transition 0.07. the size seems to be related to ir-len.
 the state is initialised with one unused call to skip the delay.
 an added benefit is that the filter-state setup malloc is checked */
-  ir_len = sp_windowed_sinc_lp_hp_ir_length((min((*trn_l), (*trn_h))));
+  ir_len = sp_windowed_sinc_lp_hp_ir_length((sp_min((*trn_l), (*trn_h))));
   s->filter_state = 0;
   status_require((sph_helper_malloc((ir_len * sizeof(sp_sample_t)), (&temp))));
   status_require((sph_helper_malloc((ir_len * sizeof(sp_sample_t)), (&temp_noise))));
@@ -274,7 +284,7 @@ status_t sp_cheap_noise_event(sp_time_t start, sp_time_t end, sp_sample_t** amp,
   status_declare;
   sp_event_t e;
   sp_cheap_noise_event_state_t* s;
-  resolution = (resolution ? min(resolution, (end - start)) : 96);
+  resolution = (resolution ? sp_min(resolution, (end - start)) : 96);
   status_require((sph_helper_malloc((sizeof(sp_cheap_noise_event_state_t)), (&s))));
   status_require((sph_helper_malloc((resolution * sizeof(sp_sample_t)), (&(s->noise)))));
   status_require((sph_helper_malloc((resolution * sizeof(sp_sample_t)), (&(s->temp)))));

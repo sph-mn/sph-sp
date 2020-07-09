@@ -14,8 +14,6 @@
 #include <sph/futures.c>
 #include <sph/set.c>
 #define sp_status_declare status_declare_group(sp_s_group_sp)
-#define max(a, b) ((a > b) ? a : b)
-#define min(a, b) ((a < b) ? a : b)
 #define sp_libc_s_id(id) \
   if (id < 0) { \
     status_set_goto(sp_s_group_libc, id); \
@@ -157,6 +155,7 @@ sp_time_t sp_phase_float(sp_time_t current, sp_sample_t change, sp_time_t cycle)
    * state.phs (phase): value per channel
    * state.amp (amplitude): array per channel */
 void sp_wave(sp_time_t start, sp_time_t duration, sp_wave_state_t* state, sp_block_t out) {
+  /* temp debug */
   sp_sample_t amp;
   sp_time_t channel_i;
   sp_time_t phs;
@@ -458,7 +457,7 @@ status_t sp_render_file(sp_event_t event, sp_time_t start, sp_time_t end, sp_ren
   block_end = (config.block_size * ((end - start) / config.block_size));
   for (i = 0; (i < block_end); i += config.block_size) {
     sp_seq(i, (i + config.block_size), block, (&event), 1);
-    status_require((sp_file_write((&file), (block.samples), (config.block_size), (&written))));
+    /* (status-require (sp-file-write &file block.samples config.block-size &written)) */
     sp_block_zero(block);
   };
   if (remainder) {
@@ -470,7 +469,7 @@ exit:
   sp_file_close(file);
   status_return;
 }
-/** render a single event to file. event can be a group */
+/** render a single event to block arrays. event can be a group */
 status_t sp_render_block(sp_event_t event, sp_time_t start, sp_time_t end, sp_render_config_t config, sp_block_t* out) {
   status_declare;
   sp_block_t block;

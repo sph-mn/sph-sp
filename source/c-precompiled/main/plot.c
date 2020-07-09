@@ -17,7 +17,7 @@ void sp_plot_times_to_file(sp_time_t* a, sp_time_t a_size, uint8_t* path) {
   FILE* file;
   sp_time_t i;
   file = fopen(path, "w");
-  for (i = 0; (i < a_size); i = (1 + i)) {
+  for (i = 0; (i < a_size); i += 1) {
     fprintf(file, "%lu\n", (a[i]));
   };
   fclose(file);
@@ -71,7 +71,7 @@ void sp_plot_times(sp_time_t* a, sp_time_t a_size) {
   snprintf(path, path_size, "%s-%lu", sp_plot_temp_path, sp_plot_temp_file_index);
   sp_plot_temp_file_index = (1 + sp_plot_temp_file_index);
   sp_plot_times_to_file(a, a_size, path);
-  sp_plot_times_file(path, 0);
+  sp_plot_times_file(path, 1);
   free(path);
 }
 /** take the fft for given samples, convert complex values to magnitudes and write plot data to file */
