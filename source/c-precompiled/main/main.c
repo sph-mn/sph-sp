@@ -155,7 +155,6 @@ sp_time_t sp_phase_float(sp_time_t current, sp_sample_t change, sp_time_t cycle)
    * state.phs (phase): value per channel
    * state.amp (amplitude): array per channel */
 void sp_wave(sp_time_t start, sp_time_t duration, sp_wave_state_t* state, sp_block_t out) {
-  /* temp debug */
   sp_sample_t amp;
   sp_time_t channel_i;
   sp_time_t phs;
@@ -457,7 +456,7 @@ status_t sp_render_file(sp_event_t event, sp_time_t start, sp_time_t end, sp_ren
   block_end = (config.block_size * ((end - start) / config.block_size));
   for (i = 0; (i < block_end); i += config.block_size) {
     sp_seq(i, (i + config.block_size), block, (&event), 1);
-    /* (status-require (sp-file-write &file block.samples config.block-size &written)) */
+    status_require((sp_file_write((&file), (block.samples), (config.block_size), (&written))));
     sp_block_zero(block);
   };
   if (remainder) {

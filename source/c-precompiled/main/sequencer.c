@@ -25,7 +25,7 @@ void sp_seq(sp_time_t start, sp_time_t end, sp_block_t out, sp_event_t* events, 
     } else {
       e_out_start = ((e.start > start) ? (e.start - start) : 0);
       e_start = ((start > e.start) ? (start - e.start) : 0);
-      e_end = (((e.end < end) ? e.end : end) - e.start);
+      e_end = (sp_min(end, (e.end)) - e.start);
       (e.f)(e_start, e_end, (e_out_start ? sp_block_with_offset(out, e_out_start) : out), (&e));
     };
   };
@@ -59,60 +59,59 @@ status_t sp_seq_parallel(sp_time_t start, sp_time_t end, sp_block_t out, sp_even
   sp_event_t e;
   sp_time_t e_start;
   sp_time_t e_end;
-  sp_channels_t channel_i;
-  sp_time_t events_start;
-  sp_time_t events_count;
+  sp_channels_t chn_i;
   sp_seq_future_t* seq_futures;
   sp_seq_future_t* sf;
   sp_time_t i;
-  sp_time_t e_i;
+  sp_time_t ftr_i;
+  sp_time_t active_count;
   seq_futures = 0;
-  /* select active events */
-  for (i = 0, events_start = 0, events_count = 0; (i < size); i = (1 + i)) {
+  active_count = 0;
+  /* count events to allocate future object memory */
+  for (i = 0; (i < size); i += 1) {
     e = events[i];
     if (e.end <= start) {
-      events_start = (1 + events_start);
+      continue;
     } else if (end <= e.start) {
       break;
     } else {
-      events_count = (1 + events_count);
+      active_count += 1;
     };
   };
-  status_require((sph_helper_malloc((events_count * sizeof(sp_seq_future_t)), (&seq_futures))));
+  status_require((sph_helper_malloc((active_count * sizeof(sp_seq_future_t)), (&seq_futures))));
   /* parallelise */
-  printf("parallelise\n");
-  for (i = 0; (i < events_count); i = (1 + i)) {
-    e = events[(events_start + i)];
-    sf = (i + seq_futures);
-    e_out_start = ((e.start > start) ? (e.start - start) : 0);
-    e_start = ((start > e.start) ? (start - e.start) : 0);
-    e_end = (sp_min((e.end), end) - e.start);
-    printf("block %lu %lu\n", (out.channels), (e_end - e_start));
-    status_require((sp_block_new((out.channels), (e_end - e_start), (&(sf->out)))));
-    sf->start = e_start;
-    sf->end = e_end;
-    sf->out_start = e_out_start;
-    sf->event = (events_start + i + events);
-    future_new(sp_seq_parallel_future_f, sf, (&(sf->future)));
+  ftr_i = 0;
+  for (i = 0; (i < size); i += 1) {
+    e = events[i];
+    if (e.end <= start) {
+      continue;
+    } else if (end <= e.start) {
+      break;
+    } else {
+      sf = (seq_futures + ftr_i);
+      e_out_start = ((e.start > start) ? (e.start - start) : 0);
+      e_start = ((start > e.start) ? (start - e.start) : 0);
+      e_end = (sp_min(end, (e.end)) - e.start);
+      ftr_i += 1;
+      status_require((sp_block_new((out.channels), (e_end - e_start), (&(sf->out)))));
+      sf->start = e_start;
+      sf->end = e_end;
+      sf->out_start = e_out_start;
+      sf->event = (i + events);
+      future_new(sp_seq_parallel_future_f, sf, (&(sf->future)));
+    };
   };
   /* merge */
-  printf("merge\n");
-  for (e_i = 0; (e_i < events_count); e_i = (1 + e_i)) {
-    sf = (e_i + seq_futures);
+  for (ftr_i = 0; (ftr_i < active_count); ftr_i += 1) {
+    sf = (ftr_i + seq_futures);
     touch((&(sf->future)));
-    for (channel_i = 0; (channel_i < out.channels); channel_i = (1 + channel_i)) {
-      printf("channel %lu %lu %lu\n", channel_i, (sf->out.size), (sf->out_start));
-      if (3294873886 < sf->out.size) {
-        printf("!out size is too large!");
-        goto exit;
-      };
+    for (chn_i = 0; (chn_i < out.channels); chn_i = (1 + chn_i)) {
       for (i = 0; (i < sf->out.size); i = (1 + i)) {
-        ((out.samples)[channel_i])[(sf->out_start + i)] += ((sf->out.samples)[channel_i])[i];
+        ((out.samples)[chn_i])[(sf->out_start + i)] += ((sf->out.samples)[chn_i])[i];
       };
     };
     sp_block_free((sf->out));
   };
-  printf("merged\n");
 exit:
   free(seq_futures);
   status_return;
@@ -155,7 +154,7 @@ void sp_noise_event_f(sp_time_t start, sp_time_t end, sp_block_t out, sp_event_t
   sp_time_t block_count;
   sp_time_t i;
   sp_time_t block_i;
-  sp_time_t channel_i;
+  sp_time_t chn_i;
   sp_time_t t;
   sp_time_t block_offset;
   sp_time_t duration;
@@ -172,9 +171,9 @@ void sp_noise_event_f(sp_time_t start, sp_time_t end, sp_block_t out, sp_event_t
     duration = ((block_count == block_i) ? block_rest : s->resolution);
     sp_samples_random((&(s->random_state)), duration, (s->noise));
     sp_windowed_sinc_bp_br((s->noise), duration, ((s->cut_l)[t]), ((s->cut_h)[t]), ((s->trn_l)[t]), ((s->trn_h)[t]), (s->is_reject), (&(s->filter_state)), (s->temp));
-    for (channel_i = 0; (channel_i < out.channels); channel_i = (1 + channel_i)) {
+    for (chn_i = 0; (chn_i < out.channels); chn_i = (1 + chn_i)) {
       for (i = 0; (i < duration); i = (1 + i)) {
-        ((out.samples)[channel_i])[(block_offset + i)] = (((out.samples)[channel_i])[(block_offset + i)] + (((s->amp)[channel_i])[(block_offset + i)] * (s->temp)[i]));
+        ((out.samples)[chn_i])[(block_offset + i)] = (((out.samples)[chn_i])[(block_offset + i)] + (((s->amp)[chn_i])[(block_offset + i)] * (s->temp)[i]));
       };
     };
   };
@@ -245,7 +244,7 @@ void sp_cheap_noise_event_f(sp_time_t start, sp_time_t end, sp_block_t out, sp_e
   sp_time_t block_i;
   sp_time_t block_offset;
   sp_time_t block_rest;
-  sp_time_t channel_i;
+  sp_time_t chn_i;
   sp_time_t duration;
   sp_time_t i;
   sp_cheap_noise_event_state_t* s;
@@ -262,9 +261,9 @@ void sp_cheap_noise_event_f(sp_time_t start, sp_time_t end, sp_block_t out, sp_e
     duration = ((block_count == block_i) ? block_rest : s->resolution);
     sp_samples_random((&(s->random_state)), duration, (s->noise));
     sp_cheap_filter((s->type), (s->noise), duration, ((s->cut)[t]), (s->passes), (s->q_factor), 1, (&(s->filter_state)), (s->temp));
-    for (channel_i = 0; (channel_i < out.channels); channel_i = (1 + channel_i)) {
+    for (chn_i = 0; (chn_i < out.channels); chn_i = (1 + chn_i)) {
       for (i = 0; (i < duration); i = (1 + i)) {
-        ((out.samples)[channel_i])[(block_offset + i)] = (((out.samples)[channel_i])[(block_offset + i)] + (((s->amp)[channel_i])[(block_offset + i)] * (s->temp)[i]));
+        ((out.samples)[chn_i])[(block_offset + i)] = (((out.samples)[chn_i])[(block_offset + i)] + (((s->amp)[chn_i])[(block_offset + i)] * (s->temp)[i]));
       };
     };
   };

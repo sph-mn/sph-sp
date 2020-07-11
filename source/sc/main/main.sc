@@ -111,7 +111,6 @@
    * state.wvf-size: size of state.wvf
    * state.phs (phase): value per channel
    * state.amp (amplitude): array per channel"
-  (sc-comment "temp debug")
   (declare amp sp-sample-t channel-i sp-time-t phs sp-time-t i sp-time-t)
   (for ((set channel-i 0) (< channel-i out.channels) (set channel-i (+ 1 channel-i)))
     (set phs (array-get state:phs channel-i))
@@ -372,7 +371,7 @@
     block-end (* config.block-size (/ (- end start) config.block-size)))
   (for ((set i 0) (< i block-end) (set+ i config.block-size))
     (sp-seq i (+ i config.block-size) block &event 1)
-    (sc-comment (status-require (sp-file-write &file block.samples config.block-size &written)))
+    (status-require (sp-file-write &file block.samples config.block-size &written))
     (sp-block-zero block))
   (if remainder
     (begin

@@ -27,7 +27,7 @@
         (set
           e-out-start (if* (> e.start start) (- e.start start) 0)
           e-start (if* (> start e.start) (- start e.start) 0)
-          e-end (- (if* (< e.end end) e.end end) e.start))
+          e-end (- (sp-min end e.end) e.start))
         (e.f e-start e-end (if* e-out-start (sp-block-with-offset out e-out-start) out) &e)))))
 
 (define (sp-events-array-free events size) (void sp-event-t* sp-time-t)
@@ -59,46 +59,41 @@
     e sp-event-t
     e-start sp-time-t
     e-end sp-time-t
-    channel-i sp-channels-t
-    events-start sp-time-t
-    events-count sp-time-t
+    chn-i sp-channels-t
     seq-futures sp-seq-future-t*
     sf sp-seq-future-t*
     i sp-time-t
-    e-i sp-time-t)
-  (set seq-futures 0)
-  (sc-comment "select active events")
-  (for ((set i 0 events-start 0 events-count 0) (< i size) (set i (+ 1 i)))
+    ftr-i sp-time-t
+    active-count sp-time-t)
+  (set seq-futures 0 active-count 0)
+  (sc-comment "count events to allocate future object memory")
+  (for ((set i 0) (< i size) (set+ i 1))
     (set e (array-get events i))
-    (cond ((<= e.end start) (set events-start (+ 1 events-start))) ((<= end e.start) break)
-      (else (set events-count (+ 1 events-count)))))
-  (status-require (sph-helper-malloc (* events-count (sizeof sp-seq-future-t)) &seq-futures))
+    (cond ((<= e.end start) continue) ((<= end e.start) break) (else (set+ active-count 1))))
+  (status-require (sph-helper-malloc (* active-count (sizeof sp-seq-future-t)) &seq-futures))
   (sc-comment "parallelise")
-  (printf "parallelise\n")
-  (for ((set i 0) (< i events-count) (set i (+ 1 i)))
-    (set
-      e (array-get events (+ events-start i))
-      sf (+ i seq-futures)
-      e-out-start (if* (> e.start start) (- e.start start) 0)
-      e-start (if* (> start e.start) (- start e.start) 0)
-      e-end (- (sp-min e.end end) e.start))
-    (printf "block %lu %lu\n" out.channels (- e-end e-start))
-    (status-require (sp-block-new out.channels (- e-end e-start) &sf:out))
-    (set sf:start e-start sf:end e-end sf:out-start e-out-start sf:event (+ events-start i events))
-    (future-new sp-seq-parallel-future-f sf &sf:future))
+  (set ftr-i 0)
+  (for ((set i 0) (< i size) (set+ i 1))
+    (set e (array-get events i))
+    (cond ((<= e.end start) continue) ((<= end e.start) break)
+      (else
+        (set
+          sf (+ seq-futures ftr-i)
+          e-out-start (if* (> e.start start) (- e.start start) 0)
+          e-start (if* (> start e.start) (- start e.start) 0)
+          e-end (- (sp-min end e.end) e.start))
+        (set+ ftr-i 1) (status-require (sp-block-new out.channels (- e-end e-start) &sf:out))
+        (set sf:start e-start sf:end e-end sf:out-start e-out-start sf:event (+ i events))
+        (future-new sp-seq-parallel-future-f sf &sf:future))))
   (sc-comment "merge")
-  (printf "merge\n")
-  (for ((set e-i 0) (< e-i events-count) (set e-i (+ 1 e-i)))
-    (set sf (+ e-i seq-futures))
+  (for ((set ftr-i 0) (< ftr-i active-count) (set+ ftr-i 1))
+    (set sf (+ ftr-i seq-futures))
     (touch &sf:future)
-    (for ((set channel-i 0) (< channel-i out.channels) (set channel-i (+ 1 channel-i)))
-      (printf "channel %lu %lu %lu\n" channel-i sf:out.size sf:out-start)
-      (if (< 3294873886 sf:out.size) (begin (printf "!out size is too large!") (goto exit)))
+    (for ((set chn-i 0) (< chn-i out.channels) (set chn-i (+ 1 chn-i)))
       (for ((set i 0) (< i sf:out.size) (set i (+ 1 i)))
-        (set+ (array-get (array-get out.samples channel-i) (+ sf:out-start i))
-          (array-get (array-get sf:out.samples channel-i) i))))
+        (set+ (array-get (array-get out.samples chn-i) (+ sf:out-start i))
+          (array-get (array-get sf:out.samples chn-i) i))))
     (sp-block-free sf:out))
-  (printf "merged\n")
   (label exit (free seq-futures) status-return))
 
 (define (sp-wave-event-f start end out event) (void sp-time-t sp-time-t sp-block-t sp-event-t*)
@@ -143,7 +138,7 @@
     block-count sp-time-t
     i sp-time-t
     block-i sp-time-t
-    channel-i sp-time-t
+    chn-i sp-time-t
     t sp-time-t
     block-offset sp-time-t
     duration sp-time-t
@@ -164,11 +159,11 @@
     (sp-windowed-sinc-bp-br s:noise duration
       (array-get s:cut-l t) (array-get s:cut-h t) (array-get s:trn-l t)
       (array-get s:trn-h t) s:is-reject &s:filter-state s:temp)
-    (for ((set channel-i 0) (< channel-i out.channels) (set channel-i (+ 1 channel-i)))
+    (for ((set chn-i 0) (< chn-i out.channels) (set chn-i (+ 1 chn-i)))
       (for ((set i 0) (< i duration) (set i (+ 1 i)))
-        (set (array-get (array-get out.samples channel-i) (+ block-offset i))
-          (+ (array-get (array-get out.samples channel-i) (+ block-offset i))
-            (* (array-get (array-get s:amp channel-i) (+ block-offset i)) (array-get s:temp i))))))))
+        (set (array-get (array-get out.samples chn-i) (+ block-offset i))
+          (+ (array-get (array-get out.samples chn-i) (+ block-offset i))
+            (* (array-get (array-get s:amp chn-i) (+ block-offset i)) (array-get s:temp i))))))))
 
 (define (sp-noise-event-free a) (void sp-event-t*)
   (define s sp-noise-event-state-t* a:state)
@@ -245,7 +240,7 @@
     block-i sp-time-t
     block-offset sp-time-t
     block-rest sp-time-t
-    channel-i sp-time-t
+    chn-i sp-time-t
     duration sp-time-t
     i sp-time-t
     s sp-cheap-noise-event-state-t*
@@ -265,11 +260,11 @@
     (sp-samples-random &s:random-state duration s:noise)
     (sp-cheap-filter s:type s:noise
       duration (array-get s:cut t) s:passes s:q-factor #t &s:filter-state s:temp)
-    (for ((set channel-i 0) (< channel-i out.channels) (set channel-i (+ 1 channel-i)))
+    (for ((set chn-i 0) (< chn-i out.channels) (set chn-i (+ 1 chn-i)))
       (for ((set i 0) (< i duration) (set i (+ 1 i)))
-        (set (array-get (array-get out.samples channel-i) (+ block-offset i))
-          (+ (array-get (array-get out.samples channel-i) (+ block-offset i))
-            (* (array-get (array-get s:amp channel-i) (+ block-offset i)) (array-get s:temp i))))))))
+        (set (array-get (array-get out.samples chn-i) (+ block-offset i))
+          (+ (array-get (array-get out.samples chn-i) (+ block-offset i))
+            (* (array-get (array-get s:amp chn-i) (+ block-offset i)) (array-get s:temp i))))))))
 
 (define (sp-cheap-noise-event-free a) (void sp-event-t*)
   (define s sp-cheap-noise-event-state-t* a:state)
