@@ -98,46 +98,21 @@
 (define (test-moving-average) status-t
   status-declare
   (declare
-    radius sp-time-t
-    out (array sp-sample-t (5) 0 0 0 0 0)
     in (array sp-sample-t (5) 1 3 5 7 8)
-    prev (array sp-sample-t (5) 9 10 11)
     next (array sp-sample-t (5) 12 13 14)
-    in-end sp-sample-t*
-    prev-end sp-sample-t*
-    next-end sp-sample-t*
-    in-window sp-sample-t*
-    in-window-end sp-sample-t*)
-  (set
-    prev-end (+ prev 2)
-    next-end (+ next 2)
-    in-end (+ in 4)
-    in-window (+ in 1)
-    in-window-end (+ in 3)
-    radius 3)
-  (status-require
-    (sp-moving-average in in-end in-window in-window-end prev prev-end next next-end radius out))
+    prev (array sp-sample-t (5) 9 10 11)
+    out (array sp-sample-t (5) 0 0 0 0 0)
+    radius sp-time-t
+    size sp-time-t)
+  (set size 5)
+  (sp-moving-average in size prev 2 next 2 4 out)
   (sc-comment "first run with prev and next and only index 1 to 3 inclusively processed")
   (test-helper-assert "moving-average 1.1"
-    (sp-sample-nearly-equal 6.142857142857143 (array-get out 0) error-margin))
+    (sp-sample-nearly-equal 5.0 (array-get out 0) error-margin))
   (test-helper-assert "moving-average 1.2"
-    (sp-sample-nearly-equal 6.571428571428571 (array-get out 1) error-margin))
+    (sp-sample-nearly-equal 6.44 (array-get out 1) error-margin))
   (test-helper-assert "moving-average 1.2"
-    (sp-sample-nearly-equal 7 (array-get out 2) error-margin))
-  (sc-comment "second run. result number series will be symmetric")
-  (array-set out 0 0 1 0 2 0 3 0 4 0)
-  (array-set in 0 2 1 2 2 2 3 2 4 2)
-  (status-require (sp-moving-average in in-end in in-end 0 0 0 0 1 out))
-  (test-helper-assert "moving-average 2.1"
-    (sp-sample-nearly-equal 1.3 (array-get out 0) error-margin))
-  (test-helper-assert "moving-average 2.2"
-    (sp-sample-nearly-equal 2 (array-get out 1) error-margin))
-  (test-helper-assert "moving-average 2.3"
-    (sp-sample-nearly-equal 2 (array-get out 2) error-margin))
-  (test-helper-assert "moving-average 2.4"
-    (sp-sample-nearly-equal 2 (array-get out 3) error-margin))
-  (test-helper-assert "moving-average 2.5"
-    (sp-sample-nearly-equal 1.3 (array-get out 4) error-margin))
+    (sp-sample-nearly-equal 7.55 (array-get out 2) error-margin))
   (label exit status-return))
 
 (define (test-windowed-sinc) status-t
@@ -684,7 +659,7 @@
     block sp-block-t
     events (array sp-event-t 10))
   status-declare
-  (set size (* 100 _rate))
+  (set size (* 10 _rate))
   (status-require (sp-path-samples-2 &amp size (sp-path-move 0 1.0) (sp-path-constant)))
   (status-require (sp-path-times-2 &frq size (sp-path-move 0 200) (sp-path-constant)))
   (for ((set i 0) (< i 10) (set+ i 1))
@@ -699,11 +674,26 @@
   (sp-block-free block)
   (label exit status-return))
 
+(pre-define temp-size 100)
+
+(define (test-temp) status-t
+  status-declare
+  (declare state sp-wave-state-t out sp-block-t frq sp-time-t* amp sp-sample-t*)
+  (status-require (sp-block-new 1 temp-size &out))
+  (status-require (sp-path-times-2 &frq temp-size (sp-path-move 0 2000) (sp-path-constant)))
+  (status-require (sp-path-samples-2 &amp temp-size (sp-path-move 0 1.0) (sp-path-constant)))
+  (set state (sp-sine-state-1 temp-size frq amp 0))
+  (sp-wave 0 temp-size &state out)
+  (sp-samples-display (array-get out.samples 0) temp-size)
+  (sp-block-free out)
+  (label exit status-return))
+
 (define (main) int
   "\"goto exit\" can skip events"
   status-declare
   (set rs (sp-random-state-new 3))
   (sp-initialise 3 _rate)
+  (test-helper-test-one test-moving-average)
   (test-helper-test-one test-stats)
   (test-helper-test-one test-render-block)
   (test-helper-test-one test-wave-event)
@@ -717,7 +707,6 @@
   (test-helper-test-one test-sp-noise-event)
   (test-helper-test-one test-sp-random)
   (test-helper-test-one test-sp-triangle-square)
-  (test-helper-test-one test-moving-average)
   (test-helper-test-one test-fft)
   (test-helper-test-one test-spectral-inversion-ir)
   (test-helper-test-one test-base)

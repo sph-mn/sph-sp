@@ -374,49 +374,38 @@
     (memset state:svf-state 0 (* (sizeof sp-sample-t) 2 (- sp-cheap-filter-passes-limit passes))))
   (if unity-gain (sp-samples-set-unity-gain in in-size out)))
 
-(define
-  (sp-moving-average in in-end in-window in-window-end prev prev-end next next-end radius out)
-  (status-t sp-sample-t* sp-sample-t* sp-sample-t* sp-sample-t* sp-sample-t* sp-sample-t* sp-sample-t* sp-sample-t* sp-time-t sp-sample-t*)
-  "apply a centered moving average filter to samples between in-window and in-window-end inclusively and write to out.
-   removes high frequencies and smoothes data with little distortion in the time domain but the frequency response has large ripples.
-   all memory is managed by the caller.
-   * prev and next can be null pointers if not available
-   * zero is used for unavailable values
-   * rounding errors are kept low by using modified kahan neumaier summation"
-  status-declare
+(define (sp-moving-average in in-size prev prev-size next next-size radius out)
+  (void sp-sample-t* sp-time-t sp-sample-t* sp-time-t sp-sample-t* sp-time-t sp-time-t sp-sample-t*)
+  "centered moving average with width (radius * 2 + 1) on in to out.
+   prev/next can be portions outside in that will be used at the beginning and end respectively.
+   attenuates high frequencies and smoothes data with little distortion in the time domain but
+   the frequency response tends to have large ripples.
+   repeats the current center value for values outside of in and prev/next"
   (declare
-    in-left sp-sample-t*
-    in-right sp-sample-t*
-    outside sp-sample-t*
-    sums (array sp-sample-t (3))
-    outside-count sp-time-t
-    in-missing sp-time-t
-    width sp-time-t)
-  (set width (+ 1 radius radius))
-  (while (<= in-window in-window-end)
+    aa sp-time-t
+    a sp-time-t
+    bb sp-time-t
+    b sp-time-t
+    i sp-time-t
+    j sp-time-t
+    sum sp-sample-t)
+  (for ((set i 0) (< i in-size) (set+ i 1))
+    (sc-comment "a: inside-before-i, b: inside-after-i, aa: outside-before-i, bb: outside-after-i")
     (set
-      (array-get sums 0) 0
-      (array-get sums 1) 0
-      (array-get sums 2) 0
-      in-left (sp-max in (- in-window radius))
-      in-right (sp-min in-end (+ in-window radius))
-      (array-get sums 1) (sp-samples-sum in-left (+ 1 (- in-right in-left))))
-    (if (and (< (- in-window in-left) radius) prev)
+      sum 0
+      a (if* (< i radius) i radius)
+      b (if* (< (+ i radius 1) in-size) (+ radius 1) (- in-size i))
+      aa (- radius a)
+      bb (- (+ radius 1) b))
+    (for ((set j (- i a)) (< j (+ i b)) (set+ j 1)) (set+ sum (array-get in j)))
+    (if aa
       (begin
-        (set
-          in-missing (- radius (- in-window in-left))
-          outside (sp-max prev (- prev-end in-missing))
-          outside-count (- prev-end outside)
-          (array-get sums 0) (sp-samples-sum outside outside-count))))
-    (if (and (< (- in-right in-window) radius) next)
+        (set a (if* (< aa prev-size) aa prev-size) b (- aa a))
+        (for ((set j 0) (< j a) (set+ j 1)) (set+ sum (array-get prev (- prev-size j 1))))
+        (set+ sum (* b (array-get in i)))))
+    (if bb
       (begin
-        (set
-          in-missing (- radius (- in-right in-window))
-          outside next
-          outside-count (sp-min (- next-end next) in-missing)
-          (array-get sums 2) (sp-samples-sum outside outside-count))))
-    (set
-      (pointer-get out) (/ (sp-samples-sum sums 3) width)
-      out (+ 1 out)
-      in-window (+ 1 in-window)))
-  status-return)
+        (set a (if* (< bb next-size) bb next-size) b (- bb a))
+        (for ((set j 0) (< j a) (set+ j 1)) (set+ sum (array-get next j)))
+        (set+ sum (* b (array-get in i)))))
+    (set (array-get out i) (/ sum (+ (* 2 radius) 1)))))

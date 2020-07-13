@@ -310,7 +310,7 @@ typedef struct {
   sp_sample_t svf_state[(2 * sp_cheap_filter_passes_limit)];
 } sp_cheap_filter_state_t;
 typedef void (*sp_state_variable_filter_t)(sp_sample_t*, sp_sample_t*, sp_float_t, sp_float_t, sp_time_t, sp_sample_t*);
-status_t sp_moving_average(sp_sample_t* in, sp_sample_t* in_end, sp_sample_t* in_window, sp_sample_t* in_window_end, sp_sample_t* prev, sp_sample_t* prev_end, sp_sample_t* next, sp_sample_t* next_end, sp_time_t radius, sp_sample_t* out);
+void sp_moving_average(sp_sample_t* in, sp_time_t in_size, sp_sample_t* prev, sp_time_t prev_size, sp_sample_t* next, sp_time_t next_size, sp_time_t radius, sp_sample_t* out);
 sp_time_t sp_windowed_sinc_lp_hp_ir_length(sp_float_t transition);
 status_t sp_windowed_sinc_ir(sp_float_t cutoff, sp_float_t transition, sp_time_t* result_len, sp_sample_t** result_ir);
 void sp_convolution_filter_state_free(sp_convolution_filter_state_t* state);

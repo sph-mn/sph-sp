@@ -104,44 +104,18 @@ exit:
 }
 status_t test_moving_average() {
   status_declare;
-  sp_time_t radius;
-  sp_sample_t out[5] = { 0, 0, 0, 0, 0 };
   sp_sample_t in[5] = { 1, 3, 5, 7, 8 };
-  sp_sample_t prev[5] = { 9, 10, 11 };
   sp_sample_t next[5] = { 12, 13, 14 };
-  sp_sample_t* in_end;
-  sp_sample_t* prev_end;
-  sp_sample_t* next_end;
-  sp_sample_t* in_window;
-  sp_sample_t* in_window_end;
-  prev_end = (prev + 2);
-  next_end = (next + 2);
-  in_end = (in + 4);
-  in_window = (in + 1);
-  in_window_end = (in + 3);
-  radius = 3;
-  status_require((sp_moving_average(in, in_end, in_window, in_window_end, prev, prev_end, next, next_end, radius, out)));
+  sp_sample_t prev[5] = { 9, 10, 11 };
+  sp_sample_t out[5] = { 0, 0, 0, 0, 0 };
+  sp_time_t radius;
+  sp_time_t size;
+  size = 5;
+  sp_moving_average(in, size, prev, 2, next, 2, 4, out);
   /* first run with prev and next and only index 1 to 3 inclusively processed */
-  test_helper_assert(("moving-average 1.1"), (sp_sample_nearly_equal((6.142857142857143), (out[0]), error_margin)));
-  test_helper_assert(("moving-average 1.2"), (sp_sample_nearly_equal((6.571428571428571), (out[1]), error_margin)));
-  test_helper_assert(("moving-average 1.2"), (sp_sample_nearly_equal(7, (out[2]), error_margin)));
-  /* second run. result number series will be symmetric */
-  out[0] = 0;
-  out[1] = 0;
-  out[2] = 0;
-  out[3] = 0;
-  out[4] = 0;
-  in[0] = 2;
-  in[1] = 2;
-  in[2] = 2;
-  in[3] = 2;
-  in[4] = 2;
-  status_require((sp_moving_average(in, in_end, in, in_end, 0, 0, 0, 0, 1, out)));
-  test_helper_assert(("moving-average 2.1"), (sp_sample_nearly_equal((1.3), (out[0]), error_margin)));
-  test_helper_assert(("moving-average 2.2"), (sp_sample_nearly_equal(2, (out[1]), error_margin)));
-  test_helper_assert(("moving-average 2.3"), (sp_sample_nearly_equal(2, (out[2]), error_margin)));
-  test_helper_assert(("moving-average 2.4"), (sp_sample_nearly_equal(2, (out[3]), error_margin)));
-  test_helper_assert(("moving-average 2.5"), (sp_sample_nearly_equal((1.3), (out[4]), error_margin)));
+  test_helper_assert(("moving-average 1.1"), (sp_sample_nearly_equal((5.0), (out[0]), error_margin)));
+  test_helper_assert(("moving-average 1.2"), (sp_sample_nearly_equal((6.44), (out[1]), error_margin)));
+  test_helper_assert(("moving-average 1.2"), (sp_sample_nearly_equal((7.55), (out[2]), error_margin)));
 exit:
   status_return;
 }
@@ -705,7 +679,7 @@ status_t test_sp_seq_parallel() {
   sp_block_t block;
   sp_event_t events[10];
   status_declare;
-  size = (100 * _rate);
+  size = (10 * _rate);
   status_require((sp_path_samples_2((&amp), size, (sp_path_move(0, (1.0))), (sp_path_constant()))));
   status_require((sp_path_times_2((&frq), size, (sp_path_move(0, 200)), (sp_path_constant()))));
   for (i = 0; (i < 10); i += 1) {
@@ -725,11 +699,29 @@ status_t test_sp_seq_parallel() {
 exit:
   status_return;
 }
+#define temp_size 100
+status_t test_temp() {
+  status_declare;
+  sp_wave_state_t state;
+  sp_block_t out;
+  sp_time_t* frq;
+  sp_sample_t* amp;
+  status_require((sp_block_new(1, temp_size, (&out))));
+  status_require((sp_path_times_2((&frq), temp_size, (sp_path_move(0, 2000)), (sp_path_constant()))));
+  status_require((sp_path_samples_2((&amp), temp_size, (sp_path_move(0, (1.0))), (sp_path_constant()))));
+  state = sp_sine_state_1(temp_size, frq, amp, 0);
+  sp_wave(0, temp_size, (&state), out);
+  sp_samples_display(((out.samples)[0]), temp_size);
+  sp_block_free(out);
+exit:
+  status_return;
+}
 /** "goto exit" can skip events */
 int main() {
   status_declare;
   rs = sp_random_state_new(3);
   sp_initialise(3, _rate);
+  test_helper_test_one(test_moving_average);
   test_helper_test_one(test_stats);
   test_helper_test_one(test_render_block);
   test_helper_test_one(test_wave_event);
@@ -743,7 +735,6 @@ int main() {
   test_helper_test_one(test_sp_noise_event);
   test_helper_test_one(test_sp_random);
   test_helper_test_one(test_sp_triangle_square);
-  test_helper_test_one(test_moving_average);
   test_helper_test_one(test_fft);
   test_helper_test_one(test_spectral_inversion_ir);
   test_helper_test_one(test_base);

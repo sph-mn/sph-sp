@@ -320,10 +320,8 @@
   sp-state-variable-filter-t
   (type
     (function-pointer void sp-sample-t* sp-sample-t* sp-float-t sp-float-t sp-time-t sp-sample-t*))
-  (sp-moving-average in in-end in-window in-window-end prev prev-end next next-end radius out)
-  (status-t sp-sample-t* sp-sample-t*
-    sp-sample-t* sp-sample-t* sp-sample-t*
-    sp-sample-t* sp-sample-t* sp-sample-t* sp-time-t sp-sample-t*)
+  (sp-moving-average in in-size prev prev-size next next-size radius out)
+  (void sp-sample-t* sp-time-t sp-sample-t* sp-time-t sp-sample-t* sp-time-t sp-time-t sp-sample-t*)
   (sp-windowed-sinc-lp-hp-ir-length transition) (sp-time-t sp-float-t)
   (sp-windowed-sinc-ir cutoff transition result-len result-ir)
   (status-t sp-float-t sp-float-t sp-time-t* sp-sample-t**)
