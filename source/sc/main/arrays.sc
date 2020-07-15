@@ -3,6 +3,14 @@
   "sp-time-t subtraction is limited to zero."
   "sp-time-t addition is not limited and large values that might lead to overflows are considered special cases.")
 
+(define (sp-shuffle state swap a size)
+  (void sp-random-state-t* (function-pointer void void* size-t size-t) void* size-t)
+  "generic shuffle that works on any array type. fisher-yates algorithm"
+  (declare i size-t j size-t)
+  (for ((set i 0) (< i size) (set+ i 1))
+    (set j (+ i (sp-time-random-bounded state (- size i))))
+    (swap a i j)))
+
 (define (sp-samples-new size out) (status-t sp-time-t sp-sample-t**)
   (return (sph-helper-calloc (* size (sizeof sp-sample-t)) out)))
 
@@ -360,13 +368,14 @@
   (declare i sp-time-t)
   (for ((set i 0) (< i count) (set+ i 1)) (set (array-get out i) start) (set/ start n)))
 
-(define (sp-samples-scale a size n out) (void sp-sample-t* sp-time-t sp-sample-t sp-sample-t*)
+(define (sp-samples-scale-y a size n out) (void sp-sample-t* sp-time-t sp-sample-t sp-sample-t*)
   "adjust all values, keeping relative sizes, so that the maximum value is n.
    a/out can be the same pointer"
   (define max sp-sample-t (sp-samples-absolute-max a size))
   (sp-samples-multiply-1 a size (/ n max) a))
 
-(define (sp-samples-scale-sum a size n out) (void sp-sample-t* sp-time-t sp-sample-t sp-sample-t*)
+(define (sp-samples-scale-y-sum a size n out)
+  (void sp-sample-t* sp-time-t sp-sample-t sp-sample-t*)
   "adjust all values, keeping relative sizes, so that the sum is n.
    a/out can be the same pointer"
   (define sum sp-sample-t (sp-samples-sum a size))
@@ -412,13 +421,6 @@
       (set+ i 1 bits-i 1))
     (set+ a-i 1)))
 
-(define (sp-shuffle state swap a size)
-  (void sp-random-state-t* (function-pointer void void* size-t size-t) void* size-t)
-  (declare i size-t j size-t)
-  (for ((set i 0) (< i size) (set+ i 1))
-    (set j (+ i (sp-time-random-bounded state (- size i))))
-    (swap a i j)))
-
 (define (sp-times-shuffle state a size) (void sp-random-state-t* sp-time-t* sp-time-t)
   "modern yates shuffle.
    https://en.wikipedia.org/wiki/Fisher%E2%80%93Yates_shuffle#The_modern_algorithm"
@@ -444,7 +446,8 @@
 
 (define (sp-times-gt-indices a size n out out-size)
   (void sp-time-t* sp-time-t sp-time-t sp-time-t* sp-time-t*)
-  "out can be \"a\""
+  "write to out indices of a that are greater than n
+   a/out can be the same pointer"
   (declare i sp-time-t i2 sp-time-t)
   (for ((set i 0 i2 0) (< i size) (set+ i 1))
     (if (< n (array-get a i)) (set (array-get out i2) i i2 (+ i2 1))))
@@ -453,16 +456,63 @@
 (define (sp-times-extract-random state a size out out-size)
   (void sp-random-state-t* sp-time-t* sp-time-t sp-time-t* sp-time-t*)
   "a/out can not be the same pointer.
-   out-size will be less or equal than size"
+   out-size will be less or equal than size.
+   memory is allocated and owned by caller"
   status-declare
   (sp-times-random-binary state size out)
   (sp-times-gt-indices out size 0 out out-size)
   (sp-times-extract-at-indices a out *out-size out))
 
-(define (sp-times-constant a size out) (status-t sp-time-t sp-time-t sp-time-t**)
+(define (sp-times-constant a size value out) (status-t sp-time-t sp-time-t sp-time-t sp-time-t**)
+  "allocate memory for out and set all elements to value"
   (declare temp sp-time-t*)
   status-declare
   (status-require (sp-times-new size &temp))
-  (sp-times-set-1 temp size 4 temp)
+  (sp-times-set-1 temp size value temp)
   (set *out temp)
   (label exit status-return))
+
+(define (sp-times-scale a a-size factor out) (status-t sp-time-t* sp-time-t sp-time-t sp-time-t*)
+  "expand by factor. y is scaled by (y * factor), x is scaled by linear interpolation between elements of a.
+   out size will be (a-size - 1) * factor"
+  status-declare
+  (declare i sp-time-t i2 sp-time-t aa sp-time-t*)
+  (status-require (sp-times-new a-size &aa))
+  (sp-times-multiply-1 a a-size factor aa)
+  (for ((set i 1) (< i a-size) (set+ i 1))
+    (for ((set i2 0) (< i2 factor) (set+ i2 1))
+      (set (array-get out (+ (* factor (- i 1)) i2))
+        (sp-time-interpolate-linear (array-get aa (- i 1)) (array-get aa i)
+          (/ i2 (convert-type factor sp-sample-t))))))
+  (free aa)
+  (label exit status-return))
+
+(define (sp-times-shuffle-swap a i1 i2) (void void* size-t size-t)
+  "a array value swap function usable with sp-shuffle"
+  (declare b sp-time-t*)
+  (set
+    b (array-get (convert-type a sp-time-t**) i1)
+    (array-get (convert-type a sp-time-t**) i1) (array-get (convert-type a sp-time-t**) i2)
+    (array-get (convert-type a sp-time-t**) i2) b))
+
+(define (sp-samples-smooth a size radius out)
+  (status-t sp-sample-t* sp-time-t sp-time-t sp-sample-t*)
+  "smooth data while keeping the first and last sample at the exact same value.
+   applies a centered moving average filter and temporarily adds preceeding and following samples which are sign inverted mirrors
+   of the start/end portions.
+   first/last of out is set to first/last of in to avoid floating point rounding errors on these values"
+  status-declare
+  (declare range sp-time-t i sp-time-t prev sp-sample-t* next sp-sample-t*)
+  (memreg-init 2)
+  (set range (sp-min radius size))
+  (status-require (sp-samples-new range &prev))
+  (memreg-add prev)
+  (status-require (sp-samples-new range &next))
+  (memreg-add next)
+  (for ((set i 0) (< i range) (set+ i 1))
+    (set
+      (array-get prev i) (* -1 (array-get a (- range i 1)))
+      (array-get next i) (* -1 (array-get a (- size (- range i 1))))))
+  (sp-moving-average a size prev radius next radius radius out)
+  (set (array-get out 0) (array-get a 0) (array-get out (- size 1)) (array-get a (- size 1)))
+  (label exit memreg-free status-return))

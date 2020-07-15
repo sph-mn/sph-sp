@@ -397,6 +397,7 @@ void sp_cheap_filter(sp_state_variable_filter_t type, sp_sample_t* in, sp_time_t
   };
 }
 /** centered moving average with width (radius * 2 + 1) on in to out.
+   this version is slower the greater radius is, and should probably be optimised (floating point errors?).
    prev/next can be portions outside in that will be used at the beginning and end respectively.
    attenuates high frequencies and smoothes data with little distortion in the time domain but
    the frequency response tends to have large ripples.

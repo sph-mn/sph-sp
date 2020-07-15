@@ -174,6 +174,8 @@ sp_time_t sp_compositions_max(sp_time_t sum);
 /* arrays */
 #define sp_samples_zero(a, size) memset(a, 0, (size * sizeof(sp_sample_t)))
 #define sp_times_zero(a, size) memset(a, 0, (size * sizeof(sp_time_t)))
+#define sp_time_interpolate_linear(a, b, t) sp_cheap_round_positive((((1 - ((sp_sample_t)(t))) * ((sp_sample_t)(a))) + (t * ((sp_sample_t)(b)))))
+#define sp_sample_interpolate_linear(a, b, t) (((1 - t) * a) + (t * b))
 sp_sample_t sp_samples_absolute_max(sp_sample_t* in, sp_time_t in_size);
 void sp_samples_add_1(sp_sample_t* a, sp_time_t size, sp_sample_t n, sp_sample_t* out);
 void sp_samples_add(sp_sample_t* a, sp_time_t size, sp_sample_t* b, sp_sample_t* out);
@@ -200,8 +202,8 @@ status_t sp_samples_copy(sp_sample_t* a, sp_time_t size, sp_sample_t** out);
 void sp_samples_differences(sp_sample_t* a, sp_time_t size, sp_sample_t* out);
 void sp_samples_additions(sp_sample_t start, sp_sample_t summand, sp_time_t count, sp_sample_t* out);
 void sp_samples_divisions(sp_sample_t start, sp_sample_t n, sp_time_t count, sp_sample_t* out);
-void sp_samples_scale(sp_sample_t* a, sp_time_t size, sp_sample_t n, sp_sample_t* out);
-void sp_samples_scale_sum(sp_sample_t* a, sp_time_t size, sp_sample_t n, sp_sample_t* out);
+void sp_samples_scale_y(sp_sample_t* a, sp_time_t size, sp_sample_t n, sp_sample_t* out);
+void sp_samples_scale_y_sum(sp_sample_t* a, sp_time_t size, sp_sample_t n, sp_sample_t* out);
 void sp_times_add_1(sp_time_t* a, sp_time_t size, sp_time_t n, sp_time_t* out);
 void sp_times_add(sp_time_t* a, sp_time_t size, sp_time_t* b, sp_time_t* out);
 void sp_times_and(sp_time_t* a, sp_time_t* b, sp_time_t size, sp_time_t limit, sp_time_t* out);
@@ -241,9 +243,12 @@ void sp_times_shuffle(sp_random_state_t* state, sp_time_t* a, sp_time_t size);
 status_t sp_times_random_binary(sp_random_state_t* state, sp_time_t size, sp_time_t* out);
 void sp_times_gt_indices(sp_time_t* a, sp_time_t size, sp_time_t n, sp_time_t* out, sp_time_t* out_size);
 void sp_times_extract_random(sp_random_state_t* state, sp_time_t* a, sp_time_t size, sp_time_t* out, sp_time_t* out_size);
-status_t sp_times_constant(sp_time_t a, sp_time_t size, sp_time_t** out);
+status_t sp_times_constant(sp_time_t a, sp_time_t size, sp_time_t value, sp_time_t** out);
 uint64_t sp_u64_from_array(uint8_t* a, sp_time_t size);
 void sp_shuffle(sp_random_state_t* state, void (*swap)(void*, size_t, size_t), void* a, size_t size);
+status_t sp_times_scale(sp_time_t* a, sp_time_t a_size, sp_time_t factor, sp_time_t* out);
+void sp_times_shuffle_swap(void* a, size_t i1, size_t i2);
+status_t sp_samples_smooth(sp_sample_t* a, sp_time_t size, sp_time_t radius, sp_sample_t* out);
 /* statistics */
 #define sp_stat_types_count (1 + (sp_stat_skewness - sp_stat_center))
 typedef enum { sp_stat_center = 0u,

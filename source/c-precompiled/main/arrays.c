@@ -1,6 +1,15 @@
 /* routines on arrays of sp-time-t or sp-sample-t
 sp-time-t subtraction is limited to zero.
 sp-time-t addition is not limited and large values that might lead to overflows are considered special cases. */
+/** generic shuffle that works on any array type. fisher-yates algorithm */
+void sp_shuffle(sp_random_state_t* state, void (*swap)(void*, size_t, size_t), void* a, size_t size) {
+  size_t i;
+  size_t j;
+  for (i = 0; (i < size); i += 1) {
+    j = (i + sp_time_random_bounded(state, (size - i)));
+    swap(a, i, j);
+  };
+}
 status_t sp_samples_new(sp_time_t size, sp_sample_t** out) { return ((sph_helper_calloc((size * sizeof(sp_sample_t)), out))); }
 status_t sp_times_new(sp_time_t size, sp_time_t** out) { return ((sph_helper_calloc((size * sizeof(sp_time_t)), out))); }
 void sp_samples_to_times(sp_sample_t* in, sp_time_t size, sp_time_t* out) {
@@ -457,13 +466,13 @@ void sp_samples_divisions(sp_sample_t start, sp_sample_t n, sp_time_t count, sp_
 }
 /** adjust all values, keeping relative sizes, so that the maximum value is n.
    a/out can be the same pointer */
-void sp_samples_scale(sp_sample_t* a, sp_time_t size, sp_sample_t n, sp_sample_t* out) {
+void sp_samples_scale_y(sp_sample_t* a, sp_time_t size, sp_sample_t n, sp_sample_t* out) {
   sp_sample_t max = sp_samples_absolute_max(a, size);
   sp_samples_multiply_1(a, size, (n / max), a);
 }
 /** adjust all values, keeping relative sizes, so that the sum is n.
    a/out can be the same pointer */
-void sp_samples_scale_sum(sp_sample_t* a, sp_time_t size, sp_sample_t n, sp_sample_t* out) {
+void sp_samples_scale_y_sum(sp_sample_t* a, sp_time_t size, sp_sample_t n, sp_sample_t* out) {
   sp_sample_t sum = sp_samples_sum(a, size);
   sp_samples_multiply_1(a, size, (n / sum), a);
 }
@@ -520,14 +529,6 @@ void sp_times_bits_to_times(sp_time_t* a, sp_time_t size, sp_time_t* out) {
     a_i += 1;
   };
 }
-void sp_shuffle(sp_random_state_t* state, void (*swap)(void*, size_t, size_t), void* a, size_t size) {
-  size_t i;
-  size_t j;
-  for (i = 0; (i < size); i += 1) {
-    j = (i + sp_time_random_bounded(state, (size - i)));
-    swap(a, i, j);
-  };
-}
 /** modern yates shuffle.
    https://en.wikipedia.org/wiki/Fisher%E2%80%93Yates_shuffle#The_modern_algorithm */
 void sp_times_shuffle(sp_random_state_t* state, sp_time_t* a, sp_time_t size) {
@@ -554,7 +555,8 @@ status_t sp_times_random_binary(sp_random_state_t* state, sp_time_t size, sp_tim
 exit:
   status_return;
 }
-/** out can be "a" */
+/** write to out indices of a that are greater than n
+   a/out can be the same pointer */
 void sp_times_gt_indices(sp_time_t* a, sp_time_t size, sp_time_t n, sp_time_t* out, sp_time_t* out_size) {
   sp_time_t i;
   sp_time_t i2;
@@ -567,19 +569,73 @@ void sp_times_gt_indices(sp_time_t* a, sp_time_t size, sp_time_t n, sp_time_t* o
   *out_size = i2;
 }
 /** a/out can not be the same pointer.
-   out-size will be less or equal than size */
+   out-size will be less or equal than size.
+   memory is allocated and owned by caller */
 void sp_times_extract_random(sp_random_state_t* state, sp_time_t* a, sp_time_t size, sp_time_t* out, sp_time_t* out_size) {
   status_declare;
   sp_times_random_binary(state, size, out);
   sp_times_gt_indices(out, size, 0, out, out_size);
   sp_times_extract_at_indices(a, out, (*out_size), out);
 }
-status_t sp_times_constant(sp_time_t a, sp_time_t size, sp_time_t** out) {
+/** allocate memory for out and set all elements to value */
+status_t sp_times_constant(sp_time_t a, sp_time_t size, sp_time_t value, sp_time_t** out) {
   sp_time_t* temp;
   status_declare;
   status_require((sp_times_new(size, (&temp))));
-  sp_times_set_1(temp, size, 4, temp);
+  sp_times_set_1(temp, size, value, temp);
   *out = temp;
 exit:
+  status_return;
+}
+/** expand by factor. y is scaled by (y * factor), x is scaled by linear interpolation between elements of a.
+   out size will be (a-size - 1) * factor */
+status_t sp_times_scale(sp_time_t* a, sp_time_t a_size, sp_time_t factor, sp_time_t* out) {
+  status_declare;
+  sp_time_t i;
+  sp_time_t i2;
+  sp_time_t* aa;
+  status_require((sp_times_new(a_size, (&aa))));
+  sp_times_multiply_1(a, a_size, factor, aa);
+  for (i = 1; (i < a_size); i += 1) {
+    for (i2 = 0; (i2 < factor); i2 += 1) {
+      out[((factor * (i - 1)) + i2)] = sp_time_interpolate_linear((aa[(i - 1)]), (aa[i]), (i2 / ((sp_sample_t)(factor))));
+    };
+  };
+  free(aa);
+exit:
+  status_return;
+}
+/** a array value swap function usable with sp-shuffle */
+void sp_times_shuffle_swap(void* a, size_t i1, size_t i2) {
+  sp_time_t* b;
+  b = ((sp_time_t**)(a))[i1];
+  ((sp_time_t**)(a))[i1] = ((sp_time_t**)(a))[i2];
+  ((sp_time_t**)(a))[i2] = b;
+}
+/** smooth data while keeping the first and last sample at the exact same value.
+   applies a centered moving average filter and temporarily adds preceeding and following samples which are sign inverted mirrors
+   of the start/end portions.
+   first/last of out is set to first/last of in to avoid floating point rounding errors on these values */
+status_t sp_samples_smooth(sp_sample_t* a, sp_time_t size, sp_time_t radius, sp_sample_t* out) {
+  status_declare;
+  sp_time_t range;
+  sp_time_t i;
+  sp_sample_t* prev;
+  sp_sample_t* next;
+  memreg_init(2);
+  range = sp_min(radius, size);
+  status_require((sp_samples_new(range, (&prev))));
+  memreg_add(prev);
+  status_require((sp_samples_new(range, (&next))));
+  memreg_add(next);
+  for (i = 0; (i < range); i += 1) {
+    prev[i] = (-1 * a[(range - i - 1)]);
+    next[i] = (-1 * a[(size - (range - i - 1))]);
+  };
+  sp_moving_average(a, size, prev, radius, next, radius, radius, out);
+  out[0] = a[0];
+  out[(size - 1)] = a[(size - 1)];
+exit:
+  memreg_free;
   status_return;
 }

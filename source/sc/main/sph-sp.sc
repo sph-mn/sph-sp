@@ -148,7 +148,12 @@
 
 (pre-define
   (sp-samples-zero a size) (memset a 0 (* size (sizeof sp-sample-t)))
-  (sp-times-zero a size) (memset a 0 (* size (sizeof sp-time-t))))
+  (sp-times-zero a size) (memset a 0 (* size (sizeof sp-time-t)))
+  (sp-time-interpolate-linear a b t)
+  (sp-cheap-round-positive
+    (+ (* (- 1 (convert-type t sp-sample-t)) (convert-type a sp-sample-t))
+      (* t (convert-type b sp-sample-t))))
+  (sp-sample-interpolate-linear a b t) (+ (* (- 1 t) a) (* t b)))
 
 (declare
   (sp-samples-absolute-max in in-size) (sp-sample-t sp-sample-t* sp-time-t)
@@ -181,8 +186,8 @@
   (sp-samples-additions start summand count out)
   (void sp-sample-t sp-sample-t sp-time-t sp-sample-t*)
   (sp-samples-divisions start n count out) (void sp-sample-t sp-sample-t sp-time-t sp-sample-t*)
-  (sp-samples-scale a size n out) (void sp-sample-t* sp-time-t sp-sample-t sp-sample-t*)
-  (sp-samples-scale-sum a size n out) (void sp-sample-t* sp-time-t sp-sample-t sp-sample-t*)
+  (sp-samples-scale-y a size n out) (void sp-sample-t* sp-time-t sp-sample-t sp-sample-t*)
+  (sp-samples-scale-y-sum a size n out) (void sp-sample-t* sp-time-t sp-sample-t sp-sample-t*)
   (sp-times-add-1 a size n out) (void sp-time-t* sp-time-t sp-time-t sp-time-t*)
   (sp-times-add a size b out) (void sp-time-t* sp-time-t sp-time-t* sp-time-t*)
   (sp-times-and a b size limit out) (void sp-time-t* sp-time-t* sp-time-t sp-time-t sp-time-t*)
@@ -230,10 +235,13 @@
   (void sp-time-t* sp-time-t sp-time-t sp-time-t* sp-time-t*)
   (sp-times-extract-random state a size out out-size)
   (void sp-random-state-t* sp-time-t* sp-time-t sp-time-t* sp-time-t*)
-  (sp-times-constant a size out) (status-t sp-time-t sp-time-t sp-time-t**)
+  (sp-times-constant a size value out) (status-t sp-time-t sp-time-t sp-time-t sp-time-t**)
   (sp-u64-from-array a size) (uint64-t uint8-t* sp-time-t)
   (sp-shuffle state swap a size)
-  (void sp-random-state-t* (function-pointer void void* size-t size-t) void* size-t))
+  (void sp-random-state-t* (function-pointer void void* size-t size-t) void* size-t)
+  (sp-times-scale a a-size factor out) (status-t sp-time-t* sp-time-t sp-time-t sp-time-t*)
+  (sp-times-shuffle-swap a i1 i2) (void void* size-t size-t)
+  (sp-samples-smooth a size radius out) (status-t sp-sample-t* sp-time-t sp-time-t sp-sample-t*))
 
 (sc-comment "statistics")
 (pre-define sp-stat-types-count (+ 1 (- sp-stat-skewness sp-stat-center)))
