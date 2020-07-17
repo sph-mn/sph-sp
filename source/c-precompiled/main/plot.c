@@ -59,7 +59,7 @@ void sp_plot_samples(sp_sample_t* a, sp_time_t a_size) {
   snprintf(path, path_size, "%s-%lu", sp_plot_temp_path, sp_plot_temp_file_index);
   sp_plot_temp_file_index = (1 + sp_plot_temp_file_index);
   sp_plot_samples_to_file(a, a_size, path);
-  sp_plot_samples_file(path, 1);
+  sp_plot_samples_file(path, 0);
   free(path);
 }
 void sp_plot_times(sp_time_t* a, sp_time_t a_size) {

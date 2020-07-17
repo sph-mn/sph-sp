@@ -1,3 +1,19 @@
+# moving average filter
+* use cases: smoothing of paths, smoothing of input control streams
+* not as useful: frequency filtering
+* options
+  * take previous/next data block
+  * mirror data before/after start/end
+  * take offset argument to control where to take previous data from
+  * centered
+    * good for smoothing finite, ready, paths in a single array
+  * right aligned - has a starting delay. as does centered
+    * does only need left portion for incremental processing
+    * introduces shift. might be possible to remove afterwards
+* option
+  * centered for smoothing, mirrors after start/end for finite data
+  * right aligned for incremental filtering. takes previous input for overlap portion
+
 # event retirement
 * groups should retire events as soon as possible
 * option

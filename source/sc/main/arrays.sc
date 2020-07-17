@@ -494,25 +494,3 @@
     b (array-get (convert-type a sp-time-t**) i1)
     (array-get (convert-type a sp-time-t**) i1) (array-get (convert-type a sp-time-t**) i2)
     (array-get (convert-type a sp-time-t**) i2) b))
-
-(define (sp-samples-smooth a size radius out)
-  (status-t sp-sample-t* sp-time-t sp-time-t sp-sample-t*)
-  "smooth data while keeping the first and last sample at the exact same value.
-   applies a centered moving average filter and temporarily adds preceeding and following samples which are sign inverted mirrors
-   of the start/end portions.
-   first/last of out is set to first/last of in to avoid floating point rounding errors on these values"
-  status-declare
-  (declare range sp-time-t i sp-time-t prev sp-sample-t* next sp-sample-t*)
-  (memreg-init 2)
-  (set range (sp-min radius size))
-  (status-require (sp-samples-new range &prev))
-  (memreg-add prev)
-  (status-require (sp-samples-new range &next))
-  (memreg-add next)
-  (for ((set i 0) (< i range) (set+ i 1))
-    (set
-      (array-get prev i) (* -1 (array-get a (- range i 1)))
-      (array-get next i) (* -1 (array-get a (- size (- range i 1))))))
-  (sp-moving-average a size prev radius next radius radius out)
-  (set (array-get out 0) (array-get a 0) (array-get out (- size 1)) (array-get a (- size 1)))
-  (label exit memreg-free status-return))

@@ -108,10 +108,20 @@ status_t test_moving_average() {
   sp_sample_t next[5] = { 12, 13, 14 };
   sp_sample_t prev[5] = { 9, 10, 11 };
   sp_sample_t out[5] = { 0, 0, 0, 0, 0 };
+  sp_sample_t* path;
+  sp_sample_t* path_filtered;
   sp_time_t radius;
   sp_time_t size;
-  size = 5;
-  sp_moving_average(in, size, prev, 2, next, 2, 4, out);
+  size = 21;
+  status_require((sp_samples_new(size, (&path_filtered))));
+  status_require((sp_path_samples_2((&path), size, (sp_path_line(10, (10.0))), (sp_path_line((size - 1), 0)))));
+  sp_samples_display(path, size);
+  sp_moving_average_centered(path, size, 4, path_filtered);
+  sp_samples_display(path_filtered, size);
+  sp_plot_samples(path_filtered, size);
+  /* (sp-plot-samples path-filtered size) */
+  exit(1);
+  sp_moving_average(in, size, 0, 0, 4, out);
   /* first run with prev and next and only index 1 to 3 inclusively processed */
   test_helper_assert(("moving-average 1.1"), (sp_sample_nearly_equal((5.0), (out[0]), error_margin)));
   test_helper_assert(("moving-average 1.2"), (sp_sample_nearly_equal((6.44), (out[1]), error_margin)));

@@ -102,10 +102,20 @@
     next (array sp-sample-t (5) 12 13 14)
     prev (array sp-sample-t (5) 9 10 11)
     out (array sp-sample-t (5) 0 0 0 0 0)
+    path sp-sample-t*
+    path-filtered sp-sample-t*
     radius sp-time-t
     size sp-time-t)
-  (set size 5)
-  (sp-moving-average in size prev 2 next 2 4 out)
+  (set size 21)
+  (status-require (sp-samples-new size &path-filtered))
+  (status-require (sp-path-samples-2 &path size (sp-path-line 10 10.0) (sp-path-line (- size 1) 0)))
+  (sp-samples-display path size)
+  (sp-moving-average-centered path size 4 path-filtered)
+  (sp-samples-display path-filtered size)
+(sp-plot-samples path-filtered size)
+(sc-comment (sp-plot-samples path-filtered size))
+  (exit 1)
+  (sp-moving-average in size 0 0 4 out)
   (sc-comment "first run with prev and next and only index 1 to 3 inclusively processed")
   (test-helper-assert "moving-average 1.1"
     (sp-sample-nearly-equal 5.0 (array-get out 0) error-margin))

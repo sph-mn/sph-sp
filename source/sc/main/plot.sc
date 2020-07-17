@@ -51,7 +51,7 @@
   (snprintf path path-size "%s-%lu" sp-plot-temp-path sp-plot-temp-file-index)
   (set sp-plot-temp-file-index (+ 1 sp-plot-temp-file-index))
   (sp-plot-samples->file a a-size path)
-  (sp-plot-samples-file path #t)
+  (sp-plot-samples-file path #f)
   (free path))
 
 (define (sp-plot-times a a-size) (void sp-time-t* sp-time-t)

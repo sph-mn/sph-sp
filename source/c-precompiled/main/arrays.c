@@ -612,30 +612,3 @@ void sp_times_shuffle_swap(void* a, size_t i1, size_t i2) {
   ((sp_time_t**)(a))[i1] = ((sp_time_t**)(a))[i2];
   ((sp_time_t**)(a))[i2] = b;
 }
-/** smooth data while keeping the first and last sample at the exact same value.
-   applies a centered moving average filter and temporarily adds preceeding and following samples which are sign inverted mirrors
-   of the start/end portions.
-   first/last of out is set to first/last of in to avoid floating point rounding errors on these values */
-status_t sp_samples_smooth(sp_sample_t* a, sp_time_t size, sp_time_t radius, sp_sample_t* out) {
-  status_declare;
-  sp_time_t range;
-  sp_time_t i;
-  sp_sample_t* prev;
-  sp_sample_t* next;
-  memreg_init(2);
-  range = sp_min(radius, size);
-  status_require((sp_samples_new(range, (&prev))));
-  memreg_add(prev);
-  status_require((sp_samples_new(range, (&next))));
-  memreg_add(next);
-  for (i = 0; (i < range); i += 1) {
-    prev[i] = (-1 * a[(range - i - 1)]);
-    next[i] = (-1 * a[(size - (range - i - 1))]);
-  };
-  sp_moving_average(a, size, prev, radius, next, radius, radius, out);
-  out[0] = a[0];
-  out[(size - 1)] = a[(size - 1)];
-exit:
-  memreg_free;
-  status_return;
-}

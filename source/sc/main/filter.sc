@@ -374,39 +374,48 @@
     (memset state:svf-state 0 (* (sizeof sp-sample-t) 2 (- sp-cheap-filter-passes-limit passes))))
   (if unity-gain (sp-samples-set-unity-gain in in-size out)))
 
-(define (sp-moving-average in in-size prev prev-size next next-size radius out)
-  (void sp-sample-t* sp-time-t sp-sample-t* sp-time-t sp-sample-t* sp-time-t sp-time-t sp-sample-t*)
-  "centered moving average with width (radius * 2 + 1) on in to out.
-   this version is slower the greater radius is, and should probably be optimised (floating point errors?).
-   prev/next can be portions outside in that will be used at the beginning and end respectively.
-   attenuates high frequencies and smoothes data with little distortion in the time domain but
-   the frequency response tends to have large ripples.
-   repeats the current center value for values outside of in and prev/next"
-  (declare
-    aa sp-time-t
-    a sp-time-t
-    bb sp-time-t
-    b sp-time-t
-    i sp-time-t
-    j sp-time-t
-    sum sp-sample-t)
-  (for ((set i 0) (< i in-size) (set+ i 1))
-    (sc-comment "a: inside-before-i, b: inside-after-i, aa: outside-before-i, bb: outside-after-i")
-    (set
-      sum 0
-      a (if* (< i radius) i radius)
-      b (if* (< (+ i radius 1) in-size) (+ radius 1) (- in-size i))
-      aa (- radius a)
-      bb (- (+ radius 1) b))
-    (for ((set j (- i a)) (< j (+ i b)) (set+ j 1)) (set+ sum (array-get in j)))
-    (if aa
-      (begin
-        (set a (if* (< aa prev-size) aa prev-size) b (- aa a))
-        (for ((set j 0) (< j a) (set+ j 1)) (set+ sum (array-get prev (- prev-size j 1))))
-        (set+ sum (* b (array-get in i)))))
-    (if bb
-      (begin
-        (set a (if* (< bb next-size) bb next-size) b (- bb a))
-        (for ((set j 0) (< j a) (set+ j 1)) (set+ sum (array-get next j)))
-        (set+ sum (* b (array-get in i)))))
-    (set (array-get out i) (/ sum (+ (* 2 radius) 1)))))
+(define (sp-moving-average-centered in in-size radius out)
+  (void sp-sample-t* sp-time-t sp-time-t sp-sample-t*)
+  "balanced centered moving average for data arrays.
+   width: radius * 2 + 1.
+   radius * 2 must be smaller than in-size.
+   in-size must be greater than zero.
+   if prev is 0, the sign inverted values of range 0..radius and (in-size - radius)..in-size are
+   used before/after in to balance averages.
+   the first/last value are copied to keep start/end exactly the same without floating point rounding errors.
+   does not work incrementally on data streams, for this see sp-moving-average.
+   use case: smoothing time domain data arrays, for example amplitude envelopes"
+  (declare i sp-time-t sum sp-sample-t width sp-time-t)
+  (set width (+ (* 2 radius) 1) sum (array-get in 0) (array-get out 0) sum)
+  (printf "a sum %f\n" sum)
+  (for ((set i 1) (< i radius) (set+ i 1))
+    (set+ sum (- (array-get in (+ i radius)) (* (array-get in i) -1)))
+    (printf "a sum %f, %f %f\n" sum (array-get in (+ i radius)) (* (array-get in i) -1))
+    (set (array-get out i) (/ sum width)))
+  (for ((set i radius) (< i (- in-size radius)) (set+ i 1))
+    (set+ sum (- (array-get in (+ i radius)) (array-get in (- i radius))))
+    (printf "b sum %f\n" sum)
+    (set (array-get out i) (/ sum width)))
+  (for ((set i (+ 1 (- in-size radius))) (< i (- in-size 1)) (set+ i 1))
+    (set+ sum (- (* (array-get in (- in-size i)) -1) (array-get in (- in-size (- i radius)))))
+    (printf "c sum %f, %f %f\n" sum (* (array-get in (- in-size (+ 1 i))) -1) (array-get in (- in-size (+ 1 (- i radius)))))
+    (set (array-get out i) (/ sum width))))
+
+(define (sp-moving-average in in-size prev prev-size width out)
+  (void sp-sample-t* sp-time-t sp-sample-t* sp-time-t sp-time-t sp-sample-t*)
+  "right aligned moving average for incremental/seamless processing.
+   width must be smaller than in-size.
+   in-size must be greater than zero.
+   prev can be 0 or data before in to be used for seamless processing.
+   if prev if not null then prev-size must be equal or greater than width.
+   if prev is null, the sign inverted values of range 0..width are used.
+   use case: smoothing control data that is received blockwise"
+  (declare i sp-time-t sum sp-sample-t)
+  (set sum (array-get in 0))
+  (if prev
+    (for ((set i 1) (< i width) (set+ i 1)) (set+ sum (+ (array-get prev (- prev-size i 1)))))
+    (for ((set i 1) (< i width) (set+ i 1)) (set+ sum (* (array-get in i) -1))))
+  (set (array-get out 0) (/ sum width))
+  (for ((set i (- in-size width)) (< i in-size) (set+ i 1))
+    (set+ sum (+ (* (array-get in (- i width)) -1) (array-get in (- i width))))
+    (set (array-get out i) (/ sum width))))
