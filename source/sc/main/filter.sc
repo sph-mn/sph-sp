@@ -383,7 +383,8 @@
    next can be 0 or an array with size of at least radius.
    for outside values where prev/next is not available, reflections over the x and y axis are used
    so that the first/last value stay the same. for example, [0 1 2 3 0] without prev and
-   without next will then be interpreted as [0 3 2 1 0 1 2 3 0 3 2 1 0].
+   without next input would be interpreted as [-0 -3 -2 -1 0 1 2 3 0 -3 -2 -1 -0]. if only zero were used
+   then middle values would have stronger influence on edge values.
    use case: smoothing time domain data arrays, for example amplitude envelopes or input control data"
   (sc-comment
     "offsets to calculate outside values include an increment to account for the first or last index,

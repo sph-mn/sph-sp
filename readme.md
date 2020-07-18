@@ -117,8 +117,7 @@ sp_group_event_free :: sp_event_t*:a -> void
 sp_group_event_parallel_f :: sp_time_t:start sp_time_t:end sp_block_t:out sp_event_t*:event -> void
 sp_group_new :: sp_time_t:start sp_group_size_t:event_size sp_group_size_t:memory_size sp_event_t*:out -> status_t
 sp_initialise :: uint16_t:cpu_count sp_time_t:sine_table_size -> status_t
-sp_moving_average :: sp_sample_t*:in sp_time_t:in_size sp_sample_t*:prev sp_time_t:prev_size sp_time_t:width sp_sample_t*:out -> void
-sp_moving_average_centered :: sp_sample_t*:in sp_time_t:in_size sp_time_t:radius sp_sample_t*:out -> void
+sp_moving_average :: sp_sample_t*:in sp_time_t:in_size sp_sample_t*:prev sp_sample_t*:next sp_time_t:radius sp_sample_t*:out -> void
 sp_noise_event :: sp_time_t:start sp_time_t:end sp_sample_t**:amp sp_sample_t*:cut_l sp_sample_t*:cut_h sp_sample_t*:trn_l sp_sample_t*:trn_h uint8_t:is_reject sp_time_t:resolution sp_random_state_t:random_state sp_event_t*:out_event -> status_t
 sp_null_ir :: sp_sample_t**:out_ir sp_time_t*:out_len -> status_t
 sp_passthrough_ir :: sp_sample_t**:out_ir sp_time_t*:out_len -> status_t
