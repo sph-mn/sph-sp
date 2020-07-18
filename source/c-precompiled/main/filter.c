@@ -396,65 +396,45 @@ void sp_cheap_filter(sp_state_variable_filter_t type, sp_sample_t* in, sp_time_t
     sp_samples_set_unity_gain(in, in_size, out);
   };
 }
-/** balanced centered moving average for data arrays.
+/** centered moving average balanced for complete data arrays and seamless for continuous data.
    width: radius * 2 + 1.
    width must be smaller than in-size.
-   the first/last value are copied to keep start/end exactly the same without floating point rounding errors.
-   does not work incrementally on data streams, for this see sp-moving-average.
-   use case: smoothing time domain data arrays, for example amplitude envelopes */
-void sp_moving_average_centered(sp_sample_t* in, sp_time_t in_size, sp_time_t radius, sp_sample_t* out) {
-  /* values are reflected over x and y. offsets to calculate the outside values
-     include an increment to account for the first or last index, across which values are reflected.
-     example: -3 -2 -1 0 1 2 3.
-     because of this the first sum equals the first center value.
+   prev can be 0 or an array with size equal to in-size.
+   next can be 0 or an array with size of at least radius.
+   for outside values where prev/next is not available, reflections over the x and y axis are used
+   so that the first/last value stay the same. for example, [0 1 2 3 0] without prev and
+   without next will then be interpreted as [0 3 2 1 0 1 2 3 0 3 2 1 0].
+   use case: smoothing time domain data arrays, for example amplitude envelopes or input control data */
+void sp_moving_average(sp_sample_t* in, sp_time_t in_size, sp_sample_t* prev, sp_sample_t* next, sp_time_t radius, sp_sample_t* out) {
+  /* offsets to calculate outside values include an increment to account for the first or last index,
+     across which values are reflected.
      the subtracted value is the first value of the previous window, and is therefore
-     at an index one less than the first value of the current window. this is why the
-     first for loop uses <= */
+     at an index one less than the first value of the current window */
   sp_time_t i;
   sp_sample_t sum;
   sp_time_t width;
-  width = ((2 * radius) + 1);
+  sp_time_t prev_range;
+  sp_time_t next_range;
+  width = ((radius * 2) + 1);
   sum = in[0];
+  if (prev) {
+    for (i = 0; (i < radius); i += 1) {
+      sum += (prev[(in_size - i - 1)] + in[(i + 1)]);
+    };
+  } else {
+    sum = in[0];
+  };
   out[0] = (sum / width);
   for (i = 1; (i <= radius); i += 1) {
-    sum = ((sum + in[(i + radius)]) - (in[((radius - i) + 1)] * -1));
+    sum = ((sum + in[(i + radius)]) - (prev ? prev[((in_size - radius - 1) + i)] : (in[((radius - i) + 1)] * -1)));
     out[i] = (sum / width);
   };
   for (i = (radius + 1); (i < (in_size - radius)); i += 1) {
-    sum = ((sum - in[(i - radius - 1)]) + in[(i + radius)]);
+    sum = ((sum + in[(i + radius)]) - in[(i - radius - 1)]);
     out[i] = (sum / width);
   };
-  for (i = (in_size - radius); (i < (in_size - 1)); i += 1) {
-    sum = ((sum - in[(i - radius - 1)]) + (in[((i + radius + 1) - in_size)] * -1));
-    out[i] = (sum / width);
-  };
-  out[(in_size - 1)] = in[(in_size - 1)];
-}
-/** right aligned moving average for incremental/seamless processing.
-   width must be smaller than in-size.
-   in-size must be greater than zero.
-   if prev is 0, the sign inverted values of range 0..radius and (in-size - radius)..in-size are
-   used before/after in to balance averages.
-   prev can be 0 or data before in to be used for seamless processing.
-   if prev if not null then prev-size must be equal or greater than width.
-   if prev is null, the sign inverted values of range 0..width are used.
-   use case: smoothing control data that is received blockwise */
-void wip_sp_moving_average(sp_sample_t* in, sp_time_t in_size, sp_sample_t* prev, sp_time_t prev_size, sp_time_t width, sp_sample_t* out) {
-  sp_time_t i;
-  sp_sample_t sum;
-  sum = in[0];
-  if (prev) {
-    for (i = 1; (i < width); i += 1) {
-      sum += (prev[(prev_size - i - 1)]);
-    };
-  } else {
-    for (i = 1; (i < width); i += 1) {
-      sum += (in[i] * -1);
-    };
-  };
-  out[0] = (sum / width);
-  for (i = (in_size - width); (i < in_size); i += 1) {
-    sum += ((in[(i - width)] * -1) + in[(i - width)]);
+  for (i = (in_size - radius); (i < in_size); i += 1) {
+    sum = ((sum + (next ? next[(i - (in_size - radius))] : (in[((i + radius + 1) - in_size)] * -1))) - in[(i - radius - 1)]);
     out[i] = (sum / width);
   };
 }

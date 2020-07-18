@@ -115,9 +115,15 @@ status_t test_moving_average() {
   memreg_add(in);
   status_require((sp_samples_new(size, (&out))));
   memreg_add(out);
-  /* sp-moving-average-centered */
-  sp_moving_average_centered(in, size, radius, out);
-  test_helper_assert("moving-average-centered", (sp_sample_nearly_equal((2.0), (out[1]), error_margin) && sp_sample_nearly_equal((5.5), (out[5]), error_margin) && sp_sample_nearly_equal((2.0), (out[9]), error_margin)));
+  /* without prev/next */
+  sp_moving_average(in, size, 0, 0, radius, out);
+  test_helper_assert("without prev/next", (sp_sample_nearly_equal((2.0), (out[1]), error_margin) && sp_sample_nearly_equal((5.5), (out[5]), error_margin) && sp_sample_nearly_equal((2.0), (out[9]), error_margin)));
+  /* with prev/next */
+  sp_samples_zero(out, size);
+  sp_sample_t prev[11] = { 0, 0, 0, 0, 0, 0, 0, -8, -6, -4, -1 };
+  sp_sample_t next[4] = { -1, -4, -6, -8 };
+  sp_moving_average(in, size, prev, next, radius, out);
+  test_helper_assert("with prev/next", (sp_sample_nearly_equal((2.11), (out[1]), error_margin) && sp_sample_nearly_equal((5.5), (out[5]), error_margin) && sp_sample_nearly_equal((2.11), (out[9]), error_margin)));
 exit:
   memreg_free;
   status_return;

@@ -104,12 +104,22 @@
   (memreg-add in)
   (status-require (sp-samples-new size &out))
   (memreg-add out)
-  (sc-comment "sp-moving-average-centered")
-  (sp-moving-average-centered in size radius out)
-  (test-helper-assert "moving-average-centered"
+  (sc-comment "without prev/next")
+  (sp-moving-average in size 0 0 radius out)
+  (test-helper-assert "without prev/next"
     (and (sp-sample-nearly-equal 2.0 (array-get out 1) error-margin)
       (sp-sample-nearly-equal 5.5 (array-get out 5) error-margin)
       (sp-sample-nearly-equal 2.0 (array-get out 9) error-margin)))
+  (sc-comment "with prev/next")
+  (sp-samples-zero out size)
+  (declare
+    prev (array sp-sample-t 11 0 0 0 0 0 0 0 -8 -6 -4 -1)
+    next (array sp-sample-t 4 -1 -4 -6 -8))
+  (sp-moving-average in size prev next radius out)
+  (test-helper-assert "with prev/next"
+    (and (sp-sample-nearly-equal 2.11 (array-get out 1) error-margin)
+      (sp-sample-nearly-equal 5.5 (array-get out 5) error-margin)
+      (sp-sample-nearly-equal 2.11 (array-get out 9) error-margin)))
   (label exit memreg-free status-return))
 
 (define (test-windowed-sinc) status-t
