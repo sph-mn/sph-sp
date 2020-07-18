@@ -104,29 +104,22 @@ exit:
 }
 status_t test_moving_average() {
   status_declare;
-  sp_sample_t in[5] = { 1, 3, 5, 7, 8 };
-  sp_sample_t next[5] = { 12, 13, 14 };
-  sp_sample_t prev[5] = { 9, 10, 11 };
-  sp_sample_t out[5] = { 0, 0, 0, 0, 0 };
-  sp_sample_t* path;
-  sp_sample_t* path_filtered;
+  sp_sample_t* in;
+  sp_sample_t* out;
   sp_time_t radius;
   sp_time_t size;
-  size = 21;
-  status_require((sp_samples_new(size, (&path_filtered))));
-  status_require((sp_path_samples_2((&path), size, (sp_path_line(10, (10.0))), (sp_path_line((size - 1), 0)))));
-  sp_samples_display(path, size);
-  sp_moving_average_centered(path, size, 4, path_filtered);
-  sp_samples_display(path_filtered, size);
-  sp_plot_samples(path_filtered, size);
-  /* (sp-plot-samples path-filtered size) */
-  exit(1);
-  sp_moving_average(in, size, 0, 0, 4, out);
-  /* first run with prev and next and only index 1 to 3 inclusively processed */
-  test_helper_assert(("moving-average 1.1"), (sp_sample_nearly_equal((5.0), (out[0]), error_margin)));
-  test_helper_assert(("moving-average 1.2"), (sp_sample_nearly_equal((6.44), (out[1]), error_margin)));
-  test_helper_assert(("moving-average 1.2"), (sp_sample_nearly_equal((7.55), (out[2]), error_margin)));
+  memreg_init(2);
+  size = 11;
+  radius = 4;
+  status_require((sp_path_samples_2((&in), size, (sp_path_line(5, (10.0))), (sp_path_line((size - 1), 0)))));
+  memreg_add(in);
+  status_require((sp_samples_new(size, (&out))));
+  memreg_add(out);
+  /* sp-moving-average-centered */
+  sp_moving_average_centered(in, size, radius, out);
+  test_helper_assert("moving-average-centered", (sp_sample_nearly_equal((2.0), (out[1]), error_margin) && sp_sample_nearly_equal((5.5), (out[5]), error_margin) && sp_sample_nearly_equal((2.0), (out[9]), error_margin)));
 exit:
+  memreg_free;
   status_return;
 }
 status_t test_windowed_sinc() {

@@ -97,33 +97,20 @@
 
 (define (test-moving-average) status-t
   status-declare
-  (declare
-    in (array sp-sample-t (5) 1 3 5 7 8)
-    next (array sp-sample-t (5) 12 13 14)
-    prev (array sp-sample-t (5) 9 10 11)
-    out (array sp-sample-t (5) 0 0 0 0 0)
-    path sp-sample-t*
-    path-filtered sp-sample-t*
-    radius sp-time-t
-    size sp-time-t)
-  (set size 21)
-  (status-require (sp-samples-new size &path-filtered))
-  (status-require (sp-path-samples-2 &path size (sp-path-line 10 10.0) (sp-path-line (- size 1) 0)))
-  (sp-samples-display path size)
-  (sp-moving-average-centered path size 4 path-filtered)
-  (sp-samples-display path-filtered size)
-(sp-plot-samples path-filtered size)
-(sc-comment (sp-plot-samples path-filtered size))
-  (exit 1)
-  (sp-moving-average in size 0 0 4 out)
-  (sc-comment "first run with prev and next and only index 1 to 3 inclusively processed")
-  (test-helper-assert "moving-average 1.1"
-    (sp-sample-nearly-equal 5.0 (array-get out 0) error-margin))
-  (test-helper-assert "moving-average 1.2"
-    (sp-sample-nearly-equal 6.44 (array-get out 1) error-margin))
-  (test-helper-assert "moving-average 1.2"
-    (sp-sample-nearly-equal 7.55 (array-get out 2) error-margin))
-  (label exit status-return))
+  (declare in sp-sample-t* out sp-sample-t* radius sp-time-t size sp-time-t)
+  (memreg-init 2)
+  (set size 11 radius 4)
+  (status-require (sp-path-samples-2 &in size (sp-path-line 5 10.0) (sp-path-line (- size 1) 0)))
+  (memreg-add in)
+  (status-require (sp-samples-new size &out))
+  (memreg-add out)
+  (sc-comment "sp-moving-average-centered")
+  (sp-moving-average-centered in size radius out)
+  (test-helper-assert "moving-average-centered"
+    (and (sp-sample-nearly-equal 2.0 (array-get out 1) error-margin)
+      (sp-sample-nearly-equal 5.5 (array-get out 5) error-margin)
+      (sp-sample-nearly-equal 2.0 (array-get out 9) error-margin)))
+  (label exit memreg-free status-return))
 
 (define (test-windowed-sinc) status-t
   status-declare

@@ -398,45 +398,48 @@ void sp_cheap_filter(sp_state_variable_filter_t type, sp_sample_t* in, sp_time_t
 }
 /** balanced centered moving average for data arrays.
    width: radius * 2 + 1.
-   radius * 2 must be smaller than in-size.
-   in-size must be greater than zero.
-   if prev is 0, the sign inverted values of range 0..radius and (in-size - radius)..in-size are
-   used before/after in to balance averages.
+   width must be smaller than in-size.
    the first/last value are copied to keep start/end exactly the same without floating point rounding errors.
    does not work incrementally on data streams, for this see sp-moving-average.
    use case: smoothing time domain data arrays, for example amplitude envelopes */
 void sp_moving_average_centered(sp_sample_t* in, sp_time_t in_size, sp_time_t radius, sp_sample_t* out) {
+  /* values are reflected over x and y. offsets to calculate the outside values
+     include an increment to account for the first or last index, across which values are reflected.
+     example: -3 -2 -1 0 1 2 3.
+     because of this the first sum equals the first center value.
+     the subtracted value is the first value of the previous window, and is therefore
+     at an index one less than the first value of the current window. this is why the
+     first for loop uses <= */
   sp_time_t i;
   sp_sample_t sum;
   sp_time_t width;
   width = ((2 * radius) + 1);
   sum = in[0];
-  out[0] = sum;
-  printf("a sum %f\n", sum);
-  for (i = 1; (i < radius); i += 1) {
-    sum += (in[(i + radius)] - (in[i] * -1));
-    printf("a sum %f, %f %f\n", sum, (in[(i + radius)]), (in[i] * -1));
+  out[0] = (sum / width);
+  for (i = 1; (i <= radius); i += 1) {
+    sum = ((sum + in[(i + radius)]) - (in[((radius - i) + 1)] * -1));
     out[i] = (sum / width);
   };
-  for (i = radius; (i < (in_size - radius)); i += 1) {
-    sum += (in[(i + radius)] - in[(i - radius)]);
-    printf("b sum %f\n", sum);
+  for (i = (radius + 1); (i < (in_size - radius)); i += 1) {
+    sum = ((sum - in[(i - radius - 1)]) + in[(i + radius)]);
     out[i] = (sum / width);
   };
-  for (i = (1 + (in_size - radius)); (i < (in_size - 1)); i += 1) {
-    sum += ((in[(in_size - i)] * -1) - in[(in_size - (i - radius))]);
-    printf("c sum %f, %f %f\n", sum, (in[(in_size - (1 + i))] * -1), (in[(in_size - (1 + (i - radius)))]));
+  for (i = (in_size - radius); (i < (in_size - 1)); i += 1) {
+    sum = ((sum - in[(i - radius - 1)]) + (in[((i + radius + 1) - in_size)] * -1));
     out[i] = (sum / width);
   };
+  out[(in_size - 1)] = in[(in_size - 1)];
 }
 /** right aligned moving average for incremental/seamless processing.
    width must be smaller than in-size.
    in-size must be greater than zero.
+   if prev is 0, the sign inverted values of range 0..radius and (in-size - radius)..in-size are
+   used before/after in to balance averages.
    prev can be 0 or data before in to be used for seamless processing.
    if prev if not null then prev-size must be equal or greater than width.
    if prev is null, the sign inverted values of range 0..width are used.
    use case: smoothing control data that is received blockwise */
-void sp_moving_average(sp_sample_t* in, sp_time_t in_size, sp_sample_t* prev, sp_time_t prev_size, sp_time_t width, sp_sample_t* out) {
+void wip_sp_moving_average(sp_sample_t* in, sp_time_t in_size, sp_sample_t* prev, sp_time_t prev_size, sp_time_t width, sp_sample_t* out) {
   sp_time_t i;
   sp_sample_t sum;
   sum = in[0];

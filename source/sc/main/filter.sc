@@ -378,34 +378,41 @@
   (void sp-sample-t* sp-time-t sp-time-t sp-sample-t*)
   "balanced centered moving average for data arrays.
    width: radius * 2 + 1.
-   radius * 2 must be smaller than in-size.
-   in-size must be greater than zero.
-   if prev is 0, the sign inverted values of range 0..radius and (in-size - radius)..in-size are
-   used before/after in to balance averages.
+   width must be smaller than in-size.
    the first/last value are copied to keep start/end exactly the same without floating point rounding errors.
    does not work incrementally on data streams, for this see sp-moving-average.
    use case: smoothing time domain data arrays, for example amplitude envelopes"
+  (sc-comment
+    "values are reflected over x and y. offsets to calculate the outside values
+     include an increment to account for the first or last index, across which values are reflected.
+     example: -3 -2 -1 0 1 2 3.
+     because of this the first sum equals the first center value.
+     the subtracted value is the first value of the previous window, and is therefore
+     at an index one less than the first value of the current window. this is why the
+     first for loop uses <=")
   (declare i sp-time-t sum sp-sample-t width sp-time-t)
-  (set width (+ (* 2 radius) 1) sum (array-get in 0) (array-get out 0) sum)
-  (printf "a sum %f\n" sum)
-  (for ((set i 1) (< i radius) (set+ i 1))
-    (set+ sum (- (array-get in (+ i radius)) (* (array-get in i) -1)))
-    (printf "a sum %f, %f %f\n" sum (array-get in (+ i radius)) (* (array-get in i) -1))
-    (set (array-get out i) (/ sum width)))
-  (for ((set i radius) (< i (- in-size radius)) (set+ i 1))
-    (set+ sum (- (array-get in (+ i radius)) (array-get in (- i radius))))
-    (printf "b sum %f\n" sum)
-    (set (array-get out i) (/ sum width)))
-  (for ((set i (+ 1 (- in-size radius))) (< i (- in-size 1)) (set+ i 1))
-    (set+ sum (- (* (array-get in (- in-size i)) -1) (array-get in (- in-size (- i radius)))))
-    (printf "c sum %f, %f %f\n" sum (* (array-get in (- in-size (+ 1 i))) -1) (array-get in (- in-size (+ 1 (- i radius)))))
-    (set (array-get out i) (/ sum width))))
+  (set width (+ (* 2 radius) 1) sum (array-get in 0) (array-get out 0) (/ sum width))
+  (for ((set i 1) (<= i radius) (set+ i 1))
+    (set
+      sum (- (+ sum (array-get in (+ i radius))) (* (array-get in (+ (- radius i) 1)) -1))
+      (array-get out i) (/ sum width)))
+  (for ((set i (+ radius 1)) (< i (- in-size radius)) (set+ i 1))
+    (set
+      sum (+ (- sum (array-get in (- i radius 1))) (array-get in (+ i radius)))
+      (array-get out i) (/ sum width)))
+  (for ((set i (- in-size radius)) (< i (- in-size 1)) (set+ i 1))
+    (set
+      sum (+ (- sum (array-get in (- i radius 1))) (* (array-get in (- (+ i radius 1) in-size)) -1))
+      (array-get out i) (/ sum width)))
+  (set (array-get out (- in-size 1)) (array-get in (- in-size 1))))
 
-(define (sp-moving-average in in-size prev prev-size width out)
+(define (wip-sp-moving-average in in-size prev prev-size width out)
   (void sp-sample-t* sp-time-t sp-sample-t* sp-time-t sp-time-t sp-sample-t*)
   "right aligned moving average for incremental/seamless processing.
    width must be smaller than in-size.
    in-size must be greater than zero.
+   if prev is 0, the sign inverted values of range 0..radius and (in-size - radius)..in-size are
+   used before/after in to balance averages.
    prev can be 0 or data before in to be used for seamless processing.
    if prev if not null then prev-size must be equal or greater than width.
    if prev is null, the sign inverted values of range 0..width are used.
