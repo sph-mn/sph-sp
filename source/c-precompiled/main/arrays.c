@@ -1,6 +1,6 @@
 /* routines on arrays of sp-time-t or sp-sample-t
 sp-time-t subtraction is limited to zero.
-sp-time-t addition is not limited and large values that might lead to overflows are considered special cases. */
+sp-time-t addition is not limited and values larger than the type lead to overflows */
 /** generic shuffle that works on any array type. fisher-yates algorithm */
 void sp_shuffle(sp_random_state_t* state, void (*swap)(void*, size_t, size_t), void* a, size_t size) {
   size_t i;
@@ -241,7 +241,8 @@ exit:
   status_return;
 }
 /** write to out the differences between subsequent values of a.
-   size must be > 1 */
+   size must be > 1.
+   out-size will be size - 1 */
 void sp_samples_differences(sp_sample_t* a, sp_time_t size, sp_sample_t* out) {
   sp_time_t i;
   for (i = 1; (i < size); i += 1) {

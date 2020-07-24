@@ -93,7 +93,10 @@
     return (0); \
   }
 #define define_sp_stat_inharmonicity(name, value_t) \
-  /** n1: 0..n; n2: 0..n; half_offset(x) = 0.5 >= x ? x : x - 1; \
+  /** calculate a value for total inharmonicity >= 0. \
+       the value is not normalised for different lengths of input. \
+       # formula \
+       n1: 0..n; n2: 0..n; half_offset(x) = 0.5 >= x ? x : x - 1; \
        min(map(n1, mean(map(n2, half_offset(x(n2) / x(n1)))))) */ \
   uint8_t name(value_t* a, sp_time_t size, sp_sample_t* out) { \
     sp_time_t i; \

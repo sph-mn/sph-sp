@@ -1,7 +1,7 @@
 (sc-comment
   "routines on arrays of sp-time-t or sp-sample-t"
   "sp-time-t subtraction is limited to zero."
-  "sp-time-t addition is not limited and large values that might lead to overflows are considered special cases.")
+  "sp-time-t addition is not limited and values larger than the type lead to overflows")
 
 (define (sp-shuffle state swap a size)
   (void sp-random-state-t* (function-pointer void void* size-t size-t) void* size-t)
@@ -208,7 +208,8 @@
 
 (define (sp-samples-differences a size out) (void sp-sample-t* sp-time-t sp-sample-t*)
   "write to out the differences between subsequent values of a.
-   size must be > 1"
+   size must be > 1.
+   out-size will be size - 1"
   (declare i sp-time-t)
   (for ((set i 1) (< i size) (set+ i 1))
     (set (array-get out (- i 1)) (- (array-get a i) (array-get a (- i 1))))))
