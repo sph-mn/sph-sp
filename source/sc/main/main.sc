@@ -285,24 +285,24 @@
   (declare i sp-channels-t)
   (for ((set i 0) (< i a.channels) (set+ i 1)) (sp-samples-zero (array-get a.samples i) a.size)))
 
-(define (sp-path-samples segments segments-size size out)
-  (status-t sp-path-segment-t* sp-time-t sp-time-t sp-sample-t**)
+(define (sp-path-samples segments segments-count size out)
+  (status-t sp-path-segment-t* sp-path-segment-count-t sp-path-time-t sp-sample-t**)
   "out memory is allocated"
   status-declare
   (declare result sp-sample-t*)
   (status-require (sp-samples-new size &result))
-  (if (spline-path-new-get segments-size segments 0 size result)
+  (if (spline-path-new-get segments-count segments 0 size result)
     (begin (free result) sp-memory-error))
   (set *out result)
   (label exit status-return))
 
-(define (sp-path-times segments segments-size size out)
-  (status-t sp-path-segment-t* sp-time-t sp-time-t sp-time-t**)
+(define (sp-path-times segments segments-count size out)
+  (status-t sp-path-segment-t* sp-path-segment-count-t sp-path-time-t sp-time-t**)
   "create a new path from the given segments config.
    memory is allocated and ownership transferred to the caller"
   status-declare
   (declare result sp-time-t* temp sp-sample-t*)
-  (status-require (sp-path-samples segments segments-size size &temp))
+  (status-require (sp-path-samples segments segments-count size &temp))
   (status-require (sp-times-new size &result))
   (sp-samples->times temp size result)
   (set *out result)

@@ -463,6 +463,8 @@
 
 (pre-define
   sp-path-t spline-path-t
+  sp-path-time-t spline-path-time-t
+  sp-path-value-t spline-path-value-t
   sp-path-point-t spline-path-point-t
   sp-path-segment-t spline-path-segment-t
   sp-path-segment-count-t spline-path-segment-count-t
@@ -471,19 +473,22 @@
   sp-path-bezier spline-path-bezier
   sp-path-constant spline-path-constant
   sp-path-path spline-path-path
+  sp-path-prepare-segments spline-path-prepare-segments
   sp-path-i-line spline-path-i-line
   sp-path-i-move spline-path-i-move
   sp-path-i-bezier spline-path-i-bezier
   sp-path-i-constant spline-path-i-constant
   sp-path-i-path spline-path-i-path
+  sp-path-end spline-path-end
+  sp-path-size spline-path-size
   (sp-path-times-constant out size value)
   (sp-path-times-2 out size (sp-path-move 0 value) (sp-path-constant))
   (sp-path-samples-constant out size value)
   (sp-path-samples-2 out size (sp-path-move 0 value) (sp-path-constant)))
 
 (declare
-  (sp-path-samples segments segments-size size out)
-  (status-t sp-path-segment-t* sp-time-t sp-time-t sp-sample-t**)
+  (sp-path-samples segments segments-count size out)
+  (status-t sp-path-segment-t* sp-path-segment-count-t sp-path-time-t sp-sample-t**)
   (sp-path-samples-1 out size s1) (status-t sp-sample-t** sp-time-t sp-path-segment-t)
   (sp-path-samples-2 out size s1 s2)
   (status-t sp-sample-t** sp-time-t sp-path-segment-t sp-path-segment-t)
@@ -492,8 +497,8 @@
   (sp-path-samples-4 out size s1 s2 s3 s4)
   (status-t sp-sample-t** sp-time-t
     sp-path-segment-t sp-path-segment-t sp-path-segment-t sp-path-segment-t)
-  (sp-path-times segments segments-size size out)
-  (status-t sp-path-segment-t* sp-time-t sp-time-t sp-time-t**)
+  (sp-path-times segments segments-count size out)
+  (status-t sp-path-segment-t* sp-path-segment-count-t sp-path-time-t sp-time-t**)
   (sp-path-times-1 out size s1) (status-t sp-time-t** sp-time-t sp-path-segment-t)
   (sp-path-times-2 out size s1 s2)
   (status-t sp-time-t** sp-time-t sp-path-segment-t sp-path-segment-t)

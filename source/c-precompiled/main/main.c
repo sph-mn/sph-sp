@@ -359,11 +359,11 @@ void sp_block_zero(sp_block_t a) {
   };
 }
 /** out memory is allocated */
-status_t sp_path_samples(sp_path_segment_t* segments, sp_time_t segments_size, sp_time_t size, sp_sample_t** out) {
+status_t sp_path_samples(sp_path_segment_t* segments, sp_path_segment_count_t segments_count, sp_path_time_t size, sp_sample_t** out) {
   status_declare;
   sp_sample_t* result;
   status_require((sp_samples_new(size, (&result))));
-  if (spline_path_new_get(segments_size, segments, 0, size, result)) {
+  if (spline_path_new_get(segments_count, segments, 0, size, result)) {
     free(result);
     sp_memory_error;
   };
@@ -373,11 +373,11 @@ exit:
 }
 /** create a new path from the given segments config.
    memory is allocated and ownership transferred to the caller */
-status_t sp_path_times(sp_path_segment_t* segments, sp_time_t segments_size, sp_time_t size, sp_time_t** out) {
+status_t sp_path_times(sp_path_segment_t* segments, sp_path_segment_count_t segments_count, sp_path_time_t size, sp_time_t** out) {
   status_declare;
   sp_time_t* result;
   sp_sample_t* temp;
-  status_require((sp_path_samples(segments, segments_size, size, (&temp))));
+  status_require((sp_path_samples(segments, segments_count, size, (&temp))));
   status_require((sp_times_new(size, (&result))));
   sp_samples_to_times(temp, size, result);
   *out = result;

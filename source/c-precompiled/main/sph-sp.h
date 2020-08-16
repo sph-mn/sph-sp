@@ -418,6 +418,8 @@ void sp_group_event_parallel_f(sp_time_t start, sp_time_t end, sp_block_t out, s
 void sp_group_event_free(sp_event_t* a);
 /* path */
 #define sp_path_t spline_path_t
+#define sp_path_time_t spline_path_time_t
+#define sp_path_value_t spline_path_value_t
 #define sp_path_point_t spline_path_point_t
 #define sp_path_segment_t spline_path_segment_t
 #define sp_path_segment_count_t spline_path_segment_count_t
@@ -426,19 +428,22 @@ void sp_group_event_free(sp_event_t* a);
 #define sp_path_bezier spline_path_bezier
 #define sp_path_constant spline_path_constant
 #define sp_path_path spline_path_path
+#define sp_path_prepare_segments spline_path_prepare_segments
 #define sp_path_i_line spline_path_i_line
 #define sp_path_i_move spline_path_i_move
 #define sp_path_i_bezier spline_path_i_bezier
 #define sp_path_i_constant spline_path_i_constant
 #define sp_path_i_path spline_path_i_path
+#define sp_path_end spline_path_end
+#define sp_path_size spline_path_size
 #define sp_path_times_constant(out, size, value) sp_path_times_2(out, size, (sp_path_move(0, value)), (sp_path_constant()))
 #define sp_path_samples_constant(out, size, value) sp_path_samples_2(out, size, (sp_path_move(0, value)), (sp_path_constant()))
-status_t sp_path_samples(sp_path_segment_t* segments, sp_time_t segments_size, sp_time_t size, sp_sample_t** out);
+status_t sp_path_samples(sp_path_segment_t* segments, sp_path_segment_count_t segments_count, sp_path_time_t size, sp_sample_t** out);
 status_t sp_path_samples_1(sp_sample_t** out, sp_time_t size, sp_path_segment_t s1);
 status_t sp_path_samples_2(sp_sample_t** out, sp_time_t size, sp_path_segment_t s1, sp_path_segment_t s2);
 status_t sp_path_samples_3(sp_sample_t** out, sp_time_t size, sp_path_segment_t s1, sp_path_segment_t s2, sp_path_segment_t s3);
 status_t sp_path_samples_4(sp_sample_t** out, sp_time_t size, sp_path_segment_t s1, sp_path_segment_t s2, sp_path_segment_t s3, sp_path_segment_t s4);
-status_t sp_path_times(sp_path_segment_t* segments, sp_time_t segments_size, sp_time_t size, sp_time_t** out);
+status_t sp_path_times(sp_path_segment_t* segments, sp_path_segment_count_t segments_count, sp_path_time_t size, sp_time_t** out);
 status_t sp_path_times_1(sp_time_t** out, sp_time_t size, sp_path_segment_t s1);
 status_t sp_path_times_2(sp_time_t** out, sp_time_t size, sp_path_segment_t s1, sp_path_segment_t s2);
 status_t sp_path_times_3(sp_time_t** out, sp_time_t size, sp_path_segment_t s1, sp_path_segment_t s2, sp_path_segment_t s3);
