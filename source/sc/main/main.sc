@@ -302,11 +302,12 @@
    memory is allocated and ownership transferred to the caller"
   status-declare
   (declare result sp-time-t* temp sp-sample-t*)
+  (set temp 0)
   (status-require (sp-path-samples segments segments-count size &temp))
   (status-require (sp-times-new size &result))
   (sp-samples->times temp size result)
   (set *out result)
-  (label exit status-return))
+  (label exit (free temp) status-return))
 
 (define (sp-path-times-1 out size s1) (status-t sp-time-t** sp-time-t sp-path-segment-t)
   (declare segments (array sp-path-segment-t 1))
@@ -354,8 +355,73 @@
   (array-set segments 0 s1 1 s2 2 s3 3 s4)
   (return (sp-path-samples segments 4 size out)))
 
+(define (sp-path-derivation path x-changes y-changes index out)
+  (status-t sp-path-t sp-sample-t** sp-sample-t** sp-time-t sp-path-t*)
+  "changes contains per point an array of values that will be added to the points x or y value.
+   index selects the current change index for all points.
+   caveats:
+   * changes for segments of type constant or type path are not to be included
+   * path size can change, sp-path-end(path) can give the new size
+   * invalid paths are possible if x-changes exceed range between the new previous and next point"
+  status-declare
+  (declare
+    a sp-path-t
+    p-i sp-path-time-t
+    p sp-path-point-t*
+    s-i sp-path-segment-count-t
+    sp-i sp-path-time-t
+    s sp-path-segment-t*
+    ss sp-path-segment-t*)
+  (sc-comment "copy segments")
+  (set ss 0)
+  (status-require (sph-helper-malloc (* path.segments-count (sizeof sp-path-segment-t)) &ss))
+  (memcpy ss path.segments (* path.segments-count (sizeof sp-path-segment-t)))
+  (sc-comment "modify points")
+  (for ((set s-i 0 sp-i 0) (< s-i path.segments-count) (set+ s-i 1))
+    (set s (+ ss s-i))
+    (for ((set p-i 0) (< p-i (spline-path-segment-points-count *s)) (set+ p-i 1))
+      (if (= spline-path-i-constant s:interpolator) break
+        (if (= spline-path-i-path s:interpolator) continue))
+      (set p (+ p-i s:points))
+      (set+ p:x (array-get x-changes sp-i index) p:y (array-get y-changes sp-i index) sp-i 1)))
+  (sc-comment "get data")
+  (sp-path-prepare-segments ss path.segments-count)
+  (set out:segments ss out:segments-count path.segments-count)
+  (label exit status-return))
+
+(define (sp-path-samples-derivation segments segments-count x-changes y-changes index out out-size)
+  (status-t sp-path-segment-t* sp-path-segment-count-t sp-sample-t** sp-sample-t** sp-time-t sp-sample-t** sp-path-time-t*)
+  "out memory is allocated"
+  status-declare
+  (declare out-temp sp-sample-t* size sp-path-time-t path sp-path-t)
+  (set path.segments segments path.segments-count segments-count)
+  (status-require (sp-path-derivation path x-changes y-changes index &path))
+  (set size (sp-path-size path))
+  (status-require (sp-samples-new size &out-temp))
+  (spline-path-get path 0 size out-temp)
+  (set *out out-temp *out-size size)
+  (label exit status-return))
+
+(define (sp-path-times-derivation segments segments-count x-changes y-changes index out out-size)
+  (status-t sp-path-segment-t* sp-path-segment-count-t sp-sample-t** sp-sample-t** sp-time-t sp-time-t** sp-path-time-t*)
+  status-declare
+  (declare result sp-time-t* temp sp-sample-t* temp-size sp-time-t)
+  (set temp 0)
+  (status-require
+    (sp-path-samples-derivation segments segments-count x-changes y-changes index &temp &temp-size))
+  (status-require (sp-times-new temp-size &result))
+  (sp-samples->times temp temp-size result)
+  (set *out result *out-size temp-size)
+  (label exit (free temp) status-return))
+
 (pre-include "../main/io.c" "../main/plot.c"
   "../main/filter.c" "../main/sequencer.c" "../main/statistics.c")
+
+(define (sp-render-config channels rate block-size)
+  (sp-render-config-t sp-channels-t sp-time-t sp-time-t)
+  (declare a sp-render-config-t)
+  (struct-set a channels channels rate rate block-size block-size)
+  (return a))
 
 (define (sp-render-file event start end config path)
   (status-t sp-event-t sp-time-t sp-time-t sp-render-config-t uint8-t*)
@@ -389,14 +455,33 @@
   (set *out block)
   (label exit status-return))
 
-(define (sp-initialise cpu-count sine-table-size) (status-t uint16-t sp-time-t)
-  "fills the sine wave lookup table"
+(define (sp-render-quick a file-or-plot) (status-t sp-event-t uint8-t)
+  "render with defaults to /tmp/sp-out.wav or plot the result.
+   example: sp_render_quick(event, 2, 48000, 1)"
+  status-declare
+  (declare block sp-block-t config sp-render-config-t)
+  (set config (sp-render-config sp-channels sp-rate sp-rate))
+  (printf "rendering %lu seconds to %s\n"
+    (sp-cheap-round-positive (/ (- a.end a.start) config.rate)) (if* file-or-plot "plot" "file"))
+  (if a.end
+    (if file-or-plot
+      (begin
+        (status-require (sp-render-block a 0 a.end config &block))
+        (sp-plot-samples (array-get block.samples 0) a.end))
+      (status-require (sp-render-file a 0 a.end config "/tmp/sp-out.wav"))))
+  (label exit status-return))
+
+(define (sp-initialise cpu-count channels rate) (status-t uint16-t sp-channels-t sp-time-t)
+  "fills the sine wave lookup table.
+   rate and channels are used to set sp-rate and sp-channels,
+   which are used as defaults in a few cases"
   status-declare
   (if cpu-count (begin (set status.id (future-init cpu-count)) (if status.id status-return)))
   (set
     sp-cpu-count cpu-count
-    sp-sine-table-size sine-table-size
+    sp-rate rate
+    sp-channels channels
     sp-default-random-state (sp-random-state-new 1557083953))
-  (status-require (sp-samples-new sine-table-size &sp-sine-table))
-  (sp-sine-period sine-table-size sp-sine-table)
+  (status-require (sp-samples-new sp-rate &sp-sine-table))
+  (sp-sine-period sp-rate sp-sine-table)
   (label exit status-return))

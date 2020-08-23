@@ -458,9 +458,9 @@
     out sp-block-t
     frq (array sp-time-t sp-wave-event-duration)
     amp (array sp-sample-t sp-wave-event-duration)
-    i sp-time-t)
-  (sp-render-config-declare rc)
-  (set rc.block-size 40)
+    i sp-time-t
+    rc sp-render-config-t)
+  (set rc (sp-render-config sp-channels sp-rate sp-rate) rc.block-size 40)
   (for ((set i 0) (< i sp-wave-event-duration) (set+ i 1))
     (set (array-get frq i) 1500 (array-get amp i) 1))
   (status-require
@@ -699,7 +699,7 @@
   "\"goto exit\" can skip events"
   status-declare
   (set rs (sp-random-state-new 3))
-  (sp-initialise 3 _rate)
+  (sp-initialise 3 2 _rate)
   (test-helper-test-one test-moving-average)
   (test-helper-test-one test-stats)
   (test-helper-test-one test-render-block)

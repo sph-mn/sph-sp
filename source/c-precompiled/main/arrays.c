@@ -613,3 +613,76 @@ void sp_times_shuffle_swap(void* a, size_t i1, size_t i2) {
   ((sp_time_t**)(a))[i1] = ((sp_time_t**)(a))[i2];
   ((sp_time_t**)(a))[i2] = b;
 }
+/** free every element array and the container array */
+void sp_times_array_free(sp_time_t** a, sp_time_t size) {
+  sp_time_t i;
+  for (i = 0; (i < size); i += 1) {
+    free((a[i]));
+  };
+  free(a);
+}
+/** free every element array and the container array */
+void sp_samples_array_free(sp_sample_t** a, sp_time_t size) {
+  sp_time_t i;
+  for (i = 0; (i < size); i += 1) {
+    free((a[i]));
+  };
+  free(a);
+}
+/** true if array a contains element b */
+uint8_t sp_times_contains(sp_time_t* a, sp_time_t size, sp_time_t b) {
+  sp_time_t i;
+  for (i = 0; (i < size); i += 1) {
+    if (b == a[i]) {
+      return (1);
+    };
+  };
+  return (0);
+}
+/** create size number of discrete random numbers corresponding to the distribution given by cudist
+   without duplicates. cudist-size must be equal to a-size.
+   a/out should not be the same pointer. out is managed by the caller.
+   size is the requested size of generated output values and should be smaller than a-size.
+   size must not be greater than the maximum possible count of unique discrete random values
+   (non-null values in the probability distribution) */
+void sp_times_random_discrete_unique(sp_random_state_t* state, sp_time_t* cudist, sp_time_t cudist_size, sp_time_t size, sp_time_t* out) {
+  status_declare;
+  sp_time_t i;
+  sp_time_t a;
+  sp_time_t remaining;
+  remaining = sp_min(size, cudist_size);
+  while (remaining) {
+    a = sp_time_random_discrete(state, cudist, cudist_size);
+    if (sp_times_contains(out, (size - remaining), a)) {
+      continue;
+    };
+    out[(size - remaining)] = a;
+    remaining -= 1;
+  };
+}
+/** out-size must be at least digits * size or base ** digits.
+   starts from out + 0. first generated element will be in out + digits.
+   out size will contain the sequences appended */
+void sp_times_sequences(sp_time_t base, sp_time_t digits, sp_time_t size, sp_time_t* out) {
+  sp_time_t i;
+  for (i = digits; (i < (digits * size)); i += digits) {
+    memcpy((out + i), (out + (i - digits)), (digits * sizeof(sp_time_t)));
+    sp_times_sequence_increment_le((out + i), digits, base);
+  };
+}
+/** write into out values from start (inclusively) to end (exclusively) */
+void sp_times_range(sp_time_t start, sp_time_t end, sp_time_t* out) {
+  sp_time_t i;
+  for (i = start; (i < end); i += 1) {
+    out[(i - start)] = i;
+  };
+}
+/** round to the next integer multiple of base  */
+sp_time_t sp_time_round_to_multiple(sp_time_t a, sp_time_t base) { return (((0 == a) ? base : sp_cheap_round_positive(((a / ((sp_sample_t)(base))) * base)))); }
+void sp_times_limit(sp_time_t* a, sp_time_t size, sp_time_t n, sp_time_t* out) {
+  sp_time_t i;
+  "set all values greater than n in array to n";
+  for (i = 0; (i < size); i += 1) {
+    out[i] = ((n < a[i]) ? n : a[i]);
+  };
+}

@@ -377,11 +377,13 @@ status_t sp_path_times(sp_path_segment_t* segments, sp_path_segment_count_t segm
   status_declare;
   sp_time_t* result;
   sp_sample_t* temp;
+  temp = 0;
   status_require((sp_path_samples(segments, segments_count, size, (&temp))));
   status_require((sp_times_new(size, (&result))));
   sp_samples_to_times(temp, size, result);
   *out = result;
 exit:
+  free(temp);
   status_return;
 }
 status_t sp_path_times_1(sp_time_t** out, sp_time_t size, sp_path_segment_t s1) {
@@ -436,11 +438,93 @@ status_t sp_path_samples_4(sp_sample_t** out, sp_time_t size, sp_path_segment_t 
   segments[3] = s4;
   return ((sp_path_samples(segments, 4, size, out)));
 }
+/** changes contains per point an array of values that will be added to the points x or y value.
+   index selects the current change index for all points.
+   caveats:
+   * changes for segments of type constant or type path are not to be included
+   * path size can change, sp-path-end(path) can give the new size
+   * invalid paths are possible if x-changes exceed range between the new previous and next point */
+status_t sp_path_derivation(sp_path_t path, sp_sample_t** x_changes, sp_sample_t** y_changes, sp_time_t index, sp_path_t* out) {
+  status_declare;
+  sp_path_t a;
+  sp_path_time_t p_i;
+  sp_path_point_t* p;
+  sp_path_segment_count_t s_i;
+  sp_path_time_t sp_i;
+  sp_path_segment_t* s;
+  sp_path_segment_t* ss;
+  /* copy segments */
+  ss = 0;
+  status_require((sph_helper_malloc((path.segments_count * sizeof(sp_path_segment_t)), (&ss))));
+  memcpy(ss, (path.segments), (path.segments_count * sizeof(sp_path_segment_t)));
+  /* modify points */
+  for (s_i = 0, sp_i = 0; (s_i < path.segments_count); s_i += 1) {
+    s = (ss + s_i);
+    for (p_i = 0; (p_i < spline_path_segment_points_count((*s))); p_i += 1) {
+      if (spline_path_i_constant == s->interpolator) {
+        break;
+      } else {
+        if (spline_path_i_path == s->interpolator) {
+          continue;
+        };
+      };
+      p = (p_i + s->points);
+      p->x += x_changes[sp_i][index];
+      p->y += y_changes[sp_i][index];
+      sp_i += 1;
+    };
+  };
+  /* get data */
+  sp_path_prepare_segments(ss, (path.segments_count));
+  out->segments = ss;
+  out->segments_count = path.segments_count;
+exit:
+  status_return;
+}
+/** out memory is allocated */
+status_t sp_path_samples_derivation(sp_path_segment_t* segments, sp_path_segment_count_t segments_count, sp_sample_t** x_changes, sp_sample_t** y_changes, sp_time_t index, sp_sample_t** out, sp_path_time_t* out_size) {
+  status_declare;
+  sp_sample_t* out_temp;
+  sp_path_time_t size;
+  sp_path_t path;
+  path.segments = segments;
+  path.segments_count = segments_count;
+  status_require((sp_path_derivation(path, x_changes, y_changes, index, (&path))));
+  size = sp_path_size(path);
+  status_require((sp_samples_new(size, (&out_temp))));
+  spline_path_get(path, 0, size, out_temp);
+  *out = out_temp;
+  *out_size = size;
+exit:
+  status_return;
+}
+status_t sp_path_times_derivation(sp_path_segment_t* segments, sp_path_segment_count_t segments_count, sp_sample_t** x_changes, sp_sample_t** y_changes, sp_time_t index, sp_time_t** out, sp_path_time_t* out_size) {
+  status_declare;
+  sp_time_t* result;
+  sp_sample_t* temp;
+  sp_time_t temp_size;
+  temp = 0;
+  status_require((sp_path_samples_derivation(segments, segments_count, x_changes, y_changes, index, (&temp), (&temp_size))));
+  status_require((sp_times_new(temp_size, (&result))));
+  sp_samples_to_times(temp, temp_size, result);
+  *out = result;
+  *out_size = temp_size;
+exit:
+  free(temp);
+  status_return;
+}
 #include "../main/io.c"
 #include "../main/plot.c"
 #include "../main/filter.c"
 #include "../main/sequencer.c"
 #include "../main/statistics.c"
+sp_render_config_t sp_render_config(sp_channels_t channels, sp_time_t rate, sp_time_t block_size) {
+  sp_render_config_t a;
+  a.channels = channels;
+  a.rate = rate;
+  a.block_size = block_size;
+  return (a);
+}
 /** render a single event to file. event can be a group */
 status_t sp_render_file(sp_event_t event, sp_time_t start, sp_time_t end, sp_render_config_t config, uint8_t* path) {
   status_declare;
@@ -479,8 +563,29 @@ status_t sp_render_block(sp_event_t event, sp_time_t start, sp_time_t end, sp_re
 exit:
   status_return;
 }
-/** fills the sine wave lookup table */
-status_t sp_initialise(uint16_t cpu_count, sp_time_t sine_table_size) {
+/** render with defaults to /tmp/sp-out.wav or plot the result.
+   example: sp_render_quick(event, 2, 48000, 1) */
+status_t sp_render_quick(sp_event_t a, uint8_t file_or_plot) {
+  status_declare;
+  sp_block_t block;
+  sp_render_config_t config;
+  config = sp_render_config(sp_channels, sp_rate, sp_rate);
+  printf("rendering %lu seconds to %s\n", (sp_cheap_round_positive(((a.end - a.start) / config.rate))), (file_or_plot ? "plot" : "file"));
+  if (a.end) {
+    if (file_or_plot) {
+      status_require((sp_render_block(a, 0, (a.end), config, (&block))));
+      sp_plot_samples(((block.samples)[0]), (a.end));
+    } else {
+      status_require((sp_render_file(a, 0, (a.end), config, ("/tmp/sp-out.wav"))));
+    };
+  };
+exit:
+  status_return;
+}
+/** fills the sine wave lookup table.
+   rate and channels are used to set sp-rate and sp-channels,
+   which are used as defaults in a few cases */
+status_t sp_initialise(uint16_t cpu_count, sp_channels_t channels, sp_time_t rate) {
   status_declare;
   if (cpu_count) {
     status.id = future_init(cpu_count);
@@ -489,10 +594,11 @@ status_t sp_initialise(uint16_t cpu_count, sp_time_t sine_table_size) {
     };
   };
   sp_cpu_count = cpu_count;
-  sp_sine_table_size = sine_table_size;
+  sp_rate = rate;
+  sp_channels = channels;
   sp_default_random_state = sp_random_state_new(1557083953);
-  status_require((sp_samples_new(sine_table_size, (&sp_sine_table))));
-  sp_sine_period(sine_table_size, sp_sine_table);
+  status_require((sp_samples_new(sp_rate, (&sp_sine_table))));
+  sp_sine_period(sp_rate, sp_sine_table);
 exit:
   status_return;
 }

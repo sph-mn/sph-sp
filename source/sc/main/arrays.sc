@@ -495,3 +495,63 @@
     b (array-get (convert-type a sp-time-t**) i1)
     (array-get (convert-type a sp-time-t**) i1) (array-get (convert-type a sp-time-t**) i2)
     (array-get (convert-type a sp-time-t**) i2) b))
+
+(define (sp-times-array-free a size) (void sp-time-t** sp-time-t)
+  "free every element array and the container array"
+  (declare i sp-time-t)
+  (for ((set i 0) (< i size) (set+ i 1)) (free (array-get a i)))
+  (free a))
+
+(define (sp-samples-array-free a size) (void sp-sample-t** sp-time-t)
+  "free every element array and the container array"
+  (declare i sp-time-t)
+  (for ((set i 0) (< i size) (set+ i 1)) (free (array-get a i)))
+  (free a))
+
+(define (sp-times-contains a size b) (uint8-t sp-time-t* sp-time-t sp-time-t)
+  "true if array a contains element b"
+  (declare i sp-time-t)
+  (for ((set i 0) (< i size) (set+ i 1)) (if (= b (array-get a i)) (return #t)))
+  (return #f))
+
+(define (sp-times-random-discrete-unique state cudist cudist-size size out)
+  (void sp-random-state-t* sp-time-t* sp-time-t sp-time-t sp-time-t*)
+  "create size number of discrete random numbers corresponding to the distribution given by cudist
+   without duplicates. cudist-size must be equal to a-size.
+   a/out should not be the same pointer. out is managed by the caller.
+   size is the requested size of generated output values and should be smaller than a-size.
+   size must not be greater than the maximum possible count of unique discrete random values
+   (non-null values in the probability distribution)"
+  status-declare
+  (declare i sp-time-t a sp-time-t remaining sp-time-t)
+  (set remaining (sp-min size cudist-size))
+  (while remaining
+    (set a (sp-time-random-discrete state cudist cudist-size))
+    (if (sp-times-contains out (- size remaining) a) continue)
+    (set (array-get out (- size remaining)) a)
+    (set- remaining 1)))
+
+(define (sp-times-sequences base digits size out) (void sp-time-t sp-time-t sp-time-t sp-time-t*)
+  "out-size must be at least digits * size or base ** digits.
+   starts from out + 0. first generated element will be in out + digits.
+   out size will contain the sequences appended"
+  (declare i sp-time-t)
+  (for ((set i digits) (< i (* digits size)) (set+ i digits))
+    (memcpy (+ out i) (+ out (- i digits)) (* digits (sizeof sp-time-t)))
+    (sp-times-sequence-increment-le (+ out i) digits base)))
+
+(define (sp-times-range start end out) (void sp-time-t sp-time-t sp-time-t*)
+  "write into out values from start (inclusively) to end (exclusively)"
+  (declare i sp-time-t)
+  (for ((set i start) (< i end) (set+ i 1)) (set (array-get out (- i start)) i)))
+
+(define (sp-time-round-to-multiple a base) (sp-time-t sp-time-t sp-time-t)
+  "round to the next integer multiple of base "
+  (return
+    (if* (= 0 a) base (sp-cheap-round-positive (* (/ a (convert-type base sp-sample-t)) base)))))
+
+(define (sp-times-limit a size n out) (void sp-time-t* sp-time-t sp-time-t sp-time-t*)
+  (declare i sp-time-t)
+  "set all values greater than n in array to n"
+  (for ((set i 0) (< i size) (set+ i 1))
+    (set (array-get out i) (if* (< n (array-get a i)) n (array-get a i)))))

@@ -104,8 +104,8 @@
 #define sp_cheap_round_positive(a) ((sp_time_t)((0.5 + a)))
 #define sp_cheap_floor_positive(a) ((sp_time_t)(a))
 #define sp_cheap_ceiling_positive(a) (((sp_time_t)(a)) + (((sp_time_t)(a)) < a))
-#define sp_sine_state_1(size, frq, amp, phs) sp_wave_state_1(sp_sine_table, sp_sine_table_size, size, frq, amp, phs)
-#define sp_sine_state_2(size, frq, amp1, amp2, phs1, phs2) sp_wave_state_2(sp_sine_table, sp_sine_table_size, size, frq, amp1, amp2, phs1, phs2)
+#define sp_sine_state_1(size, frq, amp, phs) sp_wave_state_1(sp_sine_table, sp_rate, size, frq, amp, phs)
+#define sp_sine_state_2(size, frq, amp1, amp2, phs1, phs2) sp_wave_state_2(sp_sine_table, sp_rate, size, frq, amp1, amp2, phs1, phs2)
 #define sp_max(a, b) ((a > b) ? a : b)
 #define sp_min(a, b) ((a < b) ? a : b)
 typedef struct {
@@ -121,7 +121,8 @@ typedef struct {
 } sp_file_t;
 uint32_t sp_cpu_count;
 sp_random_state_t sp_default_random_state;
-sp_time_t sp_sine_table_size;
+sp_time_t sp_rate;
+sp_channels_t sp_channels;
 sp_sample_t* sp_sine_table;
 void sp_block_zero(sp_block_t a);
 status_t sp_file_read(sp_file_t* file, sp_time_t sample_count, sp_sample_t** result_block, sp_time_t* result_sample_count);
@@ -147,7 +148,7 @@ void sp_block_free(sp_block_t a);
 sp_block_t sp_block_with_offset(sp_block_t a, sp_time_t offset);
 status_t sp_null_ir(sp_sample_t** out_ir, sp_time_t* out_len);
 status_t sp_passthrough_ir(sp_sample_t** out_ir, sp_time_t* out_len);
-status_t sp_initialise(uint16_t cpu_count, sp_time_t sine_table_size);
+status_t sp_initialise(uint16_t cpu_count, sp_channels_t channels, sp_time_t rate);
 typedef struct {
   sp_sample_t* amp[sp_channel_limit];
   sp_time_t phs[sp_channel_limit];
@@ -449,12 +450,13 @@ status_t sp_path_times_2(sp_time_t** out, sp_time_t size, sp_path_segment_t s1, 
 status_t sp_path_times_3(sp_time_t** out, sp_time_t size, sp_path_segment_t s1, sp_path_segment_t s2, sp_path_segment_t s3);
 status_t sp_path_times_4(sp_time_t** out, sp_time_t size, sp_path_segment_t s1, sp_path_segment_t s2, sp_path_segment_t s3, sp_path_segment_t s4);
 /* main 2 */
-#define sp_render_config_declare(name) sp_render_config_t name = { .channels = 2, .rate = sp_sine_table_size, .block_size = sp_sine_table_size }
 #define rt(n, d) ((sp_time_t)(((_rate / d) * n)))
 typedef struct {
+  sp_channels_t channels;
   sp_time_t rate;
   sp_time_t block_size;
-  sp_channels_t channels;
 } sp_render_config_t;
+sp_render_config_t sp_render_config(sp_channels_t channels, sp_time_t rate, sp_time_t block_size);
 status_t sp_render_file(sp_event_t event, sp_time_t start, sp_time_t end, sp_render_config_t config, uint8_t* path);
 status_t sp_render_block(sp_event_t event, sp_time_t start, sp_time_t end, sp_render_config_t config, sp_block_t* out);
+status_t sp_render_quick(sp_event_t a, uint8_t file_or_plot);

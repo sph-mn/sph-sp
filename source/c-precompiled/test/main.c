@@ -474,7 +474,8 @@ status_t test_render_block() {
   sp_time_t frq[sp_wave_event_duration];
   sp_sample_t amp[sp_wave_event_duration];
   sp_time_t i;
-  sp_render_config_declare(rc);
+  sp_render_config_t rc;
+  rc = sp_render_config(sp_channels, sp_rate, sp_rate);
   rc.block_size = 40;
   for (i = 0; (i < sp_wave_event_duration); i += 1) {
     frq[i] = 1500;
@@ -729,7 +730,7 @@ exit:
 int main() {
   status_declare;
   rs = sp_random_state_new(3);
-  sp_initialise(3, _rate);
+  sp_initialise(3, 2, _rate);
   test_helper_test_one(test_moving_average);
   test_helper_test_one(test_stats);
   test_helper_test_one(test_render_block);

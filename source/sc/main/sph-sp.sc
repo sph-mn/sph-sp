@@ -61,10 +61,9 @@
   (sp-cheap-round-positive a) (convert-type (+ 0.5 a) sp-time-t)
   (sp-cheap-floor-positive a) (convert-type a sp-time-t)
   (sp-cheap-ceiling-positive a) (+ (convert-type a sp-time-t) (< (convert-type a sp-time-t) a))
-  (sp-sine-state-1 size frq amp phs)
-  (sp-wave-state-1 sp-sine-table sp-sine-table-size size frq amp phs)
+  (sp-sine-state-1 size frq amp phs) (sp-wave-state-1 sp-sine-table sp-rate size frq amp phs)
   (sp-sine-state-2 size frq amp1 amp2 phs1 phs2)
-  (sp-wave-state-2 sp-sine-table sp-sine-table-size size frq amp1 amp2 phs1 phs2)
+  (sp-wave-state-2 sp-sine-table sp-rate size frq amp1 amp2 phs1 phs2)
   (sp-max a b) (if* (> a b) a b)
   (sp-min a b) (if* (< a b) a b))
 
@@ -84,7 +83,8 @@
       (data void*)))
   sp-cpu-count uint32-t
   sp-default-random-state sp-random-state-t
-  sp-sine-table-size sp-time-t
+  sp-rate sp-time-t
+  sp-channels sp-channels-t
   sp-sine-table sp-sample-t*
   (sp-block-zero a) (void sp-block-t)
   (sp-file-read file sample-count result-block result-sample-count)
@@ -115,7 +115,7 @@
   (sp-block-with-offset a offset) (sp-block-t sp-block-t sp-time-t)
   (sp-null-ir out-ir out-len) (status-t sp-sample-t** sp-time-t*)
   (sp-passthrough-ir out-ir out-len) (status-t sp-sample-t** sp-time-t*)
-  (sp-initialise cpu-count sine-table-size) (status-t uint16-t sp-time-t)
+  (sp-initialise cpu-count channels rate) (status-t uint16-t sp-channels-t sp-time-t)
   sp-wave-state-t
   (type
     (struct
@@ -241,7 +241,16 @@
   (void sp-random-state-t* (function-pointer void void* size-t size-t) void* size-t)
   (sp-times-scale a a-size factor out) (status-t sp-time-t* sp-time-t sp-time-t sp-time-t*)
   (sp-times-shuffle-swap a i1 i2) (void void* size-t size-t)
-  (sp-samples-smooth a size radius out) (status-t sp-sample-t* sp-time-t sp-time-t sp-sample-t*))
+  (sp-samples-smooth a size radius out) (status-t sp-sample-t* sp-time-t sp-time-t sp-sample-t*)
+  (sp-times-array-free a size) (void sp-time-t** sp-time-t)
+  (sp-samples-array-free a size) (void sp-sample-t** sp-time-t)
+  (sp-times-contains a size b) (uint8-t sp-time-t* sp-time-t sp-time-t)
+  (sp-times-random-discrete-unique state cudist cudist-size size out)
+  (void sp-random-state-t* sp-time-t* sp-time-t sp-time-t sp-time-t*)
+  (sp-times-sequences base digits size out) (void sp-time-t sp-time-t sp-time-t sp-time-t*)
+  (sp-times-range start end out) (void sp-time-t sp-time-t sp-time-t*)
+  (sp-time-round-to-multiple a base) (sp-time-t sp-time-t sp-time-t)
+  (sp-times-limit a size n out) (void sp-time-t* sp-time-t sp-time-t sp-time-t*))
 
 (sc-comment "statistics")
 (pre-define sp-stat-types-count (+ 1 (- sp-stat-skewness sp-stat-center)))
@@ -506,19 +515,24 @@
   (status-t sp-time-t** sp-time-t sp-path-segment-t sp-path-segment-t sp-path-segment-t)
   (sp-path-times-4 out size s1 s2 s3 s4)
   (status-t sp-time-t** sp-time-t
-    sp-path-segment-t sp-path-segment-t sp-path-segment-t sp-path-segment-t))
+    sp-path-segment-t sp-path-segment-t sp-path-segment-t sp-path-segment-t)
+  (sp-path-derivation path x-changes y-changes index out)
+  (status-t sp-path-t sp-sample-t** sp-sample-t** sp-time-t sp-path-t*)
+  (sp-path-samples-derivation segments segments-count x-changes y-changes index out out-size)
+  (status-t sp-path-segment-t* sp-path-segment-count-t
+    sp-sample-t** sp-sample-t** sp-time-t sp-sample-t** sp-path-time-t*)
+  (sp-path-times-derivation segments segments-count x-changes y-changes index out out-size)
+  (status-t sp-path-segment-t* sp-path-segment-count-t
+    sp-sample-t** sp-sample-t** sp-time-t sp-time-t** sp-path-time-t*))
 
 (sc-comment "main 2")
-
-(pre-define
-  (sp-render-config-declare name)
-  (define name sp-render-config-t
-    (struct-literal (channels 2) (rate sp-sine-table-size) (block-size sp-sine-table-size)))
-  (rt n d) (convert-type (* (/ _rate d) n) sp-time-t))
+(pre-define (rt n d) (convert-type (* (/ _rate d) n) sp-time-t))
 
 (declare
-  sp-render-config-t (type (struct (rate sp-time-t) (block-size sp-time-t) (channels sp-channels-t)))
+  sp-render-config-t (type (struct (channels sp-channels-t) (rate sp-time-t) (block-size sp-time-t)))
+  (sp-render-config channels rate block-size) (sp-render-config-t sp-channels-t sp-time-t sp-time-t)
   (sp-render-file event start end config path)
   (status-t sp-event-t sp-time-t sp-time-t sp-render-config-t uint8-t*)
   (sp-render-block event start end config out)
-  (status-t sp-event-t sp-time-t sp-time-t sp-render-config-t sp-block-t*))
+  (status-t sp-event-t sp-time-t sp-time-t sp-render-config-t sp-block-t*)
+  (sp-render-quick a file-or-plot) (status-t sp-event-t uint8-t))
