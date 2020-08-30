@@ -1,3 +1,5 @@
+(sc-include-once "./sc-macros")
+
 (define (sp-event-sort-swap a b c) (void void* ssize-t ssize-t)
   (declare d sp-event-t)
   (set
@@ -351,3 +353,49 @@
 (define (sp-group-append a event) (void sp-event-t* sp-event-t)
   (set+ event.start a:end event.end a:end)
   (sp-group-add *a event))
+
+(define (sp-sine-cluster prt-count amp frq phs ax ay fx fy out)
+  (status-t sp-time-t sp-path-t sp-path-t sp-time-t* sp-sample-t** sp-sample-t** sp-sample-t** sp-sample-t** sp-event-t*)
+  "creates an event group of sine events based on the given envelope configuration.
+   partial envelopes are created by modifying amp and frq with data from changes arrays.
+   the result amplitude envelopes are adjusted to in sum follow the given amp path.
+   sp-sine-cluster can take paths that give the volume distribution between partials and their frequencies,
+   arguments:
+     amp: the result amplitude envelope and base for partials.
+       the y values of points of all partials will be scaled to match amp, while keeping the relations between partials.
+     frq: frequency envelope and base for partials
+     ax/ay/fx/fy:
+       each is an array with the layout ((number:partial-change ...):segment-change ...).
+       to create envelopes for the different partials, for each partial and path segment of amp/frq,
+       the x or y value of the paths point is multiplied with a value from the corresponding changes array.
+     phs: phase offsets in number of samples"
+  (declare
+    a-samples-sizes sp-time-t*
+    a-samples sp-sample-t**
+    duration sp-time-t
+    event sp-event-t
+    f-times-size sp-time-t
+    f-times sp-time-t*
+    group sp-event-t
+    i sp-time-t)
+  status-declare
+  (memreg-init 1)
+  (sp-event-set-null group)
+  (set a-samples 0)
+  (status-require (sp-group-new 0 prt-count (* 2 prt-count) &group))
+  (status-require
+    (sp-path-samples-derivations-normalized amp prt-count ax ay &a-samples &a-samples-sizes))
+  (for-i i prt-count
+    (sp-group-memory-add group (array-get a-samples i))
+    (status-require (sp-path-times-derivation frq fx fy i &f-times &f-times-size))
+    (sp-group-memory-add group f-times)
+    (set duration (sp-min (array-get a-samples-sizes i) f-times-size))
+    (status-require
+      (sp-wave-event 0 duration
+        (sp-sine-state-2 duration f-times
+          (array-get a-samples i) (array-get a-samples i) (array-get phs i) (array-get phs i))
+        &event))
+    (sp-group-add group event))
+  (sp-group-prepare group)
+  (set *out group)
+  (label exit memreg-free (if status-is-failure (sp-group-free group)) status-return))

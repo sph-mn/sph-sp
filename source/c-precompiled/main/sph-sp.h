@@ -459,6 +459,9 @@ status_t sp_path_times_4(sp_time_t** out, sp_time_t size, sp_path_segment_t s1, 
 status_t sp_path_derivation(sp_path_t path, sp_sample_t** x_changes, sp_sample_t** y_changes, sp_time_t index, sp_path_t* out);
 status_t sp_path_samples_derivation(sp_path_t path, sp_sample_t** x_changes, sp_sample_t** y_changes, sp_time_t index, sp_sample_t** out, sp_path_time_t* out_size);
 status_t sp_path_times_derivation(sp_path_t path, sp_sample_t** x_changes, sp_sample_t** y_changes, sp_time_t index, sp_time_t** out, sp_path_time_t* out_size);
+void sp_path_multiply(sp_path_t path, sp_sample_t x_factor, sp_sample_t y_factor);
+status_t sp_path_derivations_normalized(sp_path_t base, sp_time_t count, sp_sample_t** x_changes, sp_sample_t** y_changes, sp_path_t** out);
+status_t sp_path_samples_derivations_normalized(sp_path_t path, sp_time_t count, sp_sample_t** x_changes, sp_sample_t** y_changes, sp_sample_t*** out, sp_time_t** out_sizes);
 /* main 2 */
 #define rt(n, d) ((sp_time_t)(((_rate / d) * n)))
 typedef struct {
@@ -470,3 +473,4 @@ sp_render_config_t sp_render_config(sp_channels_t channels, sp_time_t rate, sp_t
 status_t sp_render_file(sp_event_t event, sp_time_t start, sp_time_t end, sp_render_config_t config, uint8_t* path);
 status_t sp_render_block(sp_event_t event, sp_time_t start, sp_time_t end, sp_render_config_t config, sp_block_t* out);
 status_t sp_render_quick(sp_event_t a, uint8_t file_or_plot);
+status_t sp_sine_cluster(sp_time_t prt_count, sp_path_t amp, sp_path_t frq, sp_time_t* phs, sp_sample_t** ax, sp_sample_t** ay, sp_sample_t** fx, sp_sample_t** fy, sp_event_t* out);

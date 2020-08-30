@@ -522,7 +522,12 @@
   (sp-path-samples-derivation path x-changes y-changes index out out-size)
   (status-t sp-path-t sp-sample-t** sp-sample-t** sp-time-t sp-sample-t** sp-path-time-t*)
   (sp-path-times-derivation path x-changes y-changes index out out-size)
-  (status-t sp-path-t sp-sample-t** sp-sample-t** sp-time-t sp-time-t** sp-path-time-t*))
+  (status-t sp-path-t sp-sample-t** sp-sample-t** sp-time-t sp-time-t** sp-path-time-t*)
+  (sp-path-multiply path x-factor y-factor) (void sp-path-t sp-sample-t sp-sample-t)
+  (sp-path-derivations-normalized base count x-changes y-changes out)
+  (status-t sp-path-t sp-time-t sp-sample-t** sp-sample-t** sp-path-t**)
+  (sp-path-samples-derivations-normalized path count x-changes y-changes out out-sizes)
+  (status-t sp-path-t sp-time-t sp-sample-t** sp-sample-t** sp-sample-t*** sp-time-t**))
 
 (sc-comment "main 2")
 (pre-define (rt n d) (convert-type (* (/ _rate d) n) sp-time-t))
@@ -534,4 +539,7 @@
   (status-t sp-event-t sp-time-t sp-time-t sp-render-config-t uint8-t*)
   (sp-render-block event start end config out)
   (status-t sp-event-t sp-time-t sp-time-t sp-render-config-t sp-block-t*)
-  (sp-render-quick a file-or-plot) (status-t sp-event-t uint8-t))
+  (sp-render-quick a file-or-plot) (status-t sp-event-t uint8-t)
+  (sp-sine-cluster prt-count amp frq phs ax ay fx fy out)
+  (status-t sp-time-t sp-path-t
+    sp-path-t sp-time-t* sp-sample-t** sp-sample-t** sp-sample-t** sp-sample-t** sp-event-t*))

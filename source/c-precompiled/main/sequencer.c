@@ -367,3 +367,48 @@ void sp_group_append(sp_event_t* a, sp_event_t event) {
   event.end += a->end;
   sp_group_add((*a), event);
 }
+/** creates an event group of sine events based on the given envelope configuration.
+   partial envelopes are created by modifying amp and frq with data from changes arrays.
+   the result amplitude envelopes are adjusted to in sum follow the given amp path.
+   sp-sine-cluster can take paths that give the volume distribution between partials and their frequencies,
+   arguments:
+     amp: the result amplitude envelope and base for partials.
+       the y values of points of all partials will be scaled to match amp, while keeping the relations between partials.
+     frq: frequency envelope and base for partials
+     ax/ay/fx/fy:
+       each is an array with the layout ((number:partial-change ...):segment-change ...).
+       to create envelopes for the different partials, for each partial and path segment of amp/frq,
+       the x or y value of the paths point is multiplied with a value from the corresponding changes array.
+     phs: phase offsets in number of samples */
+status_t sp_sine_cluster(sp_time_t prt_count, sp_path_t amp, sp_path_t frq, sp_time_t* phs, sp_sample_t** ax, sp_sample_t** ay, sp_sample_t** fx, sp_sample_t** fy, sp_event_t* out) {
+  sp_time_t* a_samples_sizes;
+  sp_sample_t** a_samples;
+  sp_time_t duration;
+  sp_event_t event;
+  sp_time_t f_times_size;
+  sp_time_t* f_times;
+  sp_event_t group;
+  sp_time_t i;
+  status_declare;
+  memreg_init(1);
+  sp_event_set_null(group);
+  a_samples = 0;
+  status_require((sp_group_new(0, prt_count, (2 * prt_count), (&group))));
+  status_require((sp_path_samples_derivations_normalized(amp, prt_count, ax, ay, (&a_samples), (&a_samples_sizes))));
+  for (i = 0; (i < prt_count); i += 1) {
+    sp_group_memory_add(group, (a_samples[i]));
+    status_require((sp_path_times_derivation(frq, fx, fy, i, (&f_times), (&f_times_size))));
+    sp_group_memory_add(group, f_times);
+    duration = sp_min((a_samples_sizes[i]), f_times_size);
+    status_require((sp_wave_event(0, duration, (sp_sine_state_2(duration, f_times, (a_samples[i]), (a_samples[i]), (phs[i]), (phs[i]))), (&event))));
+    sp_group_add(group, event);
+  };
+  sp_group_prepare(group);
+  *out = group;
+exit:
+  memreg_free;
+  if (status_is_failure) {
+    sp_group_free(group);
+  };
+  status_return;
+}
