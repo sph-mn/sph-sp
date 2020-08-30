@@ -442,6 +442,8 @@ void sp_group_event_free(sp_event_t* a);
 #define sp_path_i_path spline_path_i_path
 #define sp_path_end spline_path_end
 #define sp_path_size spline_path_size
+#define sp_path_free spline_path_free
+#define sp_path_get spline_path_get
 #define sp_path_times_constant(out, size, value) sp_path_times_2(out, size, (sp_path_move(0, value)), (sp_path_constant()))
 #define sp_path_samples_constant(out, size, value) sp_path_samples_2(out, size, (sp_path_move(0, value)), (sp_path_constant()))
 status_t sp_path_samples(sp_path_segment_t* segments, sp_path_segment_count_t segments_count, sp_path_time_t size, sp_sample_t** out);

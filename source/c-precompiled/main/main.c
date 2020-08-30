@@ -459,9 +459,9 @@ status_t sp_path_derivation(sp_path_t path, sp_sample_t** x_changes, sp_sample_t
   status_require((sph_helper_malloc((path.segments_count * sizeof(sp_path_segment_t)), (&ss))));
   memcpy(ss, (path.segments), (path.segments_count * sizeof(sp_path_segment_t)));
   /* modify points */
-  for (s_i = 0, sp_i = 0; (s_i < path.segments_count); s_i += 1) {
+  for (s_i = 0, p_i = 0; (s_i < path.segments_count); s_i += 1) {
     s = (ss + s_i);
-    for (p_i = 0; (p_i < spline_path_segment_points_count((*s))); p_i += 1) {
+    for (sp_i = 0; (sp_i < spline_path_segment_points_count((*s))); sp_i += 1) {
       if (spline_path_i_constant == s->interpolator) {
         break;
       } else {
@@ -469,13 +469,12 @@ status_t sp_path_derivation(sp_path_t path, sp_sample_t** x_changes, sp_sample_t
           continue;
         };
       };
-      p = (p_i + s->points);
-      p->x *= x_changes[sp_i][index];
-      p->y *= y_changes[sp_i][index];
-      sp_i += 1;
+      p = (sp_i + s->points);
+      p->x *= x_changes[p_i][index];
+      p->y *= y_changes[p_i][index];
+      p_i += 1;
     };
   };
-  /* get data */
   sp_path_prepare_segments(ss, (path.segments_count));
   out->segments = ss;
   out->segments_count = path.segments_count;
