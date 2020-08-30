@@ -369,15 +369,15 @@ void sp_group_append(sp_event_t* a, sp_event_t event) {
 }
 /** creates an event group of sine events based on the given envelope configuration.
    partial envelopes are created by modifying amp and frq with data from changes arrays.
-   the result amplitude envelopes are adjusted to in sum follow the given amp path.
-   sp-sine-cluster can take paths that give the volume distribution between partials and their frequencies,
+   the result amplitude envelopes are adjusted to in sum follow the given amp path while keeping the specified relations.
+   sp_sine_cluster can take arrays that give the volume distribution between partials and the distribution of frequencies.
    arguments:
-     amp: the result amplitude envelope and base for partials.
-       the y values of points of all partials will be scaled to match amp, while keeping the relations between partials.
+     amp: the result amplitude envelope and base for partials
      frq: frequency envelope and base for partials
      ax/ay/fx/fy:
-       each is an array with the layout ((number:partial-change ...):segment-change ...).
-       to create envelopes for the different partials, for each partial and path segment of amp/frq,
+       each is an array with the layout ((number:partial_change ...):point_change ...).
+       points from sp_path_constant and sp_path_path are not to be included.
+       to create envelopes for the different partials, for each partial and path segment point of amp/frq,
        the x or y value of the paths point is multiplied with a value from the corresponding changes array.
      phs: phase offsets in number of samples */
 status_t sp_sine_cluster(sp_time_t prt_count, sp_path_t amp, sp_path_t frq, sp_time_t* phs, sp_sample_t** ax, sp_sample_t** ay, sp_sample_t** fx, sp_sample_t** fy, sp_event_t* out) {

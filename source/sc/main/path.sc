@@ -31,6 +31,7 @@
 
 (define (sp-path-times-2 out size s1 s2)
   (status-t sp-time-t** sp-time-t sp-path-segment-t sp-path-segment-t)
+  "return a newly allocated sp_time_t array for a path with two segments"
   (declare segments (array sp-path-segment-t 2))
   (array-set segments 0 s1 1 s2)
   (return (sp-path-times segments 2 size out)))
@@ -72,13 +73,13 @@
 
 (define (sp-path-derivation path x-changes y-changes index out)
   (status-t sp-path-t sp-sample-t** sp-sample-t** sp-time-t sp-path-t*)
-  "changes contains per point an array of values that will be multiplied with the corresponding points x or y value.
-   changes: (array:point-changes ...); point-changes: (number:change ...).
-   index is the current change index for all points.
+  "changes contains per point an array of values which will be multiplied with x or y value.
+   each an array with the layout ((number:derivation_change ...):point_change ...).
+   index is the current derivation_change index.
    caveats:
    * changes for segments of type constant or type path are not to be included
-   * path size can change, sp-path-end(path) can give the new size
-   * invalid paths are possible if x-changes exceed range between the new previous and next point"
+   * path size can change, sp_path_size(path) can give the new size
+   * invalid paths are possible if x_changes exceed range between the new previous and next point"
   status-declare
   (declare
     a sp-path-t
@@ -107,7 +108,7 @@
 
 (define (sp-path-samples-derivation path x-changes y-changes index out out-size)
   (status-t sp-path-t sp-sample-t** sp-sample-t** sp-time-t sp-sample-t** sp-path-time-t*)
-  "out memory is allocated"
+  "get one derivation as a sp_sample_t array. out memory will be allocated"
   status-declare
   (declare out-temp sp-sample-t* size sp-path-time-t)
   (status-require (sp-path-derivation path x-changes y-changes index &path))
@@ -119,6 +120,7 @@
 
 (define (sp-path-times-derivation path x-changes y-changes index out out-size)
   (status-t sp-path-t sp-sample-t** sp-sample-t** sp-time-t sp-time-t** sp-path-time-t*)
+  "get one derivation as a sp_time_t array. out memory will be allocated"
   status-declare
   (declare result sp-time-t* temp sp-sample-t* temp-size sp-time-t)
   (set temp 0)
@@ -129,6 +131,7 @@
   (label exit (free temp) status-return))
 
 (define (sp-path-multiply path x-factor y-factor) (void sp-path-t sp-sample-t sp-sample-t)
+  "multiply all x and y values of path segments by x_factor and y_factor respectively"
   (declare
     s sp-path-segment-t*
     p sp-path-point-t*
@@ -188,7 +191,7 @@
 
 (define (sp-path-samples-derivations-normalized path count x-changes y-changes out out-sizes)
   (status-t sp-path-t sp-time-t sp-sample-t** sp-sample-t** sp-sample-t*** sp-time-t**)
-  "get sp-path-derivations-normalized as sample arrays. out and out-sizes is allocated and passed to the caller"
+  "get sp_path_derivations_normalized as sample arrays. out and out_sizes is allocated and passed to the caller"
   (declare
     i sp-time-t
     samples-i sp-time-t

@@ -6,7 +6,7 @@
    example:
      (define-array a int (0 0 0 0) (0 0 0 0))
      ->
-     int _t1[2][4] = { { 0, 0, 0, 0 }, { 0, 0, 0, 0 } };"
+     int a[2][4] = { { 0, 0, 0, 0 }, { 0, 0, 0, 0 } };"
   (let
     ( (dimensions
         (let loop ((a values))

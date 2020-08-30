@@ -22,7 +22,7 @@ c code and shared library for sound synthesis and sequencing. the sound processo
   * events for filtered noise and wave output
   * event groups that compose for riffs and songs
 * array processing
-  * utilities like array arithmetic, shuffle, permutations, compositions, statistics such as median, deviation, skewness, inharmonicity and more
+  * utilities like array arithmetic, shuffle, permutations, compositions, statistics such as median, deviation, skewness and more
 
 # dependencies
 * run-time
@@ -122,18 +122,21 @@ sp_noise_event :: sp_time_t:start sp_time_t:end sp_sample_t**:amp sp_sample_t*:c
 sp_null_ir :: sp_sample_t**:out_ir sp_time_t*:out_len -> status_t
 sp_passthrough_ir :: sp_sample_t**:out_ir sp_time_t*:out_len -> status_t
 sp_path_derivation :: sp_path_t:path sp_sample_t**:x_changes sp_sample_t**:y_changes sp_time_t:index sp_path_t*:out -> status_t
+sp_path_derivations_normalized :: sp_path_t:base sp_time_t:count sp_sample_t**:x_changes sp_sample_t**:y_changes sp_path_t**:out -> status_t
+sp_path_multiply :: sp_path_t:path sp_sample_t:x_factor sp_sample_t:y_factor -> void
 sp_path_samples :: sp_path_segment_t*:segments sp_path_segment_count_t:segments_count sp_path_time_t:size sp_sample_t**:out -> status_t
 sp_path_samples_1 :: sp_sample_t**:out sp_time_t:size sp_path_segment_t:s1 -> status_t
 sp_path_samples_2 :: sp_sample_t**:out sp_time_t:size sp_path_segment_t:s1 sp_path_segment_t:s2 -> status_t
 sp_path_samples_3 :: sp_sample_t**:out sp_time_t:size sp_path_segment_t:s1 sp_path_segment_t:s2 sp_path_segment_t:s3 -> status_t
 sp_path_samples_4 :: sp_sample_t**:out sp_time_t:size sp_path_segment_t:s1 sp_path_segment_t:s2 sp_path_segment_t:s3 sp_path_segment_t:s4 -> status_t
-sp_path_samples_derivation :: sp_path_segment_t*:segments sp_path_segment_count_t:segments_count sp_sample_t**:x_changes sp_sample_t**:y_changes sp_time_t:index sp_sample_t**:out sp_path_time_t*:out_size -> status_t
+sp_path_samples_derivation :: sp_path_t:path sp_sample_t**:x_changes sp_sample_t**:y_changes sp_time_t:index sp_sample_t**:out sp_path_time_t*:out_size -> status_t
+sp_path_samples_derivations_normalized :: sp_path_t:path sp_time_t:count sp_sample_t**:x_changes sp_sample_t**:y_changes sp_sample_t***:out sp_time_t**:out_sizes -> status_t
 sp_path_times :: sp_path_segment_t*:segments sp_path_segment_count_t:segments_count sp_path_time_t:size sp_time_t**:out -> status_t
 sp_path_times_1 :: sp_time_t**:out sp_time_t:size sp_path_segment_t:s1 -> status_t
 sp_path_times_2 :: sp_time_t**:out sp_time_t:size sp_path_segment_t:s1 sp_path_segment_t:s2 -> status_t
 sp_path_times_3 :: sp_time_t**:out sp_time_t:size sp_path_segment_t:s1 sp_path_segment_t:s2 sp_path_segment_t:s3 -> status_t
 sp_path_times_4 :: sp_time_t**:out sp_time_t:size sp_path_segment_t:s1 sp_path_segment_t:s2 sp_path_segment_t:s3 sp_path_segment_t:s4 -> status_t
-sp_path_times_derivation :: sp_path_segment_t*:segments sp_path_segment_count_t:segments_count sp_sample_t**:x_changes sp_sample_t**:y_changes sp_time_t:index sp_time_t**:out sp_path_time_t*:out_size -> status_t
+sp_path_times_derivation :: sp_path_t:path sp_sample_t**:x_changes sp_sample_t**:y_changes sp_time_t:index sp_time_t**:out sp_path_time_t*:out_size -> status_t
 sp_permutations_max :: sp_time_t:set_size sp_time_t:selection_size -> sp_time_t
 sp_phase :: sp_time_t:current sp_time_t:change sp_time_t:cycle -> sp_time_t
 sp_phase_float :: sp_time_t:current double:change sp_time_t:cycle -> sp_time_t
@@ -190,6 +193,7 @@ sp_set_sequence_max :: sp_time_t:set_size sp_time_t:selection_size -> sp_time_t
 sp_shuffle :: sp_random_state_t*:state function_pointer void void* size_t size_t:swap void*:a size_t:size -> void
 sp_sin_lq :: sp_float_t:a -> sp_sample_t
 sp_sinc :: sp_float_t:a -> sp_float_t
+sp_sine_cluster :: sp_time_t:prt_count sp_path_t:amp sp_path_t:frq sp_time_t*:phs sp_sample_t**:ax sp_sample_t**:ay sp_sample_t**:fx sp_sample_t**:fy sp_event_t*:out -> status_t
 sp_sine_period :: sp_time_t:size sp_sample_t*:out -> void
 sp_spectral_inversion_ir :: sp_sample_t*:a sp_time_t:a_len -> void
 sp_spectral_reversal_ir :: sp_sample_t*:a sp_time_t:a_len -> void
@@ -311,10 +315,10 @@ sp_cheap_noise_event_br(start, end, amp, ...)
 sp_cheap_noise_event_hp(start, end, amp, ...)
 sp_cheap_noise_event_lp(start, end, amp, ...)
 sp_cheap_round_positive(a)
-sp_event_declare(a)
 sp_event_duration(a)
 sp_event_duration_set(a, duration)
 sp_event_move(a, start)
+sp_event_set_null(a)
 sp_file_bit_input
 sp_file_bit_output
 sp_file_bit_position
@@ -327,7 +331,6 @@ sp_filter_state_free
 sp_filter_state_t
 sp_float_t
 sp_group_add(a, event)
-sp_group_declare
 sp_group_events(a)
 sp_group_free(a)
 sp_group_memory(a)
@@ -341,6 +344,8 @@ sp_min(a, b)
 sp_path_bezier
 sp_path_constant
 sp_path_end
+sp_path_free
+sp_path_get
 sp_path_i_bezier
 sp_path_i_constant
 sp_path_i_line

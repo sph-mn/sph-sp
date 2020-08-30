@@ -31,6 +31,7 @@ status_t sp_path_times_1(sp_time_t** out, sp_time_t size, sp_path_segment_t s1) 
   segments[0] = s1;
   return ((sp_path_times(segments, 1, size, out)));
 }
+/** return a newly allocated sp_time_t array for a path with two segments */
 status_t sp_path_times_2(sp_time_t** out, sp_time_t size, sp_path_segment_t s1, sp_path_segment_t s2) {
   sp_path_segment_t segments[2];
   segments[0] = s1;
@@ -78,13 +79,13 @@ status_t sp_path_samples_4(sp_sample_t** out, sp_time_t size, sp_path_segment_t 
   segments[3] = s4;
   return ((sp_path_samples(segments, 4, size, out)));
 }
-/** changes contains per point an array of values that will be multiplied with the corresponding points x or y value.
-   changes: (array:point-changes ...); point-changes: (number:change ...).
-   index is the current change index for all points.
+/** changes contains per point an array of values which will be multiplied with x or y value.
+   each an array with the layout ((number:derivation_change ...):point_change ...).
+   index is the current derivation_change index.
    caveats:
    * changes for segments of type constant or type path are not to be included
-   * path size can change, sp-path-end(path) can give the new size
-   * invalid paths are possible if x-changes exceed range between the new previous and next point */
+   * path size can change, sp_path_size(path) can give the new size
+   * invalid paths are possible if x_changes exceed range between the new previous and next point */
 status_t sp_path_derivation(sp_path_t path, sp_sample_t** x_changes, sp_sample_t** y_changes, sp_time_t index, sp_path_t* out) {
   status_declare;
   sp_path_t a;
@@ -121,7 +122,7 @@ status_t sp_path_derivation(sp_path_t path, sp_sample_t** x_changes, sp_sample_t
 exit:
   status_return;
 }
-/** out memory is allocated */
+/** get one derivation as a sp_sample_t array. out memory will be allocated */
 status_t sp_path_samples_derivation(sp_path_t path, sp_sample_t** x_changes, sp_sample_t** y_changes, sp_time_t index, sp_sample_t** out, sp_path_time_t* out_size) {
   status_declare;
   sp_sample_t* out_temp;
@@ -135,6 +136,7 @@ status_t sp_path_samples_derivation(sp_path_t path, sp_sample_t** x_changes, sp_
 exit:
   status_return;
 }
+/** get one derivation as a sp_time_t array. out memory will be allocated */
 status_t sp_path_times_derivation(sp_path_t path, sp_sample_t** x_changes, sp_sample_t** y_changes, sp_time_t index, sp_time_t** out, sp_path_time_t* out_size) {
   status_declare;
   sp_time_t* result;
@@ -150,6 +152,7 @@ exit:
   free(temp);
   status_return;
 }
+/** multiply all x and y values of path segments by x_factor and y_factor respectively */
 void sp_path_multiply(sp_path_t path, sp_sample_t x_factor, sp_sample_t y_factor) {
   sp_path_segment_t* s;
   sp_path_point_t* p;
@@ -233,7 +236,7 @@ exit:
   };
   status_return;
 }
-/** get sp-path-derivations-normalized as sample arrays. out and out-sizes is allocated and passed to the caller */
+/** get sp_path_derivations_normalized as sample arrays. out and out_sizes is allocated and passed to the caller */
 status_t sp_path_samples_derivations_normalized(sp_path_t path, sp_time_t count, sp_sample_t** x_changes, sp_sample_t** y_changes, sp_sample_t*** out, sp_time_t** out_sizes) {
   sp_time_t i;
   sp_time_t samples_i;
