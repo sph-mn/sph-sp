@@ -357,8 +357,9 @@
 
 (define (sp-path-derivation path x-changes y-changes index out)
   (status-t sp-path-t sp-sample-t** sp-sample-t** sp-time-t sp-path-t*)
-  "changes contains per point an array of values that will be added to the points x or y value.
-   index selects the current change index for all points.
+  "changes contains per point an array of values that will be multiplied with the corresponding points x or y value.
+   changes: (array:point-changes ...); point-changes: (number:change ...).
+   index is the current change index for all points.
    caveats:
    * changes for segments of type constant or type path are not to be included
    * path size can change, sp-path-end(path) can give the new size
@@ -383,7 +384,8 @@
       (if (= spline-path-i-constant s:interpolator) break
         (if (= spline-path-i-path s:interpolator) continue))
       (set p (+ p-i s:points))
-      (set+ p:x (array-get x-changes sp-i index) p:y (array-get y-changes sp-i index) sp-i 1)))
+      (set* p:x (array-get x-changes sp-i index) p:y (array-get y-changes sp-i index))
+      (set+ sp-i 1)))
   (sc-comment "get data")
   (sp-path-prepare-segments ss path.segments-count)
   (set out:segments ss out:segments-count path.segments-count)

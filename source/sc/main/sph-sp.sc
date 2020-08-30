@@ -422,8 +422,7 @@
     (begin (array4-add (sp-group-events a) event) (if (< a.end event.end) (set a.end event.end))))
   (sp-group-prepare a)
   (sp-seq-events-prepare (struct-get (sp-group-events a) data) (array4-size (sp-group-events a)))
-  (sp-event-declare a) (begin (declare a sp-event-t) (set a.state 0 a.start 0 a.end 0))
-  sp-group-declare sp-event-declare
+  (sp-event-set-null a) (set a.state 0 a.end 0)
   (sp-group-free a) (if a.state (a.free &a))
   (sp-group-memory-add-2 g a1 a2) (begin (sp-group-memory-add g a1) (sp-group-memory-add g a2))
   (sp-group-memory-add-3 g a1 a2 a3)

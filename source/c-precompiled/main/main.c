@@ -438,8 +438,9 @@ status_t sp_path_samples_4(sp_sample_t** out, sp_time_t size, sp_path_segment_t 
   segments[3] = s4;
   return ((sp_path_samples(segments, 4, size, out)));
 }
-/** changes contains per point an array of values that will be added to the points x or y value.
-   index selects the current change index for all points.
+/** changes contains per point an array of values that will be multiplied with the corresponding points x or y value.
+   changes: (array:point-changes ...); point-changes: (number:change ...).
+   index is the current change index for all points.
    caveats:
    * changes for segments of type constant or type path are not to be included
    * path size can change, sp-path-end(path) can give the new size
@@ -469,8 +470,8 @@ status_t sp_path_derivation(sp_path_t path, sp_sample_t** x_changes, sp_sample_t
         };
       };
       p = (p_i + s->points);
-      p->x += x_changes[sp_i][index];
-      p->y += y_changes[sp_i][index];
+      p->x *= x_changes[sp_i][index];
+      p->y *= y_changes[sp_i][index];
       sp_i += 1;
     };
   };

@@ -250,6 +250,14 @@ void sp_shuffle(sp_random_state_t* state, void (*swap)(void*, size_t, size_t), v
 status_t sp_times_scale(sp_time_t* a, sp_time_t a_size, sp_time_t factor, sp_time_t* out);
 void sp_times_shuffle_swap(void* a, size_t i1, size_t i2);
 status_t sp_samples_smooth(sp_sample_t* a, sp_time_t size, sp_time_t radius, sp_sample_t* out);
+void sp_times_array_free(sp_time_t** a, sp_time_t size);
+void sp_samples_array_free(sp_sample_t** a, sp_time_t size);
+uint8_t sp_times_contains(sp_time_t* a, sp_time_t size, sp_time_t b);
+void sp_times_random_discrete_unique(sp_random_state_t* state, sp_time_t* cudist, sp_time_t cudist_size, sp_time_t size, sp_time_t* out);
+void sp_times_sequences(sp_time_t base, sp_time_t digits, sp_time_t size, sp_time_t* out);
+void sp_times_range(sp_time_t start, sp_time_t end, sp_time_t* out);
+sp_time_t sp_time_round_to_multiple(sp_time_t a, sp_time_t base);
+void sp_times_limit(sp_time_t* a, sp_time_t size, sp_time_t n, sp_time_t* out);
 /* statistics */
 #define sp_stat_types_count (1 + (sp_stat_skewness - sp_stat_center))
 typedef enum { sp_stat_center = 0u,
@@ -374,12 +382,9 @@ void sp_plot_spectrum(sp_sample_t* a, sp_time_t a_size);
     }; \
   }
 #define sp_group_prepare(a) sp_seq_events_prepare(((sp_group_events(a)).data), (array4_size((sp_group_events(a)))))
-#define sp_event_declare(a) \
-  sp_event_t a; \
+#define sp_event_set_null(a) \
   a.state = 0; \
-  a.start = 0; \
   a.end = 0
-#define sp_group_declare sp_event_declare
 #define sp_group_free(a) \
   if (a.state) { \
     (a.free)((&a)); \
@@ -449,6 +454,9 @@ status_t sp_path_times_1(sp_time_t** out, sp_time_t size, sp_path_segment_t s1);
 status_t sp_path_times_2(sp_time_t** out, sp_time_t size, sp_path_segment_t s1, sp_path_segment_t s2);
 status_t sp_path_times_3(sp_time_t** out, sp_time_t size, sp_path_segment_t s1, sp_path_segment_t s2, sp_path_segment_t s3);
 status_t sp_path_times_4(sp_time_t** out, sp_time_t size, sp_path_segment_t s1, sp_path_segment_t s2, sp_path_segment_t s3, sp_path_segment_t s4);
+status_t sp_path_derivation(sp_path_t path, sp_sample_t** x_changes, sp_sample_t** y_changes, sp_time_t index, sp_path_t* out);
+status_t sp_path_samples_derivation(sp_path_segment_t* segments, sp_path_segment_count_t segments_count, sp_sample_t** x_changes, sp_sample_t** y_changes, sp_time_t index, sp_sample_t** out, sp_path_time_t* out_size);
+status_t sp_path_times_derivation(sp_path_segment_t* segments, sp_path_segment_count_t segments_count, sp_sample_t** x_changes, sp_sample_t** y_changes, sp_time_t index, sp_time_t** out, sp_path_time_t* out_size);
 /* main 2 */
 #define rt(n, d) ((sp_time_t)(((_rate / d) * n)))
 typedef struct {
