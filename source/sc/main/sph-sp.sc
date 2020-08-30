@@ -519,12 +519,10 @@
     sp-path-segment-t sp-path-segment-t sp-path-segment-t sp-path-segment-t)
   (sp-path-derivation path x-changes y-changes index out)
   (status-t sp-path-t sp-sample-t** sp-sample-t** sp-time-t sp-path-t*)
-  (sp-path-samples-derivation segments segments-count x-changes y-changes index out out-size)
-  (status-t sp-path-segment-t* sp-path-segment-count-t
-    sp-sample-t** sp-sample-t** sp-time-t sp-sample-t** sp-path-time-t*)
-  (sp-path-times-derivation segments segments-count x-changes y-changes index out out-size)
-  (status-t sp-path-segment-t* sp-path-segment-count-t
-    sp-sample-t** sp-sample-t** sp-time-t sp-time-t** sp-path-time-t*))
+  (sp-path-samples-derivation path x-changes y-changes index out out-size)
+  (status-t sp-path-t sp-sample-t** sp-sample-t** sp-time-t sp-sample-t** sp-path-time-t*)
+  (sp-path-times-derivation path x-changes y-changes index out out-size)
+  (status-t sp-path-t sp-sample-t** sp-sample-t** sp-time-t sp-time-t** sp-path-time-t*))
 
 (sc-comment "main 2")
 (pre-define (rt n d) (convert-type (* (/ _rate d) n) sp-time-t))

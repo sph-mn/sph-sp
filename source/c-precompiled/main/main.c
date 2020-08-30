@@ -482,13 +482,10 @@ exit:
   status_return;
 }
 /** out memory is allocated */
-status_t sp_path_samples_derivation(sp_path_segment_t* segments, sp_path_segment_count_t segments_count, sp_sample_t** x_changes, sp_sample_t** y_changes, sp_time_t index, sp_sample_t** out, sp_path_time_t* out_size) {
+status_t sp_path_samples_derivation(sp_path_t path, sp_sample_t** x_changes, sp_sample_t** y_changes, sp_time_t index, sp_sample_t** out, sp_path_time_t* out_size) {
   status_declare;
   sp_sample_t* out_temp;
   sp_path_time_t size;
-  sp_path_t path;
-  path.segments = segments;
-  path.segments_count = segments_count;
   status_require((sp_path_derivation(path, x_changes, y_changes, index, (&path))));
   size = sp_path_size(path);
   status_require((sp_samples_new(size, (&out_temp))));
@@ -498,13 +495,13 @@ status_t sp_path_samples_derivation(sp_path_segment_t* segments, sp_path_segment
 exit:
   status_return;
 }
-status_t sp_path_times_derivation(sp_path_segment_t* segments, sp_path_segment_count_t segments_count, sp_sample_t** x_changes, sp_sample_t** y_changes, sp_time_t index, sp_time_t** out, sp_path_time_t* out_size) {
+status_t sp_path_times_derivation(sp_path_t path, sp_sample_t** x_changes, sp_sample_t** y_changes, sp_time_t index, sp_time_t** out, sp_path_time_t* out_size) {
   status_declare;
   sp_time_t* result;
   sp_sample_t* temp;
   sp_time_t temp_size;
   temp = 0;
-  status_require((sp_path_samples_derivation(segments, segments_count, x_changes, y_changes, index, (&temp), (&temp_size))));
+  status_require((sp_path_samples_derivation(path, x_changes, y_changes, index, (&temp), (&temp_size))));
   status_require((sp_times_new(temp_size, (&result))));
   sp_samples_to_times(temp, temp_size, result);
   *out = result;

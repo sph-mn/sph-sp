@@ -390,12 +390,11 @@
   (set out:segments ss out:segments-count path.segments-count)
   (label exit status-return))
 
-(define (sp-path-samples-derivation segments segments-count x-changes y-changes index out out-size)
-  (status-t sp-path-segment-t* sp-path-segment-count-t sp-sample-t** sp-sample-t** sp-time-t sp-sample-t** sp-path-time-t*)
+(define (sp-path-samples-derivation path x-changes y-changes index out out-size)
+  (status-t sp-path-t sp-sample-t** sp-sample-t** sp-time-t sp-sample-t** sp-path-time-t*)
   "out memory is allocated"
   status-declare
-  (declare out-temp sp-sample-t* size sp-path-time-t path sp-path-t)
-  (set path.segments segments path.segments-count segments-count)
+  (declare out-temp sp-sample-t* size sp-path-time-t)
   (status-require (sp-path-derivation path x-changes y-changes index &path))
   (set size (sp-path-size path))
   (status-require (sp-samples-new size &out-temp))
@@ -403,13 +402,12 @@
   (set *out out-temp *out-size size)
   (label exit status-return))
 
-(define (sp-path-times-derivation segments segments-count x-changes y-changes index out out-size)
-  (status-t sp-path-segment-t* sp-path-segment-count-t sp-sample-t** sp-sample-t** sp-time-t sp-time-t** sp-path-time-t*)
+(define (sp-path-times-derivation path x-changes y-changes index out out-size)
+  (status-t sp-path-t sp-sample-t** sp-sample-t** sp-time-t sp-time-t** sp-path-time-t*)
   status-declare
   (declare result sp-time-t* temp sp-sample-t* temp-size sp-time-t)
   (set temp 0)
-  (status-require
-    (sp-path-samples-derivation segments segments-count x-changes y-changes index &temp &temp-size))
+  (status-require (sp-path-samples-derivation path x-changes y-changes index &temp &temp-size))
   (status-require (sp-times-new temp-size &result))
   (sp-samples->times temp temp-size result)
   (set *out result *out-size temp-size)

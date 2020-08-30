@@ -457,8 +457,8 @@ status_t sp_path_times_2(sp_time_t** out, sp_time_t size, sp_path_segment_t s1, 
 status_t sp_path_times_3(sp_time_t** out, sp_time_t size, sp_path_segment_t s1, sp_path_segment_t s2, sp_path_segment_t s3);
 status_t sp_path_times_4(sp_time_t** out, sp_time_t size, sp_path_segment_t s1, sp_path_segment_t s2, sp_path_segment_t s3, sp_path_segment_t s4);
 status_t sp_path_derivation(sp_path_t path, sp_sample_t** x_changes, sp_sample_t** y_changes, sp_time_t index, sp_path_t* out);
-status_t sp_path_samples_derivation(sp_path_segment_t* segments, sp_path_segment_count_t segments_count, sp_sample_t** x_changes, sp_sample_t** y_changes, sp_time_t index, sp_sample_t** out, sp_path_time_t* out_size);
-status_t sp_path_times_derivation(sp_path_segment_t* segments, sp_path_segment_count_t segments_count, sp_sample_t** x_changes, sp_sample_t** y_changes, sp_time_t index, sp_time_t** out, sp_path_time_t* out_size);
+status_t sp_path_samples_derivation(sp_path_t path, sp_sample_t** x_changes, sp_sample_t** y_changes, sp_time_t index, sp_sample_t** out, sp_path_time_t* out_size);
+status_t sp_path_times_derivation(sp_path_t path, sp_sample_t** x_changes, sp_sample_t** y_changes, sp_time_t index, sp_time_t** out, sp_path_time_t* out_size);
 /* main 2 */
 #define rt(n, d) ((sp_time_t)(((_rate / d) * n)))
 typedef struct {
