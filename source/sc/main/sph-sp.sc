@@ -375,9 +375,9 @@
   (void sp-sample-t* sp-sample-t* sp-float-t sp-float-t sp-time-t sp-sample-t*)
   (sp-state-variable-filter-all out in in-count cutoff q-factor state)
   (void sp-sample-t* sp-sample-t* sp-float-t sp-float-t sp-time-t sp-sample-t*)
-  (sp-cheap-filter type in in-size cutoff passes q-factor unity-gain state out)
+  (sp-cheap-filter type in in-size cutoff passes q-factor state out)
   (void sp-state-variable-filter-t sp-sample-t*
-    sp-time-t sp-float-t sp-time-t sp-float-t uint8-t sp-cheap-filter-state-t* sp-sample-t*)
+    sp-time-t sp-float-t sp-time-t sp-float-t sp-cheap-filter-state-t* sp-sample-t*)
   (sp-cheap-filter-state-free a) (void sp-cheap-filter-state-t*)
   (sp-cheap-filter-state-new max-size max-passes out-state)
   (status-t sp-time-t sp-time-t sp-cheap-filter-state-t*)

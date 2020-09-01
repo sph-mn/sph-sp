@@ -2,6 +2,9 @@
 status_t sp_path_samples(sp_path_t path, sp_path_time_t size, sp_sample_t** out) {
   status_declare;
   sp_sample_t* out_temp;
+  if (0 == size) {
+    size = sp_path_size(path);
+  };
   status_require((sp_samples_new(size, (&out_temp))));
   spline_path_get(path, 0, size, out_temp);
   *out = out_temp;
@@ -15,6 +18,9 @@ status_t sp_path_times(sp_path_t path, sp_path_time_t size, sp_time_t** out) {
   sp_time_t* out_temp;
   sp_sample_t* temp;
   temp = 0;
+  if (0 == size) {
+    size = sp_path_size(path);
+  };
   status_require((sp_path_samples(path, size, (&temp))));
   status_require((sp_times_new(size, (&out_temp))));
   sp_samples_to_times(temp, size, out_temp);

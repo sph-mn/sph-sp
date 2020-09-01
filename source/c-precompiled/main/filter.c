@@ -334,9 +334,10 @@ define_sp_state_variable_filter(lp, v2)
   /** the sph-sp default precise filter. processing intensive if parameters change frequently.
    memory for out-state will be allocated and has to be freed with sp-filter-state-free */
   status_t sp_filter(sp_sample_t* in, sp_time_t in_size, sp_float_t cutoff_l, sp_float_t cutoff_h, sp_float_t transition_l, sp_float_t transition_h, boolean is_reject, sp_filter_state_t** out_state, sp_sample_t* out_samples) { sp_windowed_sinc_bp_br(in, in_size, cutoff_l, cutoff_h, transition_l, transition_h, is_reject, out_state, out_samples); }
+/** one state object per pass.
+   allocates and prepares temporary memory for passes and checks if max-passes doesnt exceed the limit.
+   heap memory is to be freed with sp-cheap-filter-state-free but only allocated if max-passes is greater than one */
 status_t sp_cheap_filter_state_new(sp_time_t max_size, sp_time_t max_passes, sp_cheap_filter_state_t* out_state) {
-  /* allocates and prepares memory and checks if max-passes doesnt exceed the limit
-heap memory is to be freed with sp-cheap-filter-state-free but only allocated if max-passes is greater than one */
   status_declare;
   sp_sample_t* in_temp = 0;
   sp_sample_t* out_temp = 0;
@@ -350,7 +351,7 @@ heap memory is to be freed with sp-cheap-filter-state-free but only allocated if
   };
   out_state->in_temp = in_temp;
   out_state->out_temp = out_temp;
-  memset((out_state->svf_state), 0, (sizeof(sp_sample_t) * 2 * sp_cheap_filter_passes_limit));
+  memset((out_state->svf_state), 0, (2 * sp_cheap_filter_passes_limit * sizeof(sp_sample_t)));
 exit:
   if (status_is_failure) {
     free(in_temp);
@@ -362,38 +363,28 @@ void sp_cheap_filter_state_free(sp_cheap_filter_state_t* a) {
   free((a->out_temp));
 }
 /** the sph-sp default fast filter. caller has to manage the state object with
-   sp-cheap-filter-state-new and sp-cheap-filter-state-free */
-void sp_cheap_filter(sp_state_variable_filter_t type, sp_sample_t* in, sp_time_t in_size, sp_float_t cutoff, sp_time_t passes, sp_float_t q_factor, uint8_t unity_gain, sp_cheap_filter_state_t* state, sp_sample_t* out) {
+   sp-cheap-filter-state-new and sp-cheap-filter-state-free.
+   uses separate svf-state values for multiple passes as it is like filters in series */
+void sp_cheap_filter(sp_state_variable_filter_t filter, sp_sample_t* in, sp_time_t in_size, sp_float_t cutoff, sp_time_t passes, sp_float_t q_factor, sp_cheap_filter_state_t* state, sp_sample_t* out) {
   status_declare;
   sp_sample_t* in_swap;
   sp_sample_t* in_temp;
   sp_sample_t* out_temp;
+  sp_time_t i;
   if (1 == passes) {
-    type(out, in, in_size, cutoff, q_factor, (state->svf_state));
+    filter(out, in, in_size, cutoff, q_factor, (state->svf_state));
   } else {
-    type((state->in_temp), in, in_size, cutoff, q_factor, (state->svf_state));
-    passes = (passes - 1);
     in_temp = state->in_temp;
     out_temp = state->out_temp;
-  loop:
-    if (1 < passes) {
-      type(out_temp, in_temp, in_size, cutoff, q_factor, (passes + state->svf_state));
+    filter(in_temp, in, in_size, cutoff, q_factor, (state->svf_state));
+    for (i = 1; (i < (passes - 1)); i += 1) {
+      filter(out_temp, in_temp, in_size, cutoff, q_factor, (state->svf_state + (i * 2)));
       sp_samples_zero(in_temp, in_size);
-      passes = (passes - 1);
       in_swap = in_temp;
       in_temp = out_temp;
       out_temp = in_swap;
-      goto loop;
-    } else {
-      type(out, in_temp, in_size, cutoff, q_factor, (passes + state->svf_state));
     };
-  };
-  /* reset unused state values */
-  if (sp_cheap_filter_passes_limit > passes) {
-    memset((state->svf_state), 0, (sizeof(sp_sample_t) * 2 * (sp_cheap_filter_passes_limit - passes)));
-  };
-  if (unity_gain) {
-    sp_samples_set_unity_gain(in, in_size, out);
+    filter(out, in_temp, in_size, cutoff, q_factor, (state->svf_state + (i * 2)));
   };
 }
 /** centered moving average balanced for complete data arrays and seamless for continuous data.

@@ -4,6 +4,7 @@
   "out memory is allocated"
   status-declare
   (declare out-temp sp-sample-t*)
+  (if (= 0 size) (set size (sp-path-size path)))
   (status-require (sp-samples-new size &out-temp))
   (spline-path-get path 0 size out-temp)
   (set *out out-temp)
@@ -15,6 +16,7 @@
   status-declare
   (declare out-temp sp-time-t* temp sp-sample-t*)
   (set temp 0)
+  (if (= 0 size) (set size (sp-path-size path)))
   (status-require (sp-path-samples path size &temp))
   (status-require (sp-times-new size &out-temp))
   (sp-samples->times temp size out-temp)

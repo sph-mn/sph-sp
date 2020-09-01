@@ -311,9 +311,9 @@
   (set s (sp-random-state-new 80))
   (sp-samples-random &s sp-noise-duration in)
   (status-require (sp-cheap-filter-state-new sp-noise-duration sp-cheap-filter-passes-limit &state))
-  (sp-cheap-filter-lp in sp-noise-duration 0.2 1 0 1 &state out)
-  (sp-cheap-filter-lp in sp-noise-duration 0.2 sp-cheap-filter-passes-limit 0 1 &state out)
-  (sp-cheap-filter-lp in sp-noise-duration 0.2 sp-cheap-filter-passes-limit 0 1 &state out)
+  (sp-cheap-filter-lp in sp-noise-duration 0.2 1 0 &state out)
+  (sp-cheap-filter-lp in sp-noise-duration 0.2 sp-cheap-filter-passes-limit 0 &state out)
+  (sp-cheap-filter-lp in sp-noise-duration 0.2 sp-cheap-filter-passes-limit 0 &state out)
   (sp-cheap-filter-state-free &state)
   (label exit status-return))
 

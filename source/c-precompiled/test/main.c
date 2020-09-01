@@ -330,9 +330,9 @@ status_t test_sp_cheap_filter() {
   s = sp_random_state_new(80);
   sp_samples_random((&s), sp_noise_duration, in);
   status_require((sp_cheap_filter_state_new(sp_noise_duration, sp_cheap_filter_passes_limit, (&state))));
-  sp_cheap_filter_lp(in, sp_noise_duration, (0.2), 1, 0, 1, (&state), out);
-  sp_cheap_filter_lp(in, sp_noise_duration, (0.2), sp_cheap_filter_passes_limit, 0, 1, (&state), out);
-  sp_cheap_filter_lp(in, sp_noise_duration, (0.2), sp_cheap_filter_passes_limit, 0, 1, (&state), out);
+  sp_cheap_filter_lp(in, sp_noise_duration, (0.2), 1, 0, (&state), out);
+  sp_cheap_filter_lp(in, sp_noise_duration, (0.2), sp_cheap_filter_passes_limit, 0, (&state), out);
+  sp_cheap_filter_lp(in, sp_noise_duration, (0.2), sp_cheap_filter_passes_limit, 0, (&state), out);
   sp_cheap_filter_state_free((&state));
 exit:
   status_return;

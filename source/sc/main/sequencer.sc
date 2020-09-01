@@ -151,7 +151,6 @@
     duration (- end start)
     block-count (if* (= duration s:resolution) 1 (sp-cheap-floor-positive (/ duration s:resolution)))
     block-rest (modulo duration s:resolution))
-  (sc-comment "total block count is block-count plus rest-block")
   (for ((set block-i 0) (<= block-i block-count) (set block-i (+ 1 block-i)))
     (set
       block-offset (* s:resolution block-i)
@@ -163,9 +162,8 @@
       (array-get s:trn-h t) s:is-reject &s:filter-state s:temp)
     (for ((set chn-i 0) (< chn-i out.channels) (set chn-i (+ 1 chn-i)))
       (for ((set i 0) (< i duration) (set i (+ 1 i)))
-        (set (array-get (array-get out.samples chn-i) (+ block-offset i))
-          (+ (array-get (array-get out.samples chn-i) (+ block-offset i))
-            (* (array-get (array-get s:amp chn-i) (+ block-offset i)) (array-get s:temp i))))))))
+        (set+ (array-get out.samples chn-i (+ block-offset i))
+          (* (array-get s:amp chn-i (+ t i)) (array-get s:temp i)))))))
 
 (define (sp-noise-event-free a) (void sp-event-t*)
   (define s sp-noise-event-state-t* a:state)
@@ -261,12 +259,11 @@
       duration (if* (= block-count block-i) block-rest s:resolution))
     (sp-samples-random &s:random-state duration s:noise)
     (sp-cheap-filter s:type s:noise
-      duration (array-get s:cut t) s:passes s:q-factor #t &s:filter-state s:temp)
+      duration (array-get s:cut t) s:passes s:q-factor &s:filter-state s:temp)
     (for ((set chn-i 0) (< chn-i out.channels) (set chn-i (+ 1 chn-i)))
       (for ((set i 0) (< i duration) (set i (+ 1 i)))
-        (set (array-get (array-get out.samples chn-i) (+ block-offset i))
-          (+ (array-get (array-get out.samples chn-i) (+ block-offset i))
-            (* (array-get (array-get s:amp chn-i) (+ block-offset i)) (array-get s:temp i))))))))
+        (set+ (array-get out.samples chn-i (+ block-offset i))
+          (* (array-get s:amp chn-i (+ t i)) (array-get s:temp i)))))))
 
 (define (sp-cheap-noise-event-free a) (void sp-event-t*)
   (define s sp-cheap-noise-event-state-t* a:state)
@@ -278,7 +275,7 @@
 (define
   (sp-cheap-noise-event start end amp type cut passes q-factor resolution random-state out-event)
   (status-t sp-time-t sp-time-t sp-sample-t** sp-state-variable-filter-t sp-sample-t* sp-time-t sp-sample-t sp-time-t sp-random-state-t sp-event-t*)
-  "an event for noise filtered by a state-variable filter. multiple passes currently not implemented.
+  "an event for noise filtered by a state-variable filter.
    lower processing costs even when parameters change with high resolution.
    multiple passes almost multiply performance costs.
    memory for event.state will be allocated and then owned by the caller"

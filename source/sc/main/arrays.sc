@@ -45,7 +45,7 @@
   (printf "\n"))
 
 (define (sp-samples-set-unity-gain in in-size out) (void sp-sample-t* sp-time-t sp-sample-t*)
-  "adjust amplitude of out to match the one of in"
+  "scale amplitude of out to match the one of in"
   (declare
     i sp-time-t
     in-max sp-sample-t
@@ -55,8 +55,7 @@
   (set in-max (sp-samples-absolute-max in in-size) out-max (sp-samples-absolute-max out in-size))
   (if (or (= 0 in-max) (= 0 out-max)) return)
   (set difference (/ out-max in-max) correction (+ 1 (/ (- 1 difference) difference)))
-  (for ((set i 0) (< i in-size) (set i (+ 1 i)))
-    (set (array-get out i) (* correction (array-get out i)))))
+  (for ((set i 0) (< i in-size) (set i (+ 1 i))) (set* (array-get out i) correction)))
 
 (pre-define
   (absolute-difference a b) (if* (> a b) (- a b) (- b a))

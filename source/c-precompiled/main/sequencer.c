@@ -164,7 +164,6 @@ void sp_noise_event_f(sp_time_t start, sp_time_t end, sp_block_t out, sp_event_t
   duration = (end - start);
   block_count = ((duration == s->resolution) ? 1 : sp_cheap_floor_positive((duration / s->resolution)));
   block_rest = (duration % s->resolution);
-  /* total block count is block-count plus rest-block */
   for (block_i = 0; (block_i <= block_count); block_i = (1 + block_i)) {
     block_offset = (s->resolution * block_i);
     t = (start + block_offset);
@@ -173,7 +172,7 @@ void sp_noise_event_f(sp_time_t start, sp_time_t end, sp_block_t out, sp_event_t
     sp_windowed_sinc_bp_br((s->noise), duration, ((s->cut_l)[t]), ((s->cut_h)[t]), ((s->trn_l)[t]), ((s->trn_h)[t]), (s->is_reject), (&(s->filter_state)), (s->temp));
     for (chn_i = 0; (chn_i < out.channels); chn_i = (1 + chn_i)) {
       for (i = 0; (i < duration); i = (1 + i)) {
-        ((out.samples)[chn_i])[(block_offset + i)] = (((out.samples)[chn_i])[(block_offset + i)] + (((s->amp)[chn_i])[(block_offset + i)] * (s->temp)[i]));
+        (out.samples)[chn_i][(block_offset + i)] += ((s->amp)[chn_i][(t + i)] * (s->temp)[i]);
       };
     };
   };
@@ -260,10 +259,10 @@ void sp_cheap_noise_event_f(sp_time_t start, sp_time_t end, sp_block_t out, sp_e
     t = (start + block_offset);
     duration = ((block_count == block_i) ? block_rest : s->resolution);
     sp_samples_random((&(s->random_state)), duration, (s->noise));
-    sp_cheap_filter((s->type), (s->noise), duration, ((s->cut)[t]), (s->passes), (s->q_factor), 1, (&(s->filter_state)), (s->temp));
+    sp_cheap_filter((s->type), (s->noise), duration, ((s->cut)[t]), (s->passes), (s->q_factor), (&(s->filter_state)), (s->temp));
     for (chn_i = 0; (chn_i < out.channels); chn_i = (1 + chn_i)) {
       for (i = 0; (i < duration); i = (1 + i)) {
-        ((out.samples)[chn_i])[(block_offset + i)] = (((out.samples)[chn_i])[(block_offset + i)] + (((s->amp)[chn_i])[(block_offset + i)] * (s->temp)[i]));
+        (out.samples)[chn_i][(block_offset + i)] += ((s->amp)[chn_i][(t + i)] * (s->temp)[i]);
       };
     };
   };
@@ -275,7 +274,7 @@ void sp_cheap_noise_event_free(sp_event_t* a) {
   sp_cheap_filter_state_free((&(s->filter_state)));
   free((a->state));
 }
-/** an event for noise filtered by a state-variable filter. multiple passes currently not implemented.
+/** an event for noise filtered by a state-variable filter.
    lower processing costs even when parameters change with high resolution.
    multiple passes almost multiply performance costs.
    memory for event.state will be allocated and then owned by the caller */

@@ -331,9 +331,9 @@
 
 (define (sp-cheap-filter-state-new max-size max-passes out-state)
   (status-t sp-time-t sp-time-t sp-cheap-filter-state-t*)
-  (sc-comment
-    "allocates and prepares memory and checks if max-passes doesnt exceed the limit"
-    "heap memory is to be freed with sp-cheap-filter-state-free but only allocated if max-passes is greater than one")
+  "one state object per pass.
+   allocates and prepares temporary memory for passes and checks if max-passes doesnt exceed the limit.
+   heap memory is to be freed with sp-cheap-filter-state-free but only allocated if max-passes is greater than one"
   status-declare
   (define in-temp sp-sample-t* 0)
   (define out-temp sp-sample-t* 0)
@@ -344,35 +344,29 @@
         (status-require (sp-samples-new max-size &in-temp))
         (status-require (sp-samples-new max-size &out-temp)))))
   (set out-state:in-temp in-temp out-state:out-temp out-temp)
-  (memset out-state:svf-state 0 (* (sizeof sp-sample-t) 2 sp-cheap-filter-passes-limit))
+  (memset out-state:svf-state 0 (* 2 sp-cheap-filter-passes-limit (sizeof sp-sample-t)))
   (label exit (if status-is-failure (free in-temp)) status-return))
 
 (define (sp-cheap-filter-state-free a) (void sp-cheap-filter-state-t*)
   (free a:in-temp)
   (free a:out-temp))
 
-(define (sp-cheap-filter type in in-size cutoff passes q-factor unity-gain state out)
-  (void sp-state-variable-filter-t sp-sample-t* sp-time-t sp-float-t sp-time-t sp-float-t uint8-t sp-cheap-filter-state-t* sp-sample-t*)
+(define (sp-cheap-filter filter in in-size cutoff passes q-factor state out)
+  (void sp-state-variable-filter-t sp-sample-t* sp-time-t sp-float-t sp-time-t sp-float-t sp-cheap-filter-state-t* sp-sample-t*)
   "the sph-sp default fast filter. caller has to manage the state object with
-   sp-cheap-filter-state-new and sp-cheap-filter-state-free"
+   sp-cheap-filter-state-new and sp-cheap-filter-state-free.
+   uses separate svf-state values for multiple passes as it is like filters in series"
   status-declare
-  (declare in-swap sp-sample-t* in-temp sp-sample-t* out-temp sp-sample-t*)
-  (if (= 1 passes) (type out in in-size cutoff q-factor state:svf-state)
+  (declare in-swap sp-sample-t* in-temp sp-sample-t* out-temp sp-sample-t* i sp-time-t)
+  (if (= 1 passes) (filter out in in-size cutoff q-factor state:svf-state)
     (begin
-      (type state:in-temp in in-size cutoff q-factor state:svf-state)
-      (set passes (- passes 1) in-temp state:in-temp out-temp state:out-temp)
-      (label loop
-        (if (< 1 passes)
-          (begin
-            (type out-temp in-temp in-size cutoff q-factor (+ passes state:svf-state))
-            (sp-samples-zero in-temp in-size)
-            (set passes (- passes 1) in-swap in-temp in-temp out-temp out-temp in-swap)
-            (goto loop))
-          (type out in-temp in-size cutoff q-factor (+ passes state:svf-state))))))
-  (sc-comment "reset unused state values")
-  (if (> sp-cheap-filter-passes-limit passes)
-    (memset state:svf-state 0 (* (sizeof sp-sample-t) 2 (- sp-cheap-filter-passes-limit passes))))
-  (if unity-gain (sp-samples-set-unity-gain in in-size out)))
+      (set in-temp state:in-temp out-temp state:out-temp)
+      (filter in-temp in in-size cutoff q-factor state:svf-state)
+      (for ((set i 1) (< i (- passes 1)) (set+ i 1))
+        (filter out-temp in-temp in-size cutoff q-factor (+ state:svf-state (* i 2)))
+        (sp-samples-zero in-temp in-size)
+        (set in-swap in-temp in-temp out-temp out-temp in-swap))
+      (filter out in-temp in-size cutoff q-factor (+ state:svf-state (* i 2))))))
 
 (define (sp-moving-average in in-size prev next radius out)
   (void sp-sample-t* sp-time-t sp-sample-t* sp-sample-t* sp-time-t sp-sample-t*)

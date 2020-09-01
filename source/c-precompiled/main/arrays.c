@@ -49,7 +49,7 @@ void sp_times_display(sp_time_t* a, sp_time_t size) {
   };
   printf("\n");
 }
-/** adjust amplitude of out to match the one of in */
+/** scale amplitude of out to match the one of in */
 void sp_samples_set_unity_gain(sp_sample_t* in, sp_time_t in_size, sp_sample_t* out) {
   sp_time_t i;
   sp_sample_t in_max;
@@ -64,7 +64,7 @@ void sp_samples_set_unity_gain(sp_sample_t* in, sp_time_t in_size, sp_sample_t* 
   difference = (out_max / in_max);
   correction = (1 + ((1 - difference) / difference));
   for (i = 0; (i < in_size); i = (1 + i)) {
-    out[i] = (correction * out[i]);
+    out[i] *= correction;
   };
 }
 #define absolute_difference(a, b) ((a > b) ? (a - b) : (b - a))
