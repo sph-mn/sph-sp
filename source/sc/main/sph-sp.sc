@@ -497,8 +497,7 @@
   (sp-path-samples-2 out size (sp-path-move 0 value) (sp-path-constant)))
 
 (declare
-  (sp-path-samples segments segments-count size out)
-  (status-t sp-path-segment-t* sp-path-segment-count-t sp-path-time-t sp-sample-t**)
+  (sp-path-samples path size out) (status-t sp-path-t sp-path-time-t sp-sample-t**)
   (sp-path-samples-1 out size s1) (status-t sp-sample-t** sp-time-t sp-path-segment-t)
   (sp-path-samples-2 out size s1 s2)
   (status-t sp-sample-t** sp-time-t sp-path-segment-t sp-path-segment-t)
@@ -507,8 +506,7 @@
   (sp-path-samples-4 out size s1 s2 s3 s4)
   (status-t sp-sample-t** sp-time-t
     sp-path-segment-t sp-path-segment-t sp-path-segment-t sp-path-segment-t)
-  (sp-path-times segments segments-count size out)
-  (status-t sp-path-segment-t* sp-path-segment-count-t sp-path-time-t sp-time-t**)
+  (sp-path-times path size out) (status-t sp-path-t sp-path-time-t sp-time-t**)
   (sp-path-times-1 out size s1) (status-t sp-time-t** sp-time-t sp-path-segment-t)
   (sp-path-times-2 out size s1 s2)
   (status-t sp-time-t** sp-time-t sp-path-segment-t sp-path-segment-t)
