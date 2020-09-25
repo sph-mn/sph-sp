@@ -501,9 +501,9 @@ void sp_samples_additions(sp_sample_t start, sp_sample_t summand, sp_time_t coun
     start += summand;
   };
 }
-/** take values at indices and write in order to out.
+/** take values at indices and write to out.
    a/out can be the same pointer */
-void sp_times_extract_at_indices(sp_time_t* a, sp_time_t* indices, sp_time_t size, sp_time_t* out) {
+void sp_times_select(sp_time_t* a, sp_time_t* indices, sp_time_t size, sp_time_t* out) {
   sp_time_t i;
   for (i = 0; (i < size); i += 1) {
     out[i] = a[indices[i]];
@@ -572,11 +572,11 @@ void sp_times_gt_indices(sp_time_t* a, sp_time_t size, sp_time_t n, sp_time_t* o
 /** a/out can not be the same pointer.
    out-size will be less or equal than size.
    memory is allocated and owned by caller */
-void sp_times_extract_random(sp_random_state_t* state, sp_time_t* a, sp_time_t size, sp_time_t* out, sp_time_t* out_size) {
+void sp_times_select_random(sp_random_state_t* state, sp_time_t* a, sp_time_t size, sp_time_t* out, sp_time_t* out_size) {
   status_declare;
   sp_times_random_binary(state, size, out);
   sp_times_gt_indices(out, size, 0, out, out_size);
-  sp_times_extract_at_indices(a, out, (*out_size), out);
+  sp_times_select(a, out, (*out_size), out);
 }
 /** allocate memory for out and set all elements to value */
 status_t sp_times_constant(sp_time_t a, sp_time_t size, sp_time_t value, sp_time_t** out) {
@@ -606,7 +606,7 @@ status_t sp_times_scale(sp_time_t* a, sp_time_t a_size, sp_time_t factor, sp_tim
 exit:
   status_return;
 }
-/** a array value swap function usable with sp-shuffle */
+/** a array value swap function that can be used with sp-shuffle */
 void sp_times_shuffle_swap(void* a, size_t i1, size_t i2) {
   sp_time_t* b;
   b = ((sp_time_t**)(a))[i1];

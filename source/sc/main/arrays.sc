@@ -399,9 +399,9 @@
   (declare i sp-time-t)
   (for ((set i 0) (< i count) (set+ i 1)) (set (array-get out i) start) (set+ start summand)))
 
-(define (sp-times-extract-at-indices a indices size out)
+(define (sp-times-select a indices size out)
   (void sp-time-t* sp-time-t* sp-time-t sp-time-t*)
-  "take values at indices and write in order to out.
+  "take values at indices and write to out.
    a/out can be the same pointer"
   (declare i sp-time-t)
   (for ((set i 0) (< i size) (set+ i 1))
@@ -453,7 +453,7 @@
     (if (< n (array-get a i)) (set (array-get out i2) i i2 (+ i2 1))))
   (set *out-size i2))
 
-(define (sp-times-extract-random state a size out out-size)
+(define (sp-times-select-random state a size out out-size)
   (void sp-random-state-t* sp-time-t* sp-time-t sp-time-t* sp-time-t*)
   "a/out can not be the same pointer.
    out-size will be less or equal than size.
@@ -461,7 +461,7 @@
   status-declare
   (sp-times-random-binary state size out)
   (sp-times-gt-indices out size 0 out out-size)
-  (sp-times-extract-at-indices a out *out-size out))
+  (sp-times-select a out *out-size out))
 
 (define (sp-times-constant a size value out) (status-t sp-time-t sp-time-t sp-time-t sp-time-t**)
   "allocate memory for out and set all elements to value"
@@ -488,7 +488,7 @@
   (label exit status-return))
 
 (define (sp-times-shuffle-swap a i1 i2) (void void* size-t size-t)
-  "a array value swap function usable with sp-shuffle"
+  "a array value swap function that can be used with sp-shuffle"
   (declare b sp-time-t*)
   (set
     b (array-get (convert-type a sp-time-t**) i1)

@@ -511,8 +511,8 @@
   (sp-times-additions 1 3 size a)
   (test-helper-assert "additions" (= 13 (array-get a 4)))
   (declare indices (array sp-time-t 3 1 2 4))
-  (sp-times-extract-at-indices a indices 3 a)
-  (test-helper-assert "extract-indices"
+  (sp-times-select a indices 3 a)
+  (test-helper-assert "select"
     (and (= 4 (array-get a 0)) (= 7 (array-get a 1)) (= 13 (array-get a 2))))
   (sp-times-set-1 a size 1039 a)
   (status-require (sp-times-new (* 8 (sizeof sp-time-t)) &bits))
@@ -527,23 +527,25 @@
   (sp-times-random-binary &s size a)
   (sp-times-multiplications 1 3 size a)
   (set s (sp-random-state-new 113))
-  (sp-times-extract-random &s a size b &b-size)
+  (sp-times-select-random &s a size b &b-size)
   (label exit (free a-temp) status-return))
 
-(pre-define test-stats-a-size 8 test-stats-types-count (- sp-stat-types-count 3))
+(pre-define test-stats-a-size 8 test-stats-types-count (- sp-stat-types-count 2))
 
 (define (test-stats) status-t
   status-declare
   (declare
     a (array sp-time-t test-stats-a-size 1 2 3 4 5 6 7 8)
     as (array sp-sample-t test-stats-a-size 1 2 3 4 5 6 7 8)
+    repetition-1 (array sp-time-t test-stats-a-size 1 1 1 1 1 1 1 1)
+    repetition-2 (array sp-time-t test-stats-a-size 1 2 3 4 5 6 7 8)
     inhar-1 (array sp-time-t test-stats-a-size 2 4 6 8 10 12 14 16)
     inhar-2 (array sp-time-t test-stats-a-size 2 4 6 8 10 12 13 16)
     inhar-3 (array sp-time-t test-stats-a-size 2 3 6 8 10 12 13 16)
     inhar-results (array sp-sample-t 3)
     stat-types
     (array sp-stat-type-t test-stats-types-count
-      sp-stat-center sp-stat-complexity sp-stat-deviation
+      sp-stat-center sp-stat-repetition sp-stat-deviation
       sp-stat-inharmonicity sp-stat-kurtosis sp-stat-mean
       sp-stat-median sp-stat-range sp-stat-skewness)
     stats-a (array sp-sample-t sp-stat-types-count)
@@ -553,7 +555,7 @@
   (test-helper-assert "deviation" (feq 2.29 (array-get stats-a sp-stat-deviation)))
   (test-helper-assert "center" (feq 4.54 (array-get stats-a sp-stat-center)))
   (test-helper-assert "median" (feq 4.5 (array-get stats-a sp-stat-median)))
-  (test-helper-assert "complexity" (feq 1.0 (array-get stats-a sp-stat-complexity-width)))
+  (test-helper-assert "repetition" (feq 0.0 (array-get stats-a sp-stat-repetition)))
   (test-helper-assert "skewness" (feq 0.0 (array-get stats-a sp-stat-skewness)))
   (test-helper-assert "kurtosis" (feq 1.76 (array-get stats-a sp-stat-kurtosis)))
   (status-require (sp-stat-samples as test-stats-a-size stat-types test-stats-types-count stats-as))
@@ -561,9 +563,15 @@
   (test-helper-assert "samples deviation" (feq 2.29 (array-get stats-as sp-stat-deviation)))
   (test-helper-assert "samples center" (feq 4.66 (array-get stats-as sp-stat-center)))
   (test-helper-assert "samples median" (feq 4.5 (array-get stats-as sp-stat-median)))
-  (test-helper-assert "samples complexity" (feq 1.0 (array-get stats-as sp-stat-complexity-width)))
+  (test-helper-assert "samples repetition" (feq 0.0 (array-get stats-as sp-stat-repetition)))
   (test-helper-assert "samples skewness" (feq 0.0 (array-get stats-as sp-stat-skewness)))
   (test-helper-assert "samples kurtosis" (feq 1.76 (array-get stats-as sp-stat-kurtosis)))
+  (sc-comment "repetition")
+  (set (array-get stat-types 0) sp-stat-repetition)
+  (status-require (sp-stat-times repetition-1 test-stats-a-size stat-types 1 stats-a))
+  (test-helper-assert "repetition-1" (feq 1.0 (array-get stats-a sp-stat-repetition)))
+  (status-require (sp-stat-times repetition-2 test-stats-a-size stat-types 1 stats-a))
+  (test-helper-assert "repetition-2" (feq 0.0 (array-get stats-a sp-stat-repetition)))
   (sc-comment "inharmonicity")
   (set (array-get stat-types 0) sp-stat-inharmonicity)
   (status-require (sp-stat-times inhar-1 test-stats-a-size stat-types 1 stats-a))

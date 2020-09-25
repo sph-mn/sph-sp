@@ -126,7 +126,7 @@
   /** calculate statistics for arrays, with the statistics to calculate being selected by an array of identifiers. \
        the identifiers are sp-stat-type-t and are also used to access the results. \
        out size is expected to be at least sp-stat-types-count or the largest sp-stat-type-t index used. \
-       some stat-types create multiple output values (sp-stat-range and sp-stat-complexity) and \
+       some stat-types create multiple output values (sp-stat-range) and \
        the dependent sp-stat-types (named with the full prefix, for example sp-stat-range-min) are only for access from the output array written by \
        sp-stat-times/samples and should not be used for the list of statistics to calculate because that would lead to results stored at mismatching indices */ \
   status_t name(value_t* a, sp_time_t a_size, sp_stat_type_t* stats, sp_time_t size, sp_sample_t* out) { \
@@ -156,55 +156,45 @@ uint8_t sp_stat_times_center(sp_time_t* a, sp_time_t size, sp_sample_t* out) {
   return (0);
 }
 define_sp_stat_range(sp_stat_times_range, sp_time_t)
-  /* complexity:
-   * out: ratio, width
-   * count the repetitions of overlapping subsequences of widths 0..n
-   * return the width and proportion for the width with the highest proportion of
-     unique sequences relative to the number of possible unique sequences
+  /* repetition:
+   * out: ratio
+   * x: count of overlapping subsequences of widths 1..$size
+   * y: the maximum number of possible unique subsequences
+   * the result is x divided by y normalised by $size.
    * examples
      * low: 11111 112112
      * high: 12345 112212 */
-  uint8_t sp_stat_times_complexity(sp_time_t* a, sp_time_t size, sp_sample_t* out) {
-  sequence_set_t known;
-  sequence_set_key_t key;
-  sp_sample_t max_ratio;
-  sp_time_t max_ratio_width;
-  sequence_set_key_t* value;
+  uint8_t sp_stat_times_repetition(sp_time_t* a, sp_time_t size, sp_sample_t* out) {
   sp_time_t count;
   sp_time_t i;
-  sp_sample_t ratio;
+  sequence_set_key_t key;
+  sequence_set_t known;
+  sp_time_t possible_count;
+  sp_sample_t ratios;
+  sequence_set_key_t* value;
   if (sequence_set_new(size, (&known))) {
     return (1);
   };
-  max_ratio = 0;
-  max_ratio_width = 0;
+  ratios = 0;
   for (key.size = 1; (key.size < size); key.size += 1) {
     count = 0;
+    possible_count = (size - key.size);
     for (i = 0; (i < (size - (key.size - 1))); i += 1) {
       key.data = ((uint8_t*)((i + a)));
       value = sequence_set_get(known, key);
-      if (!value) {
+      if (value) {
         count += 1;
+      } else {
         if (!sequence_set_add(known, key)) {
           sequence_set_free(known);
           return (1);
         };
       };
     };
-    /* one pattern per width is always unique, exclude because only repetition is counted */
-    ratio = ((count - 1) / ((sp_sample_t)((size - (key.size - 1)))));
-    if (ratio > max_ratio) {
-      max_ratio = ratio;
-      max_ratio_width = key.size;
-    };
+    ratios += (count / possible_count);
     sequence_set_clear(known);
   };
-  if (!max_ratio_width) {
-    max_ratio = 1;
-    max_ratio_width = size;
-  };
-  out[0] = max_ratio;
-  out[1] = max_ratio_width;
+  out[0] = (ratios / (size - 1));
   sequence_set_free(known);
   return (0);
 }
@@ -252,12 +242,12 @@ define_sp_stat_range(sp_stat_samples_range, sp_sample_t)
     out[i] = sp_cheap_round_positive(((a[i] + addition) * (max / range[2])));
   };
 }
-uint8_t sp_stat_samples_complexity(sp_sample_t* a, sp_time_t size, sp_sample_t* out) {
+uint8_t sp_stat_samples_repetition(sp_sample_t* a, sp_time_t size, sp_sample_t* out) {
   sp_time_t* b;
   status_declare;
   status_require((sp_times_new(size, (&b))));
   sp_samples_scale_to_times(a, size, 1000, b);
-  sp_stat_times_complexity(b, size, out);
+  sp_stat_times_repetition(b, size, out);
   free(b);
 exit:
   return ((status.id));

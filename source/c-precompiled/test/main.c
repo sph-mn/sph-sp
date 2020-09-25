@@ -528,8 +528,8 @@ status_t test_times() {
   sp_times_additions(1, 3, size, a);
   test_helper_assert("additions", (13 == a[4]));
   sp_time_t indices[3] = { 1, 2, 4 };
-  sp_times_extract_at_indices(a, indices, 3, a);
-  test_helper_assert("extract-indices", ((4 == a[0]) && (7 == a[1]) && (13 == a[2])));
+  sp_times_select(a, indices, 3, a);
+  test_helper_assert("select", ((4 == a[0]) && (7 == a[1]) && (13 == a[2])));
   sp_times_set_1(a, size, 1039, a);
   status_require((sp_times_new((8 * sizeof(sp_time_t)), (&bits))));
   sp_times_bits_to_times(a, (8 * sizeof(sp_time_t)), bits);
@@ -541,22 +541,24 @@ status_t test_times() {
   sp_times_random_binary((&s), size, a);
   sp_times_multiplications(1, 3, size, a);
   s = sp_random_state_new(113);
-  sp_times_extract_random((&s), a, size, b, (&b_size));
+  sp_times_select_random((&s), a, size, b, (&b_size));
 exit:
   free(a_temp);
   status_return;
 }
 #define test_stats_a_size 8
-#define test_stats_types_count (sp_stat_types_count - 3)
+#define test_stats_types_count (sp_stat_types_count - 2)
 status_t test_stats() {
   status_declare;
   sp_time_t a[test_stats_a_size] = { 1, 2, 3, 4, 5, 6, 7, 8 };
   sp_sample_t as[test_stats_a_size] = { 1, 2, 3, 4, 5, 6, 7, 8 };
+  sp_time_t repetition_1[test_stats_a_size] = { 1, 1, 1, 1, 1, 1, 1, 1 };
+  sp_time_t repetition_2[test_stats_a_size] = { 1, 2, 3, 4, 5, 6, 7, 8 };
   sp_time_t inhar_1[test_stats_a_size] = { 2, 4, 6, 8, 10, 12, 14, 16 };
   sp_time_t inhar_2[test_stats_a_size] = { 2, 4, 6, 8, 10, 12, 13, 16 };
   sp_time_t inhar_3[test_stats_a_size] = { 2, 3, 6, 8, 10, 12, 13, 16 };
   sp_sample_t inhar_results[3];
-  sp_stat_type_t stat_types[test_stats_types_count] = { sp_stat_center, sp_stat_complexity, sp_stat_deviation, sp_stat_inharmonicity, sp_stat_kurtosis, sp_stat_mean, sp_stat_median, sp_stat_range, sp_stat_skewness };
+  sp_stat_type_t stat_types[test_stats_types_count] = { sp_stat_center, sp_stat_repetition, sp_stat_deviation, sp_stat_inharmonicity, sp_stat_kurtosis, sp_stat_mean, sp_stat_median, sp_stat_range, sp_stat_skewness };
   sp_sample_t stats_a[sp_stat_types_count];
   sp_sample_t stats_as[sp_stat_types_count];
   status_require((sp_stat_times(a, test_stats_a_size, stat_types, test_stats_types_count, stats_a)));
@@ -564,7 +566,7 @@ status_t test_stats() {
   test_helper_assert("deviation", (feq((2.29), (stats_a[sp_stat_deviation]))));
   test_helper_assert("center", (feq((4.54), (stats_a[sp_stat_center]))));
   test_helper_assert("median", (feq((4.5), (stats_a[sp_stat_median]))));
-  test_helper_assert("complexity", (feq((1.0), (stats_a[sp_stat_complexity_width]))));
+  test_helper_assert("repetition", (feq((0.0), (stats_a[sp_stat_repetition]))));
   test_helper_assert("skewness", (feq((0.0), (stats_a[sp_stat_skewness]))));
   test_helper_assert("kurtosis", (feq((1.76), (stats_a[sp_stat_kurtosis]))));
   status_require((sp_stat_samples(as, test_stats_a_size, stat_types, test_stats_types_count, stats_as)));
@@ -572,9 +574,15 @@ status_t test_stats() {
   test_helper_assert("samples deviation", (feq((2.29), (stats_as[sp_stat_deviation]))));
   test_helper_assert("samples center", (feq((4.66), (stats_as[sp_stat_center]))));
   test_helper_assert("samples median", (feq((4.5), (stats_as[sp_stat_median]))));
-  test_helper_assert("samples complexity", (feq((1.0), (stats_as[sp_stat_complexity_width]))));
+  test_helper_assert("samples repetition", (feq((0.0), (stats_as[sp_stat_repetition]))));
   test_helper_assert("samples skewness", (feq((0.0), (stats_as[sp_stat_skewness]))));
   test_helper_assert("samples kurtosis", (feq((1.76), (stats_as[sp_stat_kurtosis]))));
+  /* repetition */
+  stat_types[0] = sp_stat_repetition;
+  status_require((sp_stat_times(repetition_1, test_stats_a_size, stat_types, 1, stats_a)));
+  test_helper_assert("repetition-1", (feq((1.0), (stats_a[sp_stat_repetition]))));
+  status_require((sp_stat_times(repetition_2, test_stats_a_size, stat_types, 1, stats_a)));
+  test_helper_assert("repetition-2", (feq((0.0), (stats_a[sp_stat_repetition]))));
   /* inharmonicity */
   stat_types[0] = sp_stat_inharmonicity;
   status_require((sp_stat_times(inhar_1, test_stats_a_size, stat_types, 1, stats_a)));

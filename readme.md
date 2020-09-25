@@ -3,7 +3,7 @@ c code and shared library for sound synthesis and sequencing. the sound processo
 
 # features
 * basics
-  * file input/output with many supported file [formats](http://www.mega-nerd.com/libsndfile/)
+  * file output with many supported file [formats](http://www.mega-nerd.com/libsndfile/)
   * 64 bit float sample format by default, other formats possible for many processors
   * processing of non-interleaved sample arrays with one array per channel. number of channels and sample rate can be custom set
   * fast fourier transform (fft) and inverse fast fourier transform (ifft)
@@ -200,7 +200,7 @@ sp_spectral_reversal_ir :: sp_sample_t*:a sp_time_t:a_len -> void
 sp_square :: sp_time_t:t sp_time_t:size -> sp_sample_t
 sp_stat_samples :: sp_sample_t*:a sp_time_t:a_size sp_stat_type_t*:stats sp_time_t:size sp_sample_t*:out -> status_t
 sp_stat_samples_center :: sp_sample_t*:a sp_time_t:size sp_sample_t*:out -> uint8_t
-sp_stat_samples_complexity :: sp_sample_t*:a sp_time_t:size sp_sample_t*:out -> uint8_t
+sp_stat_samples_repetition :: sp_sample_t*:a sp_time_t:size sp_sample_t*:out -> uint8_t
 sp_stat_samples_deviation :: sp_sample_t*:a sp_time_t:size sp_sample_t*:out -> uint8_t
 sp_stat_samples_inharmonicity :: sp_sample_t*:a sp_time_t:size sp_sample_t*:out -> uint8_t
 sp_stat_samples_kurtosis :: sp_sample_t*:a sp_time_t:size sp_sample_t*:out -> uint8_t
@@ -210,7 +210,7 @@ sp_stat_samples_range :: sp_sample_t*:a sp_time_t:size sp_sample_t*:out -> uint8
 sp_stat_samples_skewness :: sp_sample_t*:a sp_time_t:size sp_sample_t*:out -> uint8_t
 sp_stat_times :: sp_time_t*:a sp_time_t:a_size sp_stat_type_t*:stats sp_time_t:size sp_sample_t*:out -> status_t
 sp_stat_times_center :: sp_time_t*:a sp_time_t:size sp_sample_t*:out -> uint8_t
-sp_stat_times_complexity :: sp_time_t*:a sp_time_t:size sp_sample_t*:out -> uint8_t
+sp_stat_times_repetition :: sp_time_t*:a sp_time_t:size sp_sample_t*:out -> uint8_t
 sp_stat_times_deviation :: sp_time_t*:a sp_time_t:size sp_sample_t*:out -> uint8_t
 sp_stat_times_inharmonicity :: sp_time_t*:a sp_time_t:size sp_sample_t*:out -> uint8_t
 sp_stat_times_kurtosis :: sp_time_t*:a sp_time_t:size sp_sample_t*:out -> uint8_t
@@ -247,8 +247,8 @@ sp_times_display :: sp_time_t*:a sp_time_t:size -> void
 sp_times_divide :: sp_time_t*:a sp_time_t:size sp_time_t*:b sp_time_t*:out -> void
 sp_times_divide_1 :: sp_time_t*:a sp_time_t:size sp_time_t:n sp_time_t*:out -> void
 sp_times_equal_1 :: sp_time_t*:a sp_time_t:size sp_time_t:n -> uint8_t
-sp_times_extract_at_indices :: sp_time_t*:a sp_time_t*:indices sp_time_t:size sp_time_t*:out -> void
-sp_times_extract_random :: sp_random_state_t*:state sp_time_t*:a sp_time_t:size sp_time_t*:out sp_time_t*:out_size -> void
+sp_times_select :: sp_time_t*:a sp_time_t*:indices sp_time_t:size sp_time_t*:out -> void
+sp_times_select_random :: sp_random_state_t*:state sp_time_t*:a sp_time_t:size sp_time_t*:out sp_time_t*:out_size -> void
 sp_times_gt_indices :: sp_time_t*:a sp_time_t:size sp_time_t:n sp_time_t*:out sp_time_t*:out_size -> void
 sp_times_limit :: sp_time_t*:a sp_time_t:size sp_time_t:n sp_time_t*:out -> void
 sp_times_multiplications :: sp_time_t:start sp_time_t:factor sp_time_t:count sp_time_t*:out -> void
@@ -418,7 +418,7 @@ uint32_t sp_cpu_count
 
 ## types
 ```
-sp_stat_type_t: enum sp_stat_center 0u sp_stat_complexity sp_stat_complexity_width sp_stat_deviation sp_stat_inharmonicity sp_stat_kurtosis sp_stat_mean sp_stat_median sp_stat_range sp_stat_range_min sp_stat_range_max sp_stat_skewness
+sp_stat_type_t: enum sp_stat_center 0u sp_stat_repetition sp_stat_deviation sp_stat_inharmonicity sp_stat_kurtosis sp_stat_mean sp_stat_median sp_stat_range sp_stat_range_min sp_stat_range_max sp_stat_skewness
 sp_convolution_filter_ir_f_t: void* sp_sample_t** sp_time_t* -> status_t
 sp_event_f_t: sp_time_t sp_time_t sp_block_t sp_event_t* -> void
 sp_stat_samples_f_t: sp_sample_t* sp_time_t sp_sample_t* -> uint8_t

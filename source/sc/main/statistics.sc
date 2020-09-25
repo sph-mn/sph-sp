@@ -87,7 +87,7 @@
     "calculate statistics for arrays, with the statistics to calculate being selected by an array of identifiers.
      the identifiers are sp-stat-type-t and are also used to access the results.
      out size is expected to be at least sp-stat-types-count or the largest sp-stat-type-t index used.
-     some stat-types create multiple output values (sp-stat-range and sp-stat-complexity) and
+     some stat-types create multiple output values (sp-stat-range) and
      the dependent sp-stat-types (named with the full prefix, for example sp-stat-range-min) are only for access from the output array written by
      sp-stat-times/samples and should not be used for the list of statistics to calculate because that would lead to results stored at mismatching indices"
     (declare i sp-time-t)
@@ -112,42 +112,34 @@
 (define-sp-stat-range sp-stat-times-range sp-time-t)
 
 (sc-comment
-  "complexity:
-   * out: ratio, width
-   * count the repetitions of overlapping subsequences of widths 0..n
-   * return the width and proportion for the width with the highest proportion of
-     unique sequences relative to the number of possible unique sequences
+  "repetition:
+   * out: ratio
+   * x: count of overlapping subsequences of widths 1..$size
+   * y: the maximum number of possible unique subsequences
+   * the result is x divided by y normalised by $size.
    * examples
      * low: 11111 112112
      * high: 12345 112212")
 
-(define-sp-stat-times sp-stat-times-complexity
+(define-sp-stat-times sp-stat-times-repetition
   (declare
-    known sequence-set-t
-    key sequence-set-key-t
-    max-ratio sp-sample-t
-    max-ratio-width sp-time-t
-    value sequence-set-key-t*
     count sp-time-t
     i sp-time-t
-    ratio sp-sample-t)
-  (if (sequence-set-new size &known) (return 1)) (set max-ratio 0 max-ratio-width 0)
+    key sequence-set-key-t
+    known sequence-set-t
+    possible-count sp-time-t
+    ratios sp-sample-t
+    value sequence-set-key-t*)
+  (if (sequence-set-new size &known) (return 1)) (set ratios 0)
   (for ((set key.size 1) (< key.size size) (set+ key.size 1))
-    (set count 0)
+    (set count 0 possible-count (- size key.size))
     (for-i i (- size (- key.size 1))
       (set key.data (convert-type (+ i a) uint8-t*) value (sequence-set-get known key))
-      (if (not value)
-        (begin
-          (set+ count 1)
-          (if (not (sequence-set-add known key)) (begin (sequence-set-free known) (return 1))))))
-    (sc-comment
-      "one pattern per width is always unique, exclude because only repetition is counted")
-    (set ratio (/ (- count 1) (convert-type (- size (- key.size 1)) sp-sample-t)))
-    (if (> ratio max-ratio) (set max-ratio ratio max-ratio-width key.size))
+      (if value (set+ count 1)
+        (if (not (sequence-set-add known key)) (begin (sequence-set-free known) (return 1)))))
+    (set+ ratios (/ count possible-count))
     (sequence-set-clear known))
-  (if (not max-ratio-width) (set max-ratio 1 max-ratio-width size))
-  (set (array-get out 0) max-ratio (array-get out 1) max-ratio-width) (sequence-set-free known)
-  (return 0))
+  (set (array-get out 0) (/ ratios (- size 1))) (sequence-set-free known) (return 0))
 
 (define-sp-stat-times sp-stat-times-mean (declare i sp-time-t sum sp-time-t)
   (set sum 0) (for-i i size (set+ sum (array-get a i)))
@@ -180,9 +172,9 @@
     (set (array-get out i)
       (sp-cheap-round-positive (* (+ (array-get a i) addition) (/ max (array-get range 2)))))))
 
-(define-sp-stat-samples sp-stat-samples-complexity (declare b sp-time-t*)
+(define-sp-stat-samples sp-stat-samples-repetition (declare b sp-time-t*)
   status-declare (status-require (sp-times-new size &b)) (sp-samples-scale->times a size 1000 b)
-  (sp-stat-times-complexity b size out) (free b) (label exit (return status.id)))
+  (sp-stat-times-repetition b size out) (free b) (label exit (return status.id)))
 
 (define-sp-stat-samples sp-stat-samples-mean (set *out (/ (sp-samples-sum a size) size)) (return 0))
 (define-sp-stat-deviation sp-stat-samples-deviation sp-stat-samples-mean sp-sample-t)
