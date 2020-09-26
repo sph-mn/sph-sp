@@ -23,7 +23,7 @@
   sp-sample-random sph-random-f64)
 
 (pre-include "sph/status.c" "sph/spline-path.h"
-  "sph/random.c" "sph/array3.c" "sph/array4.c" "sph/memreg-heap.c" "sph/float.c")
+  "sph/random.c" "sph/array3.c" "sph/array4.c" "sph/memreg-heap.c" "sph/float.c" "sph/set.c")
 
 (sc-comment "main")
 
@@ -153,7 +153,9 @@
   (sp-cheap-round-positive
     (+ (* (- 1 (convert-type t sp-sample-t)) (convert-type a sp-sample-t))
       (* t (convert-type b sp-sample-t))))
-  (sp-sample-interpolate-linear a b t) (+ (* (- 1 t) a) (* t b)))
+  (sp-sample-interpolate-linear a b t) (+ (* (- 1 t) a) (* t b))
+  (sp-sequence-set-equal a b)
+  (and (= a.size b.size) (or (and (= 0 a.size) (= 0 b.size)) (not (memcmp a.data b.data a.size)))))
 
 (declare
   (sp-samples-absolute-max in in-size) (sp-sample-t sp-sample-t* sp-time-t)
@@ -250,7 +252,16 @@
   (sp-times-sequences base digits size out) (void sp-time-t sp-time-t sp-time-t sp-time-t*)
   (sp-times-range start end out) (void sp-time-t sp-time-t sp-time-t*)
   (sp-time-round-to-multiple a base) (sp-time-t sp-time-t sp-time-t)
-  (sp-times-limit a size n out) (void sp-time-t* sp-time-t sp-time-t sp-time-t*))
+  (sp-times-limit a size n out) (void sp-time-t* sp-time-t sp-time-t sp-time-t*)
+  sp-sequence-set-key-t (type (struct (size sp-time-t) (data uint8-t*))))
+
+(define sp-sequence-set-null sp-sequence-set-key-t (struct-literal 0 0))
+
+(define (sp-sequence-set-hash a memory-size) (uint64-t sp-sequence-set-key-t sp-time-t)
+  (modulo (sp-u64-from-array a.data a.size) memory-size))
+
+(sph-set-declare-type-nonull sp-sequence-set sp-sequence-set-key-t
+  sp-sequence-set-hash sp-sequence-set-equal sp-sequence-set-null 2)
 
 (sc-comment "statistics")
 (pre-define sp-stat-types-count (+ 1 (- sp-stat-skewness sp-stat-center)))

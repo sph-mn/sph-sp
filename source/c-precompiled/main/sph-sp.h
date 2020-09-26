@@ -66,6 +66,7 @@
 #include <sph/array4.c>
 #include <sph/memreg-heap.c>
 #include <sph/float.c>
+#include <sph/set.c>
 /* main */
 #define boolean uint8_t
 #define f64 double
@@ -177,6 +178,7 @@ sp_time_t sp_compositions_max(sp_time_t sum);
 #define sp_times_zero(a, size) memset(a, 0, (size * sizeof(sp_time_t)))
 #define sp_time_interpolate_linear(a, b, t) sp_cheap_round_positive((((1 - ((sp_sample_t)(t))) * ((sp_sample_t)(a))) + (t * ((sp_sample_t)(b)))))
 #define sp_sample_interpolate_linear(a, b, t) (((1 - t) * a) + (t * b))
+#define sp_sequence_set_equal(a, b) ((a.size == b.size) && (((0 == a.size) && (0 == b.size)) || !memcmp((a.data), (b.data), (a.size))))
 sp_sample_t sp_samples_absolute_max(sp_sample_t* in, sp_time_t in_size);
 void sp_samples_add_1(sp_sample_t* a, sp_time_t size, sp_sample_t n, sp_sample_t* out);
 void sp_samples_add(sp_sample_t* a, sp_time_t size, sp_sample_t* b, sp_sample_t* out);
@@ -258,6 +260,13 @@ void sp_times_sequences(sp_time_t base, sp_time_t digits, sp_time_t size, sp_tim
 void sp_times_range(sp_time_t start, sp_time_t end, sp_time_t* out);
 sp_time_t sp_time_round_to_multiple(sp_time_t a, sp_time_t base);
 void sp_times_limit(sp_time_t* a, sp_time_t size, sp_time_t n, sp_time_t* out);
+typedef struct {
+  sp_time_t size;
+  uint8_t* data;
+} sp_sequence_set_key_t;
+sp_sequence_set_key_t sp_sequence_set_null = { 0, 0 };
+uint64_t sp_sequence_set_hash(sp_sequence_set_key_t a, sp_time_t memory_size) { (sp_u64_from_array((a.data), (a.size)) % memory_size); }
+sph_set_declare_type_nonull(sp_sequence_set, sp_sequence_set_key_t, sp_sequence_set_hash, sp_sequence_set_equal, sp_sequence_set_null, 2);
 /* statistics */
 #define sp_stat_types_count (1 + (sp_stat_skewness - sp_stat_center))
 typedef enum { sp_stat_center = 0u,

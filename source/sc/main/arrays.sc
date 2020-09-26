@@ -1,7 +1,7 @@
 (sc-comment
-  "routines on arrays of sp-time-t or sp-sample-t"
+  "utilities for arrays of sp-time-t or sp-sample-t."
   "sp-time-t subtraction is limited to zero."
-  "sp-time-t addition is not limited and values larger than the type lead to overflows")
+  "sp-time-t addition is not limited.")
 
 (define (sp-shuffle state swap a size)
   (void sp-random-state-t* (function-pointer void void* size-t size-t) void* size-t)
@@ -124,7 +124,7 @@
     "a/out can be the same"
     (declare i sp-time-t)
     (for ((set i 0) (< i size) (set+ i 1)) (set (array-get out i) transfer)))
-  (sequence-set-equal a b)
+  (sp-sequence-set-equal a b)
   (and (= a.size b.size) (or (and (= 0 a.size) (= 0 b.size)) (not (memcmp a.data b.data a.size)))))
 
 (define (sp-samples-every-equal a size n) (uint8-t sp-sample-t* sp-time-t sp-sample-t)
@@ -185,15 +185,6 @@
           (bit-shift-left (convert-type (pointer-get (convert-type (+ 4 a) uint16-t*)) uint64-t) 32)
           (bit-shift-left (convert-type (array-get a 6) uint64-t) 48))))
     (8 (return (pointer-get (convert-type a uint64-t*))))))
-
-(declare sequence-set-key-t (type (struct (size sp-time-t) (data uint8-t*))))
-(define sequence-set-null sequence-set-key-t (struct-literal 0 0))
-
-(define (sequence-set-hash a memory-size) (uint64-t sequence-set-key-t sp-time-t)
-  (modulo (sp-u64-from-array a.data a.size) memory-size))
-
-(sph-set-declare-type-nonull sequence-set sequence-set-key-t
-  sequence-set-hash sequence-set-equal sequence-set-null 2)
 
 (sc-comment "samples")
 
@@ -399,8 +390,7 @@
   (declare i sp-time-t)
   (for ((set i 0) (< i count) (set+ i 1)) (set (array-get out i) start) (set+ start summand)))
 
-(define (sp-times-select a indices size out)
-  (void sp-time-t* sp-time-t* sp-time-t sp-time-t*)
+(define (sp-times-select a indices size out) (void sp-time-t* sp-time-t* sp-time-t sp-time-t*)
   "take values at indices and write to out.
    a/out can be the same pointer"
   (declare i sp-time-t)

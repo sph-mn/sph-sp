@@ -12,7 +12,6 @@
 #include <sph/queue.c>
 #include <sph/thread-pool.c>
 #include <sph/futures.c>
-#include <sph/set.c>
 #define sp_status_declare status_declare_group(sp_s_group_sp)
 #define sp_libc_s_id(id) \
   if (id < 0) { \

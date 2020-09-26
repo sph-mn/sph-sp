@@ -167,12 +167,12 @@ define_sp_stat_range(sp_stat_times_range, sp_time_t)
   uint8_t sp_stat_times_repetition(sp_time_t* a, sp_time_t size, sp_sample_t* out) {
   sp_time_t count;
   sp_time_t i;
-  sequence_set_key_t key;
-  sequence_set_t known;
+  sp_sequence_set_key_t key;
+  sp_sequence_set_t known;
   sp_time_t possible_count;
   sp_sample_t ratios;
-  sequence_set_key_t* value;
-  if (sequence_set_new(size, (&known))) {
+  sp_sequence_set_key_t* value;
+  if (sp_sequence_set_new(size, (&known))) {
     return (1);
   };
   ratios = 0;
@@ -181,21 +181,21 @@ define_sp_stat_range(sp_stat_times_range, sp_time_t)
     possible_count = (size - key.size);
     for (i = 0; (i < (size - (key.size - 1))); i += 1) {
       key.data = ((uint8_t*)((i + a)));
-      value = sequence_set_get(known, key);
+      value = sp_sequence_set_get(known, key);
       if (value) {
         count += 1;
       } else {
-        if (!sequence_set_add(known, key)) {
-          sequence_set_free(known);
+        if (!sp_sequence_set_add(known, key)) {
+          sp_sequence_set_free(known);
           return (1);
         };
       };
     };
     ratios += (count / possible_count);
-    sequence_set_clear(known);
+    sp_sequence_set_clear(known);
   };
   out[0] = (ratios / (size - 1));
-  sequence_set_free(known);
+  sp_sequence_set_free(known);
   return (0);
 }
 uint8_t sp_stat_times_mean(sp_time_t* a, sp_time_t size, sp_sample_t* out) {

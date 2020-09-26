@@ -1,6 +1,6 @@
-/* routines on arrays of sp-time-t or sp-sample-t
+/* utilities for arrays of sp-time-t or sp-sample-t.
 sp-time-t subtraction is limited to zero.
-sp-time-t addition is not limited and values larger than the type lead to overflows */
+sp-time-t addition is not limited. */
 /** generic shuffle that works on any array type. fisher-yates algorithm */
 void sp_shuffle(sp_random_state_t* state, void (*swap)(void*, size_t, size_t), void* a, size_t size) {
   size_t i;
@@ -168,7 +168,7 @@ void sp_samples_set_unity_gain(sp_sample_t* in, sp_time_t in_size, sp_sample_t* 
       out[i] = transfer; \
     }; \
   }
-#define sequence_set_equal(a, b) ((a.size == b.size) && (((0 == a.size) && (0 == b.size)) || !memcmp((a.data), (b.data), (a.size))))
+#define sp_sequence_set_equal(a, b) ((a.size == b.size) && (((0 == a.size) && (0 == b.size)) || !memcmp((a.data), (b.data), (a.size))))
 uint8_t sp_samples_every_equal(sp_sample_t* a, sp_time_t size, sp_sample_t n) {
   sp_time_t i;
   for (i = 0; (i < size); i += 1) {
@@ -223,13 +223,6 @@ define_value_functions(sp_times, sp_time_t)
     return ((*((uint64_t*)(a))));
   };
 }
-typedef struct {
-  sp_time_t size;
-  uint8_t* data;
-} sequence_set_key_t;
-sequence_set_key_t sequence_set_null = { 0, 0 };
-uint64_t sequence_set_hash(sequence_set_key_t a, sp_time_t memory_size) { (sp_u64_from_array((a.data), (a.size)) % memory_size); }
-sph_set_declare_type_nonull(sequence_set, sequence_set_key_t, sequence_set_hash, sequence_set_equal, sequence_set_null, 2);
 /* samples */
 status_t sp_samples_copy(sp_sample_t* a, sp_time_t size, sp_sample_t** out) {
   status_declare;

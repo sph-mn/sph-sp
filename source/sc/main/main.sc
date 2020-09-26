@@ -4,7 +4,7 @@
 (pre-include "stdio.h" "fcntl.h"
   "sndfile.h" "foreign/nayuki-fft/fft.c" "../main/sph-sp.h"
   "sph/spline-path.c" "sph/helper.c" "sph/memreg.c"
-  "sph/quicksort.c" "sph/queue.c" "sph/thread-pool.c" "sph/futures.c" "sph/set.c")
+  "sph/quicksort.c" "sph/queue.c" "sph/thread-pool.c" "sph/futures.c")
 
 (pre-define
   sp-status-declare (status-declare-group sp-s-group-sp)

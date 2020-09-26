@@ -1,18 +1,6 @@
 (sc-define-syntax (for-i index limit body ...)
   (for ((set index 0) (< index limit) (set+ index 1)) body ...))
 
-(sc-define-syntax (define-sp-stat-times name body ...)
-  (define (name a size out) (uint8-t sp-time-t* sp-time-t sp-sample-t*) body ...))
-
-(sc-define-syntax (define-sp-stat-samples name body ...)
-  (define (name a size out) (uint8-t sp-sample-t* sp-time-t sp-sample-t*) body ...))
-
-(sc-define-syntax (define-sp-stat2-times name body ...)
-  (define (name a b size out) (uint8-t sp-time-t* sp-time-t* sp-time-t sp-sample-t*) body ...))
-
-(sc-define-syntax (define-sp-stat2-samples name body ...)
-  (define (name a b size out) (uint8-t sp-sample-t* sp-sample-t* sp-time-t sp-sample-t*) body ...))
-
 (pre-define
   (define-sp-stat-range name value-t)
   (define (name a size out) (uint8-t value-t* sp-time-t sp-sample-t*)
@@ -121,29 +109,35 @@
      * low: 11111 112112
      * high: 12345 112212")
 
-(define-sp-stat-times sp-stat-times-repetition
+(define (sp-stat-times-repetition a size out) (uint8-t sp-time-t* sp-time-t sp-sample-t*)
   (declare
     count sp-time-t
     i sp-time-t
-    key sequence-set-key-t
-    known sequence-set-t
+    key sp-sequence-set-key-t
+    known sp-sequence-set-t
     possible-count sp-time-t
     ratios sp-sample-t
-    value sequence-set-key-t*)
-  (if (sequence-set-new size &known) (return 1)) (set ratios 0)
+    value sp-sequence-set-key-t*)
+  (if (sp-sequence-set-new size &known) (return 1))
+  (set ratios 0)
   (for ((set key.size 1) (< key.size size) (set+ key.size 1))
     (set count 0 possible-count (- size key.size))
     (for-i i (- size (- key.size 1))
-      (set key.data (convert-type (+ i a) uint8-t*) value (sequence-set-get known key))
+      (set key.data (convert-type (+ i a) uint8-t*) value (sp-sequence-set-get known key))
       (if value (set+ count 1)
-        (if (not (sequence-set-add known key)) (begin (sequence-set-free known) (return 1)))))
+        (if (not (sp-sequence-set-add known key)) (begin (sp-sequence-set-free known) (return 1)))))
     (set+ ratios (/ count possible-count))
-    (sequence-set-clear known))
-  (set (array-get out 0) (/ ratios (- size 1))) (sequence-set-free known) (return 0))
+    (sp-sequence-set-clear known))
+  (set (array-get out 0) (/ ratios (- size 1)))
+  (sp-sequence-set-free known)
+  (return 0))
 
-(define-sp-stat-times sp-stat-times-mean (declare i sp-time-t sum sp-time-t)
-  (set sum 0) (for-i i size (set+ sum (array-get a i)))
-  (set *out (/ sum (convert-type size sp-sample-t))) (return 0))
+(define (sp-stat-times-mean a size out) (uint8-t sp-time-t* sp-time-t sp-sample-t*)
+  (declare i sp-time-t sum sp-time-t)
+  (set sum 0)
+  (for-i i size (set+ sum (array-get a i)))
+  (set *out (/ sum (convert-type size sp-sample-t)))
+  (return 0))
 
 (define-sp-stat-deviation sp-stat-times-deviation sp-stat-times-mean sp-time-t)
 (define-sp-stat-median sp-stat-times-median sp-times-sort-less sp-times-sort-swap sp-time-t)
@@ -151,10 +145,12 @@
 (define-sp-stat-kurtosis sp-stat-times-kurtosis sp-stat-times-mean sp-time-t)
 (sc-comment "samples")
 
-(define-sp-stat-samples sp-stat-samples-center
+(define (sp-stat-samples-center a size out) (uint8-t sp-sample-t* sp-time-t sp-sample-t*)
   (declare i sp-time-t sum sp-sample-t index-sum sp-sample-t)
-  (set index-sum 0 sum (sp-samples-sum a size)) (for-i i size (set+ index-sum (* i (array-get a i))))
-  (set *out (/ index-sum sum)) (return 0))
+  (set index-sum 0 sum (sp-samples-sum a size))
+  (for-i i size (set+ index-sum (* i (array-get a i))))
+  (set *out (/ index-sum sum))
+  (return 0))
 
 (define-sp-stat-range sp-stat-samples-range sp-sample-t)
 (define-sp-stat-inharmonicity sp-stat-times-inharmonicity sp-time-t)
@@ -172,11 +168,19 @@
     (set (array-get out i)
       (sp-cheap-round-positive (* (+ (array-get a i) addition) (/ max (array-get range 2)))))))
 
-(define-sp-stat-samples sp-stat-samples-repetition (declare b sp-time-t*)
-  status-declare (status-require (sp-times-new size &b)) (sp-samples-scale->times a size 1000 b)
-  (sp-stat-times-repetition b size out) (free b) (label exit (return status.id)))
+(define (sp-stat-samples-repetition a size out) (uint8-t sp-sample-t* sp-time-t sp-sample-t*)
+  (declare b sp-time-t*)
+  status-declare
+  (status-require (sp-times-new size &b))
+  (sp-samples-scale->times a size 1000 b)
+  (sp-stat-times-repetition b size out)
+  (free b)
+  (label exit (return status.id)))
 
-(define-sp-stat-samples sp-stat-samples-mean (set *out (/ (sp-samples-sum a size) size)) (return 0))
+(define (sp-stat-samples-mean a size out) (uint8-t sp-sample-t* sp-time-t sp-sample-t*)
+  (set *out (/ (sp-samples-sum a size) size))
+  (return 0))
+
 (define-sp-stat-deviation sp-stat-samples-deviation sp-stat-samples-mean sp-sample-t)
 (define-sp-stat-median sp-stat-samples-median sp-samples-sort-less sp-samples-sort-swap sp-sample-t)
 (define-sp-stat-skewness sp-stat-samples-skewness sp-stat-samples-mean sp-sample-t)

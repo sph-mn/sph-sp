@@ -1,5 +1,5 @@
 (sc-comment
-  "creates few seconds long wav file with a synthesised bassdrum."
+  "creates few seconds long wav file with a synthesized bassdrum."
   "an example for using the synthesiser and sequence output using event groups."
   "can be compiled with: gcc -lsph-sp example.c -o example.exe")
 
