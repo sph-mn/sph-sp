@@ -122,22 +122,6 @@
     *out = min; \
     return (0); \
   }
-#define define_sp_stat(name, f_array, value_t) \
-  /** calculate statistics for arrays, with the statistics to calculate being selected by an array of identifiers. \
-       the identifiers are sp-stat-type-t and are also used to access the results. \
-       out size is expected to be at least sp-stat-types-count or the largest sp-stat-type-t index used. \
-       some stat-types create multiple output values (sp-stat-range) and \
-       the dependent sp-stat-types (named with the full prefix, for example sp-stat-range-min) are only for access from the output array written by \
-       sp-stat-times/samples and should not be used for the list of statistics to calculate because that would lead to results stored at mismatching indices */ \
-  status_t name(value_t* a, sp_time_t a_size, sp_stat_type_t* stats, sp_time_t size, sp_sample_t* out) { \
-    sp_time_t i; \
-    status_declare; \
-    for (i = 0; (i < size); i += 1) { \
-      status_i_require(((f_array[stats[i]])(a, a_size, (out + stats[i])))); \
-    }; \
-  exit: \
-    status_return; \
-  }
 /* times */
 /** center of mass. the distribution of mass is balanced around the center of mass, and the average of
    the weighted position coordinates of the distributed mass defines its coordinates.
@@ -261,7 +245,3 @@ define_sp_stat_deviation(sp_stat_samples_deviation, sp_stat_samples_mean, sp_sam
     define_sp_stat_skewness(sp_stat_samples_skewness, sp_stat_samples_mean, sp_sample_t)
       define_sp_stat_kurtosis(sp_stat_samples_kurtosis, sp_stat_samples_mean, sp_sample_t)
         define_sp_stat_inharmonicity(sp_stat_samples_inharmonicity, sp_sample_t)
-  /* f-array maps sp-stat-type-t indices to the functions that calculate the corresponding values.
-   some functions create multiple output values and can be repeated or set to zero for the corresponding sp-stat-type-t indices */
-  define_sp_stat(sp_stat_times, sp_stat_times_f_array, sp_time_t)
-    define_sp_stat(sp_stat_samples, sp_stat_samples_f_array, sp_sample_t)

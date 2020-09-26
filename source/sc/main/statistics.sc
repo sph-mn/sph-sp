@@ -68,22 +68,7 @@
       (set sum (/ sum size))
       (if (< sum min) (set min sum)))
     (set *out min)
-    (return 0))
-  (define-sp-stat name f-array value-t)
-  (define (name a a-size stats size out)
-    (status-t value-t* sp-time-t sp-stat-type-t* sp-time-t sp-sample-t*)
-    "calculate statistics for arrays, with the statistics to calculate being selected by an array of identifiers.
-     the identifiers are sp-stat-type-t and are also used to access the results.
-     out size is expected to be at least sp-stat-types-count or the largest sp-stat-type-t index used.
-     some stat-types create multiple output values (sp-stat-range) and
-     the dependent sp-stat-types (named with the full prefix, for example sp-stat-range-min) are only for access from the output array written by
-     sp-stat-times/samples and should not be used for the list of statistics to calculate because that would lead to results stored at mismatching indices"
-    (declare i sp-time-t)
-    status-declare
-    (for-i i size
-      (status-i-require
-        ((array-get f-array (array-get stats i)) a a-size (+ out (array-get stats i)))))
-    (label exit status-return)))
+    (return 0)))
 
 (sc-comment "times")
 
@@ -186,10 +171,3 @@
 (define-sp-stat-skewness sp-stat-samples-skewness sp-stat-samples-mean sp-sample-t)
 (define-sp-stat-kurtosis sp-stat-samples-kurtosis sp-stat-samples-mean sp-sample-t)
 (define-sp-stat-inharmonicity sp-stat-samples-inharmonicity sp-sample-t)
-
-(sc-comment
-  "f-array maps sp-stat-type-t indices to the functions that calculate the corresponding values.
-   some functions create multiple output values and can be repeated or set to zero for the corresponding sp-stat-type-t indices")
-
-(define-sp-stat sp-stat-times sp-stat-times-f-array sp-time-t)
-(define-sp-stat sp-stat-samples sp-stat-samples-f-array sp-sample-t)

@@ -268,24 +268,8 @@ sp_sequence_set_key_t sp_sequence_set_null = { 0, 0 };
 uint64_t sp_sequence_set_hash(sp_sequence_set_key_t a, sp_time_t memory_size) { (sp_u64_from_array((a.data), (a.size)) % memory_size); }
 sph_set_declare_type_nonull(sp_sequence_set, sp_sequence_set_key_t, sp_sequence_set_hash, sp_sequence_set_equal, sp_sequence_set_null, 2);
 /* statistics */
-#define sp_stat_types_count (1 + (sp_stat_skewness - sp_stat_center))
-typedef enum { sp_stat_center = 0u,
-  sp_stat_repetition,
-  sp_stat_deviation,
-  sp_stat_inharmonicity,
-  sp_stat_kurtosis,
-  sp_stat_mean,
-  sp_stat_median,
-  sp_stat_range,
-  sp_stat_range_min,
-  sp_stat_range_max,
-  sp_stat_skewness } sp_stat_type_t;
 typedef uint8_t (*sp_stat_times_f_t)(sp_time_t*, sp_time_t, sp_sample_t*);
 typedef uint8_t (*sp_stat_samples_f_t)(sp_sample_t*, sp_time_t, sp_sample_t*);
-typedef uint8_t (*sp_stat2_times_f_t)(sp_time_t*, sp_time_t*, sp_time_t, sp_sample_t*);
-typedef uint8_t (*sp_stat2_samples_f_t)(sp_sample_t*, sp_sample_t*, sp_time_t, sp_sample_t*);
-status_t sp_stat_times(sp_time_t* a, sp_time_t a_size, sp_stat_type_t* stats, sp_time_t size, sp_sample_t* out);
-status_t sp_stat_samples(sp_sample_t* a, sp_time_t a_size, sp_stat_type_t* stats, sp_time_t size, sp_sample_t* out);
 uint8_t sp_stat_times_range(sp_time_t* a, sp_time_t size, sp_sample_t* out);
 uint8_t sp_stat_times_repetition(sp_time_t* a, sp_time_t size, sp_sample_t* out);
 uint8_t sp_stat_times_mean(sp_time_t* a, sp_time_t size, sp_sample_t* out);
@@ -304,8 +288,6 @@ uint8_t sp_stat_samples_center(sp_sample_t* a, sp_time_t size, sp_sample_t* out)
 uint8_t sp_stat_samples_range(sp_sample_t* a, sp_time_t size, sp_sample_t* out);
 uint8_t sp_stat_samples_kurtosis(sp_sample_t* a, sp_time_t size, sp_sample_t* out);
 uint8_t sp_stat_samples_skewness(sp_sample_t* a, sp_time_t size, sp_sample_t* out);
-sp_stat_times_f_t sp_stat_times_f_array[sp_stat_types_count] = { sp_stat_times_center, sp_stat_times_repetition, sp_stat_times_deviation, sp_stat_times_inharmonicity, sp_stat_times_kurtosis, sp_stat_times_mean, sp_stat_times_median, sp_stat_times_range, sp_stat_times_range, sp_stat_times_range, sp_stat_times_skewness };
-sp_stat_samples_f_t sp_stat_samples_f_array[sp_stat_types_count] = { sp_stat_samples_center, sp_stat_samples_repetition, sp_stat_samples_deviation, sp_stat_samples_inharmonicity, sp_stat_samples_kurtosis, sp_stat_samples_mean, sp_stat_samples_median, sp_stat_samples_range, sp_stat_samples_range, sp_stat_samples_range, sp_stat_samples_skewness };
 void sp_samples_scale_to_times(sp_sample_t* a, sp_time_t size, sp_time_t max, sp_time_t* out);
 /* filter */
 #define sp_filter_state_t sp_convolution_filter_state_t

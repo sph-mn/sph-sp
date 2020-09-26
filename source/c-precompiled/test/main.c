@@ -547,9 +547,9 @@ exit:
   status_return;
 }
 #define test_stats_a_size 8
-#define test_stats_types_count (sp_stat_types_count - 2)
 status_t test_stats() {
   status_declare;
+  sp_time_t size;
   sp_time_t a[test_stats_a_size] = { 1, 2, 3, 4, 5, 6, 7, 8 };
   sp_sample_t as[test_stats_a_size] = { 1, 2, 3, 4, 5, 6, 7, 8 };
   sp_time_t repetition_1[test_stats_a_size] = { 1, 1, 1, 1, 1, 1, 1, 1 };
@@ -558,39 +558,45 @@ status_t test_stats() {
   sp_time_t inhar_2[test_stats_a_size] = { 2, 4, 6, 8, 10, 12, 13, 16 };
   sp_time_t inhar_3[test_stats_a_size] = { 2, 3, 6, 8, 10, 12, 13, 16 };
   sp_sample_t inhar_results[3];
-  sp_stat_type_t stat_types[test_stats_types_count] = { sp_stat_center, sp_stat_repetition, sp_stat_deviation, sp_stat_inharmonicity, sp_stat_kurtosis, sp_stat_mean, sp_stat_median, sp_stat_range, sp_stat_skewness };
-  sp_sample_t stats_a[sp_stat_types_count];
-  sp_sample_t stats_as[sp_stat_types_count];
-  status_require((sp_stat_times(a, test_stats_a_size, stat_types, test_stats_types_count, stats_a)));
-  test_helper_assert("mean", (feq((4.5), (stats_a[sp_stat_mean]))));
-  test_helper_assert("deviation", (feq((2.29), (stats_a[sp_stat_deviation]))));
-  test_helper_assert("center", (feq((4.54), (stats_a[sp_stat_center]))));
-  test_helper_assert("median", (feq((4.5), (stats_a[sp_stat_median]))));
-  test_helper_assert("repetition", (feq((0.0), (stats_a[sp_stat_repetition]))));
-  test_helper_assert("skewness", (feq((0.0), (stats_a[sp_stat_skewness]))));
-  test_helper_assert("kurtosis", (feq((1.76), (stats_a[sp_stat_kurtosis]))));
-  status_require((sp_stat_samples(as, test_stats_a_size, stat_types, test_stats_types_count, stats_as)));
-  test_helper_assert("samples mean", (feq((4.5), (stats_as[sp_stat_mean]))));
-  test_helper_assert("samples deviation", (feq((2.29), (stats_as[sp_stat_deviation]))));
-  test_helper_assert("samples center", (feq((4.66), (stats_as[sp_stat_center]))));
-  test_helper_assert("samples median", (feq((4.5), (stats_as[sp_stat_median]))));
-  test_helper_assert("samples repetition", (feq((0.0), (stats_as[sp_stat_repetition]))));
-  test_helper_assert("samples skewness", (feq((0.0), (stats_as[sp_stat_skewness]))));
-  test_helper_assert("samples kurtosis", (feq((1.76), (stats_as[sp_stat_kurtosis]))));
+  sp_sample_t stat_out;
+  size = test_stats_a_size;
+  sp_stat_times_mean(a, size, (&stat_out));
+  test_helper_assert("mean", (feq((4.5), stat_out)));
+  sp_stat_times_deviation(a, size, (&stat_out));
+  test_helper_assert("deviation", (feq((2.29), stat_out)));
+  sp_stat_times_center(a, size, (&stat_out));
+  test_helper_assert("center", (feq((4.54), stat_out)));
+  sp_stat_times_median(a, size, (&stat_out));
+  test_helper_assert("median", (feq((4.5), stat_out)));
+  sp_stat_times_repetition(a, size, (&stat_out));
+  test_helper_assert("repetition", (feq((0.0), stat_out)));
+  sp_stat_times_skewness(a, size, (&stat_out));
+  test_helper_assert("skewness", (feq((0.0), stat_out)));
+  sp_stat_times_kurtosis(a, size, (&stat_out));
+  test_helper_assert("kurtosis", (feq((1.76), stat_out)));
+  sp_stat_samples_mean(as, size, (&stat_out));
+  test_helper_assert("samples mean", (feq((4.5), stat_out)));
+  sp_stat_samples_deviation(as, size, (&stat_out));
+  test_helper_assert("samples deviation", (feq((2.29), stat_out)));
+  sp_stat_samples_center(as, size, (&stat_out));
+  test_helper_assert("samples center", (feq((4.66), stat_out)));
+  sp_stat_samples_median(as, size, (&stat_out));
+  test_helper_assert("samples median", (feq((4.5), stat_out)));
+  sp_stat_samples_repetition(as, size, (&stat_out));
+  test_helper_assert("samples repetition", (feq((0.0), stat_out)));
+  sp_stat_samples_skewness(as, size, (&stat_out));
+  test_helper_assert("samples skewness", (feq((0.0), stat_out)));
+  sp_stat_samples_kurtosis(as, size, (&stat_out));
+  test_helper_assert("samples kurtosis", (feq((1.76), stat_out)));
   /* repetition */
-  stat_types[0] = sp_stat_repetition;
-  status_require((sp_stat_times(repetition_1, test_stats_a_size, stat_types, 1, stats_a)));
-  test_helper_assert("repetition-1", (feq((1.0), (stats_a[sp_stat_repetition]))));
-  status_require((sp_stat_times(repetition_2, test_stats_a_size, stat_types, 1, stats_a)));
-  test_helper_assert("repetition-2", (feq((0.0), (stats_a[sp_stat_repetition]))));
+  sp_stat_times_repetition(repetition_1, size, (&stat_out));
+  test_helper_assert("repetition-1", (feq((1.0), stat_out)));
+  sp_stat_times_repetition(repetition_2, size, (&stat_out));
+  test_helper_assert("repetition-2", (feq((0.0), stat_out)));
   /* inharmonicity */
-  stat_types[0] = sp_stat_inharmonicity;
-  status_require((sp_stat_times(inhar_1, test_stats_a_size, stat_types, 1, stats_a)));
-  inhar_results[0] = stats_a[sp_stat_inharmonicity];
-  status_require((sp_stat_times(inhar_2, test_stats_a_size, stat_types, 1, stats_a)));
-  inhar_results[1] = stats_a[sp_stat_inharmonicity];
-  status_require((sp_stat_times(inhar_3, test_stats_a_size, stat_types, 1, stats_a)));
-  inhar_results[2] = stats_a[sp_stat_inharmonicity];
+  sp_stat_times_inharmonicity(inhar_1, size, (inhar_results + 0));
+  sp_stat_times_inharmonicity(inhar_2, size, (inhar_results + 1));
+  sp_stat_times_inharmonicity(inhar_3, size, (inhar_results + 2));
   test_helper_assert("inharmonicity relations", ((inhar_results[0] < inhar_results[1]) && (inhar_results[1] < inhar_results[2])));
   test_helper_assert("inharmonicity 1", (feq((0.0), (inhar_results[0]))));
   test_helper_assert("inharmonicity 2", (feq((0.0625), (inhar_results[1]))));
