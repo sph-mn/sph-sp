@@ -20,7 +20,9 @@
   sp-samples-random sph-random-f64-array
   sp-time-random sph-random-u32
   sp-time-random-bounded sph-random-u32-bounded
-  sp-sample-random sph-random-f64)
+  sp-sample-random sph-random-f64
+  sp-sample-nearly-equal f64-nearly-equal
+  sp-sample-array-nearly-equal f64-array-nearly-equal)
 
 (pre-include "sph/status.c" "sph/spline-path.h"
   "sph/random.c" "sph/array3.c" "sph/array4.c" "sph/memreg-heap.c" "sph/float.c" "sph/set.c")
@@ -155,7 +157,8 @@
       (* t (convert-type b sp-sample-t))))
   (sp-sample-interpolate-linear a b t) (+ (* (- 1 t) a) (* t b))
   (sp-sequence-set-equal a b)
-  (and (= a.size b.size) (or (and (= 0 a.size) (= 0 b.size)) (not (memcmp a.data b.data a.size)))))
+  (and (= a.size b.size)
+    (or (and (= 0 a.size) (= 0 b.size)) (= 0 (memcmp a.data b.data (* a.size (sizeof sp-time-t)))))))
 
 (declare
   (sp-samples-absolute-max in in-size) (sp-sample-t sp-sample-t* sp-time-t)
@@ -222,7 +225,7 @@
   (sp-sample-random-custom state cudist cudist-size range)
   (sp-sample-t sp-random-state-t* sp-time-t* sp-time-t sp-sample-t)
   (sp-times-swap a i1 i2) (void sp-time-t* ssize-t ssize-t)
-  (sp-times-sequence-increment-le a size set-size) (void sp-time-t* sp-time-t sp-time-t)
+  (sp-times-sequence-increment a size set-size) (void sp-time-t* sp-time-t sp-time-t)
   (sp-times-compositions sum out out-size out-sizes)
   (status-t sp-time-t sp-time-t*** sp-time-t* sp-time-t**)
   (sp-times-permutations size set set-size out out-size)

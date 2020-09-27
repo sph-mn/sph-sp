@@ -353,6 +353,9 @@
     sp-rate rate
     sp-channels channels
     sp-default-random-state (sp-random-state-new 1557083953))
+  (sc-comment "random state needs warm-up")
+  (sp-time-random &sp-default-random-state)
+  (sp-time-random &sp-default-random-state)
   (status-require (sp-samples-new sp-rate &sp-sine-table))
   (sp-sine-period sp-rate sp-sine-table)
   (label exit status-return))

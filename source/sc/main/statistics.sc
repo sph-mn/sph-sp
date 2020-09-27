@@ -91,7 +91,7 @@
    * y: the maximum number of possible unique subsequences
    * the result is x divided by y normalised by $size.
    * examples
-     * low: 11111 112112
+     * low: 11111 121212
      * high: 12345 112212")
 
 (define (sp-stat-times-repetition a size out) (uint8-t sp-time-t* sp-time-t sp-sample-t*)

@@ -263,7 +263,7 @@ sp_times_random_discrete_unique :: sp_random_state_t*:state sp_time_t*:cudist sp
 sp_times_range :: sp_time_t:start sp_time_t:end sp_time_t*:out -> void
 sp_times_reverse :: sp_time_t*:a sp_time_t:size sp_time_t*:out -> void
 sp_times_scale :: sp_time_t*:a sp_time_t:a_size sp_time_t:factor sp_time_t*:out -> status_t
-sp_times_sequence_increment_le :: sp_time_t*:a sp_time_t:size sp_time_t:set_size -> void
+sp_times_sequence_increment :: sp_time_t*:a sp_time_t:size sp_time_t:set_size -> void
 sp_times_sequences :: sp_time_t:base sp_time_t:digits sp_time_t:size sp_time_t*:out -> void
 sp_times_set_1 :: sp_time_t*:a sp_time_t:size sp_time_t:n sp_time_t*:out -> void
 sp_times_shuffle :: sp_random_state_t*:state sp_time_t*:a sp_time_t:size -> void

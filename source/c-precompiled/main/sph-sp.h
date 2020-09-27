@@ -59,6 +59,12 @@
 #ifndef sp_sample_random
 #define sp_sample_random sph_random_f64
 #endif
+#ifndef sp_sample_nearly_equal
+#define sp_sample_nearly_equal f64_nearly_equal
+#endif
+#ifndef sp_sample_array_nearly_equal
+#define sp_sample_array_nearly_equal f64_array_nearly_equal
+#endif
 #include <sph/status.c>
 #include <sph/spline-path.h>
 #include <sph/random.c>
@@ -178,7 +184,7 @@ sp_time_t sp_compositions_max(sp_time_t sum);
 #define sp_times_zero(a, size) memset(a, 0, (size * sizeof(sp_time_t)))
 #define sp_time_interpolate_linear(a, b, t) sp_cheap_round_positive((((1 - ((sp_sample_t)(t))) * ((sp_sample_t)(a))) + (t * ((sp_sample_t)(b)))))
 #define sp_sample_interpolate_linear(a, b, t) (((1 - t) * a) + (t * b))
-#define sp_sequence_set_equal(a, b) ((a.size == b.size) && (((0 == a.size) && (0 == b.size)) || !memcmp((a.data), (b.data), (a.size))))
+#define sp_sequence_set_equal(a, b) ((a.size == b.size) && (((0 == a.size) && (0 == b.size)) || (0 == memcmp((a.data), (b.data), (a.size * sizeof(sp_time_t))))))
 sp_sample_t sp_samples_absolute_max(sp_sample_t* in, sp_time_t in_size);
 void sp_samples_add_1(sp_sample_t* a, sp_time_t size, sp_sample_t n, sp_sample_t* out);
 void sp_samples_add(sp_sample_t* a, sp_time_t size, sp_sample_t* b, sp_sample_t* out);
@@ -235,7 +241,7 @@ sp_time_t sp_time_random_discrete(sp_random_state_t* state, sp_time_t* cudist, s
 void sp_times_random_discrete(sp_random_state_t* state, sp_time_t* cudist, sp_time_t cudist_size, sp_time_t count, sp_time_t* out);
 sp_sample_t sp_sample_random_custom(sp_random_state_t* state, sp_time_t* cudist, sp_time_t cudist_size, sp_sample_t range);
 void sp_times_swap(sp_time_t* a, ssize_t i1, ssize_t i2);
-void sp_times_sequence_increment_le(sp_time_t* a, sp_time_t size, sp_time_t set_size);
+void sp_times_sequence_increment(sp_time_t* a, sp_time_t size, sp_time_t set_size);
 status_t sp_times_compositions(sp_time_t sum, sp_time_t*** out, sp_time_t* out_size, sp_time_t** out_sizes);
 status_t sp_times_permutations(sp_time_t size, sp_time_t* set, sp_time_t set_size, sp_time_t*** out, sp_time_t* out_size);
 void sp_times_multiplications(sp_time_t start, sp_time_t factor, sp_time_t count, sp_time_t* out);

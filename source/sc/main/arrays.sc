@@ -123,9 +123,7 @@
   (define (name a size n out) (void value-t* sp-time-t value-t value-t*)
     "a/out can be the same"
     (declare i sp-time-t)
-    (for ((set i 0) (< i size) (set+ i 1)) (set (array-get out i) transfer)))
-  (sp-sequence-set-equal a b)
-  (and (= a.size b.size) (or (and (= 0 a.size) (= 0 b.size)) (not (memcmp a.data b.data a.size)))))
+    (for ((set i 0) (< i size) (set+ i 1)) (set (array-get out i) transfer))))
 
 (define (sp-samples-every-equal a size n) (uint8-t sp-sample-t* sp-time-t sp-sample-t)
   (declare i sp-time-t)
@@ -265,8 +263,8 @@
   (declare temp sp-time-t)
   (set temp (array-get a i1) (array-get a i1) (array-get a i2) (array-get a i2) temp))
 
-(define (sp-times-sequence-increment-le a size set-size) (void sp-time-t* sp-time-t sp-time-t)
-  "increment array as if its elements were digits of a written number of base set-size"
+(define (sp-times-sequence-increment a size set-size) (void sp-time-t* sp-time-t sp-time-t)
+  "increment array as if its elements were digits of a written number of base set-size, lower endian"
   (declare i sp-time-t)
   (for ((set i 0) (< i size) (set+ i 1))
     (if (< (array-get a i) (- set-size 1)) (begin (set+ (array-get a i) 1) break)
@@ -527,7 +525,7 @@
   (declare i sp-time-t)
   (for ((set i digits) (< i (* digits size)) (set+ i digits))
     (memcpy (+ out i) (+ out (- i digits)) (* digits (sizeof sp-time-t)))
-    (sp-times-sequence-increment-le (+ out i) digits base)))
+    (sp-times-sequence-increment (+ out i) digits base)))
 
 (define (sp-times-range start end out) (void sp-time-t sp-time-t sp-time-t*)
   "write into out values from start (inclusively) to end (exclusively)"

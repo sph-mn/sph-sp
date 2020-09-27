@@ -146,7 +146,7 @@ define_sp_stat_range(sp_stat_times_range, sp_time_t)
    * y: the maximum number of possible unique subsequences
    * the result is x divided by y normalised by $size.
    * examples
-     * low: 11111 112112
+     * low: 11111 121212
      * high: 12345 112212 */
   uint8_t sp_stat_times_repetition(sp_time_t* a, sp_time_t size, sp_sample_t* out) {
   sp_time_t count;

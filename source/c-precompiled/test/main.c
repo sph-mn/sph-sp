@@ -500,8 +500,6 @@ status_t test_path() {
 exit:
   status_return;
 }
-#define sp_sample_nearly_equal f64_nearly_equal
-#define sp_sample_array_nearly_equal f64_array_nearly_equal
 #define feq(a, b) sp_sample_nearly_equal(a, b, (0.01))
 sp_random_state_t rs;
 uint8_t u64_from_array_test(sp_time_t size) {

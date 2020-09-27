@@ -481,11 +481,7 @@
   (status-require (sp-path-times-2 &times 100 (sp-path-line 10 1) (sp-path-line 100 0)))
   (label exit status-return))
 
-(pre-define
-  sp-sample-nearly-equal f64-nearly-equal
-  sp-sample-array-nearly-equal f64-array-nearly-equal
-  (feq a b) (sp-sample-nearly-equal a b 0.01))
-
+(pre-define (feq a b) (sp-sample-nearly-equal a b 0.01))
 (declare rs sp-random-state-t)
 
 (define (u64-from-array-test size) (uint8-t sp-time-t)

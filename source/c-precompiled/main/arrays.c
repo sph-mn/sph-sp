@@ -168,7 +168,6 @@ void sp_samples_set_unity_gain(sp_sample_t* in, sp_time_t in_size, sp_sample_t* 
       out[i] = transfer; \
     }; \
   }
-#define sp_sequence_set_equal(a, b) ((a.size == b.size) && (((0 == a.size) && (0 == b.size)) || !memcmp((a.data), (b.data), (a.size))))
 uint8_t sp_samples_every_equal(sp_sample_t* a, sp_time_t size, sp_sample_t n) {
   sp_time_t i;
   for (i = 0; (i < size); i += 1) {
@@ -312,8 +311,8 @@ void sp_times_swap(sp_time_t* a, ssize_t i1, ssize_t i2) {
   a[i1] = a[i2];
   a[i2] = temp;
 }
-/** increment array as if its elements were digits of a written number of base set-size */
-void sp_times_sequence_increment_le(sp_time_t* a, sp_time_t size, sp_time_t set_size) {
+/** increment array as if its elements were digits of a written number of base set-size, lower endian */
+void sp_times_sequence_increment(sp_time_t* a, sp_time_t size, sp_time_t set_size) {
   sp_time_t i;
   for (i = 0; (i < size); i += 1) {
     if (a[i] < (set_size - 1)) {
@@ -660,7 +659,7 @@ void sp_times_sequences(sp_time_t base, sp_time_t digits, sp_time_t size, sp_tim
   sp_time_t i;
   for (i = digits; (i < (digits * size)); i += digits) {
     memcpy((out + i), (out + (i - digits)), (digits * sizeof(sp_time_t)));
-    sp_times_sequence_increment_le((out + i), digits, base);
+    sp_times_sequence_increment((out + i), digits, base);
   };
 }
 /** write into out values from start (inclusively) to end (exclusively) */
