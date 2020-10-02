@@ -348,6 +348,7 @@ void sp_block_zero(sp_block_t a) {
 #include "../main/filter.c"
 #include "../main/sequencer.c"
 #include "../main/statistics.c"
+#include "../main/statistics-mod.c"
 sp_render_config_t sp_render_config(sp_channels_t channels, sp_time_t rate, sp_time_t block_size) {
   sp_render_config_t a;
   a.channels = channels;

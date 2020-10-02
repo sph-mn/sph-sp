@@ -3,6 +3,8 @@
   "sp-time-t subtraction is limited to zero."
   "sp-time-t addition is not limited.")
 
+(sc-include-once "./sc-macros")
+
 (define (sp-shuffle state swap a size)
   (void sp-random-state-t* (function-pointer void void* size-t size-t) void* size-t)
   "generic shuffle that works on any array type. fisher-yates algorithm"
@@ -74,7 +76,7 @@
       (return (< (array-get (convert-type a value-t*) b) (array-get (convert-type a value-t*) c)))))
   (define-array-functions prefix value-t)
   (begin
-    "functions that work on sp-sample-t* and sp-time-t*"
+    "functions that work the same on sp-sample-t* and sp-time-t*"
     (define ((pre-concat prefix _reverse) a size out) (void value-t* sp-time-t value-t*)
       "a/out can not be the same pointer"
       (declare i sp-time-t)
@@ -546,7 +548,7 @@
 (define (sp-times-deduplicate a size out out-size)
   (status-t sp-time-t* sp-time-t sp-time-t* sp-time-t*)
   "writes the unique elements of a to out.
-   out lend by the owner. out size should be equal to a-size.
+   out is lend by the owner. out size should be equal to a-size.
    out-size will be set to the number of unique elements"
   status-declare
   (declare unique sp-time-set-t i sp-time-t unique-count sp-time-t)
@@ -561,3 +563,52 @@
         (set+ unique-count 1))))
   (set *out-size unique-count)
   (label exit (if unique.size (sp-time-set-free unique)) status-return))
+
+(define (sp-times-counted-sequences-sort-swap a b c) (void void* ssize-t ssize-t)
+  (declare d sp-times-counted-sequences-t)
+  (set
+    d (array-get (convert-type a sp-times-counted-sequences-t*) b)
+    (array-get (convert-type a sp-times-counted-sequences-t*) b)
+    (array-get (convert-type a sp-times-counted-sequences-t*) c)
+    (array-get (convert-type a sp-times-counted-sequences-t*) c) d))
+
+(define (sp-times-counted-sequences-sort-less a b c) (uint8-t void* ssize-t ssize-t)
+  (return
+    (< (struct-get (array-get (convert-type a sp-times-counted-sequences-t*) b) count)
+      (struct-get (array-get (convert-type a sp-times-counted-sequences-t*) c) count))))
+
+(define (sp-times-counted-sequences-sort-greater a b c) (uint8-t void* ssize-t ssize-t)
+  (return
+    (> (struct-get (array-get (convert-type a sp-times-counted-sequences-t*) b) count)
+      (struct-get (array-get (convert-type a sp-times-counted-sequences-t*) c) count))))
+
+(define (sp-times-counted-sequences a size width limit out out-size out-repetition)
+  (status-t sp-time-t* sp-time-t sp-time-t sp-time-t sp-times-counted-sequences-t* sp-time-t* sp-time-t*)
+  "limit: only add sequences with count greater than limit to out
+   out-size: number of elements in out
+   out-repetition: counted total repetition"
+  status-declare
+  (declare
+    i sp-time-t
+    key sp-sequence-set-key-t
+    known sp-sequence-hashtable-t
+    out-size-temp sp-time-t
+    repetition sp-time-t
+    value sp-time-t*
+    max-unique sp-time-t)
+  (set max-unique (- size (- width 1)) known.size 0 key.size width out-size-temp 0 repetition 0)
+  (if (sp-sequence-hashtable-new max-unique &known) sp-memory-error)
+  (for-i i max-unique
+    (set key.data (convert-type (+ i a) uint8-t*) value (sp-sequence-hashtable-get known key))
+    (if value (set+ *value 1 repetition 1)
+      (if (not (sp-sequence-hashtable-set known key 1)) sp-memory-error)))
+  (for-i i known.size
+    (if (and (array-get known.flags i) (< limit (array-get known.values i)))
+      (begin
+        (set
+          (struct-get (array-get out out-size-temp) count) (array-get known.values i)
+          (struct-get (array-get out out-size-temp) sequence)
+          (convert-type (struct-get (array-get known.keys i) data) sp-time-t*))
+        (set+ out-size-temp 1))))
+  (set *out-size out-size-temp *out-repetition repetition)
+  (label exit (if known.size (sp-sequence-hashtable-free known)) status-return))

@@ -25,7 +25,8 @@
   sp-sample-array-nearly-equal f64-array-nearly-equal)
 
 (pre-include "sph/status.c" "sph/spline-path.h"
-  "sph/random.c" "sph/array3.c" "sph/array4.c" "sph/memreg-heap.c" "sph/float.c" "sph/set.c")
+  "sph/random.c" "sph/array3.c" "sph/array4.c"
+  "sph/memreg-heap.c" "sph/float.c" "sph/set.c" "sph/hashtable.c")
 
 (sc-comment "main")
 
@@ -161,6 +162,27 @@
     (or (and (= 0 a.size) (= 0 b.size)) (= 0 (memcmp a.data b.data (* a.size (sizeof sp-time-t)))))))
 
 (declare
+  sp-sequence-set-key-t (type (struct (size sp-time-t) (data uint8-t*)))
+  (sp-u64-from-array a size) (uint64-t uint8-t* sp-time-t))
+
+(define sp-sequence-set-null sp-sequence-set-key-t (struct-literal 0 0))
+
+(define (sp-sequence-set-hash a memory-size) (uint64-t sp-sequence-set-key-t sp-time-t)
+  (modulo (sp-u64-from-array a.data a.size) memory-size))
+
+(sph-set-declare-type-nonull sp-sequence-set sp-sequence-set-key-t
+  sp-sequence-set-hash sp-sequence-set-equal sp-sequence-set-null 2)
+
+(sph-set-declare-type sp-time-set sp-time-t sph-set-hash-integer sph-set-equal-integer 0 1 2)
+
+(hashtable-declare-type sp-sequence-hashtable sp-sequence-set-key-t
+  sp-time-t sp-sequence-set-hash sp-sequence-set-equal 2)
+
+(declare
+  sp-times-counted-sequences-t (type (struct (count sp-time-t) (sequence sp-time-t*)))
+  (sp-times-counted-sequences a size width limit out out-size out-repetition)
+  (status-t sp-time-t* sp-time-t
+    sp-time-t sp-time-t sp-times-counted-sequences-t* sp-time-t* sp-time-t*)
   (sp-samples-absolute-max in in-size) (sp-sample-t sp-sample-t* sp-time-t)
   (sp-samples-add-1 a size n out) (void sp-sample-t* sp-time-t sp-sample-t sp-sample-t*)
   (sp-samples-add a size b out) (void sp-sample-t* sp-time-t sp-sample-t* sp-sample-t*)
@@ -241,7 +263,6 @@
   (sp-times-select-random state a size out out-size)
   (void sp-random-state-t* sp-time-t* sp-time-t sp-time-t* sp-time-t*)
   (sp-times-constant a size value out) (status-t sp-time-t sp-time-t sp-time-t sp-time-t**)
-  (sp-u64-from-array a size) (uint64-t uint8-t* sp-time-t)
   (sp-shuffle state swap a size)
   (void sp-random-state-t* (function-pointer void void* size-t size-t) void* size-t)
   (sp-times-scale a a-size factor out) (status-t sp-time-t* sp-time-t sp-time-t sp-time-t*)
@@ -255,18 +276,7 @@
   (sp-times-sequences base digits size out) (void sp-time-t sp-time-t sp-time-t sp-time-t*)
   (sp-times-range start end out) (void sp-time-t sp-time-t sp-time-t*)
   (sp-time-round-to-multiple a base) (sp-time-t sp-time-t sp-time-t)
-  (sp-times-limit a size n out) (void sp-time-t* sp-time-t sp-time-t sp-time-t*)
-  sp-sequence-set-key-t (type (struct (size sp-time-t) (data uint8-t*))))
-
-(define sp-sequence-set-null sp-sequence-set-key-t (struct-literal 0 0))
-
-(define (sp-sequence-set-hash a memory-size) (uint64-t sp-sequence-set-key-t sp-time-t)
-  (modulo (sp-u64-from-array a.data a.size) memory-size))
-
-(sph-set-declare-type-nonull sp-sequence-set sp-sequence-set-key-t
-  sp-sequence-set-hash sp-sequence-set-equal sp-sequence-set-null 2)
-
-(sph-set-declare-type sp-time-set sp-time-t sph-set-hash-integer sph-set-equal-integer 0 1 2)
+  (sp-times-limit a size n out) (void sp-time-t* sp-time-t sp-time-t sp-time-t*))
 
 (sc-comment "statistics")
 
@@ -297,7 +307,9 @@
   (sp-stat-unique-all-max size) (sp-time-t sp-time-t)
   (sp-stat-repetition-all-max size) (sp-time-t sp-time-t)
   (sp-stat-times-repetition a size width out) (uint8-t sp-time-t* sp-time-t sp-time-t sp-sample-t*)
-  (sp-stat-repetition-max size width) (sp-time-t sp-time-t sp-time-t))
+  (sp-stat-repetition-max size width) (sp-time-t sp-time-t sp-time-t)
+  (sp-stat-times-repetition-decrease a size width target)
+  (status-t sp-time-t* sp-time-t sp-time-t sp-time-t))
 
 (sc-comment "filter")
 

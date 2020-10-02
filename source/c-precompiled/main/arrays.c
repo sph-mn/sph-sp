@@ -79,7 +79,7 @@ void sp_samples_set_unity_gain(sp_sample_t* in, sp_time_t in_size, sp_sample_t* 
     ((value_t*)(a))[c] = d; \
   } \
   uint8_t prefix##_sort_less(void* a, ssize_t b, ssize_t c) { return ((((value_t*)(a))[b] < ((value_t*)(a))[c])); }
-/** functions that work on sp-sample-t* and sp-time-t* */
+/** functions that work the same on sp-sample-t* and sp-time-t* */
 #define define_array_functions(prefix, value_t) \
   /** a/out can not be the same pointer */ \
   void prefix##_reverse(value_t* a, sp_time_t size, value_t* out) { \
@@ -679,7 +679,7 @@ void sp_times_limit(sp_time_t* a, sp_time_t size, sp_time_t n, sp_time_t* out) {
   };
 }
 /** writes the unique elements of a to out.
-   out lend by the owner. out size should be equal to a-size.
+   out is lend by the owner. out size should be equal to a-size.
    out-size will be set to the number of unique elements */
 status_t sp_times_deduplicate(sp_time_t* a, sp_time_t size, sp_time_t* out, sp_time_t* out_size) {
   status_declare;
@@ -704,6 +704,61 @@ status_t sp_times_deduplicate(sp_time_t* a, sp_time_t size, sp_time_t* out, sp_t
 exit:
   if (unique.size) {
     sp_time_set_free(unique);
+  };
+  status_return;
+}
+void sp_times_counted_sequences_sort_swap(void* a, ssize_t b, ssize_t c) {
+  sp_times_counted_sequences_t d;
+  d = ((sp_times_counted_sequences_t*)(a))[b];
+  ((sp_times_counted_sequences_t*)(a))[b] = ((sp_times_counted_sequences_t*)(a))[c];
+  ((sp_times_counted_sequences_t*)(a))[c] = d;
+}
+uint8_t sp_times_counted_sequences_sort_less(void* a, ssize_t b, ssize_t c) { return (((((sp_times_counted_sequences_t*)(a))[b]).count < (((sp_times_counted_sequences_t*)(a))[c]).count)); }
+uint8_t sp_times_counted_sequences_sort_greater(void* a, ssize_t b, ssize_t c) { return (((((sp_times_counted_sequences_t*)(a))[b]).count > (((sp_times_counted_sequences_t*)(a))[c]).count)); }
+/** limit: only add sequences with count greater than limit to out
+   out-size: number of elements in out
+   out-repetition: counted total repetition */
+status_t sp_times_counted_sequences(sp_time_t* a, sp_time_t size, sp_time_t width, sp_time_t limit, sp_times_counted_sequences_t* out, sp_time_t* out_size, sp_time_t* out_repetition) {
+  status_declare;
+  sp_time_t i;
+  sp_sequence_set_key_t key;
+  sp_sequence_hashtable_t known;
+  sp_time_t out_size_temp;
+  sp_time_t repetition;
+  sp_time_t* value;
+  sp_time_t max_unique;
+  max_unique = (size - (width - 1));
+  known.size = 0;
+  key.size = width;
+  out_size_temp = 0;
+  repetition = 0;
+  if (sp_sequence_hashtable_new(max_unique, (&known))) {
+    sp_memory_error;
+  };
+  for (i = 0; (i < max_unique); i += 1) {
+    key.data = ((uint8_t*)((i + a)));
+    value = sp_sequence_hashtable_get(known, key);
+    if (value) {
+      *value += 1;
+      repetition += 1;
+    } else {
+      if (!sp_sequence_hashtable_set(known, key, 1)) {
+        sp_memory_error;
+      };
+    };
+  };
+  for (i = 0; (i < known.size); i += 1) {
+    if ((known.flags)[i] && (limit < (known.values)[i])) {
+      (out[out_size_temp]).count = (known.values)[i];
+      (out[out_size_temp]).sequence = ((sp_time_t*)(((known.keys)[i]).data));
+      out_size_temp += 1;
+    };
+  };
+  *out_size = out_size_temp;
+  *out_repetition = repetition;
+exit:
+  if (known.size) {
+    sp_sequence_hashtable_free(known);
   };
   status_return;
 }

@@ -279,7 +279,8 @@
   (for ((set i 0) (< i a.channels) (set+ i 1)) (sp-samples-zero (array-get a.samples i) a.size)))
 
 (pre-include "../main/path.c" "../main/io.c"
-  "../main/plot.c" "../main/filter.c" "../main/sequencer.c" "../main/statistics.c")
+  "../main/plot.c" "../main/filter.c" "../main/sequencer.c"
+  "../main/statistics.c" "../main/statistics-mod.c")
 
 (define (sp-render-config channels rate block-size)
   (sp-render-config-t sp-channels-t sp-time-t sp-time-t)
