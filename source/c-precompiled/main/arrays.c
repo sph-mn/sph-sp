@@ -678,3 +678,32 @@ void sp_times_limit(sp_time_t* a, sp_time_t size, sp_time_t n, sp_time_t* out) {
     out[i] = ((n < a[i]) ? n : a[i]);
   };
 }
+/** writes the unique elements of a to out.
+   out lend by the owner. out size should be equal to a-size.
+   out-size will be set to the number of unique elements */
+status_t sp_times_deduplicate(sp_time_t* a, sp_time_t size, sp_time_t* out, sp_time_t* out_size) {
+  status_declare;
+  sp_time_set_t unique;
+  sp_time_t i;
+  sp_time_t unique_count;
+  unique.size = 0;
+  if (sp_time_set_new(size, (&unique))) {
+    sp_memory_error;
+  };
+  unique_count = 0;
+  for (i = 0; (i < size); i += 1) {
+    if (!sp_time_set_get(unique, (a[i]))) {
+      if (!sp_time_set_add(unique, (a[i]))) {
+        sp_memory_error;
+      };
+      out[unique_count] = a[i];
+      unique_count += 1;
+    };
+  };
+  *out_size = unique_count;
+exit:
+  if (unique.size) {
+    sp_time_set_free(unique);
+  };
+  status_return;
+}

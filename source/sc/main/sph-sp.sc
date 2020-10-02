@@ -266,13 +266,16 @@
 (sph-set-declare-type-nonull sp-sequence-set sp-sequence-set-key-t
   sp-sequence-set-hash sp-sequence-set-equal sp-sequence-set-null 2)
 
+(sph-set-declare-type sp-time-set sp-time-t sph-set-hash-integer sph-set-equal-integer 0 1 2)
+
 (sc-comment "statistics")
 
 (declare
   sp-stat-times-f-t (type (function-pointer uint8-t sp-time-t* sp-time-t sp-sample-t*))
   sp-stat-samples-f-t (type (function-pointer uint8-t sp-sample-t* sp-time-t sp-sample-t*))
   (sp-stat-times-range a size out) (uint8-t sp-time-t* sp-time-t sp-sample-t*)
-  (sp-stat-times-repetition a size out) (uint8-t sp-time-t* sp-time-t sp-sample-t*)
+  (sp-stat-times-repetition a size width out) (uint8-t sp-time-t* sp-time-t sp-time-t sp-sample-t*)
+  (sp-stat-times-repetition-all a size out) (uint8-t sp-time-t* sp-time-t sp-sample-t*)
   (sp-stat-times-mean a size out) (uint8-t sp-time-t* sp-time-t sp-sample-t*)
   (sp-stat-times-deviation a size out) (uint8-t sp-time-t* sp-time-t sp-sample-t*)
   (sp-stat-times-median a size out) (uint8-t sp-time-t* sp-time-t sp-sample-t*)
@@ -280,7 +283,7 @@
   (sp-stat-times-inharmonicity a size out) (uint8-t sp-time-t* sp-time-t sp-sample-t*)
   (sp-stat-times-kurtosis a size out) (uint8-t sp-time-t* sp-time-t sp-sample-t*)
   (sp-stat-times-skewness a size out) (uint8-t sp-time-t* sp-time-t sp-sample-t*)
-  (sp-stat-samples-repetition a size out) (uint8-t sp-sample-t* sp-time-t sp-sample-t*)
+  (sp-stat-samples-repetition-all a size out) (uint8-t sp-sample-t* sp-time-t sp-sample-t*)
   (sp-stat-samples-mean a size out) (uint8-t sp-sample-t* sp-time-t sp-sample-t*)
   (sp-stat-samples-deviation a size out) (uint8-t sp-sample-t* sp-time-t sp-sample-t*)
   (sp-stat-samples-inharmonicity a size out) (uint8-t sp-sample-t* sp-time-t sp-sample-t*)
@@ -289,7 +292,12 @@
   (sp-stat-samples-range a size out) (uint8-t sp-sample-t* sp-time-t sp-sample-t*)
   (sp-stat-samples-kurtosis a size out) (uint8-t sp-sample-t* sp-time-t sp-sample-t*)
   (sp-stat-samples-skewness a size out) (uint8-t sp-sample-t* sp-time-t sp-sample-t*)
-  (sp-samples-scale->times a size max out) (void sp-sample-t* sp-time-t sp-time-t sp-time-t*))
+  (sp-samples-scale->times a size max out) (void sp-sample-t* sp-time-t sp-time-t sp-time-t*)
+  (sp-stat-unique-max size width) (sp-time-t sp-time-t sp-time-t)
+  (sp-stat-unique-all-max size) (sp-time-t sp-time-t)
+  (sp-stat-repetition-all-max size) (sp-time-t sp-time-t)
+  (sp-stat-times-repetition a size width out) (uint8-t sp-time-t* sp-time-t sp-time-t sp-sample-t*)
+  (sp-stat-repetition-max size width) (sp-time-t sp-time-t sp-time-t))
 
 (sc-comment "filter")
 

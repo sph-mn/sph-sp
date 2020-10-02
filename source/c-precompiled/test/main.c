@@ -566,8 +566,6 @@ status_t test_stats() {
   test_helper_assert("center", (feq((4.54), stat_out)));
   sp_stat_times_median(a, size, (&stat_out));
   test_helper_assert("median", (feq((4.5), stat_out)));
-  sp_stat_times_repetition(a, size, (&stat_out));
-  test_helper_assert("repetition", (feq((0.0), stat_out)));
   sp_stat_times_skewness(a, size, (&stat_out));
   test_helper_assert("skewness", (feq((0.0), stat_out)));
   sp_stat_times_kurtosis(a, size, (&stat_out));
@@ -580,17 +578,21 @@ status_t test_stats() {
   test_helper_assert("samples center", (feq((4.66), stat_out)));
   sp_stat_samples_median(as, size, (&stat_out));
   test_helper_assert("samples median", (feq((4.5), stat_out)));
-  sp_stat_samples_repetition(as, size, (&stat_out));
-  test_helper_assert("samples repetition", (feq((0.0), stat_out)));
   sp_stat_samples_skewness(as, size, (&stat_out));
   test_helper_assert("samples skewness", (feq((0.0), stat_out)));
   sp_stat_samples_kurtosis(as, size, (&stat_out));
   test_helper_assert("samples kurtosis", (feq((1.76), stat_out)));
-  /* repetition */
-  sp_stat_times_repetition(repetition_1, size, (&stat_out));
-  test_helper_assert("repetition-1", (feq((1.0), stat_out)));
-  sp_stat_times_repetition(repetition_2, size, (&stat_out));
-  test_helper_assert("repetition-2", (feq((0.0), stat_out)));
+  /* repetition-all */
+  sp_stat_times_repetition_all(repetition_1, size, (&stat_out));
+  test_helper_assert("repetition-1 all", (feq((28.0), stat_out)));
+  test_helper_assert("repetition-1 all max", (feq((sp_stat_repetition_all_max(size)), stat_out)));
+  sp_stat_times_repetition(repetition_1, size, 2, (&stat_out));
+  test_helper_assert("repetition-1", (feq(6, stat_out)));
+  test_helper_assert("repetition-1 max", (feq((sp_stat_repetition_max(size, 2)), stat_out)));
+  sp_stat_times_repetition_all(repetition_2, size, (&stat_out));
+  test_helper_assert("repetition-2 all", (feq((0.0), stat_out)));
+  sp_stat_samples_repetition_all(as, size, (&stat_out));
+  test_helper_assert("samples repetition-all", (feq((0.0), stat_out)));
   /* inharmonicity */
   sp_stat_times_inharmonicity(inhar_1, size, (inhar_results + 0));
   sp_stat_times_inharmonicity(inhar_2, size, (inhar_results + 1));

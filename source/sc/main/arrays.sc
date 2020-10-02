@@ -542,3 +542,22 @@
   "set all values greater than n in array to n"
   (for ((set i 0) (< i size) (set+ i 1))
     (set (array-get out i) (if* (< n (array-get a i)) n (array-get a i)))))
+
+(define (sp-times-deduplicate a size out out-size)
+  (status-t sp-time-t* sp-time-t sp-time-t* sp-time-t*)
+  "writes the unique elements of a to out.
+   out lend by the owner. out size should be equal to a-size.
+   out-size will be set to the number of unique elements"
+  status-declare
+  (declare unique sp-time-set-t i sp-time-t unique-count sp-time-t)
+  (set unique.size 0)
+  (if (sp-time-set-new size &unique) sp-memory-error)
+  (set unique-count 0)
+  (for ((set i 0) (< i size) (set+ i 1))
+    (if (not (sp-time-set-get unique (array-get a i)))
+      (begin
+        (if (not (sp-time-set-add unique (array-get a i))) sp-memory-error)
+        (set (array-get out unique-count) (array-get a i))
+        (set+ unique-count 1))))
+  (set *out-size unique-count)
+  (label exit (if unique.size (sp-time-set-free unique)) status-return))

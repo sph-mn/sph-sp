@@ -331,22 +331,7 @@ sp_time_t sp_time_factorial(sp_time_t a) {
   };
   return (result);
 }
-/** calculate the maximum possible number of overlapping sequences */
-sp_time_t sp_sequence_max(sp_time_t size, sp_time_t min_size) {
-  sp_time_t i;
-  if ((0 == size) || (min_size > size)) {
-    return (0);
-  } else if (min_size == size) {
-    return (1);
-  } else {
-    sp_time_t result = 0;
-    for (i = min_size; (i <= size); i += 1) {
-      result += ((1 + size) - i);
-    };
-    return (result);
-  };
-}
-/** calculate the maximum number of possible distinct selections from a set with length "set-size" */
+/** return the maximum number of possible distinct selections from a set with length "set-size" */
 sp_time_t sp_set_sequence_max(sp_time_t set_size, sp_time_t selection_size) { return (((0 == set_size) ? 0 : sp_time_expt(set_size, selection_size))); }
 sp_time_t sp_permutations_max(sp_time_t set_size, sp_time_t selection_size) { return ((sp_time_factorial(set_size) / (set_size - selection_size))); }
 sp_time_t sp_compositions_max(sp_time_t sum) { return ((sp_time_expt(2, (sum - 1)))); }

@@ -264,15 +264,8 @@
   (while (> a 0) (set result (* result a) a (- a 1)))
   (return result))
 
-(define (sp-sequence-max size min-size) (sp-time-t sp-time-t sp-time-t)
-  "calculate the maximum possible number of overlapping sequences"
-  (declare i sp-time-t)
-  (cond ((or (= 0 size) (> min-size size)) (return 0)) ((= min-size size) (return 1))
-    (else (define result sp-time-t 0)
-      (for ((set i min-size) (<= i size) (set+ i 1)) (set+ result (- (+ 1 size) i))) (return result))))
-
 (define (sp-set-sequence-max set-size selection-size) (sp-time-t sp-time-t sp-time-t)
-  "calculate the maximum number of possible distinct selections from a set with length \"set-size\""
+  "return the maximum number of possible distinct selections from a set with length \"set-size\""
   (return (if* (= 0 set-size) 0 (sp-time-expt set-size selection-size))))
 
 (define (sp-permutations-max set-size selection-size) (sp-time-t sp-time-t sp-time-t)

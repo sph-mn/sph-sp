@@ -273,11 +273,13 @@ typedef struct {
 sp_sequence_set_key_t sp_sequence_set_null = { 0, 0 };
 uint64_t sp_sequence_set_hash(sp_sequence_set_key_t a, sp_time_t memory_size) { (sp_u64_from_array((a.data), (a.size)) % memory_size); }
 sph_set_declare_type_nonull(sp_sequence_set, sp_sequence_set_key_t, sp_sequence_set_hash, sp_sequence_set_equal, sp_sequence_set_null, 2);
+sph_set_declare_type(sp_time_set, sp_time_t, sph_set_hash_integer, sph_set_equal_integer, 0, 1, 2);
 /* statistics */
 typedef uint8_t (*sp_stat_times_f_t)(sp_time_t*, sp_time_t, sp_sample_t*);
 typedef uint8_t (*sp_stat_samples_f_t)(sp_sample_t*, sp_time_t, sp_sample_t*);
 uint8_t sp_stat_times_range(sp_time_t* a, sp_time_t size, sp_sample_t* out);
-uint8_t sp_stat_times_repetition(sp_time_t* a, sp_time_t size, sp_sample_t* out);
+uint8_t sp_stat_times_repetition(sp_time_t* a, sp_time_t size, sp_time_t width, sp_sample_t* out);
+uint8_t sp_stat_times_repetition_all(sp_time_t* a, sp_time_t size, sp_sample_t* out);
 uint8_t sp_stat_times_mean(sp_time_t* a, sp_time_t size, sp_sample_t* out);
 uint8_t sp_stat_times_deviation(sp_time_t* a, sp_time_t size, sp_sample_t* out);
 uint8_t sp_stat_times_median(sp_time_t* a, sp_time_t size, sp_sample_t* out);
@@ -285,7 +287,7 @@ uint8_t sp_stat_times_center(sp_time_t* a, sp_time_t size, sp_sample_t* out);
 uint8_t sp_stat_times_inharmonicity(sp_time_t* a, sp_time_t size, sp_sample_t* out);
 uint8_t sp_stat_times_kurtosis(sp_time_t* a, sp_time_t size, sp_sample_t* out);
 uint8_t sp_stat_times_skewness(sp_time_t* a, sp_time_t size, sp_sample_t* out);
-uint8_t sp_stat_samples_repetition(sp_sample_t* a, sp_time_t size, sp_sample_t* out);
+uint8_t sp_stat_samples_repetition_all(sp_sample_t* a, sp_time_t size, sp_sample_t* out);
 uint8_t sp_stat_samples_mean(sp_sample_t* a, sp_time_t size, sp_sample_t* out);
 uint8_t sp_stat_samples_deviation(sp_sample_t* a, sp_time_t size, sp_sample_t* out);
 uint8_t sp_stat_samples_inharmonicity(sp_sample_t* a, sp_time_t size, sp_sample_t* out);
@@ -295,6 +297,11 @@ uint8_t sp_stat_samples_range(sp_sample_t* a, sp_time_t size, sp_sample_t* out);
 uint8_t sp_stat_samples_kurtosis(sp_sample_t* a, sp_time_t size, sp_sample_t* out);
 uint8_t sp_stat_samples_skewness(sp_sample_t* a, sp_time_t size, sp_sample_t* out);
 void sp_samples_scale_to_times(sp_sample_t* a, sp_time_t size, sp_time_t max, sp_time_t* out);
+sp_time_t sp_stat_unique_max(sp_time_t size, sp_time_t width);
+sp_time_t sp_stat_unique_all_max(sp_time_t size);
+sp_time_t sp_stat_repetition_all_max(sp_time_t size);
+uint8_t sp_stat_times_repetition(sp_time_t* a, sp_time_t size, sp_time_t width, sp_sample_t* out);
+sp_time_t sp_stat_repetition_max(sp_time_t size, sp_time_t width);
 /* filter */
 #define sp_filter_state_t sp_convolution_filter_state_t
 #define sp_filter_state_free sp_convolution_filter_state_free
