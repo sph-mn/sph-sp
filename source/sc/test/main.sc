@@ -528,7 +528,7 @@
 
 (pre-define test-stats-a-size 8)
 
-(define (test-stats) status-t
+(define (test-statistics) status-t
   status-declare
   (declare
     size sp-time-t
@@ -586,6 +586,13 @@
   (test-helper-assert "inharmonicity 1" (feq 0.0 (array-get inhar-results 0)))
   (test-helper-assert "inharmonicity 2" (feq 0.0625 (array-get inhar-results 1)))
   (test-helper-assert "inharmonicity 3" (feq 0.125 (array-get inhar-results 2)))
+  (label exit status-return))
+
+(define (test-statistics-mod) status-t
+  status-declare
+  (declare b (array sp-time-t 20 1 1 1 2 2 2 3 3 3 3 4 4 4 5 5 5 6 6 6 6))
+  (status-require (sp-stat-times-repetition-decrease b 20 2 0))
+  (status-require (sp-stat-times-repetition-increase b 20 2 100))
   (label exit status-return))
 
 (define (test-simple-mappings) status-t
@@ -710,7 +717,8 @@
   (set rs (sp-random-state-new 3))
   (sp-initialise 3 2 _rate)
   (test-helper-test-one test-moving-average)
-  (test-helper-test-one test-stats)
+  (test-helper-test-one test-statistics)
+  (test-helper-test-one test-statistics-mod)
   (test-helper-test-one test-render-block)
   (test-helper-test-one test-wave-event)
   (test-helper-test-one test-wave)

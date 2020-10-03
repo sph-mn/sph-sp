@@ -196,11 +196,6 @@ uint64_t sp_sequence_set_hash(sp_sequence_set_key_t a, sp_time_t memory_size) { 
 sph_set_declare_type_nonull(sp_sequence_set, sp_sequence_set_key_t, sp_sequence_set_hash, sp_sequence_set_equal, sp_sequence_set_null, 2);
 sph_set_declare_type(sp_time_set, sp_time_t, sph_set_hash_integer, sph_set_equal_integer, 0, 1, 2);
 hashtable_declare_type(sp_sequence_hashtable, sp_sequence_set_key_t, sp_time_t, sp_sequence_set_hash, sp_sequence_set_equal, 2);
-typedef struct {
-  sp_time_t count;
-  sp_time_t* sequence;
-} sp_times_counted_sequences_t;
-status_t sp_times_counted_sequences(sp_time_t* a, sp_time_t size, sp_time_t width, sp_time_t limit, sp_times_counted_sequences_t* out, sp_time_t* out_size, sp_time_t* out_repetition);
 sp_sample_t sp_samples_absolute_max(sp_sample_t* in, sp_time_t in_size);
 void sp_samples_add_1(sp_sample_t* a, sp_time_t size, sp_sample_t n, sp_sample_t* out);
 void sp_samples_add(sp_sample_t* a, sp_time_t size, sp_sample_t* b, sp_sample_t* out);
@@ -281,6 +276,16 @@ void sp_times_sequences(sp_time_t base, sp_time_t digits, sp_time_t size, sp_tim
 void sp_times_range(sp_time_t start, sp_time_t end, sp_time_t* out);
 sp_time_t sp_time_round_to_multiple(sp_time_t a, sp_time_t base);
 void sp_times_limit(sp_time_t* a, sp_time_t size, sp_time_t n, sp_time_t* out);
+typedef struct {
+  sp_time_t count;
+  sp_time_t* sequence;
+} sp_times_counted_sequences_t;
+void sp_times_counted_sequences_sort_swap(void* a, ssize_t b, ssize_t c);
+uint8_t sp_times_counted_sequences_sort_less(void* a, ssize_t b, ssize_t c);
+uint8_t sp_times_counted_sequences_sort_greater(void* a, ssize_t b, ssize_t c);
+status_t sp_times_deduplicate(sp_time_t* a, sp_time_t size, sp_time_t* out, sp_time_t* out_size);
+void sp_times_counted_sequences_hash(sp_time_t* a, sp_time_t size, sp_time_t width, sp_sequence_hashtable_t out);
+void sp_times_counted_sequences(sp_sequence_hashtable_t known, sp_time_t limit, sp_times_counted_sequences_t* out, sp_time_t* out_size);
 /* statistics */
 typedef uint8_t (*sp_stat_times_f_t)(sp_time_t*, sp_time_t, sp_sample_t*);
 typedef uint8_t (*sp_stat_samples_f_t)(sp_sample_t*, sp_time_t, sp_sample_t*);
@@ -309,6 +314,8 @@ sp_time_t sp_stat_unique_all_max(sp_time_t size);
 sp_time_t sp_stat_repetition_all_max(sp_time_t size);
 uint8_t sp_stat_times_repetition(sp_time_t* a, sp_time_t size, sp_time_t width, sp_sample_t* out);
 sp_time_t sp_stat_repetition_max(sp_time_t size, sp_time_t width);
+/* statistics-mod */
+status_t sp_stat_times_repetition_increase(sp_time_t* a, sp_time_t size, sp_time_t width, sp_time_t target);
 status_t sp_stat_times_repetition_decrease(sp_time_t* a, sp_time_t size, sp_time_t width, sp_time_t target);
 /* filter */
 #define sp_filter_state_t sp_convolution_filter_state_t

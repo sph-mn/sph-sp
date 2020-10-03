@@ -715,50 +715,35 @@ void sp_times_counted_sequences_sort_swap(void* a, ssize_t b, ssize_t c) {
 }
 uint8_t sp_times_counted_sequences_sort_less(void* a, ssize_t b, ssize_t c) { return (((((sp_times_counted_sequences_t*)(a))[b]).count < (((sp_times_counted_sequences_t*)(a))[c]).count)); }
 uint8_t sp_times_counted_sequences_sort_greater(void* a, ssize_t b, ssize_t c) { return (((((sp_times_counted_sequences_t*)(a))[b]).count > (((sp_times_counted_sequences_t*)(a))[c]).count)); }
-/** limit: only add sequences with count greater than limit to out
-   out-size: number of elements in out
-   out-repetition: counted total repetition */
-status_t sp_times_counted_sequences(sp_time_t* a, sp_time_t size, sp_time_t width, sp_time_t limit, sp_times_counted_sequences_t* out, sp_time_t* out_size, sp_time_t* out_repetition) {
-  status_declare;
+/** associate in hash table $out sub-sequences of $width with their count in $a.
+   memory for $out is lend and should be allocated with sp_sequence_hashtable_new(size - (width - 1), &out) */
+void sp_times_counted_sequences_hash(sp_time_t* a, sp_time_t size, sp_time_t width, sp_sequence_hashtable_t out) {
   sp_time_t i;
   sp_sequence_set_key_t key;
-  sp_sequence_hashtable_t known;
-  sp_time_t out_size_temp;
-  sp_time_t repetition;
   sp_time_t* value;
-  sp_time_t max_unique;
-  max_unique = (size - (width - 1));
-  known.size = 0;
   key.size = width;
-  out_size_temp = 0;
-  repetition = 0;
-  if (sp_sequence_hashtable_new(max_unique, (&known))) {
-    sp_memory_error;
-  };
-  for (i = 0; (i < max_unique); i += 1) {
+  for (i = 0; (i < (size - (width - 1))); i += 1) {
     key.data = ((uint8_t*)((i + a)));
-    value = sp_sequence_hashtable_get(known, key);
+    value = sp_sequence_hashtable_get(out, key);
+    /* full-hashtable-error is ignored */
     if (value) {
       *value += 1;
-      repetition += 1;
     } else {
-      if (!sp_sequence_hashtable_set(known, key, 1)) {
-        sp_memory_error;
-      };
+      sp_sequence_hashtable_set(out, key, 1);
     };
   };
+}
+/** extract counts from a counted-sequences-hash and return as an array of structs */
+void sp_times_counted_sequences(sp_sequence_hashtable_t known, sp_time_t limit, sp_times_counted_sequences_t* out, sp_time_t* out_size) {
+  sp_time_t i;
+  sp_time_t count;
+  count = 0;
   for (i = 0; (i < known.size); i += 1) {
     if ((known.flags)[i] && (limit < (known.values)[i])) {
-      (out[out_size_temp]).count = (known.values)[i];
-      (out[out_size_temp]).sequence = ((sp_time_t*)(((known.keys)[i]).data));
-      out_size_temp += 1;
+      (out[count]).count = (known.values)[i];
+      (out[count]).sequence = ((sp_time_t*)(((known.keys)[i]).data));
+      count += 1;
     };
   };
-  *out_size = out_size_temp;
-  *out_repetition = repetition;
-exit:
-  if (known.size) {
-    sp_sequence_hashtable_free(known);
-  };
-  status_return;
+  *out_size = count;
 }

@@ -582,33 +582,28 @@
     (> (struct-get (array-get (convert-type a sp-times-counted-sequences-t*) b) count)
       (struct-get (array-get (convert-type a sp-times-counted-sequences-t*) c) count))))
 
-(define (sp-times-counted-sequences a size width limit out out-size out-repetition)
-  (status-t sp-time-t* sp-time-t sp-time-t sp-time-t sp-times-counted-sequences-t* sp-time-t* sp-time-t*)
-  "limit: only add sequences with count greater than limit to out
-   out-size: number of elements in out
-   out-repetition: counted total repetition"
-  status-declare
-  (declare
-    i sp-time-t
-    key sp-sequence-set-key-t
-    known sp-sequence-hashtable-t
-    out-size-temp sp-time-t
-    repetition sp-time-t
-    value sp-time-t*
-    max-unique sp-time-t)
-  (set max-unique (- size (- width 1)) known.size 0 key.size width out-size-temp 0 repetition 0)
-  (if (sp-sequence-hashtable-new max-unique &known) sp-memory-error)
-  (for-i i max-unique
-    (set key.data (convert-type (+ i a) uint8-t*) value (sp-sequence-hashtable-get known key))
-    (if value (set+ *value 1 repetition 1)
-      (if (not (sp-sequence-hashtable-set known key 1)) sp-memory-error)))
+(define (sp-times-counted-sequences-hash a size width out)
+  (void sp-time-t* sp-time-t sp-time-t sp-sequence-hashtable-t)
+  "associate in hash table $out sub-sequences of $width with their count in $a.
+   memory for $out is lend and should be allocated with sp_sequence_hashtable_new(size - (width - 1), &out)"
+  (declare i sp-time-t key sp-sequence-set-key-t value sp-time-t*)
+  (set key.size width)
+  (for-i i (- size (- width 1))
+    (set key.data (convert-type (+ i a) uint8-t*) value (sp-sequence-hashtable-get out key))
+    (sc-comment "full-hashtable-error is ignored")
+    (if value (set+ *value 1) (sp-sequence-hashtable-set out key 1))))
+
+(define (sp-times-counted-sequences known limit out out-size)
+  (void sp-sequence-hashtable-t sp-time-t sp-times-counted-sequences-t* sp-time-t*)
+  "extract counts from a counted-sequences-hash and return as an array of structs"
+  (declare i sp-time-t count sp-time-t)
+  (set count 0)
   (for-i i known.size
     (if (and (array-get known.flags i) (< limit (array-get known.values i)))
       (begin
         (set
-          (struct-get (array-get out out-size-temp) count) (array-get known.values i)
-          (struct-get (array-get out out-size-temp) sequence)
+          (struct-get (array-get out count) count) (array-get known.values i)
+          (struct-get (array-get out count) sequence)
           (convert-type (struct-get (array-get known.keys i) data) sp-time-t*))
-        (set+ out-size-temp 1))))
-  (set *out-size out-size-temp *out-repetition repetition)
-  (label exit (if known.size (sp-sequence-hashtable-free known)) status-return))
+        (set+ count 1))))
+  (set *out-size count))

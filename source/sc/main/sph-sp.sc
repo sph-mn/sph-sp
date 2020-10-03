@@ -179,10 +179,6 @@
   sp-time-t sp-sequence-set-hash sp-sequence-set-equal 2)
 
 (declare
-  sp-times-counted-sequences-t (type (struct (count sp-time-t) (sequence sp-time-t*)))
-  (sp-times-counted-sequences a size width limit out out-size out-repetition)
-  (status-t sp-time-t* sp-time-t
-    sp-time-t sp-time-t sp-times-counted-sequences-t* sp-time-t* sp-time-t*)
   (sp-samples-absolute-max in in-size) (sp-sample-t sp-sample-t* sp-time-t)
   (sp-samples-add-1 a size n out) (void sp-sample-t* sp-time-t sp-sample-t sp-sample-t*)
   (sp-samples-add a size b out) (void sp-sample-t* sp-time-t sp-sample-t* sp-sample-t*)
@@ -276,7 +272,16 @@
   (sp-times-sequences base digits size out) (void sp-time-t sp-time-t sp-time-t sp-time-t*)
   (sp-times-range start end out) (void sp-time-t sp-time-t sp-time-t*)
   (sp-time-round-to-multiple a base) (sp-time-t sp-time-t sp-time-t)
-  (sp-times-limit a size n out) (void sp-time-t* sp-time-t sp-time-t sp-time-t*))
+  (sp-times-limit a size n out) (void sp-time-t* sp-time-t sp-time-t sp-time-t*)
+  sp-times-counted-sequences-t (type (struct (count sp-time-t) (sequence sp-time-t*)))
+  (sp-times-counted-sequences-sort-swap a b c) (void void* ssize-t ssize-t)
+  (sp-times-counted-sequences-sort-less a b c) (uint8-t void* ssize-t ssize-t)
+  (sp-times-counted-sequences-sort-greater a b c) (uint8-t void* ssize-t ssize-t)
+  (sp-times-deduplicate a size out out-size) (status-t sp-time-t* sp-time-t sp-time-t* sp-time-t*)
+  (sp-times-counted-sequences-hash a size width out)
+  (void sp-time-t* sp-time-t sp-time-t sp-sequence-hashtable-t)
+  (sp-times-counted-sequences known limit out out-size)
+  (void sp-sequence-hashtable-t sp-time-t sp-times-counted-sequences-t* sp-time-t*))
 
 (sc-comment "statistics")
 
@@ -307,7 +312,13 @@
   (sp-stat-unique-all-max size) (sp-time-t sp-time-t)
   (sp-stat-repetition-all-max size) (sp-time-t sp-time-t)
   (sp-stat-times-repetition a size width out) (uint8-t sp-time-t* sp-time-t sp-time-t sp-sample-t*)
-  (sp-stat-repetition-max size width) (sp-time-t sp-time-t sp-time-t)
+  (sp-stat-repetition-max size width) (sp-time-t sp-time-t sp-time-t))
+
+(sc-comment "statistics-mod")
+
+(declare
+  (sp-stat-times-repetition-increase a size width target)
+  (status-t sp-time-t* sp-time-t sp-time-t sp-time-t)
   (sp-stat-times-repetition-decrease a size width target)
   (status-t sp-time-t* sp-time-t sp-time-t sp-time-t))
 

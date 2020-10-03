@@ -545,7 +545,7 @@ exit:
   status_return;
 }
 #define test_stats_a_size 8
-status_t test_stats() {
+status_t test_statistics() {
   status_declare;
   sp_time_t size;
   sp_time_t a[test_stats_a_size] = { 1, 2, 3, 4, 5, 6, 7, 8 };
@@ -601,6 +601,14 @@ status_t test_stats() {
   test_helper_assert("inharmonicity 1", (feq((0.0), (inhar_results[0]))));
   test_helper_assert("inharmonicity 2", (feq((0.0625), (inhar_results[1]))));
   test_helper_assert("inharmonicity 3", (feq((0.125), (inhar_results[2]))));
+exit:
+  status_return;
+}
+status_t test_statistics_mod() {
+  status_declare;
+  sp_time_t b[20] = { 1, 1, 1, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 5, 5, 5, 6, 6, 6, 6 };
+  status_require((sp_stat_times_repetition_decrease(b, 20, 2, 0)));
+  status_require((sp_stat_times_repetition_increase(b, 20, 2, 100)));
 exit:
   status_return;
 }
@@ -746,7 +754,8 @@ int main() {
   rs = sp_random_state_new(3);
   sp_initialise(3, 2, _rate);
   test_helper_test_one(test_moving_average);
-  test_helper_test_one(test_stats);
+  test_helper_test_one(test_statistics);
+  test_helper_test_one(test_statistics_mod);
   test_helper_test_one(test_render_block);
   test_helper_test_one(test_wave_event);
   test_helper_test_one(test_wave);
