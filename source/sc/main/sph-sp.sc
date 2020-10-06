@@ -524,6 +524,7 @@
   sp-path-size spline-path-size
   sp-path-free spline-path-free
   sp-path-get spline-path-get
+  sp-path-set spline-path-set
   (sp-path-times-constant out size value)
   (sp-path-times-2 out size (sp-path-move 0 value) (sp-path-constant))
   (sp-path-samples-constant out size value)

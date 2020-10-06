@@ -72,8 +72,8 @@
 
 (define (sp-path-derivation path x-changes y-changes index out)
   (status-t sp-path-t sp-sample-t** sp-sample-t** sp-time-t sp-path-t*)
-  "changes contains per point an array of values which will be multiplied with x or y value.
-   each an array with the layout ((number:derivation_change ...):point_change ...).
+  "changes contains per point an array of values which will be multiplied with x or y values for index.
+   each is an array with the layout ((number:derivation_change ...):point_change ...).
    index is the current derivation_change index.
    caveats:
    * changes for segments of type constant or type path are not to be included

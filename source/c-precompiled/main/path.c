@@ -78,8 +78,8 @@ status_t sp_path_samples_4(sp_sample_t** out, sp_time_t size, sp_path_segment_t 
   spline_path_set((&path), s, 4);
   return ((sp_path_samples(path, size, out)));
 }
-/** changes contains per point an array of values which will be multiplied with x or y value.
-   each an array with the layout ((number:derivation_change ...):point_change ...).
+/** changes contains per point an array of values which will be multiplied with x or y values for index.
+   each is an array with the layout ((number:derivation_change ...):point_change ...).
    index is the current derivation_change index.
    caveats:
    * changes for segments of type constant or type path are not to be included
