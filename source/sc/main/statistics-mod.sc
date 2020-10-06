@@ -1,6 +1,42 @@
 (sc-comment "routines that modify arrays to change statistical values")
 (sc-include "./sc-macros")
 
+(define (sp-stat-times-harmonicity-increase a size base fraction)
+  (void sp-time-t* sp-time-t sp-time-t sp-sample-t)
+  "round values fraction distance to nearest multiple of base.
+   for example, fraction 1.0 rounds fully, fraction 0.0 does not round at all, fraction 0.5 rounds half-way"
+  (declare i sp-time-t value sp-time-t nearest sp-time-t)
+  (for-i i size
+    (set
+      value (array-get a i)
+      nearest (* (/ (- (+ value base) 1) base) base)
+      (array-get a i)
+      (if* (> value nearest) (- value (* fraction (- value nearest)))
+        (+ value (* fraction (- nearest value)))))))
+
+(define (sp-stat-times-harmonicity-decrease a size base fraction)
+  (void sp-time-t* sp-time-t sp-time-t sp-sample-t)
+  "the nearer values are to the multiple, the further move them randomly up to half base away"
+  (declare
+    i sp-time-t
+    value sp-time-t
+    nearest sp-time-t
+    amount sp-time-t
+    distance-ratio sp-sample-t)
+  (for-i i size
+    (set
+      value (array-get a i)
+      nearest (* (/ (- (+ value base) 1) base) base)
+      distance-ratio
+      (/ (- base (sp-absolute-difference value nearest)) (convert-type base sp-sample-t))
+      amount
+      (* fraction distance-ratio (+ 1 (sp-time-random-bounded &sp-default-random-state (/ base 2)))))
+    (if (or (> value nearest) (< value amount)) (set (array-get a i) (+ value amount))
+      (if (< value nearest) (set (array-get a i) (- value amount))
+        (if (bit-and 1 (sp-time-random &sp-default-random-state))
+          (set (array-get a i) (- value amount))
+          (set (array-get a i) (+ value amount)))))))
+
 (define (sp-stat-times-repetition-increase a size width target)
   (status-t sp-time-t* sp-time-t sp-time-t sp-time-t)
   "try to increase repetition of subseqences of size $width to $target or nearest possible.

@@ -1,4 +1,43 @@
 /* routines that modify arrays to change statistical values */
+/** round values fraction distance to nearest multiple of base.
+   for example, fraction 1.0 rounds fully, fraction 0.0 does not round at all, fraction 0.5 rounds half-way */
+void sp_stat_times_harmonicity_increase(sp_time_t* a, sp_time_t size, sp_time_t base, sp_sample_t fraction) {
+  sp_time_t i;
+  sp_time_t value;
+  sp_time_t nearest;
+  for (i = 0; (i < size); i += 1) {
+    value = a[i];
+    nearest = ((((value + base) - 1) / base) * base);
+    a[i] = ((value > nearest) ? (value - (fraction * (value - nearest))) : (value + (fraction * (nearest - value))));
+  };
+}
+/** the nearer values are to the multiple, the further move them randomly up to half base away */
+void sp_stat_times_harmonicity_decrease(sp_time_t* a, sp_time_t size, sp_time_t base, sp_sample_t fraction) {
+  sp_time_t i;
+  sp_time_t value;
+  sp_time_t nearest;
+  sp_time_t amount;
+  sp_sample_t distance_ratio;
+  for (i = 0; (i < size); i += 1) {
+    value = a[i];
+    nearest = ((((value + base) - 1) / base) * base);
+    distance_ratio = ((base - sp_absolute_difference(value, nearest)) / ((sp_sample_t)(base)));
+    amount = (fraction * distance_ratio * (1 + sp_time_random_bounded((&sp_default_random_state), (base / 2))));
+    if ((value > nearest) || (value < amount)) {
+      a[i] = (value + amount);
+    } else {
+      if (value < nearest) {
+        a[i] = (value - amount);
+      } else {
+        if (1 & sp_time_random((&sp_default_random_state))) {
+          a[i] = (value - amount);
+        } else {
+          a[i] = (value + amount);
+        };
+      };
+    };
+  };
+}
 /** try to increase repetition of subseqences of size $width to $target or nearest possible.
    $a is modified directly.
    uncommon sequences are replaced by more common ones */

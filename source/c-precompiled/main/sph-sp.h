@@ -116,6 +116,9 @@
 #define sp_sine_state_2(size, frq, amp1, amp2, phs1, phs2) sp_wave_state_2(sp_sine_table, sp_rate, size, frq, amp1, amp2, phs1, phs2)
 #define sp_max(a, b) ((a > b) ? a : b)
 #define sp_min(a, b) ((a < b) ? a : b)
+#define sp_absolute_difference(a, b) ((a > b) ? (a - b) : (b - a))
+#define sp_no_underflow_subtract(a, b) ((a > b) ? (a - b) : 0)
+#define sp_no_zero_divide(a, b) ((0 == b) ? 0 : (a / b))
 typedef struct {
   sp_channels_t channels;
   sp_time_t size;
@@ -286,6 +289,10 @@ uint8_t sp_times_counted_sequences_sort_greater(void* a, ssize_t b, ssize_t c);
 status_t sp_times_deduplicate(sp_time_t* a, sp_time_t size, sp_time_t* out, sp_time_t* out_size);
 void sp_times_counted_sequences_hash(sp_time_t* a, sp_time_t size, sp_time_t width, sp_sequence_hashtable_t out);
 void sp_times_counted_sequences(sp_sequence_hashtable_t known, sp_time_t limit, sp_times_counted_sequences_t* out, sp_time_t* out_size);
+void sp_times_remove(sp_time_t* in, sp_time_t size, sp_time_t index, sp_time_t count, sp_time_t* out);
+void sp_times_insert_space(sp_time_t* in, sp_time_t size, sp_time_t index, sp_time_t count, sp_time_t* out);
+void sp_times_subdivide(sp_time_t* a, sp_time_t size, sp_time_t index, sp_time_t count, sp_time_t* out);
+void sp_times_blend(sp_time_t* a, sp_time_t* b, sp_sample_t* coefficients, sp_time_t size, sp_time_t* out);
 /* statistics */
 typedef uint8_t (*sp_stat_times_f_t)(sp_time_t*, sp_time_t, sp_sample_t*);
 typedef uint8_t (*sp_stat_samples_f_t)(sp_sample_t*, sp_time_t, sp_sample_t*);
@@ -315,6 +322,8 @@ sp_time_t sp_stat_repetition_all_max(sp_time_t size);
 uint8_t sp_stat_times_repetition(sp_time_t* a, sp_time_t size, sp_time_t width, sp_sample_t* out);
 sp_time_t sp_stat_repetition_max(sp_time_t size, sp_time_t width);
 /* statistics-mod */
+void sp_stat_times_harmonicity_increase(sp_time_t* a, sp_time_t size, sp_time_t base, sp_sample_t fraction);
+void sp_stat_times_harmonicity_decrease(sp_time_t* a, sp_time_t size, sp_time_t base, sp_sample_t fraction);
 status_t sp_stat_times_repetition_increase(sp_time_t* a, sp_time_t size, sp_time_t width, sp_time_t target);
 status_t sp_stat_times_repetition_decrease(sp_time_t* a, sp_time_t size, sp_time_t width, sp_time_t target);
 /* filter */

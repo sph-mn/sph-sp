@@ -60,9 +60,6 @@
   (for ((set i 0) (< i in-size) (set i (+ 1 i))) (set* (array-get out i) correction)))
 
 (pre-define
-  (absolute-difference a b) (if* (> a b) (- a b) (- b a))
-  (no-underflow-subtract a b) (if* (> a b) (- a b) 0)
-  (no-zero-divide a b) (if* (= 0 b) 0 (/ a b))
   (define-value-functions prefix value-t)
   (begin
     "functions that work on single sp-sample-t and sp-time-t"
@@ -142,7 +139,7 @@
 (define-array-combinator sp-samples-add sp-sample-t (+ (array-get a i) (array-get b i)))
 
 (define-array-combinator sp-times-subtract sp-time-t
-  (no-underflow-subtract (array-get a i) (array-get b i)))
+  (sp-no-underflow-subtract (array-get a i) (array-get b i)))
 
 (define-array-combinator sp-samples-subtract sp-sample-t (- (array-get a i) (array-get b i)))
 (define-array-combinator sp-times-multiply sp-time-t (* (array-get a i) (array-get b i)))
@@ -151,7 +148,10 @@
 (define-array-combinator sp-samples-divide sp-sample-t (/ (array-get a i) (array-get b i)))
 (define-array-combinator-1 sp-times-add-1 sp-time-t (+ (array-get a i) n))
 (define-array-combinator-1 sp-samples-add-1 sp-sample-t (+ (array-get a i) n))
-(define-array-combinator-1 sp-times-subtract-1 sp-time-t (no-underflow-subtract (array-get a i) n))
+
+(define-array-combinator-1 sp-times-subtract-1 sp-time-t
+  (sp-no-underflow-subtract (array-get a i) n))
+
 (define-array-combinator-1 sp-samples-subtract-1 sp-sample-t (- (array-get a i) n))
 (define-array-combinator-1 sp-times-multiply-1 sp-time-t (* (array-get a i) n))
 (define-array-combinator-1 sp-times-divide-1 sp-time-t (/ (array-get a i) n))
@@ -217,7 +217,7 @@
   "a.size must be > 1. a.size minus 1 elements will be written to out"
   (declare i sp-time-t)
   (for ((set i 1) (< i size) (set+ i 1))
-    (set (array-get out (- i 1)) (absolute-difference (array-get a i) (array-get a (- i 1))))))
+    (set (array-get out (- i 1)) (sp-absolute-difference (array-get a i) (array-get a (- i 1))))))
 
 (define (sp-times-cusum a size out) (void sp-time-t* sp-time-t sp-time-t*)
   "calculate cumulative sums from the given numbers.
@@ -607,3 +607,40 @@
           (convert-type (struct-get (array-get known.keys i) data) sp-time-t*))
         (set+ count 1))))
   (set *out-size count))
+
+(define (sp-times-remove in size index count out)
+  (void sp-time-t* sp-time-t sp-time-t sp-time-t sp-time-t*)
+  (cond ((= 0 index) (memcpy out (+ in count) (* (- size count) (sizeof sp-time-t))))
+    ((= (- size 1) index) (memcpy out in (* (- size count) (sizeof sp-time-t))))
+    (else (memcpy out in (* index (sizeof sp-time-t)))
+      (memcpy (+ out index) (+ in index count) (* (- size index count) (sizeof sp-time-t))))))
+
+(define (sp-times-insert-space in size index count out)
+  (void sp-time-t* sp-time-t sp-time-t sp-time-t sp-time-t*)
+  "insert unset elements before index"
+  (if (= 0 index) (memcpy (+ out count) in (* size (sizeof sp-time-t)))
+    (begin
+      (memcpy out in (* index (sizeof sp-time-t)))
+      (memcpy (+ out index count) (+ in index) (* (- size index) (sizeof sp-time-t))))))
+
+(define (sp-times-subdivide a size index count out)
+  (void sp-time-t* sp-time-t sp-time-t sp-time-t sp-time-t*)
+  "insert equally spaced values between the two values at $index and $index + 1.
+   a:(4 16) index:0 count:3 -> out:(4 7 10 13 16)
+   the second value must be greater than the first.
+   $index must not be the last index.
+   $out size must be at least $size + $count"
+  (declare i sp-time-t interval sp-time-t value sp-time-t previous sp-time-t)
+  (sp-times-insert-space a size (+ index 1) count out)
+  (set interval (- (array-get a (+ index 1)) (array-get a index)) value (/ interval (+ count 1)))
+  (for ((set i (+ index 1)) (< i (+ index (+ count 1))) (set+ i 1))
+    (set (array-get out i) (+ (array-get out (- i 1)) value))))
+
+(define (sp-times-blend a b coefficients size out)
+  (void sp-time-t* sp-time-t* sp-sample-t* sp-time-t sp-time-t*)
+  "interpolate values between $a and $b with interpolation distance 0..1 of $coefficients"
+  (declare i sp-time-t)
+  (for-i i size
+    (set (array-get out i)
+      (sp-cheap-round-positive
+        (sp-time-interpolate-linear (array-get a i) (array-get b i) (array-get coefficients i))))))

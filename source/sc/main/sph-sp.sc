@@ -68,7 +68,10 @@
   (sp-sine-state-2 size frq amp1 amp2 phs1 phs2)
   (sp-wave-state-2 sp-sine-table sp-rate size frq amp1 amp2 phs1 phs2)
   (sp-max a b) (if* (> a b) a b)
-  (sp-min a b) (if* (< a b) a b))
+  (sp-min a b) (if* (< a b) a b)
+  (sp-absolute-difference a b) (if* (> a b) (- a b) (- b a))
+  (sp-no-underflow-subtract a b) (if* (> a b) (- a b) 0)
+  (sp-no-zero-divide a b) (if* (= 0 b) 0 (/ a b)))
 
 (declare
   sp-block-t
@@ -281,7 +284,15 @@
   (sp-times-counted-sequences-hash a size width out)
   (void sp-time-t* sp-time-t sp-time-t sp-sequence-hashtable-t)
   (sp-times-counted-sequences known limit out out-size)
-  (void sp-sequence-hashtable-t sp-time-t sp-times-counted-sequences-t* sp-time-t*))
+  (void sp-sequence-hashtable-t sp-time-t sp-times-counted-sequences-t* sp-time-t*)
+  (sp-times-remove in size index count out)
+  (void sp-time-t* sp-time-t sp-time-t sp-time-t sp-time-t*)
+  (sp-times-insert-space in size index count out)
+  (void sp-time-t* sp-time-t sp-time-t sp-time-t sp-time-t*)
+  (sp-times-subdivide a size index count out)
+  (void sp-time-t* sp-time-t sp-time-t sp-time-t sp-time-t*)
+  (sp-times-blend a b coefficients size out)
+  (void sp-time-t* sp-time-t* sp-sample-t* sp-time-t sp-time-t*))
 
 (sc-comment "statistics")
 
@@ -317,6 +328,10 @@
 (sc-comment "statistics-mod")
 
 (declare
+  (sp-stat-times-harmonicity-increase a size base fraction)
+  (void sp-time-t* sp-time-t sp-time-t sp-sample-t)
+  (sp-stat-times-harmonicity-decrease a size base fraction)
+  (void sp-time-t* sp-time-t sp-time-t sp-sample-t)
   (sp-stat-times-repetition-increase a size width target)
   (status-t sp-time-t* sp-time-t sp-time-t sp-time-t)
   (sp-stat-times-repetition-decrease a size width target)

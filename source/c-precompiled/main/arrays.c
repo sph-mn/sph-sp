@@ -67,9 +67,6 @@ void sp_samples_set_unity_gain(sp_sample_t* in, sp_time_t in_size, sp_sample_t* 
     out[i] *= correction;
   };
 }
-#define absolute_difference(a, b) ((a > b) ? (a - b) : (b - a))
-#define no_underflow_subtract(a, b) ((a > b) ? (a - b) : 0)
-#define no_zero_divide(a, b) ((0 == b) ? 0 : (a / b))
 /** functions that work on single sp-sample-t and sp-time-t */
 #define define_value_functions(prefix, value_t) \
   void prefix##_sort_swap(void* a, ssize_t b, ssize_t c) { \
@@ -185,7 +182,7 @@ define_value_functions(sp_times, sp_time_t)
           define_array_mapper(sp_samples_square, sp_sample_t, (a[i] * a[i]))
             define_array_combinator(sp_times_add, sp_time_t, (a[i] + b[i]))
               define_array_combinator(sp_samples_add, sp_sample_t, (a[i] + b[i]))
-                define_array_combinator(sp_times_subtract, sp_time_t, (no_underflow_subtract((a[i]), (b[i]))))
+                define_array_combinator(sp_times_subtract, sp_time_t, (sp_no_underflow_subtract((a[i]), (b[i]))))
                   define_array_combinator(sp_samples_subtract, sp_sample_t, (a[i] - b[i]))
                     define_array_combinator(sp_times_multiply, sp_time_t, (a[i] * b[i]))
                       define_array_combinator(sp_samples_multiply, sp_sample_t, (a[i] * b[i]))
@@ -193,7 +190,7 @@ define_value_functions(sp_times, sp_time_t)
                           define_array_combinator(sp_samples_divide, sp_sample_t, (a[i] / b[i]))
                             define_array_combinator_1(sp_times_add_1, sp_time_t, (a[i] + n))
                               define_array_combinator_1(sp_samples_add_1, sp_sample_t, (a[i] + n))
-                                define_array_combinator_1(sp_times_subtract_1, sp_time_t, (no_underflow_subtract((a[i]), n)))
+                                define_array_combinator_1(sp_times_subtract_1, sp_time_t, (sp_no_underflow_subtract((a[i]), n)))
                                   define_array_combinator_1(sp_samples_subtract_1, sp_sample_t, (a[i] - n))
                                     define_array_combinator_1(sp_times_multiply_1, sp_time_t, (a[i] * n))
                                       define_array_combinator_1(sp_times_divide_1, sp_time_t, (a[i] / n))
@@ -254,7 +251,7 @@ exit:
 void sp_times_differences(sp_time_t* a, sp_time_t size, sp_time_t* out) {
   sp_time_t i;
   for (i = 1; (i < size); i += 1) {
-    out[(i - 1)] = absolute_difference((a[i]), (a[(i - 1)]));
+    out[(i - 1)] = sp_absolute_difference((a[i]), (a[(i - 1)]));
   };
 }
 /** calculate cumulative sums from the given numbers.
@@ -746,4 +743,47 @@ void sp_times_counted_sequences(sp_sequence_hashtable_t known, sp_time_t limit, 
     };
   };
   *out_size = count;
+}
+void sp_times_remove(sp_time_t* in, sp_time_t size, sp_time_t index, sp_time_t count, sp_time_t* out) {
+  if (0 == index) {
+    memcpy(out, (in + count), ((size - count) * sizeof(sp_time_t)));
+  } else if ((size - 1) == index) {
+    memcpy(out, in, ((size - count) * sizeof(sp_time_t)));
+  } else {
+    memcpy(out, in, (index * sizeof(sp_time_t)));
+    memcpy((out + index), (in + index + count), ((size - index - count) * sizeof(sp_time_t)));
+  };
+}
+/** insert unset elements before index */
+void sp_times_insert_space(sp_time_t* in, sp_time_t size, sp_time_t index, sp_time_t count, sp_time_t* out) {
+  if (0 == index) {
+    memcpy((out + count), in, (size * sizeof(sp_time_t)));
+  } else {
+    memcpy(out, in, (index * sizeof(sp_time_t)));
+    memcpy((out + index + count), (in + index), ((size - index) * sizeof(sp_time_t)));
+  };
+}
+/** insert equally spaced values between the two values at $index and $index + 1.
+   a:(4 16) index:0 count:3 -> out:(4 7 10 13 16)
+   the second value must be greater than the first.
+   $index must not be the last index.
+   $out size must be at least $size + $count */
+void sp_times_subdivide(sp_time_t* a, sp_time_t size, sp_time_t index, sp_time_t count, sp_time_t* out) {
+  sp_time_t i;
+  sp_time_t interval;
+  sp_time_t value;
+  sp_time_t previous;
+  sp_times_insert_space(a, size, (index + 1), count, out);
+  interval = (a[(index + 1)] - a[index]);
+  value = (interval / (count + 1));
+  for (i = (index + 1); (i < (index + (count + 1))); i += 1) {
+    out[i] = (out[(i - 1)] + value);
+  };
+}
+/** interpolate values between $a and $b with interpolation distance 0..1 of $coefficients */
+void sp_times_blend(sp_time_t* a, sp_time_t* b, sp_sample_t* coefficients, sp_time_t size, sp_time_t* out) {
+  sp_time_t i;
+  for (i = 0; (i < size); i += 1) {
+    out[i] = sp_cheap_round_positive((sp_time_interpolate_linear((a[i]), (b[i]), (coefficients[i]))));
+  };
 }
