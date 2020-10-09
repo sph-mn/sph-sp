@@ -165,7 +165,7 @@ status_t test_file() {
   status_declare;
   sp_block_t block_2;
   sp_block_t block;
-  sp_channels_t channel_count;
+  sp_channel_count_t channel_count;
   sp_time_t channel;
   sp_file_t file;
   sp_time_t len;
@@ -426,19 +426,13 @@ exit:
 status_t test_wave() {
   status_declare;
   sp_wave_state_t state;
-  sp_block_t out1;
-  sp_block_t out2;
+  sp_sample_t out[test_wave_duration];
   sp_time_t frq[4] = { 48000, 48000, 48000, 48000 };
   sp_sample_t amp[4] = { 0.1, 0.2, 0.3, 0.4 };
-  status_require((sp_block_new(test_wave_channels, test_wave_duration, (&out1))));
-  status_require((sp_block_new(test_wave_channels, test_wave_duration, (&out2))));
-  state = sp_wave_state_2(sp_sine_table, _rate, test_wave_duration, frq, amp, amp, 0, 0);
-  sp_wave(0, test_wave_duration, (&state), out1);
-  sp_wave(0, test_wave_duration, (&state), out2);
-  test_helper_assert("zeros", ((0 == (out1.samples)[0][0]) && ((out1.samples)[0][0] == (out1.samples)[0][2])));
-  test_helper_assert("non-zeros", (!(0 == (out1.samples)[0][1]) && !(0 == (out1.samples)[0][3])));
-  sp_block_free(out1);
-  sp_block_free(out2);
+  state = sp_wave_state(sp_sine_table, _rate, test_wave_duration, frq, amp, 0);
+  sp_wave(0, test_wave_duration, (&state), out);
+  test_helper_assert("zeros", (0 == out[0]));
+  test_helper_assert("non-zeros", (!(0 == out[1])));
 exit:
   status_return;
 }
@@ -458,7 +452,7 @@ status_t test_wave_event() {
     amp1[i] = 1;
     amp2[i] = 0.5;
   };
-  status_require((sp_wave_event(0, sp_wave_event_duration, (sp_wave_state_2(sp_sine_table, _rate, sp_wave_event_duration, frq, amp1, amp2, 0, 0)), (&event))));
+  status_require((sp_wave_event(0, sp_wave_event_duration, (sp_wave_event_state_2((sp_wave_state(sp_sine_table, _rate, sp_wave_event_duration, frq, amp1, 0)), (sp_wave_state(sp_sine_table, _rate, sp_wave_event_duration, frq, amp2, 0)))), (&event))));
   status_require((sp_block_new(2, sp_wave_event_duration, (&out))));
   (event.f)(0, 30, out, (&event));
   (event.f)(30, sp_wave_event_duration, (sp_block_with_offset(out, 30)), (&event));
@@ -481,10 +475,10 @@ status_t test_render_block() {
     frq[i] = 1500;
     amp[i] = 1;
   };
-  status_require((sp_wave_event(0, sp_wave_event_duration, (sp_sine_state_2(sp_wave_event_duration, frq, amp, amp, 0, 0)), (&event))));
-  status_require((sp_block_new(2, sp_wave_event_duration, (&out))));
-  sp_render_file(event, 0, sp_wave_event_duration, rc, ("/tmp/test.wav"));
-  /* (sp-render-block event 0 sp-wave-event-duration rc &out) */
+  status_require((sp_wave_event(0, sp_wave_event_duration, (sp_wave_event_state_1((sp_sine_state(sp_wave_event_duration, frq, amp, 0)))), (&event))));
+  status_require((sp_block_new(1, sp_wave_event_duration, (&out))));
+  /* (sp-render-file event 0 sp-wave-event-duration rc /tmp/test.wav) */
+  sp_render_block(event, 0, sp_wave_event_duration, rc, (&out));
   /* (sp-block-plot-1 out) */
   sp_block_free(out);
   (event.free)((&event));
@@ -604,14 +598,6 @@ status_t test_statistics() {
 exit:
   status_return;
 }
-status_t test_statistics_mod() {
-  status_declare;
-  sp_time_t b[20] = { 1, 1, 1, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 5, 5, 5, 6, 6, 6, 6 };
-  status_require((sp_stat_times_repetition_decrease(b, 20, 2, 0)));
-  status_require((sp_stat_times_repetition_increase(b, 20, 2, 100)));
-exit:
-  status_return;
-}
 status_t test_simple_mappings() {
   status_declare;
   sp_time_t size;
@@ -715,7 +701,7 @@ status_t test_sp_seq_parallel() {
   status_require((sp_path_samples_2((&amp), size, (sp_path_move(0, (1.0))), (sp_path_constant()))));
   status_require((sp_path_times_2((&frq), size, (sp_path_move(0, 200)), (sp_path_constant()))));
   for (i = 0; (i < 10); i += 1) {
-    status_require((sp_wave_event(0, size, (sp_sine_state_1(size, frq, amp, 1)), (events + i))));
+    status_require((sp_wave_event(0, size, (sp_wave_event_state_1((sp_sine_state(size, frq, amp, 1)))), (events + i))));
   };
   status_require((sp_block_new(1, size, (&block))));
   step_size = _rate;
@@ -735,16 +721,16 @@ exit:
 status_t test_temp() {
   status_declare;
   sp_wave_state_t state;
-  sp_block_t out;
+  sp_sample_t* out;
   sp_time_t* frq;
   sp_sample_t* amp;
-  status_require((sp_block_new(1, temp_size, (&out))));
+  status_require((sp_samples_new(temp_size, (&out))));
   status_require((sp_path_times_2((&frq), temp_size, (sp_path_move(0, 2000)), (sp_path_constant()))));
   status_require((sp_path_samples_2((&amp), temp_size, (sp_path_move(0, (1.0))), (sp_path_constant()))));
-  state = sp_sine_state_1(temp_size, frq, amp, 0);
+  state = sp_sine_state(temp_size, frq, amp, 0);
   sp_wave(0, temp_size, (&state), out);
-  sp_samples_display(((out.samples)[0]), temp_size);
-  sp_block_free(out);
+  sp_samples_display(out, temp_size);
+  free(out);
 exit:
   status_return;
 }
@@ -755,7 +741,6 @@ int main() {
   sp_initialise(3, 2, _rate);
   test_helper_test_one(test_moving_average);
   test_helper_test_one(test_statistics);
-  test_helper_test_one(test_statistics_mod);
   test_helper_test_one(test_render_block);
   test_helper_test_one(test_wave_event);
   test_helper_test_one(test_wave);

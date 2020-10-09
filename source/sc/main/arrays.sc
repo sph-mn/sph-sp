@@ -188,7 +188,7 @@
 
 (sc-comment "samples")
 
-(define (sp-samples-copy a size out) (status-t sp-sample-t* sp-time-t sp-sample-t**)
+(define (sp-samples-duplicate a size out) (status-t sp-sample-t* sp-time-t sp-sample-t**)
   status-declare
   (declare temp sp-sample-t*)
   (status-require (sp-samples-new size &temp))
@@ -206,7 +206,7 @@
 
 (sc-comment "times")
 
-(define (sp-times-copy a size out) (status-t sp-time-t sp-time-t sp-time-t**)
+(define (sp-times-duplicate a size out) (status-t sp-time-t sp-time-t sp-time-t**)
   status-declare
   (declare temp sp-time-t*)
   (status-require (sp-times-new size &temp))
@@ -365,8 +365,7 @@
   (define max sp-sample-t (sp-samples-absolute-max a size))
   (sp-samples-multiply-1 a size (/ n max) a))
 
-(define (sp-samples-scale-y-sum a size n out)
-  (void sp-sample-t* sp-time-t sp-sample-t sp-sample-t*)
+(define (sp-samples-scale-sum a size n out) (void sp-sample-t* sp-time-t sp-sample-t sp-sample-t*)
   "adjust all values, keeping relative sizes, so that the sum is n.
    a/out can be the same pointer"
   (define sum sp-sample-t (sp-samples-sum a size))
@@ -636,9 +635,18 @@
   (for ((set i (+ index 1)) (< i (+ index (+ count 1))) (set+ i 1))
     (set (array-get out i) (+ (array-get out (- i 1)) value))))
 
-(define (sp-times-blend a b coefficients size out)
+(define (sp-times-blend a b fraction size out)
+  (void sp-time-t* sp-time-t* sp-sample-t sp-time-t sp-time-t*)
+  "interpolate values between $a and $b with interpolation distance 0..1"
+  (declare i sp-time-t)
+  (for-i i size
+    (set (array-get out i)
+      (sp-cheap-round-positive
+        (sp-time-interpolate-linear (array-get a i) (array-get b i) fraction)))))
+
+(define (sp-times-mask a b coefficients size out)
   (void sp-time-t* sp-time-t* sp-sample-t* sp-time-t sp-time-t*)
-  "interpolate values between $a and $b with interpolation distance 0..1 of $coefficients"
+  "interpolate values between $a and $b with interpolation distance 0..1 from $coefficients"
   (declare i sp-time-t)
   (for-i i size
     (set (array-get out i)

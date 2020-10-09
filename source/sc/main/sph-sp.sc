@@ -4,7 +4,7 @@
 
 (pre-define-if-not-defined
   sp-channel-limit 2
-  sp-channels-t uint8-t
+  sp-channel-count-t uint8-t
   sp-file-format (bit-or SF-FORMAT-WAV SF_FORMAT_FLOAT)
   sp-float-t double
   spline-path-time-t sp-time-t
@@ -64,9 +64,7 @@
   (sp-cheap-round-positive a) (convert-type (+ 0.5 a) sp-time-t)
   (sp-cheap-floor-positive a) (convert-type a sp-time-t)
   (sp-cheap-ceiling-positive a) (+ (convert-type a sp-time-t) (< (convert-type a sp-time-t) a))
-  (sp-sine-state-1 size frq amp phs) (sp-wave-state-1 sp-sine-table sp-rate size frq amp phs)
-  (sp-sine-state-2 size frq amp1 amp2 phs1 phs2)
-  (sp-wave-state-2 sp-sine-table sp-rate size frq amp1 amp2 phs1 phs2)
+  (sp-sine-state size frq amp phs) (sp-wave-state sp-sine-table sp-rate size frq amp phs)
   (sp-max a b) (if* (> a b) a b)
   (sp-min a b) (if* (< a b) a b)
   (sp-absolute-difference a b) (if* (> a b) (- a b) (- b a))
@@ -77,7 +75,7 @@
   sp-block-t
   (type
     (struct
-      (channels sp-channels-t)
+      (channels sp-channel-count-t)
       (size sp-time-t)
       (samples (array sp-sample-t* sp-channel-limit))))
   sp-file-t
@@ -85,12 +83,12 @@
     (struct
       (flags uint8-t)
       (sample-rate sp-sample-rate-t)
-      (channel-count sp-channels-t)
+      (channel-count sp-channel-count-t)
       (data void*)))
   sp-cpu-count uint32-t
   sp-default-random-state sp-random-state-t
   sp-rate sp-time-t
-  sp-channels sp-channels-t
+  sp-channels sp-channel-count-t
   sp-sine-table sp-sample-t*
   (sp-block-zero a) (void sp-block-t)
   (sp-file-read file sample-count result-block result-sample-count)
@@ -100,10 +98,11 @@
   (sp-file-position file result-position) (status-t sp-file-t* sp-time-t*)
   (sp-file-position-set file sample-offset) (status-t sp-file-t* sp-time-t)
   (sp-file-open path mode channel-count sample-rate result-file)
-  (status-t uint8-t* int sp-channels-t sp-sample-rate-t sp-file-t*)
+  (status-t uint8-t* int sp-channel-count-t sp-sample-rate-t sp-file-t*)
   (sp-file-close a) (status-t sp-file-t)
   (sp-block->file block path rate) (status-t sp-block-t uint8-t* sp-time-t)
-  (sp-block-new channel-count sample-count out-block) (status-t sp-channels-t sp-time-t sp-block-t*)
+  (sp-block-new channel-count sample-count out-block)
+  (status-t sp-channel-count-t sp-time-t sp-block-t*)
   (sp-status-description a) (uint8-t* status-t)
   (sp-status-name a) (uint8-t* status-t)
   (sp-sin-lq a) (sp-sample-t sp-float-t)
@@ -121,28 +120,27 @@
   (sp-block-with-offset a offset) (sp-block-t sp-block-t sp-time-t)
   (sp-null-ir out-ir out-len) (status-t sp-sample-t** sp-time-t*)
   (sp-passthrough-ir out-ir out-len) (status-t sp-sample-t** sp-time-t*)
-  (sp-initialise cpu-count channels rate) (status-t uint16-t sp-channels-t sp-time-t)
+  (sp-initialise cpu-count channels rate) (status-t uint16-t sp-channel-count-t sp-time-t)
   sp-wave-state-t
   (type
     (struct
-      (amp (array sp-sample-t* sp-channel-limit))
-      (phs (array sp-time-t sp-channel-limit))
+      (amp sp-sample-t*)
+      (phs sp-time-t)
       (frq sp-time-t*)
       (wvf-size sp-time-t)
       (wvf sp-sample-t*)
-      (size sp-time-t)
-      (channels sp-channels-t)))
+      (channels sp-channel-count-t)
+      (size sp-time-t)))
+  sp-wave-event-state-t
+  (type (struct (wave-states (array sp-wave-state-t sp-channel-limit)) (channels sp-time-t)))
+  (sp-wave-state wvf wvf-size size frq amp phs)
+  (sp-wave-state-t sp-sample-t* sp-time-t sp-time-t sp-time-t* sp-sample-t* sp-time-t)
   (sp-sine-period size out) (void sp-time-t sp-sample-t*)
   (sp-phase current change cycle) (sp-time-t sp-time-t sp-time-t sp-time-t)
   (sp-phase-float current change cycle) (sp-time-t sp-time-t double sp-time-t)
   (sp-square t size) (sp-sample-t sp-time-t sp-time-t)
   (sp-triangle t a b) (sp-sample-t sp-time-t sp-time-t sp-time-t)
-  (sp-wave start duration state out) (void sp-time-t sp-time-t sp-wave-state-t* sp-block-t)
-  (sp-wave-state-1 wvf wvf-size size frq amp phs)
-  (sp-wave-state-t sp-sample-t* sp-time-t sp-time-t sp-time-t* sp-sample-t* sp-time-t)
-  (sp-wave-state-2 wvf wvf-size size frq amp1 amp2 phs1 phs2)
-  (sp-wave-state-t sp-sample-t* sp-time-t
-    sp-time-t sp-time-t* sp-sample-t* sp-sample-t* sp-time-t sp-time-t)
+  (sp-wave offset duration state out) (void sp-time-t sp-time-t sp-wave-state-t* sp-sample-t*)
   (sp-time-expt base exp) (sp-time-t sp-time-t sp-time-t)
   (sp-time-factorial a) (sp-time-t sp-time-t)
   (sp-sequence-max size min-size) (sp-time-t sp-time-t sp-time-t)
@@ -207,13 +205,13 @@
   (sp-samples->times in in-size out) (void sp-sample-t* sp-time-t sp-time-t*)
   (sp-samples-xor a b size limit out)
   (void sp-sample-t* sp-sample-t* sp-time-t sp-sample-t sp-sample-t*)
-  (sp-samples-copy a size out) (status-t sp-sample-t* sp-time-t sp-sample-t**)
+  (sp-samples-duplicate a size out) (status-t sp-sample-t* sp-time-t sp-sample-t**)
   (sp-samples-differences a size out) (void sp-sample-t* sp-time-t sp-sample-t*)
   (sp-samples-additions start summand count out)
   (void sp-sample-t sp-sample-t sp-time-t sp-sample-t*)
   (sp-samples-divisions start n count out) (void sp-sample-t sp-sample-t sp-time-t sp-sample-t*)
   (sp-samples-scale-y a size n out) (void sp-sample-t* sp-time-t sp-sample-t sp-sample-t*)
-  (sp-samples-scale-y-sum a size n out) (void sp-sample-t* sp-time-t sp-sample-t sp-sample-t*)
+  (sp-samples-scale-sum a size n out) (void sp-sample-t* sp-time-t sp-sample-t sp-sample-t*)
   (sp-times-add-1 a size n out) (void sp-time-t* sp-time-t sp-time-t sp-time-t*)
   (sp-times-add a size b out) (void sp-time-t* sp-time-t sp-time-t* sp-time-t*)
   (sp-times-and a b size limit out) (void sp-time-t* sp-time-t* sp-time-t sp-time-t sp-time-t*)
@@ -234,7 +232,7 @@
   (sp-times-subtract-1 a size n out) (void sp-time-t* sp-time-t sp-time-t sp-time-t*)
   (sp-times-subtract a size b out) (void sp-time-t* sp-time-t sp-time-t* sp-time-t*)
   (sp-times-xor a b size limit out) (void sp-time-t* sp-time-t* sp-time-t sp-time-t sp-time-t*)
-  (sp-times-copy a size out) (status-t sp-time-t sp-time-t sp-time-t**)
+  (sp-times-duplicate a size out) (status-t sp-time-t sp-time-t sp-time-t**)
   (sp-times-differences a size out) (void sp-time-t* sp-time-t sp-time-t*)
   (sp-times-cusum a size out) (void sp-time-t* sp-time-t sp-time-t*)
   (sp-time-random-custom state cudist cudist-size range)
@@ -291,7 +289,9 @@
   (void sp-time-t* sp-time-t sp-time-t sp-time-t sp-time-t*)
   (sp-times-subdivide a size index count out)
   (void sp-time-t* sp-time-t sp-time-t sp-time-t sp-time-t*)
-  (sp-times-blend a b coefficients size out)
+  (sp-times-blend a b fraction size out)
+  (void sp-time-t* sp-time-t* sp-sample-t sp-time-t sp-time-t*)
+  (sp-times-mask a b coefficients size out)
   (void sp-time-t* sp-time-t* sp-sample-t* sp-time-t sp-time-t*))
 
 (sc-comment "statistics")
@@ -324,18 +324,6 @@
   (sp-stat-repetition-all-max size) (sp-time-t sp-time-t)
   (sp-stat-times-repetition a size width out) (uint8-t sp-time-t* sp-time-t sp-time-t sp-sample-t*)
   (sp-stat-repetition-max size width) (sp-time-t sp-time-t sp-time-t))
-
-(sc-comment "statistics-mod")
-
-(declare
-  (sp-stat-times-harmonicity-increase a size base fraction)
-  (void sp-time-t* sp-time-t sp-time-t sp-sample-t)
-  (sp-stat-times-harmonicity-decrease a size base fraction)
-  (void sp-time-t* sp-time-t sp-time-t sp-sample-t)
-  (sp-stat-times-repetition-increase a size width target)
-  (status-t sp-time-t* sp-time-t sp-time-t sp-time-t)
-  (sp-stat-times-repetition-decrease a size width target)
-  (status-t sp-time-t* sp-time-t sp-time-t sp-time-t))
 
 (sc-comment "filter")
 
@@ -483,7 +471,11 @@
     sp-sample-t* sp-sample-t* uint8-t sp-time-t sp-random-state-t sp-event-t*)
   (sp-events-array-free events size) (void sp-event-t* sp-time-t)
   (sp-wave-event-f start end out event) (void sp-time-t sp-time-t sp-block-t sp-event-t*)
-  (sp-wave-event start end state out) (status-t sp-time-t sp-time-t sp-wave-state-t sp-event-t*)
+  (sp-wave-event start end state out)
+  (status-t sp-time-t sp-time-t sp-wave-event-state-t sp-event-t*)
+  (sp-wave-event-state-1 wave-state) (sp-wave-event-state-t sp-wave-state-t)
+  (sp-wave-event-state-2 wave-state-1 wave-state-2)
+  (sp-wave-event-state-t sp-wave-state-t sp-wave-state-t)
   (sp-cheap-noise-event start end amp type cut passes q-factor resolution random-state out-event)
   (status-t sp-time-t sp-time-t
     sp-sample-t** sp-state-variable-filter-t sp-sample-t*
@@ -565,13 +557,12 @@
 (pre-define (rt n d) (convert-type (* (/ _rate d) n) sp-time-t))
 
 (declare
-  sp-render-config-t (type (struct (channels sp-channels-t) (rate sp-time-t) (block-size sp-time-t)))
-  (sp-render-config channels rate block-size) (sp-render-config-t sp-channels-t sp-time-t sp-time-t)
+  sp-render-config-t
+  (type (struct (channels sp-channel-count-t) (rate sp-time-t) (block-size sp-time-t)))
+  (sp-render-config channels rate block-size)
+  (sp-render-config-t sp-channel-count-t sp-time-t sp-time-t)
   (sp-render-file event start end config path)
   (status-t sp-event-t sp-time-t sp-time-t sp-render-config-t uint8-t*)
   (sp-render-block event start end config out)
   (status-t sp-event-t sp-time-t sp-time-t sp-render-config-t sp-block-t*)
-  (sp-render-quick a file-or-plot) (status-t sp-event-t uint8-t)
-  (sp-sine-cluster prt-count amp frq phs ax ay fx fy out)
-  (status-t sp-time-t sp-path-t
-    sp-path-t sp-time-t* sp-sample-t** sp-sample-t** sp-sample-t** sp-sample-t** sp-event-t*))
+  (sp-render-quick a file-or-plot) (status-t sp-event-t uint8-t))

@@ -29,9 +29,9 @@
      a: source
      b: target */
 #define define_sp_interleave(name, type, body) \
-  void name(type** a, type* b, sp_time_t a_size, sp_channels_t channel_count) { \
+  void name(type** a, type* b, sp_time_t a_size, sp_channel_count_t channel_count) { \
     sp_time_t b_size; \
-    sp_channels_t channel; \
+    sp_channel_count_t channel; \
     b_size = (a_size * channel_count); \
     while (a_size) { \
       a_size = (a_size - 1); \
@@ -95,7 +95,7 @@ uint8_t* sp_status_name(status_t a) {
   return (b);
 }
 /** return a newly allocated array for channels with data arrays for each channel */
-status_t sp_block_new(sp_channels_t channels, sp_time_t size, sp_block_t* out) {
+status_t sp_block_new(sp_channel_count_t channels, sp_time_t size, sp_block_t* out) {
   status_declare;
   memreg_init(channels);
   sp_sample_t* channel;
@@ -151,48 +151,30 @@ sp_time_t sp_phase_float(sp_time_t current, sp_sample_t change, sp_time_t cycle)
    * state.frq (frequency): array with hertz values
    * state.wvf (waveform): array with waveform samples
    * state.wvf-size: size of state.wvf
-   * state.phs (phase): value per channel
-   * state.amp (amplitude): array per channel */
-void sp_wave(sp_time_t start, sp_time_t duration, sp_wave_state_t* state, sp_block_t out) {
+   * state.phs (phase): one value for the phase offset
+   * state.amp (amplitude): array with values per sample */
+void sp_wave(sp_time_t offset, sp_time_t duration, sp_wave_state_t* state, sp_sample_t* out) {
   sp_sample_t amp;
-  sp_time_t channel_i;
   sp_time_t phs;
   sp_time_t i;
-  for (channel_i = 0; (channel_i < out.channels); channel_i = (1 + channel_i)) {
-    phs = (state->phs)[channel_i];
-    for (i = 0; (i < duration); i = (1 + i)) {
-      (out.samples)[channel_i][i] += ((state->amp)[channel_i][(start + i)] * (state->wvf)[phs]);
-      phs += (state->frq)[(start + i)];
-      if (phs >= state->wvf_size) {
-        phs = (phs % state->wvf_size);
-      };
+  phs = state->phs;
+  for (i = 0; (i < duration); i = (1 + i)) {
+    out[i] += ((state->amp)[(offset + i)] * (state->wvf)[phs]);
+    phs += (state->frq)[(offset + i)];
+    if (phs >= state->wvf_size) {
+      phs = (phs % state->wvf_size);
     };
-    (state->phs)[channel_i] = phs;
   };
+  state->phs = phs;
 }
-#define sp_wave_state_set_channel(a, channel, amp_array, phs_value) \
-  (a.amp)[channel] = amp_array; \
-  (a.phs)[channel] = phs_value
-/** setup a single channel wave config */
-sp_wave_state_t sp_wave_state_1(sp_sample_t* wvf, sp_time_t wvf_size, sp_time_t size, sp_time_t* frq, sp_sample_t* amp, sp_time_t phs) {
+sp_wave_state_t sp_wave_state(sp_sample_t* wvf, sp_time_t wvf_size, sp_time_t size, sp_time_t* frq, sp_sample_t* amp, sp_time_t phs) {
   sp_wave_state_t a;
-  a.channels = 1;
   a.size = size;
   a.frq = frq;
   a.wvf = wvf;
   a.wvf_size = wvf_size;
-  sp_wave_state_set_channel(a, 0, amp, phs);
-  return (a);
-}
-sp_wave_state_t sp_wave_state_2(sp_sample_t* wvf, sp_time_t wvf_size, sp_time_t size, sp_time_t* frq, sp_sample_t* amp1, sp_sample_t* amp2, sp_time_t phs1, sp_time_t phs2) {
-  sp_wave_state_t a;
-  a.channels = 2;
-  a.size = size;
-  a.frq = frq;
-  a.wvf = wvf;
-  a.wvf_size = wvf_size;
-  sp_wave_state_set_channel(a, 0, amp1, phs1);
-  sp_wave_state_set_channel(a, 1, amp2, phs2);
+  a.amp = amp;
+  a.phs = phs;
   return (a);
 }
 /** return a sample for a triangular wave with center offsets a left and b right.
@@ -337,7 +319,7 @@ sp_time_t sp_permutations_max(sp_time_t set_size, sp_time_t selection_size) { re
 sp_time_t sp_compositions_max(sp_time_t sum) { return ((sp_time_expt(2, (sum - 1)))); }
 #include "../main/arrays.c"
 void sp_block_zero(sp_block_t a) {
-  sp_channels_t i;
+  sp_channel_count_t i;
   for (i = 0; (i < a.channels); i += 1) {
     sp_samples_zero(((a.samples)[i]), (a.size));
   };
@@ -349,7 +331,7 @@ void sp_block_zero(sp_block_t a) {
 #include "../main/sequencer.c"
 #include "../main/statistics.c"
 #include "../main/statistics-mod.c"
-sp_render_config_t sp_render_config(sp_channels_t channels, sp_time_t rate, sp_time_t block_size) {
+sp_render_config_t sp_render_config(sp_channel_count_t channels, sp_time_t rate, sp_time_t block_size) {
   sp_render_config_t a;
   a.channels = channels;
   a.rate = rate;
@@ -416,7 +398,7 @@ exit:
 /** fills the sine wave lookup table.
    rate and channels are used to set sp-rate and sp-channels,
    which are used as defaults in a few cases */
-status_t sp_initialise(uint16_t cpu_count, sp_channels_t channels, sp_time_t rate) {
+status_t sp_initialise(uint16_t cpu_count, sp_channel_count_t channels, sp_time_t rate) {
   status_declare;
   if (cpu_count) {
     status.id = future_init(cpu_count);

@@ -220,7 +220,7 @@ define_value_functions(sp_times, sp_time_t)
   };
 }
 /* samples */
-status_t sp_samples_copy(sp_sample_t* a, sp_time_t size, sp_sample_t** out) {
+status_t sp_samples_duplicate(sp_sample_t* a, sp_time_t size, sp_sample_t** out) {
   status_declare;
   sp_sample_t* temp;
   status_require((sp_samples_new(size, (&temp))));
@@ -239,7 +239,7 @@ void sp_samples_differences(sp_sample_t* a, sp_time_t size, sp_sample_t* out) {
   };
 }
 /* times */
-status_t sp_times_copy(sp_time_t a, sp_time_t size, sp_time_t** out) {
+status_t sp_times_duplicate(sp_time_t a, sp_time_t size, sp_time_t** out) {
   status_declare;
   sp_time_t* temp;
   status_require((sp_times_new(size, (&temp))));
@@ -462,7 +462,7 @@ void sp_samples_scale_y(sp_sample_t* a, sp_time_t size, sp_sample_t n, sp_sample
 }
 /** adjust all values, keeping relative sizes, so that the sum is n.
    a/out can be the same pointer */
-void sp_samples_scale_y_sum(sp_sample_t* a, sp_time_t size, sp_sample_t n, sp_sample_t* out) {
+void sp_samples_scale_sum(sp_sample_t* a, sp_time_t size, sp_sample_t n, sp_sample_t* out) {
   sp_sample_t sum = sp_samples_sum(a, size);
   sp_samples_multiply_1(a, size, (n / sum), a);
 }
@@ -780,8 +780,15 @@ void sp_times_subdivide(sp_time_t* a, sp_time_t size, sp_time_t index, sp_time_t
     out[i] = (out[(i - 1)] + value);
   };
 }
-/** interpolate values between $a and $b with interpolation distance 0..1 of $coefficients */
-void sp_times_blend(sp_time_t* a, sp_time_t* b, sp_sample_t* coefficients, sp_time_t size, sp_time_t* out) {
+/** interpolate values between $a and $b with interpolation distance 0..1 */
+void sp_times_blend(sp_time_t* a, sp_time_t* b, sp_sample_t fraction, sp_time_t size, sp_time_t* out) {
+  sp_time_t i;
+  for (i = 0; (i < size); i += 1) {
+    out[i] = sp_cheap_round_positive((sp_time_interpolate_linear((a[i]), (b[i]), fraction)));
+  };
+}
+/** interpolate values between $a and $b with interpolation distance 0..1 from $coefficients */
+void sp_times_mask(sp_time_t* a, sp_time_t* b, sp_sample_t* coefficients, sp_time_t size, sp_time_t* out) {
   sp_time_t i;
   for (i = 0; (i < size); i += 1) {
     out[i] = sp_cheap_round_positive((sp_time_interpolate_linear((a[i]), (b[i]), (coefficients[i]))));

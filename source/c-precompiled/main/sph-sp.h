@@ -8,8 +8,8 @@
 #ifndef sp_channel_limit
 #define sp_channel_limit 2
 #endif
-#ifndef sp_channels_t
-#define sp_channels_t uint8_t
+#ifndef sp_channel_count_t
+#define sp_channel_count_t uint8_t
 #endif
 #ifndef sp_file_format
 #define sp_file_format (SF_FORMAT_WAV | SF_FORMAT_FLOAT)
@@ -112,38 +112,37 @@
 #define sp_cheap_round_positive(a) ((sp_time_t)((0.5 + a)))
 #define sp_cheap_floor_positive(a) ((sp_time_t)(a))
 #define sp_cheap_ceiling_positive(a) (((sp_time_t)(a)) + (((sp_time_t)(a)) < a))
-#define sp_sine_state_1(size, frq, amp, phs) sp_wave_state_1(sp_sine_table, sp_rate, size, frq, amp, phs)
-#define sp_sine_state_2(size, frq, amp1, amp2, phs1, phs2) sp_wave_state_2(sp_sine_table, sp_rate, size, frq, amp1, amp2, phs1, phs2)
+#define sp_sine_state(size, frq, amp, phs) sp_wave_state(sp_sine_table, sp_rate, size, frq, amp, phs)
 #define sp_max(a, b) ((a > b) ? a : b)
 #define sp_min(a, b) ((a < b) ? a : b)
 #define sp_absolute_difference(a, b) ((a > b) ? (a - b) : (b - a))
 #define sp_no_underflow_subtract(a, b) ((a > b) ? (a - b) : 0)
 #define sp_no_zero_divide(a, b) ((0 == b) ? 0 : (a / b))
 typedef struct {
-  sp_channels_t channels;
+  sp_channel_count_t channels;
   sp_time_t size;
   sp_sample_t* samples[sp_channel_limit];
 } sp_block_t;
 typedef struct {
   uint8_t flags;
   sp_sample_rate_t sample_rate;
-  sp_channels_t channel_count;
+  sp_channel_count_t channel_count;
   void* data;
 } sp_file_t;
 uint32_t sp_cpu_count;
 sp_random_state_t sp_default_random_state;
 sp_time_t sp_rate;
-sp_channels_t sp_channels;
+sp_channel_count_t sp_channels;
 sp_sample_t* sp_sine_table;
 void sp_block_zero(sp_block_t a);
 status_t sp_file_read(sp_file_t* file, sp_time_t sample_count, sp_sample_t** result_block, sp_time_t* result_sample_count);
 status_t sp_file_write(sp_file_t* file, sp_sample_t** block, sp_time_t sample_count, sp_time_t* result_sample_count);
 status_t sp_file_position(sp_file_t* file, sp_time_t* result_position);
 status_t sp_file_position_set(sp_file_t* file, sp_time_t sample_offset);
-status_t sp_file_open(uint8_t* path, int mode, sp_channels_t channel_count, sp_sample_rate_t sample_rate, sp_file_t* result_file);
+status_t sp_file_open(uint8_t* path, int mode, sp_channel_count_t channel_count, sp_sample_rate_t sample_rate, sp_file_t* result_file);
 status_t sp_file_close(sp_file_t a);
 status_t sp_block_to_file(sp_block_t block, uint8_t* path, sp_time_t rate);
-status_t sp_block_new(sp_channels_t channel_count, sp_time_t sample_count, sp_block_t* out_block);
+status_t sp_block_new(sp_channel_count_t channel_count, sp_time_t sample_count, sp_block_t* out_block);
 uint8_t* sp_status_description(status_t a);
 uint8_t* sp_status_name(status_t a);
 sp_sample_t sp_sin_lq(sp_float_t a);
@@ -159,24 +158,27 @@ void sp_block_free(sp_block_t a);
 sp_block_t sp_block_with_offset(sp_block_t a, sp_time_t offset);
 status_t sp_null_ir(sp_sample_t** out_ir, sp_time_t* out_len);
 status_t sp_passthrough_ir(sp_sample_t** out_ir, sp_time_t* out_len);
-status_t sp_initialise(uint16_t cpu_count, sp_channels_t channels, sp_time_t rate);
+status_t sp_initialise(uint16_t cpu_count, sp_channel_count_t channels, sp_time_t rate);
 typedef struct {
-  sp_sample_t* amp[sp_channel_limit];
-  sp_time_t phs[sp_channel_limit];
+  sp_sample_t* amp;
+  sp_time_t phs;
   sp_time_t* frq;
   sp_time_t wvf_size;
   sp_sample_t* wvf;
+  sp_channel_count_t channels;
   sp_time_t size;
-  sp_channels_t channels;
 } sp_wave_state_t;
+typedef struct {
+  sp_wave_state_t wave_states[sp_channel_limit];
+  sp_time_t channels;
+} sp_wave_event_state_t;
+sp_wave_state_t sp_wave_state(sp_sample_t* wvf, sp_time_t wvf_size, sp_time_t size, sp_time_t* frq, sp_sample_t* amp, sp_time_t phs);
 void sp_sine_period(sp_time_t size, sp_sample_t* out);
 sp_time_t sp_phase(sp_time_t current, sp_time_t change, sp_time_t cycle);
 sp_time_t sp_phase_float(sp_time_t current, double change, sp_time_t cycle);
 sp_sample_t sp_square(sp_time_t t, sp_time_t size);
 sp_sample_t sp_triangle(sp_time_t t, sp_time_t a, sp_time_t b);
-void sp_wave(sp_time_t start, sp_time_t duration, sp_wave_state_t* state, sp_block_t out);
-sp_wave_state_t sp_wave_state_1(sp_sample_t* wvf, sp_time_t wvf_size, sp_time_t size, sp_time_t* frq, sp_sample_t* amp, sp_time_t phs);
-sp_wave_state_t sp_wave_state_2(sp_sample_t* wvf, sp_time_t wvf_size, sp_time_t size, sp_time_t* frq, sp_sample_t* amp1, sp_sample_t* amp2, sp_time_t phs1, sp_time_t phs2);
+void sp_wave(sp_time_t offset, sp_time_t duration, sp_wave_state_t* state, sp_sample_t* out);
 sp_time_t sp_time_expt(sp_time_t base, sp_time_t exp);
 sp_time_t sp_time_factorial(sp_time_t a);
 sp_time_t sp_sequence_max(sp_time_t size, sp_time_t min_size);
@@ -221,12 +223,12 @@ void sp_samples_subtract_1(sp_sample_t* a, sp_time_t size, sp_sample_t n, sp_sam
 void sp_samples_subtract(sp_sample_t* a, sp_time_t size, sp_sample_t* b, sp_sample_t* out);
 void sp_samples_to_times(sp_sample_t* in, sp_time_t in_size, sp_time_t* out);
 void sp_samples_xor(sp_sample_t* a, sp_sample_t* b, sp_time_t size, sp_sample_t limit, sp_sample_t* out);
-status_t sp_samples_copy(sp_sample_t* a, sp_time_t size, sp_sample_t** out);
+status_t sp_samples_duplicate(sp_sample_t* a, sp_time_t size, sp_sample_t** out);
 void sp_samples_differences(sp_sample_t* a, sp_time_t size, sp_sample_t* out);
 void sp_samples_additions(sp_sample_t start, sp_sample_t summand, sp_time_t count, sp_sample_t* out);
 void sp_samples_divisions(sp_sample_t start, sp_sample_t n, sp_time_t count, sp_sample_t* out);
 void sp_samples_scale_y(sp_sample_t* a, sp_time_t size, sp_sample_t n, sp_sample_t* out);
-void sp_samples_scale_y_sum(sp_sample_t* a, sp_time_t size, sp_sample_t n, sp_sample_t* out);
+void sp_samples_scale_sum(sp_sample_t* a, sp_time_t size, sp_sample_t n, sp_sample_t* out);
 void sp_times_add_1(sp_time_t* a, sp_time_t size, sp_time_t n, sp_time_t* out);
 void sp_times_add(sp_time_t* a, sp_time_t size, sp_time_t* b, sp_time_t* out);
 void sp_times_and(sp_time_t* a, sp_time_t* b, sp_time_t size, sp_time_t limit, sp_time_t* out);
@@ -247,7 +249,7 @@ void sp_times_square(sp_time_t* a, sp_time_t size, sp_time_t* out);
 void sp_times_subtract_1(sp_time_t* a, sp_time_t size, sp_time_t n, sp_time_t* out);
 void sp_times_subtract(sp_time_t* a, sp_time_t size, sp_time_t* b, sp_time_t* out);
 void sp_times_xor(sp_time_t* a, sp_time_t* b, sp_time_t size, sp_time_t limit, sp_time_t* out);
-status_t sp_times_copy(sp_time_t a, sp_time_t size, sp_time_t** out);
+status_t sp_times_duplicate(sp_time_t a, sp_time_t size, sp_time_t** out);
 void sp_times_differences(sp_time_t* a, sp_time_t size, sp_time_t* out);
 void sp_times_cusum(sp_time_t* a, sp_time_t size, sp_time_t* out);
 sp_time_t sp_time_random_custom(sp_random_state_t* state, sp_time_t* cudist, sp_time_t cudist_size, sp_time_t range);
@@ -292,7 +294,8 @@ void sp_times_counted_sequences(sp_sequence_hashtable_t known, sp_time_t limit, 
 void sp_times_remove(sp_time_t* in, sp_time_t size, sp_time_t index, sp_time_t count, sp_time_t* out);
 void sp_times_insert_space(sp_time_t* in, sp_time_t size, sp_time_t index, sp_time_t count, sp_time_t* out);
 void sp_times_subdivide(sp_time_t* a, sp_time_t size, sp_time_t index, sp_time_t count, sp_time_t* out);
-void sp_times_blend(sp_time_t* a, sp_time_t* b, sp_sample_t* coefficients, sp_time_t size, sp_time_t* out);
+void sp_times_blend(sp_time_t* a, sp_time_t* b, sp_sample_t fraction, sp_time_t size, sp_time_t* out);
+void sp_times_mask(sp_time_t* a, sp_time_t* b, sp_sample_t* coefficients, sp_time_t size, sp_time_t* out);
 /* statistics */
 typedef uint8_t (*sp_stat_times_f_t)(sp_time_t*, sp_time_t, sp_sample_t*);
 typedef uint8_t (*sp_stat_samples_f_t)(sp_sample_t*, sp_time_t, sp_sample_t*);
@@ -321,11 +324,6 @@ sp_time_t sp_stat_unique_all_max(sp_time_t size);
 sp_time_t sp_stat_repetition_all_max(sp_time_t size);
 uint8_t sp_stat_times_repetition(sp_time_t* a, sp_time_t size, sp_time_t width, sp_sample_t* out);
 sp_time_t sp_stat_repetition_max(sp_time_t size, sp_time_t width);
-/* statistics-mod */
-void sp_stat_times_harmonicity_increase(sp_time_t* a, sp_time_t size, sp_time_t base, sp_sample_t fraction);
-void sp_stat_times_harmonicity_decrease(sp_time_t* a, sp_time_t size, sp_time_t base, sp_sample_t fraction);
-status_t sp_stat_times_repetition_increase(sp_time_t* a, sp_time_t size, sp_time_t width, sp_time_t target);
-status_t sp_stat_times_repetition_decrease(sp_time_t* a, sp_time_t size, sp_time_t width, sp_time_t target);
 /* filter */
 #define sp_filter_state_t sp_convolution_filter_state_t
 #define sp_filter_state_free sp_convolution_filter_state_free
@@ -437,7 +435,9 @@ status_t sp_seq_parallel(sp_time_t start, sp_time_t end, sp_block_t out, sp_even
 status_t sp_noise_event(sp_time_t start, sp_time_t end, sp_sample_t** amp, sp_sample_t* cut_l, sp_sample_t* cut_h, sp_sample_t* trn_l, sp_sample_t* trn_h, uint8_t is_reject, sp_time_t resolution, sp_random_state_t random_state, sp_event_t* out_event);
 void sp_events_array_free(sp_event_t* events, sp_time_t size);
 void sp_wave_event_f(sp_time_t start, sp_time_t end, sp_block_t out, sp_event_t* event);
-status_t sp_wave_event(sp_time_t start, sp_time_t end, sp_wave_state_t state, sp_event_t* out);
+status_t sp_wave_event(sp_time_t start, sp_time_t end, sp_wave_event_state_t state, sp_event_t* out);
+sp_wave_event_state_t sp_wave_event_state_1(sp_wave_state_t wave_state);
+sp_wave_event_state_t sp_wave_event_state_2(sp_wave_state_t wave_state_1, sp_wave_state_t wave_state_2);
 status_t sp_cheap_noise_event(sp_time_t start, sp_time_t end, sp_sample_t** amp, sp_state_variable_filter_t type, sp_sample_t* cut, sp_time_t passes, sp_sample_t q_factor, sp_time_t resolution, sp_random_state_t random_state, sp_event_t* out_event);
 array4_declare_type(sp_events, sp_event_t);
 typedef struct {
@@ -493,12 +493,11 @@ status_t sp_path_samples_derivations_normalized(sp_path_t path, sp_time_t count,
 /* main 2 */
 #define rt(n, d) ((sp_time_t)(((_rate / d) * n)))
 typedef struct {
-  sp_channels_t channels;
+  sp_channel_count_t channels;
   sp_time_t rate;
   sp_time_t block_size;
 } sp_render_config_t;
-sp_render_config_t sp_render_config(sp_channels_t channels, sp_time_t rate, sp_time_t block_size);
+sp_render_config_t sp_render_config(sp_channel_count_t channels, sp_time_t rate, sp_time_t block_size);
 status_t sp_render_file(sp_event_t event, sp_time_t start, sp_time_t end, sp_render_config_t config, uint8_t* path);
 status_t sp_render_block(sp_event_t event, sp_time_t start, sp_time_t end, sp_render_config_t config, sp_block_t* out);
 status_t sp_render_quick(sp_event_t a, uint8_t file_or_plot);
-status_t sp_sine_cluster(sp_time_t prt_count, sp_path_t amp, sp_path_t frq, sp_time_t* phs, sp_sample_t** ax, sp_sample_t** ay, sp_sample_t** fx, sp_sample_t** fy, sp_event_t* out);

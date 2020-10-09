@@ -158,7 +158,7 @@
   (declare
     block-2 sp-block-t
     block sp-block-t
-    channel-count sp-channels-t
+    channel-count sp-channel-count-t
     channel sp-time-t
     file sp-file-t
     len sp-time-t
@@ -410,20 +410,13 @@
   status-declare
   (declare
     state sp-wave-state-t
-    out1 sp-block-t
-    out2 sp-block-t
+    out (array sp-sample-t test-wave-duration)
     frq (array sp-time-t 4 48000 48000 48000 48000)
     amp (array sp-sample-t 4 0.1 0.2 0.3 0.4))
-  (status-require (sp-block-new test-wave-channels test-wave-duration &out1))
-  (status-require (sp-block-new test-wave-channels test-wave-duration &out2))
-  (set state (sp-wave-state-2 sp-sine-table _rate test-wave-duration frq amp amp 0 0))
-  (sp-wave 0 test-wave-duration &state out1)
-  (sp-wave 0 test-wave-duration &state out2)
-  (test-helper-assert "zeros" (= 0 (array-get out1.samples 0 0) (array-get out1.samples 0 2)))
-  (test-helper-assert "non-zeros"
-    (and (not (= 0 (array-get out1.samples 0 1))) (not (= 0 (array-get out1.samples 0 3)))))
-  (sp-block-free out1)
-  (sp-block-free out2)
+  (set state (sp-wave-state sp-sine-table _rate test-wave-duration frq amp 0))
+  (sp-wave 0 test-wave-duration &state out)
+  (test-helper-assert "zeros" (= 0 (array-get out 0)))
+  (test-helper-assert "non-zeros" (not (= 0 (array-get out 1))))
   (label exit status-return))
 
 (pre-define sp-wave-event-duration 100)
@@ -443,7 +436,9 @@
     (set (array-get frq i) 2000 (array-get amp1 i) 1 (array-get amp2 i) 0.5))
   (status-require
     (sp-wave-event 0 sp-wave-event-duration
-      (sp-wave-state-2 sp-sine-table _rate sp-wave-event-duration frq amp1 amp2 0 0) &event))
+      (sp-wave-event-state-2 (sp-wave-state sp-sine-table _rate sp-wave-event-duration frq amp1 0)
+        (sp-wave-state sp-sine-table _rate sp-wave-event-duration frq amp2 0))
+      &event))
   (status-require (sp-block-new 2 sp-wave-event-duration &out))
   (event.f 0 30 out &event)
   (event.f 30 sp-wave-event-duration (sp-block-with-offset out 30) &event)
@@ -465,10 +460,10 @@
     (set (array-get frq i) 1500 (array-get amp i) 1))
   (status-require
     (sp-wave-event 0 sp-wave-event-duration
-      (sp-sine-state-2 sp-wave-event-duration frq amp amp 0 0) &event))
-  (status-require (sp-block-new 2 sp-wave-event-duration &out))
-  (sp-render-file event 0 sp-wave-event-duration rc "/tmp/test.wav")
-  (sc-comment (sp-render-block event 0 sp-wave-event-duration rc &out))
+      (sp-wave-event-state-1 (sp-sine-state sp-wave-event-duration frq amp 0)) &event))
+  (status-require (sp-block-new 1 sp-wave-event-duration &out))
+  (sc-comment (sp-render-file event 0 sp-wave-event-duration rc "/tmp/test.wav"))
+  (sp-render-block event 0 sp-wave-event-duration rc &out)
   (sc-comment (sp-block-plot-1 out))
   (sp-block-free out)
   (event.free &event)
@@ -588,13 +583,6 @@
   (test-helper-assert "inharmonicity 3" (feq 0.125 (array-get inhar-results 2)))
   (label exit status-return))
 
-(define (test-statistics-mod) status-t
-  status-declare
-  (declare b (array sp-time-t 20 1 1 1 2 2 2 3 3 3 3 4 4 4 5 5 5 6 6 6 6))
-  (status-require (sp-stat-times-repetition-decrease b 20 2 0))
-  (status-require (sp-stat-times-repetition-increase b 20 2 100))
-  (label exit status-return))
-
 (define (test-simple-mappings) status-t
   status-declare
   (declare
@@ -686,7 +674,8 @@
   (status-require (sp-path-samples-2 &amp size (sp-path-move 0 1.0) (sp-path-constant)))
   (status-require (sp-path-times-2 &frq size (sp-path-move 0 200) (sp-path-constant)))
   (for ((set i 0) (< i 10) (set+ i 1))
-    (status-require (sp-wave-event 0 size (sp-sine-state-1 size frq amp 1) (+ events i))))
+    (status-require
+      (sp-wave-event 0 size (sp-wave-event-state-1 (sp-sine-state size frq amp 1)) (+ events i))))
   (status-require (sp-block-new 1 size &block))
   (set step-size _rate)
   (for ((set i 0) (< i size) (set+ i step-size))
@@ -701,14 +690,14 @@
 
 (define (test-temp) status-t
   status-declare
-  (declare state sp-wave-state-t out sp-block-t frq sp-time-t* amp sp-sample-t*)
-  (status-require (sp-block-new 1 temp-size &out))
+  (declare state sp-wave-state-t out sp-sample-t* frq sp-time-t* amp sp-sample-t*)
+  (status-require (sp-samples-new temp-size &out))
   (status-require (sp-path-times-2 &frq temp-size (sp-path-move 0 2000) (sp-path-constant)))
   (status-require (sp-path-samples-2 &amp temp-size (sp-path-move 0 1.0) (sp-path-constant)))
-  (set state (sp-sine-state-1 temp-size frq amp 0))
+  (set state (sp-sine-state temp-size frq amp 0))
   (sp-wave 0 temp-size &state out)
-  (sp-samples-display (array-get out.samples 0) temp-size)
-  (sp-block-free out)
+  (sp-samples-display out temp-size)
+  (free out)
   (label exit status-return))
 
 (define (main) int
@@ -718,7 +707,6 @@
   (sp-initialise 3 2 _rate)
   (test-helper-test-one test-moving-average)
   (test-helper-test-one test-statistics)
-  (test-helper-test-one test-statistics-mod)
   (test-helper-test-one test-render-block)
   (test-helper-test-one test-wave-event)
   (test-helper-test-one test-wave)

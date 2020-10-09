@@ -59,7 +59,7 @@ status_t sp_seq_parallel(sp_time_t start, sp_time_t end, sp_block_t out, sp_even
   sp_event_t e;
   sp_time_t e_start;
   sp_time_t e_end;
-  sp_channels_t chn_i;
+  sp_channel_count_t chn_i;
   sp_seq_future_t* seq_futures;
   sp_seq_future_t* sf;
   sp_time_t i;
@@ -116,15 +116,41 @@ exit:
   free(seq_futures);
   status_return;
 }
-void sp_wave_event_f(sp_time_t start, sp_time_t end, sp_block_t out, sp_event_t* event) { sp_wave(start, (end - start), (event->state), out); }
+sp_wave_event_state_t sp_wave_event_state_1(sp_wave_state_t wave_state) {
+  sp_wave_event_state_t a;
+  a.channels = 1;
+  (a.wave_states)[0] = wave_state;
+  return (a);
+}
+sp_wave_event_state_t sp_wave_event_state_2(sp_wave_state_t wave_state_1, sp_wave_state_t wave_state_2) {
+  sp_wave_event_state_t a;
+  a.channels = 2;
+  (a.wave_states)[0] = wave_state_1;
+  (a.wave_states)[1] = wave_state_2;
+  return (a);
+}
+void sp_wave_event_f(sp_time_t start, sp_time_t end, sp_block_t out, sp_event_t* event) {
+  sp_channel_count_t chn_i;
+  sp_wave_event_state_t state;
+  sp_wave_state_t* wave_state;
+  state = *((sp_wave_event_state_t*)(event->state));
+  for (chn_i = 0; (chn_i < state.channels); chn_i = (1 + chn_i)) {
+    wave_state = (state.wave_states + chn_i);
+    if (!wave_state->amp) {
+      continue;
+    };
+    sp_wave(start, (end - start), wave_state, ((out.samples)[chn_i]));
+  };
+}
 void sp_wave_event_free(sp_event_t* event) { free((event->state)); }
-/** memory for event.state is allocated and later freed with event.free */
-status_t sp_wave_event(sp_time_t start, sp_time_t end, sp_wave_state_t state, sp_event_t* out) {
+/** in wave-event-state, unset wave states or wave states with amp set to null will generate no output.
+   the states struct array is copied and freed with event.free */
+status_t sp_wave_event(sp_time_t start, sp_time_t end, sp_wave_event_state_t state, sp_event_t* out) {
   status_declare;
   sp_wave_state_t* event_state;
   event_state = 0;
-  status_require((sph_helper_malloc((sizeof(sp_wave_state_t)), (&event_state))));
-  *event_state = state;
+  status_require((sph_helper_calloc((sizeof(sp_wave_event_state_t)), (&event_state))));
+  memcpy(event_state, (&state), (sizeof(sp_wave_event_state_t)));
   out->start = start;
   out->end = end;
   out->f = sp_wave_event_f;
@@ -155,6 +181,7 @@ void sp_noise_event_f(sp_time_t start, sp_time_t end, sp_block_t out, sp_event_t
   sp_time_t i;
   sp_time_t block_i;
   sp_time_t chn_i;
+  sp_sample_t** amp;
   sp_time_t t;
   sp_time_t block_offset;
   sp_time_t duration;
@@ -171,8 +198,12 @@ void sp_noise_event_f(sp_time_t start, sp_time_t end, sp_block_t out, sp_event_t
     sp_samples_random((&(s->random_state)), duration, (s->noise));
     sp_windowed_sinc_bp_br((s->noise), duration, ((s->cut_l)[t]), ((s->cut_h)[t]), ((s->trn_l)[t]), ((s->trn_h)[t]), (s->is_reject), (&(s->filter_state)), (s->temp));
     for (chn_i = 0; (chn_i < out.channels); chn_i = (1 + chn_i)) {
+      amp = (s->amp + chn_i);
+      if (!amp) {
+        continue;
+      };
       for (i = 0; (i < duration); i = (1 + i)) {
-        (out.samples)[chn_i][(block_offset + i)] += ((s->amp)[chn_i][(t + i)] * (s->temp)[i]);
+        (out.samples)[chn_i][(block_offset + i)] += ((*amp)[(t + i)] * (s->temp)[i]);
       };
     };
   };
@@ -239,6 +270,7 @@ typedef struct {
   sp_sample_t* temp;
 } sp_cheap_noise_event_state_t;
 void sp_cheap_noise_event_f(sp_time_t start, sp_time_t end, sp_block_t out, sp_event_t* event) {
+  sp_sample_t** amp;
   sp_time_t block_count;
   sp_time_t block_i;
   sp_time_t block_offset;
@@ -261,8 +293,12 @@ void sp_cheap_noise_event_f(sp_time_t start, sp_time_t end, sp_block_t out, sp_e
     sp_samples_random((&(s->random_state)), duration, (s->noise));
     sp_cheap_filter((s->type), (s->noise), duration, ((s->cut)[t]), (s->passes), (s->q_factor), (&(s->filter_state)), (s->temp));
     for (chn_i = 0; (chn_i < out.channels); chn_i = (1 + chn_i)) {
+      amp = (s->amp + chn_i);
+      if (!amp) {
+        continue;
+      };
       for (i = 0; (i < duration); i = (1 + i)) {
-        (out.samples)[chn_i][(block_offset + i)] += ((s->amp)[chn_i][(t + i)] * (s->temp)[i]);
+        (out.samples)[chn_i][(block_offset + i)] += ((*amp)[(t + i)] * (s->temp)[i]);
       };
     };
   };
@@ -365,49 +401,4 @@ void sp_group_append(sp_event_t* a, sp_event_t event) {
   event.start += a->end;
   event.end += a->end;
   sp_group_add((*a), event);
-}
-/** creates an event group of sine events based on the given envelope configuration.
-   partial envelopes are created by modifying amp and frq with data from changes arrays.
-   the result amplitude envelopes are adjusted to in sum follow the given amp path while keeping the specified relations.
-   sp_sine_cluster can take arrays that give the volume distribution between partials and the distribution of frequencies.
-   arguments:
-     amp: the result amplitude envelope and base for partials
-     frq: frequency envelope and base for partials
-     ax/ay/fx/fy:
-       each is an array with the layout ((number:partial_change ...):point_change ...).
-       points from sp_path_constant and sp_path_path are not to be included.
-       to create envelopes for the different partials, for each partial and path segment point of amp/frq,
-       the x or y value of the paths point is multiplied with a value from the corresponding changes array.
-     phs: phase offsets in number of samples */
-status_t sp_sine_cluster(sp_time_t prt_count, sp_path_t amp, sp_path_t frq, sp_time_t* phs, sp_sample_t** ax, sp_sample_t** ay, sp_sample_t** fx, sp_sample_t** fy, sp_event_t* out) {
-  sp_time_t* a_samples_sizes;
-  sp_sample_t** a_samples;
-  sp_time_t duration;
-  sp_event_t event;
-  sp_time_t f_times_size;
-  sp_time_t* f_times;
-  sp_event_t group;
-  sp_time_t i;
-  status_declare;
-  memreg_init(1);
-  sp_event_set_null(group);
-  a_samples = 0;
-  status_require((sp_group_new(0, prt_count, (2 * prt_count), (&group))));
-  status_require((sp_path_samples_derivations_normalized(amp, prt_count, ax, ay, (&a_samples), (&a_samples_sizes))));
-  for (i = 0; (i < prt_count); i += 1) {
-    sp_group_memory_add(group, (a_samples[i]));
-    status_require((sp_path_times_derivation(frq, fx, fy, i, (&f_times), (&f_times_size))));
-    sp_group_memory_add(group, f_times);
-    duration = sp_min((a_samples_sizes[i]), f_times_size);
-    status_require((sp_wave_event(0, duration, (sp_sine_state_2(duration, f_times, (a_samples[i]), (a_samples[i]), (phs[i]), (phs[i]))), (&event))));
-    sp_group_add(group, event);
-  };
-  sp_group_prepare(group);
-  *out = group;
-exit:
-  memreg_free;
-  if (status_is_failure) {
-    sp_group_free(group);
-  };
-  status_return;
 }

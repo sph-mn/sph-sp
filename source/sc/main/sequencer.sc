@@ -61,7 +61,7 @@
     e sp-event-t
     e-start sp-time-t
     e-end sp-time-t
-    chn-i sp-channels-t
+    chn-i sp-channel-count-t
     seq-futures sp-seq-future-t*
     sf sp-seq-future-t*
     i sp-time-t
@@ -98,20 +98,39 @@
     (sp-block-free sf:out))
   (label exit (free seq-futures) status-return))
 
+(define (sp-wave-event-state-1 wave-state) (sp-wave-event-state-t sp-wave-state-t)
+  (declare a sp-wave-event-state-t)
+  (set a.channels 1)
+  (array-set* a.wave-states wave-state)
+  (return a))
+
+(define (sp-wave-event-state-2 wave-state-1 wave-state-2)
+  (sp-wave-event-state-t sp-wave-state-t sp-wave-state-t)
+  (declare a sp-wave-event-state-t)
+  (set a.channels 2)
+  (array-set* a.wave-states wave-state-1 wave-state-2)
+  (return a))
+
 (define (sp-wave-event-f start end out event) (void sp-time-t sp-time-t sp-block-t sp-event-t*)
-  (sp-wave start (- end start) event:state out))
+  (declare chn-i sp-channel-count-t state sp-wave-event-state-t wave-state sp-wave-state-t*)
+  (set state (pointer-get (convert-type event:state sp-wave-event-state-t*)))
+  (for ((set chn-i 0) (< chn-i state.channels) (set chn-i (+ 1 chn-i)))
+    (set wave-state (+ state.wave-states chn-i))
+    (if (not wave-state:amp) continue)
+    (sp-wave start (- end start) wave-state (array-get out.samples chn-i))))
 
 (define (sp-wave-event-free event) (void sp-event-t*) (free event:state))
 
 (define (sp-wave-event start end state out)
-  (status-t sp-time-t sp-time-t sp-wave-state-t sp-event-t*)
-  "memory for event.state is allocated and later freed with event.free"
+  (status-t sp-time-t sp-time-t sp-wave-event-state-t sp-event-t*)
+  "in wave-event-state, unset wave states or wave states with amp set to null will generate no output.
+   the states struct array is copied and freed with event.free"
   status-declare
   (declare event-state sp-wave-state-t*)
   (set event-state 0)
-  (status-require (sph-helper-malloc (sizeof sp-wave-state-t) &event-state))
+  (status-require (sph-helper-calloc (sizeof sp-wave-event-state-t) &event-state))
+  (memcpy event-state &state (sizeof sp-wave-event-state-t))
   (set
-    *event-state state
     out:start start
     out:end end
     out:f sp-wave-event-f
@@ -141,6 +160,7 @@
     i sp-time-t
     block-i sp-time-t
     chn-i sp-time-t
+    amp sp-sample-t**
     t sp-time-t
     block-offset sp-time-t
     duration sp-time-t
@@ -161,9 +181,11 @@
       (array-get s:cut-l t) (array-get s:cut-h t) (array-get s:trn-l t)
       (array-get s:trn-h t) s:is-reject &s:filter-state s:temp)
     (for ((set chn-i 0) (< chn-i out.channels) (set chn-i (+ 1 chn-i)))
+      (set amp (+ s:amp chn-i))
+      (if (not amp) continue)
       (for ((set i 0) (< i duration) (set i (+ 1 i)))
         (set+ (array-get out.samples chn-i (+ block-offset i))
-          (* (array-get s:amp chn-i (+ t i)) (array-get s:temp i)))))))
+          (* (array-get *amp (+ t i)) (array-get s:temp i)))))))
 
 (define (sp-noise-event-free a) (void sp-event-t*)
   (define s sp-noise-event-state-t* a:state)
@@ -236,6 +258,7 @@
 (define (sp-cheap-noise-event-f start end out event)
   (void sp-time-t sp-time-t sp-block-t sp-event-t*)
   (declare
+    amp sp-sample-t**
     block-count sp-time-t
     block-i sp-time-t
     block-offset sp-time-t
@@ -261,9 +284,11 @@
     (sp-cheap-filter s:type s:noise
       duration (array-get s:cut t) s:passes s:q-factor &s:filter-state s:temp)
     (for ((set chn-i 0) (< chn-i out.channels) (set chn-i (+ 1 chn-i)))
+      (set amp (+ s:amp chn-i))
+      (if (not amp) continue)
       (for ((set i 0) (< i duration) (set i (+ 1 i)))
         (set+ (array-get out.samples chn-i (+ block-offset i))
-          (* (array-get s:amp chn-i (+ t i)) (array-get s:temp i)))))))
+          (* (array-get *amp (+ t i)) (array-get s:temp i)))))))
 
 (define (sp-cheap-noise-event-free a) (void sp-event-t*)
   (define s sp-cheap-noise-event-state-t* a:state)
@@ -350,49 +375,3 @@
 (define (sp-group-append a event) (void sp-event-t* sp-event-t)
   (set+ event.start a:end event.end a:end)
   (sp-group-add *a event))
-
-(define (sp-sine-cluster prt-count amp frq phs ax ay fx fy out)
-  (status-t sp-time-t sp-path-t sp-path-t sp-time-t* sp-sample-t** sp-sample-t** sp-sample-t** sp-sample-t** sp-event-t*)
-  "creates an event group of sine events based on the given envelope configuration.
-   partial envelopes are created by modifying amp and frq with data from changes arrays.
-   the result amplitude envelopes are adjusted to in sum follow the given amp path while keeping the specified relations.
-   sp_sine_cluster can take arrays that give the volume distribution between partials and the distribution of frequencies.
-   arguments:
-     amp: the result amplitude envelope and base for partials
-     frq: frequency envelope and base for partials
-     ax/ay/fx/fy:
-       each is an array with the layout ((number:partial_change ...):point_change ...).
-       points from sp_path_constant and sp_path_path are not to be included.
-       to create envelopes for the different partials, for each partial and path segment point of amp/frq,
-       the x or y value of the paths point is multiplied with a value from the corresponding changes array.
-     phs: phase offsets in number of samples"
-  (declare
-    a-samples-sizes sp-time-t*
-    a-samples sp-sample-t**
-    duration sp-time-t
-    event sp-event-t
-    f-times-size sp-time-t
-    f-times sp-time-t*
-    group sp-event-t
-    i sp-time-t)
-  status-declare
-  (memreg-init 1)
-  (sp-event-set-null group)
-  (set a-samples 0)
-  (status-require (sp-group-new 0 prt-count (* 2 prt-count) &group))
-  (status-require
-    (sp-path-samples-derivations-normalized amp prt-count ax ay &a-samples &a-samples-sizes))
-  (for-i i prt-count
-    (sp-group-memory-add group (array-get a-samples i))
-    (status-require (sp-path-times-derivation frq fx fy i &f-times &f-times-size))
-    (sp-group-memory-add group f-times)
-    (set duration (sp-min (array-get a-samples-sizes i) f-times-size))
-    (status-require
-      (sp-wave-event 0 duration
-        (sp-sine-state-2 duration f-times
-          (array-get a-samples i) (array-get a-samples i) (array-get phs i) (array-get phs i))
-        &event))
-    (sp-group-add group event))
-  (sp-group-prepare group)
-  (set *out group)
-  (label exit memreg-free (if status-is-failure (sp-group-free group)) status-return))

@@ -25,7 +25,7 @@
   }
 void test_helper_event_f(sp_time_t start, sp_time_t end, sp_block_t out, sp_event_t* event) {
   sp_time_t i;
-  sp_channels_t channel_i;
+  sp_channel_count_t channel_i;
   for (i = 0; (i < (end - start)); i += 1) {
     for (channel_i = 0; (channel_i < out.channels); channel_i += 1) {
       (out.samples)[channel_i][i] = ((sp_time_t)(((uint64_t)(event->state))));

@@ -18,8 +18,8 @@
     "define a deinterleave, interleave or similar routine.
      a: source
      b: target"
-    (define (name a b a-size channel-count) (void type** type* sp-time-t sp-channels-t)
-      (declare b-size sp-time-t channel sp-channels-t)
+    (define (name a b a-size channel-count) (void type** type* sp-time-t sp-channel-count-t)
+      (declare b-size sp-time-t channel sp-channel-count-t)
       (set b-size (* a-size channel-count))
       (while a-size
         (set a-size (- a-size 1) channel channel-count)
@@ -65,7 +65,7 @@
     ((= 0 (strcmp sp-s-group-sndfile a.group)) (set b "sndfile")) (else (set b "unknown")))
   (return b))
 
-(define (sp-block-new channels size out) (status-t sp-channels-t sp-time-t sp-block-t*)
+(define (sp-block-new channels size out) (status-t sp-channel-count-t sp-time-t sp-block-t*)
   "return a newly allocated array for channels with data arrays for each channel"
   status-declare
   (memreg-init channels)
@@ -104,40 +104,26 @@
   (define a sp-time-t (+ current (sp-cheap-ceiling-positive change)))
   (return (if* (< a cycle) a (modulo a cycle))))
 
-(define (sp-wave start duration state out) (void sp-time-t sp-time-t sp-wave-state-t* sp-block-t)
+(define (sp-wave offset duration state out)
+  (void sp-time-t sp-time-t sp-wave-state-t* sp-sample-t*)
   "* sums into out
    * state.frq (frequency): array with hertz values
    * state.wvf (waveform): array with waveform samples
    * state.wvf-size: size of state.wvf
-   * state.phs (phase): value per channel
-   * state.amp (amplitude): array per channel"
-  (declare amp sp-sample-t channel-i sp-time-t phs sp-time-t i sp-time-t)
-  (for ((set channel-i 0) (< channel-i out.channels) (set channel-i (+ 1 channel-i)))
-    (set phs (array-get state:phs channel-i))
-    (for ((set i 0) (< i duration) (set i (+ 1 i)))
-      (set+ (array-get out.samples channel-i i)
-        (* (array-get state:amp channel-i (+ start i)) (array-get state:wvf phs)) phs
-        (array-get state:frq (+ start i)))
-      (if (>= phs state:wvf-size) (set phs (modulo phs state:wvf-size))))
-    (set (array-get state:phs channel-i) phs)))
+   * state.phs (phase): one value for the phase offset
+   * state.amp (amplitude): array with values per sample"
+  (declare amp sp-sample-t phs sp-time-t i sp-time-t)
+  (set phs state:phs)
+  (for ((set i 0) (< i duration) (set i (+ 1 i)))
+    (set+ (array-get out i) (* (array-get state:amp (+ offset i)) (array-get state:wvf phs))
+      phs (array-get state:frq (+ offset i)))
+    (if (>= phs state:wvf-size) (set phs (modulo phs state:wvf-size))))
+  (set state:phs phs))
 
-(pre-define (sp-wave-state-set-channel a channel amp-array phs-value)
-  (set (array-get a.amp channel) amp-array (array-get a.phs channel) phs-value))
-
-(define (sp-wave-state-1 wvf wvf-size size frq amp phs)
+(define (sp-wave-state wvf wvf-size size frq amp phs)
   (sp-wave-state-t sp-sample-t* sp-time-t sp-time-t sp-time-t* sp-sample-t* sp-time-t)
-  "setup a single channel wave config"
   (declare a sp-wave-state-t)
-  (set a.channels 1 a.size size a.frq frq a.wvf wvf a.wvf-size wvf-size)
-  (sp-wave-state-set-channel a 0 amp phs)
-  (return a))
-
-(define (sp-wave-state-2 wvf wvf-size size frq amp1 amp2 phs1 phs2)
-  (sp-wave-state-t sp-sample-t* sp-time-t sp-time-t sp-time-t* sp-sample-t* sp-sample-t* sp-time-t sp-time-t)
-  (declare a sp-wave-state-t)
-  (set a.channels 2 a.size size a.frq frq a.wvf wvf a.wvf-size wvf-size)
-  (sp-wave-state-set-channel a 0 amp1 phs1)
-  (sp-wave-state-set-channel a 1 amp2 phs2)
+  (set a.size size a.frq frq a.wvf wvf a.wvf-size wvf-size a.amp amp a.phs phs)
   (return a))
 
 (define (sp-triangle t a b) (sp-sample-t sp-time-t sp-time-t sp-time-t)
@@ -275,7 +261,7 @@
 (pre-include "../main/arrays.c")
 
 (define (sp-block-zero a) (void sp-block-t)
-  (declare i sp-channels-t)
+  (declare i sp-channel-count-t)
   (for ((set i 0) (< i a.channels) (set+ i 1)) (sp-samples-zero (array-get a.samples i) a.size)))
 
 (pre-include "../main/path.c" "../main/io.c"
@@ -283,7 +269,7 @@
   "../main/statistics.c" "../main/statistics-mod.c")
 
 (define (sp-render-config channels rate block-size)
-  (sp-render-config-t sp-channels-t sp-time-t sp-time-t)
+  (sp-render-config-t sp-channel-count-t sp-time-t sp-time-t)
   (declare a sp-render-config-t)
   (struct-set a channels channels rate rate block-size block-size)
   (return a))
@@ -336,7 +322,7 @@
       (status-require (sp-render-file a 0 a.end config "/tmp/sp-out.wav"))))
   (label exit status-return))
 
-(define (sp-initialise cpu-count channels rate) (status-t uint16-t sp-channels-t sp-time-t)
+(define (sp-initialise cpu-count channels rate) (status-t uint16-t sp-channel-count-t sp-time-t)
   "fills the sine wave lookup table.
    rate and channels are used to set sp-rate and sp-channels,
    which are used as defaults in a few cases"

@@ -5,7 +5,7 @@
   status-return)
 
 (define (sp-file-open path mode channel-count sample-rate result-file)
-  (status-t uint8-t* int sp-channels-t sp-sample-rate-t sp-file-t*)
+  (status-t uint8-t* int sp-channel-count-t sp-sample-rate-t sp-file-t*)
   status-declare
   (declare info SF_INFO file SNDFILE* sf-mode int flags uint8-t)
   (case = mode
@@ -40,7 +40,7 @@
   "failure status if not all samples could be written (sp-s-id-file-incomplete)"
   status-declare
   (declare
-    channel-count sp-channels-t
+    channel-count sp-channel-count-t
     snd_file SNDFILE*
     interleaved sp-sample-t*
     interleaved-size sp-time-t
@@ -63,7 +63,7 @@
   "failure status only if no results read (sp-s-id-eof)"
   status-declare
   (declare
-    channel-count sp-channels-t
+    channel-count sp-channel-count-t
     interleaved-size sp-time-t
     interleaved sp-sample-t*
     frames-count sf-count-t)

@@ -6,7 +6,7 @@ status_t sp_file_close(sp_file_t file) {
   };
   status_return;
 }
-status_t sp_file_open(uint8_t* path, int mode, sp_channels_t channel_count, sp_sample_rate_t sample_rate, sp_file_t* result_file) {
+status_t sp_file_open(uint8_t* path, int mode, sp_channel_count_t channel_count, sp_sample_rate_t sample_rate, sp_file_t* result_file) {
   status_declare;
   SF_INFO info;
   SNDFILE* file;
@@ -47,7 +47,7 @@ exit:
 /** failure status if not all samples could be written (sp-s-id-file-incomplete) */
 status_t sp_file_write(sp_file_t* file, sp_sample_t** channel_data, sp_time_t sample_count, sp_time_t* result_sample_count) {
   status_declare;
-  sp_channels_t channel_count;
+  sp_channel_count_t channel_count;
   SNDFILE* snd_file;
   sp_sample_t* interleaved;
   sp_time_t interleaved_size;
@@ -71,7 +71,7 @@ exit:
 /** failure status only if no results read (sp-s-id-eof) */
 status_t sp_file_read(sp_file_t* file, sp_time_t sample_count, sp_sample_t** result_channel_data, sp_time_t* result_sample_count) {
   status_declare;
-  sp_channels_t channel_count;
+  sp_channel_count_t channel_count;
   sp_time_t interleaved_size;
   sp_sample_t* interleaved;
   sf_count_t frames_count;
