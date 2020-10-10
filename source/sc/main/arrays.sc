@@ -652,3 +652,10 @@
     (set (array-get out i)
       (sp-cheap-round-positive
         (sp-time-interpolate-linear (array-get a i) (array-get b i) (array-get coefficients i))))))
+
+(define (sp-samples-blend a b fraction size out)
+  (void sp-sample-t* sp-sample-t* sp-sample-t sp-time-t sp-sample-t*)
+  "interpolate values between $a and $b with interpolation distance 0..1"
+  (declare i sp-time-t)
+  (for-i i size
+    (set (array-get out i) (sp-sample-interpolate-linear (array-get a i) (array-get b i) fraction))))

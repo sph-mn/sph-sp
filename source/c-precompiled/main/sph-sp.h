@@ -50,6 +50,9 @@
 #ifndef sp_samples_random
 #define sp_samples_random sph_random_f64_array
 #endif
+#ifndef sp_samples_random_bounded
+#define sp_samples_random_bounded sph_random_f64_bounded_array
+#endif
 #ifndef sp_time_random
 #define sp_time_random sph_random_u32
 #endif
@@ -113,6 +116,7 @@
 #define sp_cheap_floor_positive(a) ((sp_time_t)(a))
 #define sp_cheap_ceiling_positive(a) (((sp_time_t)(a)) + (((sp_time_t)(a)) < a))
 #define sp_sine_state(size, frq, amp, phs) sp_wave_state(sp_sine_table, sp_rate, size, frq, amp, phs)
+#define sp_sine_state_lfo(size, frq, amp, phs) sp_wave_state(sp_sine_table_lfo, (sp_rate * sp_sine_lfo_factor), size, frq, amp, phs)
 #define sp_max(a, b) ((a > b) ? a : b)
 #define sp_min(a, b) ((a < b) ? a : b)
 #define sp_absolute_difference(a, b) ((a > b) ? (a - b) : (b - a))
@@ -134,6 +138,8 @@ sp_random_state_t sp_default_random_state;
 sp_time_t sp_rate;
 sp_channel_count_t sp_channels;
 sp_sample_t* sp_sine_table;
+sp_sample_t* sp_sine_table_lfo;
+sp_time_t sp_sine_lfo_factor;
 void sp_block_zero(sp_block_t a);
 status_t sp_file_read(sp_file_t* file, sp_time_t sample_count, sp_sample_t** result_block, sp_time_t* result_sample_count);
 status_t sp_file_write(sp_file_t* file, sp_sample_t** block, sp_time_t sample_count, sp_time_t* result_sample_count);
@@ -296,6 +302,7 @@ void sp_times_insert_space(sp_time_t* in, sp_time_t size, sp_time_t index, sp_ti
 void sp_times_subdivide(sp_time_t* a, sp_time_t size, sp_time_t index, sp_time_t count, sp_time_t* out);
 void sp_times_blend(sp_time_t* a, sp_time_t* b, sp_sample_t fraction, sp_time_t size, sp_time_t* out);
 void sp_times_mask(sp_time_t* a, sp_time_t* b, sp_sample_t* coefficients, sp_time_t size, sp_time_t* out);
+void sp_samples_blend(sp_sample_t* a, sp_sample_t* b, sp_sample_t fraction, sp_time_t size, sp_sample_t* out);
 /* statistics */
 typedef uint8_t (*sp_stat_times_f_t)(sp_time_t*, sp_time_t, sp_sample_t*);
 typedef uint8_t (*sp_stat_samples_f_t)(sp_sample_t*, sp_time_t, sp_sample_t*);

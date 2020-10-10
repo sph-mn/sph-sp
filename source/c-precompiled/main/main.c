@@ -410,11 +410,14 @@ status_t sp_initialise(uint16_t cpu_count, sp_channel_count_t channels, sp_time_
   sp_rate = rate;
   sp_channels = channels;
   sp_default_random_state = sp_random_state_new(1557083953);
+  sp_sine_lfo_factor = 10;
   /* random state needs warm-up */
   sp_time_random((&sp_default_random_state));
   sp_time_random((&sp_default_random_state));
   status_require((sp_samples_new(sp_rate, (&sp_sine_table))));
+  status_require((sp_samples_new((sp_rate * sp_sine_lfo_factor), (&sp_sine_table_lfo))));
   sp_sine_period(sp_rate, sp_sine_table);
+  sp_sine_period((sp_rate * sp_sine_lfo_factor), sp_sine_table_lfo);
 exit:
   status_return;
 }

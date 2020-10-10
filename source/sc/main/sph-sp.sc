@@ -18,6 +18,7 @@
   sp-times-random sph-random-u32-array
   sp-times-random-bounded sph-random-u32-bounded-array
   sp-samples-random sph-random-f64-array
+  sp-samples-random-bounded sph-random-f64-bounded-array
   sp-time-random sph-random-u32
   sp-time-random-bounded sph-random-u32-bounded
   sp-sample-random sph-random-f64
@@ -65,6 +66,8 @@
   (sp-cheap-floor-positive a) (convert-type a sp-time-t)
   (sp-cheap-ceiling-positive a) (+ (convert-type a sp-time-t) (< (convert-type a sp-time-t) a))
   (sp-sine-state size frq amp phs) (sp-wave-state sp-sine-table sp-rate size frq amp phs)
+  (sp-sine-state-lfo size frq amp phs)
+  (sp-wave-state sp-sine-table-lfo (* sp-rate sp-sine-lfo-factor) size frq amp phs)
   (sp-max a b) (if* (> a b) a b)
   (sp-min a b) (if* (< a b) a b)
   (sp-absolute-difference a b) (if* (> a b) (- a b) (- b a))
@@ -90,6 +93,8 @@
   sp-rate sp-time-t
   sp-channels sp-channel-count-t
   sp-sine-table sp-sample-t*
+  sp-sine-table-lfo sp-sample-t*
+  sp-sine-lfo-factor sp-time-t
   (sp-block-zero a) (void sp-block-t)
   (sp-file-read file sample-count result-block result-sample-count)
   (status-t sp-file-t* sp-time-t sp-sample-t** sp-time-t*)
@@ -292,7 +297,9 @@
   (sp-times-blend a b fraction size out)
   (void sp-time-t* sp-time-t* sp-sample-t sp-time-t sp-time-t*)
   (sp-times-mask a b coefficients size out)
-  (void sp-time-t* sp-time-t* sp-sample-t* sp-time-t sp-time-t*))
+  (void sp-time-t* sp-time-t* sp-sample-t* sp-time-t sp-time-t*)
+  (sp-samples-blend a b fraction size out)
+  (void sp-sample-t* sp-sample-t* sp-sample-t sp-time-t sp-sample-t*))
 
 (sc-comment "statistics")
 

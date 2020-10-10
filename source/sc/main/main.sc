@@ -332,10 +332,13 @@
     sp-cpu-count cpu-count
     sp-rate rate
     sp-channels channels
-    sp-default-random-state (sp-random-state-new 1557083953))
+    sp-default-random-state (sp-random-state-new 1557083953)
+    sp-sine-lfo-factor 10)
   (sc-comment "random state needs warm-up")
   (sp-time-random &sp-default-random-state)
   (sp-time-random &sp-default-random-state)
   (status-require (sp-samples-new sp-rate &sp-sine-table))
+  (status-require (sp-samples-new (* sp-rate sp-sine-lfo-factor) &sp-sine-table-lfo))
   (sp-sine-period sp-rate sp-sine-table)
+  (sp-sine-period (* sp-rate sp-sine-lfo-factor) sp-sine-table-lfo)
   (label exit status-return))

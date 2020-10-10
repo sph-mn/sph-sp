@@ -794,3 +794,10 @@ void sp_times_mask(sp_time_t* a, sp_time_t* b, sp_sample_t* coefficients, sp_tim
     out[i] = sp_cheap_round_positive((sp_time_interpolate_linear((a[i]), (b[i]), (coefficients[i]))));
   };
 }
+/** interpolate values between $a and $b with interpolation distance 0..1 */
+void sp_samples_blend(sp_sample_t* a, sp_sample_t* b, sp_sample_t fraction, sp_time_t size, sp_sample_t* out) {
+  sp_time_t i;
+  for (i = 0; (i < size); i += 1) {
+    out[i] = sp_sample_interpolate_linear((a[i]), (b[i]), fraction);
+  };
+}
