@@ -131,11 +131,11 @@ sp_wave_event_state_t sp_wave_event_state_2(sp_wave_state_t wave_state_1, sp_wav
 }
 void sp_wave_event_f(sp_time_t start, sp_time_t end, sp_block_t out, sp_event_t* event) {
   sp_channel_count_t chn_i;
-  sp_wave_event_state_t state;
+  sp_wave_event_state_t* state;
   sp_wave_state_t* wave_state;
-  state = *((sp_wave_event_state_t*)(event->state));
-  for (chn_i = 0; (chn_i < state.channels); chn_i = (1 + chn_i)) {
-    wave_state = (state.wave_states + chn_i);
+  state = ((sp_wave_event_state_t*)(event->state));
+  for (chn_i = 0; (chn_i < state->channels); chn_i = (1 + chn_i)) {
+    wave_state = (state->wave_states + chn_i);
     if (!wave_state->amp) {
       continue;
     };

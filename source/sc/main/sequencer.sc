@@ -112,10 +112,10 @@
   (return a))
 
 (define (sp-wave-event-f start end out event) (void sp-time-t sp-time-t sp-block-t sp-event-t*)
-  (declare chn-i sp-channel-count-t state sp-wave-event-state-t wave-state sp-wave-state-t*)
-  (set state (pointer-get (convert-type event:state sp-wave-event-state-t*)))
-  (for ((set chn-i 0) (< chn-i state.channels) (set chn-i (+ 1 chn-i)))
-    (set wave-state (+ state.wave-states chn-i))
+  (declare chn-i sp-channel-count-t state sp-wave-event-state-t* wave-state sp-wave-state-t*)
+  (set state (convert-type event:state sp-wave-event-state-t*))
+  (for ((set chn-i 0) (< chn-i state:channels) (set chn-i (+ 1 chn-i)))
+    (set wave-state (+ state:wave-states chn-i))
     (if (not wave-state:amp) continue)
     (sp-wave start (- end start) wave-state (array-get out.samples chn-i))))
 
