@@ -65,7 +65,7 @@ status_t test_convolve() {
   memreg_add(b);
   status_require((sph_helper_calloc((carryover_len * sizeof(sp_sample_t)), (&carryover))));
   memreg_add(carryover);
-  /* prepare input/output data arrays */
+  // prepare input/output data arrays
   a[0] = 2;
   a[1] = 3;
   a[2] = 4;
@@ -77,11 +77,11 @@ status_t test_convolve() {
   carryover[0] = 0;
   carryover[1] = 0;
   carryover[2] = 0;
-  /* test convolve first segment */
+  // test convolve first segment
   sp_convolve(a, a_len, b, b_len, carryover_len, carryover, result);
   test_helper_assert("first result", (sp_samples_nearly_equal(result, result_len, expected_result, result_len, error_margin)));
   test_helper_assert("first result carryover", (sp_samples_nearly_equal(carryover, carryover_len, expected_carryover, carryover_len, error_margin)));
-  /* test convolve second segment */
+  // test convolve second segment
   a[0] = 8;
   a[1] = 9;
   a[2] = 10;
@@ -115,10 +115,10 @@ status_t test_moving_average() {
   memreg_add(in);
   status_require((sp_samples_new(size, (&out))));
   memreg_add(out);
-  /* without prev/next */
+  // without prev/next
   sp_moving_average(in, size, 0, 0, radius, out);
   test_helper_assert("without prev/next", (sp_sample_nearly_equal((2.0), (out[1]), error_margin) && sp_sample_nearly_equal((5.5), (out[5]), error_margin) && sp_sample_nearly_equal((2.0), (out[9]), error_margin)));
-  /* with prev/next */
+  // with prev/next
   sp_samples_zero(out, size);
   sp_sample_t prev[11] = { 0, 0, 0, 0, 0, 0, 0, -8, -6, -4, -1 };
   sp_sample_t next[4] = { -1, -4, -6, -8 };
@@ -140,13 +140,13 @@ status_t test_windowed_sinc() {
   state = 0;
   cutoff = 0.1;
   transition = 0.08;
-  /* ir functions */
+  // ir functions
   status_require((sp_windowed_sinc_lp_hp_ir(cutoff, transition, 0, (&ir), (&ir_len))));
   test_helper_assert("ir", (sp_sample_nearly_equal((0.0952), (ir[28]), error_margin)));
   status_require((sp_windowed_sinc_bp_br_ir((0.1), (0.4), (0.08), (0.08), 0, (&ir), (&ir_len))));
   status_require((sp_windowed_sinc_lp_hp_ir(cutoff, transition, 1, (&ir), (&ir_len))));
   status_require((sp_windowed_sinc_bp_br_ir(cutoff, cutoff, transition, transition, 1, (&ir), (&ir_len))));
-  /* filter functions */
+  // filter functions
   status_require((sp_windowed_sinc_lp_hp(source, 10, (0.1), (0.08), 0, (&state), result)));
   sp_convolution_filter_state_free(state);
   state = 0;
@@ -192,7 +192,7 @@ status_t test_file() {
       ((block.samples)[channel])[len] = len;
     };
   };
-  /* test create */
+  // test create
   status_require((sp_file_open(test_file_path, sp_file_mode_read_write, channel_count, sample_rate, (&file))));
   printf("  create\n");
   status_require((sp_file_position((&file), (&position))));
@@ -201,7 +201,7 @@ status_t test_file() {
   test_helper_assert("sp-file-position file after write", (sample_count == position));
   status_require((sp_file_position_set((&file), 0)));
   status_require((sp_file_read((&file), sample_count, (block_2.samples), (&result_sample_count))));
-  /* compare read result with output data */
+  // compare read result with output data
   len = channel_count;
   unequal = 0;
   while ((len && !unequal)) {
@@ -211,13 +211,13 @@ status_t test_file() {
   test_helper_assert("sp-file-read new file result", !unequal);
   status_require((sp_file_close(file)));
   printf("  write\n");
-  /* test open */
+  // test open
   status_require((sp_file_open(test_file_path, sp_file_mode_read_write, 2, 8000, (&file))));
   status_require((sp_file_position((&file), (&position))));
   test_helper_assert("sp-file-position existing file", (sample_count == position));
   status_require((sp_file_position_set((&file), 0)));
   sp_file_read((&file), sample_count, (block_2.samples), (&result_sample_count));
-  /* compare read result with output data */
+  // compare read result with output data
   unequal = 0;
   len = channel_count;
   while ((len && !unequal)) {
@@ -378,7 +378,7 @@ status_t test_sp_seq() {
   test_helper_assert("block contents 1 event 1", ((1 == (out.samples)[0][0]) && (1 == (out.samples)[0][39])));
   test_helper_assert("block contents 1 gap", (0 == (out.samples)[0][40]));
   test_helper_assert("block contents 1 event 2", ((2 == (out.samples)[0][41]) && (2 == (out.samples)[0][99])));
-  /* sp-seq-parallel */
+  // sp-seq-parallel
   status_require((sp_seq_parallel(0, 100, out, events, sp_seq_event_count)));
   sp_events_array_free(events, sp_seq_event_count);
   sp_block_free(out);
@@ -477,9 +477,9 @@ status_t test_render_block() {
   };
   status_require((sp_wave_event(0, sp_wave_event_duration, (sp_wave_event_state_1((sp_sine_state(sp_wave_event_duration, frq, amp, 0)))), (&event))));
   status_require((sp_block_new(1, sp_wave_event_duration, (&out))));
-  /* (sp-render-file event 0 sp-wave-event-duration rc /tmp/test.wav) */
+  // (sp-render-file event 0 sp-wave-event-duration rc /tmp/test.wav)
   sp_render_block(event, 0, sp_wave_event_duration, rc, (&out));
-  /* (sp-block-plot-1 out) */
+  // (sp-block-plot-1 out)
   sp_block_free(out);
   (event.free)((&event));
 exit:
@@ -576,7 +576,7 @@ status_t test_statistics() {
   test_helper_assert("samples skewness", (feq((0.0), stat_out)));
   sp_stat_samples_kurtosis(as, size, (&stat_out));
   test_helper_assert("samples kurtosis", (feq((1.76), stat_out)));
-  /* repetition-all */
+  // repetition-all
   sp_stat_times_repetition_all(repetition_1, size, (&stat_out));
   test_helper_assert("repetition-1 all", (feq((28.0), stat_out)));
   test_helper_assert("repetition-1 all max", (feq((sp_stat_repetition_all_max(size)), stat_out)));
@@ -587,7 +587,7 @@ status_t test_statistics() {
   test_helper_assert("repetition-2 all", (feq((0.0), stat_out)));
   sp_stat_samples_repetition_all(as, size, (&stat_out));
   test_helper_assert("samples repetition-all", (feq((0.0), stat_out)));
-  /* inharmonicity */
+  // inharmonicity
   sp_stat_times_inharmonicity(inhar_1, size, (inhar_results + 0));
   sp_stat_times_inharmonicity(inhar_2, size, (inhar_results + 1));
   sp_stat_times_inharmonicity(inhar_3, size, (inhar_results + 2));
@@ -606,7 +606,7 @@ status_t test_simple_mappings() {
   sp_sample_t as[4] = { 1, 1, 1, 1 };
   sp_sample_t bs[4] = { 2, 2, 2, 2 };
   size = 4;
-  /* times */
+  // times
   sp_times_set_1(a, size, 0, a);
   sp_samples_set_1(as, size, 0, as);
   test_helper_assert("times set-1", (sp_times_equal_1(a, size, 0)));

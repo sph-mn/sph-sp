@@ -1,4 +1,4 @@
-/* this file contains basics and includes dependencies */
+// this file contains basics and includes dependencies
 #define M_PI 3.141592653589793
 #include <stdio.h>
 #include <fcntl.h>
@@ -257,7 +257,7 @@ void sp_convolve(sp_sample_t* a, sp_time_t a_len, sp_sample_t* b, sp_time_t b_le
   sp_time_t c_index;
   if (carryover_len) {
     if (carryover_len <= a_len) {
-      /* copy all entries to result and reset */
+      // copy all entries to result and reset
       memcpy(result_samples, result_carryover, (carryover_len * sizeof(sp_sample_t)));
       memset(result_carryover, 0, (carryover_len * sizeof(sp_sample_t)));
       memset((carryover_len + result_samples), 0, ((a_len - carryover_len) * sizeof(sp_sample_t)));
@@ -277,7 +277,7 @@ first process values that dont lead to carryover */
   if (size) {
     sp_convolve_one(a, size, b, b_len, result_samples);
   };
-  /* process values with carryover */
+  // process values with carryover
   for (a_index = size; (a_index < a_len); a_index = (1 + a_index)) {
     for (b_index = 0; (b_index < b_len); b_index = (1 + b_index)) {
       c_index = (a_index + b_index);
@@ -411,7 +411,7 @@ status_t sp_initialise(uint16_t cpu_count, sp_channel_count_t channels, sp_time_
   sp_channels = channels;
   sp_default_random_state = sp_random_state_new(1557083953);
   sp_sine_lfo_factor = 10;
-  /* random state needs warm-up */
+  // random state needs warm-up
   sp_time_random((&sp_default_random_state));
   sp_time_random((&sp_default_random_state));
   status_require((sp_samples_new(sp_rate, (&sp_sine_table))));

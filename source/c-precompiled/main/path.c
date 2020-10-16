@@ -94,11 +94,11 @@ status_t sp_path_derivation(sp_path_t path, sp_sample_t** x_changes, sp_sample_t
   sp_path_time_t sp_i;
   sp_path_segment_t* s;
   sp_path_segment_t* ss;
-  /* copy segments */
+  // copy segments
   ss = 0;
   status_require((sph_helper_malloc((path.segments_count * sizeof(sp_path_segment_t)), (&ss))));
   memcpy(ss, (path.segments), (path.segments_count * sizeof(sp_path_segment_t)));
-  /* modify points */
+  // modify points
   for (s_i = 0, p_i = 0; (s_i < path.segments_count); s_i += 1) {
     s = (ss + s_i);
     for (sp_i = 0; (sp_i < spline_path_segment_points_count((*s))); sp_i += 1) {

@@ -67,7 +67,7 @@ status_t sp_seq_parallel(sp_time_t start, sp_time_t end, sp_block_t out, sp_even
   sp_time_t active_count;
   seq_futures = 0;
   active_count = 0;
-  /* count events to allocate future object memory */
+  // count events to allocate future object memory
   for (i = 0; (i < size); i += 1) {
     e = events[i];
     if (e.end <= start) {
@@ -79,7 +79,7 @@ status_t sp_seq_parallel(sp_time_t start, sp_time_t end, sp_block_t out, sp_even
     };
   };
   status_require((sph_helper_malloc((active_count * sizeof(sp_seq_future_t)), (&seq_futures))));
-  /* parallelise */
+  // parallelise
   ftr_i = 0;
   for (i = 0; (i < size); i += 1) {
     e = events[i];
@@ -101,7 +101,7 @@ status_t sp_seq_parallel(sp_time_t start, sp_time_t end, sp_block_t out, sp_even
       future_new(sp_seq_parallel_future_f, sf, (&(sf->future)));
     };
   };
-  /* merge */
+  // merge
   for (ftr_i = 0; (ftr_i < active_count); ftr_i += 1) {
     sf = (ftr_i + seq_futures);
     touch((&(sf->future)));
@@ -186,7 +186,7 @@ void sp_noise_event_f(sp_time_t start, sp_time_t end, sp_block_t out, sp_event_t
   sp_time_t block_offset;
   sp_time_t duration;
   sp_time_t block_rest;
-  /* update filter arguments only every resolution number of samples */
+  // update filter arguments only every resolution number of samples
   s = event->state;
   duration = (end - start);
   block_count = ((duration == s->resolution) ? 1 : sp_cheap_floor_positive((duration / s->resolution)));
@@ -280,12 +280,12 @@ void sp_cheap_noise_event_f(sp_time_t start, sp_time_t end, sp_block_t out, sp_e
   sp_time_t i;
   sp_cheap_noise_event_state_t* s;
   sp_time_t t;
-  /* update filter arguments only every resolution number of samples */
+  // update filter arguments only every resolution number of samples
   s = event->state;
   duration = (end - start);
   block_count = ((duration == s->resolution) ? 1 : sp_cheap_floor_positive((duration / s->resolution)));
   block_rest = (duration % s->resolution);
-  /* total block count is block-count plus rest-block */
+  // total block count is block-count plus rest-block
   for (block_i = 0; (block_i <= block_count); block_i = (1 + block_i)) {
     block_offset = (s->resolution * block_i);
     t = (start + block_offset);

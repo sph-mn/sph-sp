@@ -71,6 +71,7 @@
   (sp-max a b) (if* (> a b) a b)
   (sp-min a b) (if* (< a b) a b)
   (sp-absolute-difference a b) (if* (> a b) (- a b) (- b a))
+  (sp-abs a) (if* (> 0 a) (* -1 a) a)
   (sp-no-underflow-subtract a b) (if* (> a b) (- a b) 0)
   (sp-no-zero-divide a b) (if* (= 0 b) 0 (/ a b)))
 
@@ -279,6 +280,7 @@
   (sp-times-range start end out) (void sp-time-t sp-time-t sp-time-t*)
   (sp-time-round-to-multiple a base) (sp-time-t sp-time-t sp-time-t)
   (sp-times-limit a size n out) (void sp-time-t* sp-time-t sp-time-t sp-time-t*)
+  (sp-samples-limit-abs a size n out) (void sp-sample-t* sp-time-t sp-sample-t sp-sample-t*)
   sp-times-counted-sequences-t (type (struct (count sp-time-t) (sequence sp-time-t*)))
   (sp-times-counted-sequences-sort-swap a b c) (void void* ssize-t ssize-t)
   (sp-times-counted-sequences-sort-less a b c) (uint8-t void* ssize-t ssize-t)

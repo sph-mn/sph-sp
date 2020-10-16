@@ -538,12 +538,6 @@
   (return
     (if* (= 0 a) base (sp-cheap-round-positive (* (/ a (convert-type base sp-sample-t)) base)))))
 
-(define (sp-times-limit a size n out) (void sp-time-t* sp-time-t sp-time-t sp-time-t*)
-  (declare i sp-time-t)
-  "set all values greater than n in array to n"
-  (for ((set i 0) (< i size) (set+ i 1))
-    (set (array-get out i) (if* (< n (array-get a i)) n (array-get a i)))))
-
 (define (sp-times-deduplicate a size out out-size)
   (status-t sp-time-t* sp-time-t sp-time-t* sp-time-t*)
   "writes the unique elements of a to out.
@@ -659,3 +653,17 @@
   (declare i sp-time-t)
   (for-i i size
     (set (array-get out i) (sp-sample-interpolate-linear (array-get a i) (array-get b i) fraction))))
+
+(define (sp-times-limit a size n out) (void sp-time-t* sp-time-t sp-time-t sp-time-t*)
+  (declare i sp-time-t)
+  "set all values greater than n in array to n"
+  (for ((set i 0) (< i size) (set+ i 1))
+    (set (array-get out i) (if* (< n (array-get a i)) n (array-get a i)))))
+
+(define (sp-samples-limit-abs a size n out) (void sp-sample-t* sp-time-t sp-sample-t sp-sample-t*)
+  (declare i sp-time-t v sp-sample-t)
+  "set all values greater than n in array to n"
+  (for ((set i 0) (< i size) (set+ i 1))
+    (set v (array-get a i))
+    (if (> 0 v) (set (array-get out i) (if* (> (* -1 n) v) (* -1 n) v))
+      (set (array-get out i) (if* (< n v) n v)))))
