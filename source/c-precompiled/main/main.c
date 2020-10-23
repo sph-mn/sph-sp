@@ -158,19 +158,30 @@ void sp_wave(sp_time_t offset, sp_time_t duration, sp_wave_state_t* state, sp_sa
   sp_time_t phs;
   sp_time_t i;
   phs = state->phs;
-  for (i = 0; (i < duration); i = (1 + i)) {
-    out[i] += ((state->amp)[(offset + i)] * (state->wvf)[phs]);
-    phs += (state->frq)[(offset + i)];
-    if (phs >= state->wvf_size) {
-      phs = (phs % state->wvf_size);
+  if (state->frq) {
+    for (i = 0; (i < duration); i = (1 + i)) {
+      out[i] += ((state->amp)[(offset + i)] * (state->wvf)[phs]);
+      phs += (state->frq)[(offset + i)];
+      if (phs >= state->wvf_size) {
+        phs = (phs % state->wvf_size);
+      };
+    };
+  } else {
+    for (i = 0; (i < duration); i = (1 + i)) {
+      out[i] += ((state->amp)[(offset + i)] * (state->wvf)[phs]);
+      phs += state->frq_fixed;
+      if (phs >= state->wvf_size) {
+        phs = (phs % state->wvf_size);
+      };
     };
   };
   state->phs = phs;
 }
-sp_wave_state_t sp_wave_state(sp_sample_t* wvf, sp_time_t wvf_size, sp_time_t size, sp_time_t* frq, sp_sample_t* amp, sp_time_t phs) {
+sp_wave_state_t sp_wave_state(sp_sample_t* wvf, sp_time_t wvf_size, sp_time_t size, sp_time_t* frq, sp_time_t frq_fixed, sp_sample_t* amp, sp_time_t phs) {
   sp_wave_state_t a;
   a.size = size;
   a.frq = frq;
+  a.frq_fixed = frq_fixed;
   a.wvf = wvf;
   a.wvf_size = wvf_size;
   a.amp = amp;

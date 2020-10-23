@@ -474,7 +474,8 @@ void sp_times_multiplications(sp_time_t start, sp_time_t factor, sp_time_t count
     start *= factor;
   };
 }
-/** write count cumulative additions with summand from start to out */
+/** write count cumulative additions with summand from start to out.
+   use case: generating harmonic frequency values */
 void sp_times_additions(sp_time_t start, sp_time_t summand, sp_time_t count, sp_time_t* out) {
   sp_time_t i;
   for (i = 0; (i < count); i += 1) {

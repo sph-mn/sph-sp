@@ -65,9 +65,10 @@
   (sp-cheap-round-positive a) (convert-type (+ 0.5 a) sp-time-t)
   (sp-cheap-floor-positive a) (convert-type a sp-time-t)
   (sp-cheap-ceiling-positive a) (+ (convert-type a sp-time-t) (< (convert-type a sp-time-t) a))
-  (sp-sine-state size frq amp phs) (sp-wave-state sp-sine-table sp-rate size frq amp phs)
-  (sp-sine-state-lfo size frq amp phs)
-  (sp-wave-state sp-sine-table-lfo (* sp-rate sp-sine-lfo-factor) size frq amp phs)
+  (sp-sine-state size frq frq-fixed amp phs)
+  (sp-wave-state sp-sine-table sp-rate size frq frq-fixed amp phs)
+  (sp-sine-state-lfo size frq frq-fixed amp phs)
+  (sp-wave-state sp-sine-table-lfo (* sp-rate sp-sine-lfo-factor) size frq frq-fixed amp phs)
   (sp-max a b) (if* (> a b) a b)
   (sp-min a b) (if* (< a b) a b)
   (sp-absolute-difference a b) (if* (> a b) (- a b) (- b a))
@@ -133,14 +134,15 @@
       (amp sp-sample-t*)
       (phs sp-time-t)
       (frq sp-time-t*)
+      (frq-fixed sp-time-t)
       (wvf-size sp-time-t)
       (wvf sp-sample-t*)
       (channels sp-channel-count-t)
       (size sp-time-t)))
   sp-wave-event-state-t
   (type (struct (wave-states (array sp-wave-state-t sp-channel-limit)) (channels sp-time-t)))
-  (sp-wave-state wvf wvf-size size frq amp phs)
-  (sp-wave-state-t sp-sample-t* sp-time-t sp-time-t sp-time-t* sp-sample-t* sp-time-t)
+  (sp-wave-state wvf wvf-size size frq frq-fixed amp phs)
+  (sp-wave-state-t sp-sample-t* sp-time-t sp-time-t sp-time-t* sp-time-t sp-sample-t* sp-time-t)
   (sp-sine-period size out) (void sp-time-t sp-sample-t*)
   (sp-phase current change cycle) (sp-time-t sp-time-t sp-time-t sp-time-t)
   (sp-phase-float current change cycle) (sp-time-t sp-time-t double sp-time-t)
@@ -563,7 +565,13 @@
   (status-t sp-path-t sp-time-t sp-sample-t** sp-sample-t** sp-sample-t*** sp-time-t**))
 
 (sc-comment "main 2")
-(pre-define (rt n d) (convert-type (* (/ _rate d) n) sp-time-t))
+
+(pre-define (rt n d)
+  (begin
+    "return a sample count relative to the current default sample rate sp_rate.
+     (rate / d * n)
+     example (rt 1 2) returns half of sp_rate"
+    (convert-type (* (/ sp-rate d) n) sp-time-t)))
 
 (declare
   sp-render-config-t

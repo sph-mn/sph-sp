@@ -379,7 +379,8 @@
 
 (define (sp-times-additions start summand count out)
   (void sp-time-t sp-time-t sp-time-t sp-time-t*)
-  "write count cumulative additions with summand from start to out"
+  "write count cumulative additions with summand from start to out.
+   use case: generating harmonic frequency values"
   (declare i sp-time-t)
   (for ((set i 0) (< i count) (set+ i 1)) (set (array-get out i) start) (set+ start summand)))
 

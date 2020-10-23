@@ -114,16 +114,28 @@
    * state.amp (amplitude): array with values per sample"
   (declare amp sp-sample-t phs sp-time-t i sp-time-t)
   (set phs state:phs)
-  (for ((set i 0) (< i duration) (set i (+ 1 i)))
-    (set+ (array-get out i) (* (array-get state:amp (+ offset i)) (array-get state:wvf phs))
-      phs (array-get state:frq (+ offset i)))
-    (if (>= phs state:wvf-size) (set phs (modulo phs state:wvf-size))))
+  (if state:frq
+    (for ((set i 0) (< i duration) (set i (+ 1 i)))
+      (set+ (array-get out i) (* (array-get state:amp (+ offset i)) (array-get state:wvf phs))
+        phs (array-get state:frq (+ offset i)))
+      (if (>= phs state:wvf-size) (set phs (modulo phs state:wvf-size))))
+    (for ((set i 0) (< i duration) (set i (+ 1 i)))
+      (set+ (array-get out i) (* (array-get state:amp (+ offset i)) (array-get state:wvf phs))
+        phs state:frq-fixed)
+      (if (>= phs state:wvf-size) (set phs (modulo phs state:wvf-size)))))
   (set state:phs phs))
 
-(define (sp-wave-state wvf wvf-size size frq amp phs)
-  (sp-wave-state-t sp-sample-t* sp-time-t sp-time-t sp-time-t* sp-sample-t* sp-time-t)
+(define (sp-wave-state wvf wvf-size size frq frq-fixed amp phs)
+  (sp-wave-state-t sp-sample-t* sp-time-t sp-time-t sp-time-t* sp-time-t sp-sample-t* sp-time-t)
   (declare a sp-wave-state-t)
-  (set a.size size a.frq frq a.wvf wvf a.wvf-size wvf-size a.amp amp a.phs phs)
+  (set
+    a.size size
+    a.frq frq
+    a.frq-fixed frq-fixed
+    a.wvf wvf
+    a.wvf-size wvf-size
+    a.amp amp
+    a.phs phs)
   (return a))
 
 (define (sp-triangle t a b) (sp-sample-t sp-time-t sp-time-t sp-time-t)

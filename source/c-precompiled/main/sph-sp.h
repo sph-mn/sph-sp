@@ -115,8 +115,8 @@
 #define sp_cheap_round_positive(a) ((sp_time_t)((0.5 + a)))
 #define sp_cheap_floor_positive(a) ((sp_time_t)(a))
 #define sp_cheap_ceiling_positive(a) (((sp_time_t)(a)) + (((sp_time_t)(a)) < a))
-#define sp_sine_state(size, frq, amp, phs) sp_wave_state(sp_sine_table, sp_rate, size, frq, amp, phs)
-#define sp_sine_state_lfo(size, frq, amp, phs) sp_wave_state(sp_sine_table_lfo, (sp_rate * sp_sine_lfo_factor), size, frq, amp, phs)
+#define sp_sine_state(size, frq, frq_fixed, amp, phs) sp_wave_state(sp_sine_table, sp_rate, size, frq, frq_fixed, amp, phs)
+#define sp_sine_state_lfo(size, frq, frq_fixed, amp, phs) sp_wave_state(sp_sine_table_lfo, (sp_rate * sp_sine_lfo_factor), size, frq, frq_fixed, amp, phs)
 #define sp_max(a, b) ((a > b) ? a : b)
 #define sp_min(a, b) ((a < b) ? a : b)
 #define sp_absolute_difference(a, b) ((a > b) ? (a - b) : (b - a))
@@ -170,6 +170,7 @@ typedef struct {
   sp_sample_t* amp;
   sp_time_t phs;
   sp_time_t* frq;
+  sp_time_t frq_fixed;
   sp_time_t wvf_size;
   sp_sample_t* wvf;
   sp_channel_count_t channels;
@@ -179,7 +180,7 @@ typedef struct {
   sp_wave_state_t wave_states[sp_channel_limit];
   sp_time_t channels;
 } sp_wave_event_state_t;
-sp_wave_state_t sp_wave_state(sp_sample_t* wvf, sp_time_t wvf_size, sp_time_t size, sp_time_t* frq, sp_sample_t* amp, sp_time_t phs);
+sp_wave_state_t sp_wave_state(sp_sample_t* wvf, sp_time_t wvf_size, sp_time_t size, sp_time_t* frq, sp_time_t frq_fixed, sp_sample_t* amp, sp_time_t phs);
 void sp_sine_period(sp_time_t size, sp_sample_t* out);
 sp_time_t sp_phase(sp_time_t current, sp_time_t change, sp_time_t cycle);
 sp_time_t sp_phase_float(sp_time_t current, double change, sp_time_t cycle);
@@ -500,7 +501,10 @@ void sp_path_multiply(sp_path_t path, sp_sample_t x_factor, sp_sample_t y_factor
 status_t sp_path_derivations_normalized(sp_path_t base, sp_time_t count, sp_sample_t** x_changes, sp_sample_t** y_changes, sp_path_t** out);
 status_t sp_path_samples_derivations_normalized(sp_path_t path, sp_time_t count, sp_sample_t** x_changes, sp_sample_t** y_changes, sp_sample_t*** out, sp_time_t** out_sizes);
 // main 2
-#define rt(n, d) ((sp_time_t)(((_rate / d) * n)))
+/** return a sample count relative to the current default sample rate sp_rate.
+     (rate / d * n)
+     example (rt 1 2) returns half of sp_rate */
+#define rt(n, d) ((sp_time_t)(((sp_rate / d) * n)))
 typedef struct {
   sp_channel_count_t channels;
   sp_time_t rate;
