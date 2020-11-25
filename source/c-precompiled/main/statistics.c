@@ -140,7 +140,7 @@ sp_time_t sp_stat_unique_all_max(sp_time_t size) {
 }
 sp_time_t sp_stat_repetition_all_max(sp_time_t size) { return ((sp_stat_unique_all_max(size) - size)); }
 sp_time_t sp_stat_repetition_max(sp_time_t size, sp_time_t width) { return ((sp_stat_unique_max(size, width) - 1)); }
-// times
+/* times */
 /** center of mass. the distribution of mass is balanced around the center of mass, and the average of
    the weighted position coordinates of the distributed mass defines its coordinates.
    sum(n * x(n)) / sum(x(n)) */
@@ -233,7 +233,7 @@ define_sp_stat_deviation(sp_stat_times_deviation, sp_stat_times_mean, sp_time_t)
   define_sp_stat_median(sp_stat_times_median, sp_times_sort_less, sp_times_sort_swap, sp_time_t)
     define_sp_stat_skewness(sp_stat_times_skewness, sp_stat_times_mean, sp_time_t)
       define_sp_stat_kurtosis(sp_stat_times_kurtosis, sp_stat_times_mean, sp_time_t)
-  // samples
+  /* samples */
   uint8_t sp_stat_samples_center(sp_sample_t* a, sp_time_t size, sp_sample_t* out) {
   sp_time_t i;
   sp_sample_t sum;
@@ -256,7 +256,7 @@ define_sp_stat_range(sp_stat_samples_range, sp_sample_t)
   sp_time_t i;
   sp_sample_t range[3];
   sp_sample_t addition;
-  // returns min, max, range
+  /* returns min, max, range */
   sp_stat_samples_range(a, size, range);
   addition = ((0 > range[0]) ? fabs((range[0])) : 0);
   for (i = 0; (i < size); i += 1) {

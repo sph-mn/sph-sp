@@ -4,7 +4,7 @@
 #include <byteswap.h>
 #include <inttypes.h>
 #include <string.h>
-// configuration
+/* configuration */
 #ifndef sp_channel_limit
 #define sp_channel_limit 2
 #endif
@@ -77,7 +77,7 @@
 #include <sph/float.c>
 #include <sph/set.c>
 #include <sph/hashtable.c>
-// main
+/* main */
 #define boolean uint8_t
 #define f64 double
 #define sp_file_bit_input 1
@@ -193,7 +193,7 @@ sp_time_t sp_sequence_max(sp_time_t size, sp_time_t min_size);
 sp_time_t sp_set_sequence_max(sp_time_t set_size, sp_time_t selection_size);
 sp_time_t sp_permutations_max(sp_time_t set_size, sp_time_t selection_size);
 sp_time_t sp_compositions_max(sp_time_t sum);
-// arrays
+/* arrays */
 #define sp_samples_zero(a, size) memset(a, 0, (size * sizeof(sp_sample_t)))
 #define sp_times_zero(a, size) memset(a, 0, (size * sizeof(sp_time_t)))
 #define sp_time_interpolate_linear(a, b, t) sp_cheap_round_positive((((1 - ((sp_sample_t)(t))) * ((sp_sample_t)(a))) + (t * ((sp_sample_t)(b)))))
@@ -306,7 +306,7 @@ void sp_times_subdivide(sp_time_t* a, sp_time_t size, sp_time_t index, sp_time_t
 void sp_times_blend(sp_time_t* a, sp_time_t* b, sp_sample_t fraction, sp_time_t size, sp_time_t* out);
 void sp_times_mask(sp_time_t* a, sp_time_t* b, sp_sample_t* coefficients, sp_time_t size, sp_time_t* out);
 void sp_samples_blend(sp_sample_t* a, sp_sample_t* b, sp_sample_t fraction, sp_time_t size, sp_sample_t* out);
-// statistics
+/* statistics */
 typedef uint8_t (*sp_stat_times_f_t)(sp_time_t*, sp_time_t, sp_sample_t*);
 typedef uint8_t (*sp_stat_samples_f_t)(sp_sample_t*, sp_time_t, sp_sample_t*);
 uint8_t sp_stat_times_range(sp_time_t* a, sp_time_t size, sp_sample_t* out);
@@ -334,7 +334,7 @@ sp_time_t sp_stat_unique_all_max(sp_time_t size);
 sp_time_t sp_stat_repetition_all_max(sp_time_t size);
 uint8_t sp_stat_times_repetition(sp_time_t* a, sp_time_t size, sp_time_t width, sp_sample_t* out);
 sp_time_t sp_stat_repetition_max(sp_time_t size, sp_time_t width);
-// filter
+/* filter */
 #define sp_filter_state_t sp_convolution_filter_state_t
 #define sp_filter_state_free sp_convolution_filter_state_free
 #define sp_cheap_filter_passes_limit 8
@@ -382,7 +382,7 @@ void sp_cheap_filter(sp_state_variable_filter_t type, sp_sample_t* in, sp_time_t
 void sp_cheap_filter_state_free(sp_cheap_filter_state_t* a);
 status_t sp_cheap_filter_state_new(sp_time_t max_size, sp_time_t max_passes, sp_cheap_filter_state_t* out_state);
 status_t sp_filter(sp_sample_t* in, sp_time_t in_size, sp_float_t cutoff_l, sp_float_t cutoff_h, sp_float_t transition_l, sp_float_t transition_h, boolean is_reject, sp_filter_state_t** out_state, sp_sample_t* out_samples);
-// plot
+/* plot */
 #define sp_block_plot_1(a) sp_plot_samples(((a.samples)[0]), (a.size))
 void sp_plot_samples(sp_sample_t* a, sp_time_t a_size);
 void sp_plot_times(sp_time_t* a, sp_time_t a_size);
@@ -392,7 +392,7 @@ void sp_plot_samples_file(uint8_t* path, uint8_t use_steps);
 void sp_plot_spectrum_to_file(sp_sample_t* a, sp_time_t a_size, uint8_t* path);
 void sp_plot_spectrum_file(uint8_t* path);
 void sp_plot_spectrum(sp_sample_t* a, sp_time_t a_size);
-// sequencer
+/* sequencer */
 #define sp_event_duration(a) (a.end - a.start)
 #define sp_event_duration_set(a, duration) a.end = (a.start + duration)
 #define sp_event_move(a, start) \
@@ -459,7 +459,7 @@ void sp_group_append(sp_event_t* a, sp_event_t event);
 void sp_group_event_f(sp_time_t start, sp_time_t end, sp_block_t out, sp_event_t* event);
 void sp_group_event_parallel_f(sp_time_t start, sp_time_t end, sp_block_t out, sp_event_t* event);
 void sp_group_event_free(sp_event_t* a);
-// path
+/* path */
 #define sp_path_t spline_path_t
 #define sp_path_time_t spline_path_time_t
 #define sp_path_value_t spline_path_value_t
@@ -500,7 +500,7 @@ status_t sp_path_times_derivation(sp_path_t path, sp_sample_t** x_changes, sp_sa
 void sp_path_multiply(sp_path_t path, sp_sample_t x_factor, sp_sample_t y_factor);
 status_t sp_path_derivations_normalized(sp_path_t base, sp_time_t count, sp_sample_t** x_changes, sp_sample_t** y_changes, sp_path_t** out);
 status_t sp_path_samples_derivations_normalized(sp_path_t path, sp_time_t count, sp_sample_t** x_changes, sp_sample_t** y_changes, sp_sample_t*** out, sp_time_t** out_sizes);
-// main 2
+/* main 2 */
 /** return a sample count relative to the current default sample rate sp_rate.
      (rate / d * n)
      example (rt 1 2) returns half of sp_rate */

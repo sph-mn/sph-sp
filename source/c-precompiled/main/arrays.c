@@ -219,7 +219,7 @@ define_value_functions(sp_times, sp_time_t)
     return ((*((uint64_t*)(a))));
   };
 }
-// samples
+/* samples */
 status_t sp_samples_duplicate(sp_sample_t* a, sp_time_t size, sp_sample_t** out) {
   status_declare;
   sp_sample_t* temp;
@@ -238,7 +238,7 @@ void sp_samples_differences(sp_sample_t* a, sp_time_t size, sp_sample_t* out) {
     out[(i - 1)] = (a[i] - a[(i - 1)]);
   };
 }
-// times
+/* times */
 status_t sp_times_duplicate(sp_time_t a, sp_time_t size, sp_time_t** out) {
   status_declare;
   sp_time_t* temp;
@@ -298,7 +298,7 @@ sp_time_t sp_time_random_discrete(sp_random_state_t* state, sp_time_t* cudist, s
 /** get a random number in range with a custom probability distribution given by cudist,
    the cumulative sums of the distribution. the resulting number resolution is proportional to cudist-size */
 sp_time_t sp_time_random_custom(sp_random_state_t* state, sp_time_t* cudist, sp_time_t cudist_size, sp_time_t range) {
-  // cudist-size minus one because range end is exclusive
+  /* cudist-size minus one because range end is exclusive */
   return ((sp_cheap_round_positive((range * (sp_time_random_discrete(state, cudist, cudist_size) / ((sp_sample_t)((cudist_size - 1))))))));
 }
 sp_sample_t sp_sample_random_custom(sp_random_state_t* state, sp_time_t* cudist, sp_time_t cudist_size, sp_sample_t range) { return ((range * (sp_time_random_discrete(state, cudist, cudist_size) / ((sp_sample_t)(cudist_size))))); }
@@ -404,7 +404,7 @@ status_t sp_times_permutations(sp_time_t size, sp_time_t* set, sp_time_t set_siz
   status_require((sph_helper_malloc((size * sizeof(sp_time_t)), (&a))));
   status_require((sph_helper_calloc((size * sizeof(sp_time_t)), (&s))));
   status_require((sph_helper_calloc((o_size * sizeof(sp_time_t*)), (&o))));
-  // ensure that new b are always added to o
+  /* ensure that new b are always added to o */
   status_require((sph_helper_malloc((size * sizeof(sp_time_t)), (&b))));
   o[o_used] = b;
   o_used = (o_used + 1);
@@ -716,7 +716,7 @@ void sp_times_counted_sequences_hash(sp_time_t* a, sp_time_t size, sp_time_t wid
   for (i = 0; (i < (size - (width - 1))); i += 1) {
     key.data = ((uint8_t*)((i + a)));
     value = sp_sequence_hashtable_get(out, key);
-    // full-hashtable-error is ignored
+    /* full-hashtable-error is ignored */
     if (value) {
       *value += 1;
     } else {

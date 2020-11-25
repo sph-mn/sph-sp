@@ -123,8 +123,9 @@
 
 (define (sp-wave-event start end state out)
   (status-t sp-time-t sp-time-t sp-wave-event-state-t sp-event-t*)
-  "in wave-event-state, unset wave states or wave states with amp set to null will generate no output.
-   the states struct array is copied and freed with event.free"
+  "in wave_event_state, unset wave states or wave states with amp set to null will generate no output.
+   the state struct is copied and freed with event.free so that stack declared structs can be used.
+   sp_wave_event, sp_wave_event_f and sp_wave_event_free are a good example for custom events"
   status-declare
   (declare event-state sp-wave-state-t*)
   (set event-state 0)
