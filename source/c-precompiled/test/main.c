@@ -293,7 +293,6 @@ exit:
 #define sp_noise_duration 96
 status_t test_sp_noise_event() {
   status_declare;
-  sp_event_t events[1];
   sp_time_t events_size;
   sp_block_t out;
   sp_sample_t cut_l[sp_noise_duration];
@@ -303,6 +302,7 @@ status_t test_sp_noise_event() {
   sp_sample_t amp1[sp_noise_duration];
   sp_sample_t* amp[sp_channel_limit];
   sp_time_t i;
+  sp_declare_event_array(events, 1);
   status_require((sp_block_new(1, sp_noise_duration, (&out))));
   amp[0] = amp1;
   for (i = 0; (i < sp_noise_duration); i = (1 + i)) {
@@ -339,7 +339,6 @@ exit:
 }
 status_t test_sp_cheap_noise_event() {
   status_declare;
-  sp_event_t events[1];
   sp_time_t events_size;
   sp_block_t out;
   sp_sample_t cut[sp_noise_duration];
@@ -347,6 +346,7 @@ status_t test_sp_cheap_noise_event() {
   sp_sample_t* amp[sp_channel_limit];
   sp_sample_t q_factor;
   sp_time_t i;
+  sp_declare_event_array(events, 1);
   status_require((sp_block_new(1, sp_noise_duration, (&out))));
   amp[0] = amp1;
   q_factor = 0;
@@ -366,9 +366,9 @@ exit:
 #define sp_seq_event_count 2
 status_t test_sp_seq() {
   status_declare;
-  sp_event_t events[sp_seq_event_count];
   sp_block_t out;
   sp_time_t i;
+  sp_declare_event_array(events, sp_seq_event_count);
   events[0] = test_helper_event(0, 40, 1);
   events[1] = test_helper_event(41, 100, 2);
   sp_seq_events_prepare(events, sp_seq_event_count);
@@ -387,18 +387,15 @@ exit:
 }
 status_t test_sp_group() {
   status_declare;
-  sp_event_t g;
-  sp_event_t g1;
-  sp_event_t e1;
-  sp_event_t e2;
-  sp_event_t e3;
   sp_block_t block;
   sp_time_t* m1;
   sp_time_t* m2;
+  sp_declare_event_2(g, g1);
+  sp_declare_event_3(e1, e2, e3);
   status_require((sp_times_new(100, (&m1))));
   status_require((sp_times_new(100, (&m2))));
-  status_require((sp_group_new(0, 2, 2, (&g))));
-  status_require((sp_group_new(10, 2, 0, (&g1))));
+  status_require((sp_group_new(0, 2, (&g))));
+  status_require((sp_group_new(10, 2, (&g1))));
   status_require((sp_block_new(2, 100, (&block))));
   e1 = test_helper_event(0, 20, 1);
   e2 = test_helper_event(20, 40, 2);
@@ -407,8 +404,9 @@ status_t test_sp_group() {
   sp_group_add(g1, e2);
   sp_group_add(g, g1);
   sp_group_add(g, e3);
-  sp_group_memory_add(g, m1);
-  sp_group_memory_add(g, m2);
+  sp_event_memory_init(g, 2);
+  sp_event_memory_add(g, m1);
+  sp_event_memory_add(g, m2);
   sp_group_prepare(g);
   (g.f)(0, 50, block, (&g));
   (g.f)(50, 100, (sp_block_with_offset(block, 50)), (&g));
@@ -441,12 +439,12 @@ exit:
    sp-plot-samples can plot the result */
 status_t test_wave_event() {
   status_declare;
-  sp_event_t event;
   sp_block_t out;
   sp_time_t frq[sp_wave_event_duration];
   sp_sample_t amp1[sp_wave_event_duration];
   sp_sample_t amp2[sp_wave_event_duration];
   sp_time_t i;
+  sp_declare_event(event);
   for (i = 0; (i < sp_wave_event_duration); i += 1) {
     frq[i] = 2000;
     amp1[i] = 1;
@@ -463,12 +461,12 @@ exit:
 }
 status_t test_render_block() {
   status_declare;
-  sp_event_t event;
   sp_block_t out;
   sp_time_t frq[sp_wave_event_duration];
   sp_sample_t amp[sp_wave_event_duration];
   sp_time_t i;
   sp_render_config_t rc;
+  sp_declare_event(event);
   rc = sp_render_config(sp_channels, sp_rate, sp_rate);
   rc.block_size = 40;
   for (i = 0; (i < sp_wave_event_duration); i += 1) {
@@ -695,7 +693,7 @@ status_t test_sp_seq_parallel() {
   sp_time_t* frq;
   sp_time_t size;
   sp_block_t block;
-  sp_event_t events[10];
+  sp_declare_event_array(events, 10);
   status_declare;
   size = (10 * _rate);
   status_require((sp_path_samples_2((&amp), size, (sp_path_move(0, (1.0))), (sp_path_constant()))));

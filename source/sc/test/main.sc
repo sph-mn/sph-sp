@@ -272,7 +272,6 @@
 (define (test-sp-noise-event) status-t
   status-declare
   (declare
-    events (array sp-event-t 1)
     events-size sp-time-t
     out sp-block-t
     cut-l (array sp-sample-t sp-noise-duration)
@@ -282,6 +281,7 @@
     amp1 (array sp-sample-t sp-noise-duration)
     amp (array sp-sample-t* sp-channel-limit)
     i sp-time-t)
+  (sp-declare-event-array events 1)
   (status-require (sp-block-new 1 sp-noise-duration &out))
   (set (array-get amp 0) amp1)
   (for ((set i 0) (< i sp-noise-duration) (set i (+ 1 i)))
@@ -320,7 +320,6 @@
 (define (test-sp-cheap-noise-event) status-t
   status-declare
   (declare
-    events (array sp-event-t 1)
     events-size sp-time-t
     out sp-block-t
     cut (array sp-sample-t sp-noise-duration)
@@ -328,6 +327,7 @@
     amp (array sp-sample-t* sp-channel-limit)
     q-factor sp-sample-t
     i sp-time-t)
+  (sp-declare-event-array events 1)
   (status-require (sp-block-new 1 sp-noise-duration &out))
   (set (array-get amp 0) amp1 q-factor 0)
   (for ((set i 0) (< i sp-noise-duration) (set i (+ 1 i)))
@@ -347,7 +347,8 @@
 
 (define (test-sp-seq) status-t
   status-declare
-  (declare events (array sp-event-t sp-seq-event-count) out sp-block-t i sp-time-t)
+  (declare out sp-block-t i sp-time-t)
+  (sp-declare-event-array events sp-seq-event-count)
   (set
     (array-get events 0) (test-helper-event 0 40 1)
     (array-get events 1) (test-helper-event 41 100 2))
@@ -368,27 +369,22 @@
 
 (define (test-sp-group) status-t
   status-declare
-  (declare
-    g sp-event-t
-    g1 sp-event-t
-    e1 sp-event-t
-    e2 sp-event-t
-    e3 sp-event-t
-    block sp-block-t
-    m1 sp-time-t*
-    m2 sp-time-t*)
+  (declare block sp-block-t m1 sp-time-t* m2 sp-time-t*)
+  (sp-declare-event-2 g g1)
+  (sp-declare-event-3 e1 e2 e3)
   (status-require (sp-times-new 100 &m1))
   (status-require (sp-times-new 100 &m2))
-  (status-require (sp-group-new 0 2 2 &g))
-  (status-require (sp-group-new 10 2 0 &g1))
+  (status-require (sp-group-new 0 2 &g))
+  (status-require (sp-group-new 10 2 &g1))
   (status-require (sp-block-new 2 100 &block))
   (set e1 (test-helper-event 0 20 1) e2 (test-helper-event 20 40 2) e3 (test-helper-event 50 100 3))
   (sp-group-add g1 e1)
   (sp-group-add g1 e2)
   (sp-group-add g g1)
   (sp-group-add g e3)
-  (sp-group-memory-add g m1)
-  (sp-group-memory-add g m2)
+  (sp-event-memory-init g 2)
+  (sp-event-memory-add g m1)
+  (sp-event-memory-add g m2)
   (sp-group-prepare g)
   (g.f 0 50 block &g)
   (g.f 50 100 (sp-block-with-offset block 50) &g)
@@ -426,17 +422,18 @@
    sp-plot-samples can plot the result"
   status-declare
   (declare
-    event sp-event-t
     out sp-block-t
     frq (array sp-time-t sp-wave-event-duration)
     amp1 (array sp-sample-t sp-wave-event-duration)
     amp2 (array sp-sample-t sp-wave-event-duration)
     i sp-time-t)
+  (sp-declare-event event)
   (for ((set i 0) (< i sp-wave-event-duration) (set+ i 1))
     (set (array-get frq i) 2000 (array-get amp1 i) 1 (array-get amp2 i) 0.5))
   (status-require
     (sp-wave-event 0 sp-wave-event-duration
-      (sp-wave-event-state-2 (sp-wave-state sp-sine-table _rate sp-wave-event-duration frq 0 amp1 0)
+      (sp-wave-event-state-2
+        (sp-wave-state sp-sine-table _rate sp-wave-event-duration frq 0 amp1 0)
         (sp-wave-state sp-sine-table _rate sp-wave-event-duration frq 0 amp2 0))
       &event))
   (status-require (sp-block-new 2 sp-wave-event-duration &out))
@@ -449,12 +446,12 @@
 (define (test-render-block) status-t
   status-declare
   (declare
-    event sp-event-t
     out sp-block-t
     frq (array sp-time-t sp-wave-event-duration)
     amp (array sp-sample-t sp-wave-event-duration)
     i sp-time-t
     rc sp-render-config-t)
+  (sp-declare-event event)
   (set rc (sp-render-config sp-channels sp-rate sp-rate) rc.block-size 40)
   (for ((set i 0) (< i sp-wave-event-duration) (set+ i 1))
     (set (array-get frq i) 1500 (array-get amp i) 1))
@@ -667,8 +664,8 @@
     amp sp-sample-t*
     frq sp-time-t*
     size sp-time-t
-    block sp-block-t
-    events (array sp-event-t 10))
+    block sp-block-t)
+  (sp-declare-event-array events 10)
   status-declare
   (set size (* 10 _rate))
   (status-require (sp-path-samples-2 &amp size (sp-path-move 0 1.0) (sp-path-constant)))

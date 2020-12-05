@@ -340,6 +340,7 @@ status_t sp_cheap_noise_event(sp_time_t start, sp_time_t end, sp_sample_t** amp,
 exit:
   status_return;
 }
+/** to free events while the group itself is not finished */
 #define sp_group_event_free_events(events, end) \
   while ((array4_in_range(events) && ((array4_get(events)).end <= end))) { \
     if ((array4_get(events)).free) { \
@@ -349,44 +350,40 @@ exit:
   }
 /** events.current is used to track freed events */
 void sp_group_event_free(sp_event_t* a) {
-  sp_group_event_state_t s = *((sp_group_event_state_t*)(a->state));
-  while (array4_in_range((s.events))) {
-    if ((array4_get((s.events))).free) {
-      ((array4_get((s.events))).free)((array4_get_address((s.events))));
+  sp_events_t s = *((sp_events_t*)(a->state));
+  while (array4_in_range(s)) {
+    if ((array4_get(s)).free) {
+      ((array4_get(s)).free)((array4_get_address(s)));
     };
-    array4_forward((s.events));
+    array4_forward(s);
   };
-  memreg_heap_free_pointers((s.memory));
-  array4_free((s.events));
-  array4_free((s.memory));
+  array4_free(s);
+  sp_event_memory_free(a);
   free((a->state));
 }
 /** free past events early, they might be sub-group trees */
 void sp_group_event_f(sp_time_t start, sp_time_t end, sp_block_t out, sp_event_t* event) {
-  sp_group_event_state_t* s = event->state;
-  sp_seq(start, end, out, (array4_get_address((s->events))), (array4_right_size((s->events))));
-  sp_group_event_free_events((s->events), end);
+  sp_events_t* s = event->state;
+  sp_seq(start, end, out, (array4_get_address((*s))), (array4_right_size((*s))));
+  sp_group_event_free_events((*s), end);
 }
 /** can be used in place of sp-group-event-f.
    seq-parallel can fail if there is not enough memory, but this is ignored currently */
 void sp_group_event_parallel_f(sp_time_t start, sp_time_t end, sp_block_t out, sp_event_t* event) {
-  sp_group_event_state_t* s = event->state;
-  sp_seq_parallel(start, end, out, (array4_get_address((s->events))), (array4_right_size((s->events))));
-  sp_group_event_free_events((s->events), end);
+  sp_events_t* s = event->state;
+  sp_seq_parallel(start, end, out, (array4_get_address((*s))), (array4_right_size((*s))));
+  sp_group_event_free_events((*s), end);
 }
-status_t sp_group_new(sp_time_t start, sp_group_size_t event_size, sp_group_size_t memory_size, sp_event_t* out) {
+status_t sp_group_new(sp_time_t start, sp_group_size_t event_size, sp_event_t* out) {
   status_declare;
-  sp_group_event_state_t* s;
+  sp_events_t* s;
   memreg_init(2);
-  status_require((sph_helper_malloc((sizeof(sp_group_event_state_t)), (&s))));
+  status_require((sph_helper_malloc((sizeof(sp_events_t)), (&s))));
   memreg_add(s);
-  if (sp_events_new(event_size, (&(s->events)))) {
+  if (sp_events_new(event_size, s)) {
     sp_memory_error;
   };
-  memreg_add((s->events.data));
-  if (memreg_heap_new(memory_size, (&(s->memory)))) {
-    sp_memory_error;
-  };
+  memreg_add((s->data));
   (*out).state = s;
   (*out).start = start;
   (*out).end = start;
@@ -402,4 +399,19 @@ void sp_group_append(sp_event_t* a, sp_event_t event) {
   event.start += a->end;
   event.end += a->end;
   sp_group_add((*a), event);
+}
+void sp_event_memory_free(sp_event_t* event) {
+  sp_time_half_t i;
+  sp_memory_t m;
+  for (i = 0; (i < event->memory_used); i += 1) {
+    m = (event->memory)[i];
+    (m.free)((m.data));
+  };
+  free((event->memory));
+}
+void sp_event_array_set_null(sp_event_t* a, sp_time_t size) {
+  sp_time_t i;
+  for (i = 0; (i < size); i += 1) {
+    sp_event_set_null((a[i]));
+  };
 }

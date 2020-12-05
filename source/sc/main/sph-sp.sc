@@ -15,6 +15,7 @@
   sp-sf-read sf-readf-double
   sp-sf-write sf-writef-double
   sp-time-t uint32-t
+  sp-time-half-t uint16-t
   sp-times-random sph-random-u32-array
   sp-times-random-bounded sph-random-u32-bounded-array
   sp-samples-random sph-random-f64-array
@@ -74,7 +75,8 @@
   (sp-absolute-difference a b) (if* (> a b) (- a b) (- b a))
   (sp-abs a) (if* (> 0 a) (* -1 a) a)
   (sp-no-underflow-subtract a b) (if* (> a b) (- a b) 0)
-  (sp-no-zero-divide a b) (if* (= 0 b) 0 (/ a b)))
+  (sp-no-zero-divide a b) (if* (= 0 b) 0 (/ a b))
+  (sp-status-set id) (set status.id sp-s-id-memory status.group sp-s-group-sp))
 
 (declare
   sp-block-t
@@ -444,34 +446,55 @@
   (sp-cheap-noise-event start end amp sp-state-variable-filter-bp __VA_ARGS__)
   (sp-cheap-noise-event-br start end amp ...)
   (sp-cheap-noise-event start end amp sp-state-variable-filter-br __VA_ARGS__)
-  sp-group-size-t uint32-t
-  (sp-group-events a) (: (convert-type a.state sp-group-event-state-t*) events)
-  (sp-group-memory a) (: (convert-type a.state sp-group-event-state-t*) memory)
-  (sp-group-memory-add a pointer)
-  (if (array4-not-full (sp-group-memory a)) (array4-add (sp-group-memory a) pointer))
+  sp-group-size-t uint16-t
+  (sp-group-events a) (pointer-get (convert-type a.state sp-events-t*))
   (sp-group-add a event)
-  (if (array4-not-full (sp-group-events a))
-    (begin (array4-add (sp-group-events a) event) (if (< a.end event.end) (set a.end event.end))))
+  (begin (array4-add (sp-group-events a) event) (if (< a.end event.end) (set a.end event.end)))
   (sp-group-prepare a)
   (sp-seq-events-prepare (struct-get (sp-group-events a) data) (array4-size (sp-group-events a)))
-  (sp-event-set-null a) (set a.state 0 a.end 0)
+  (sp-event-set-null a)
+  (begin
+    "set so that duration is zero, state is zero if not allocated, and sp-event-memory-free does not fail"
+    (set a.start 0 a.end 0 a.state 0 a.memory-used 0 a.memory 0))
   (sp-group-free a) (if a.state (a.free &a))
-  (sp-group-memory-add-2 g a1 a2) (begin (sp-group-memory-add g a1) (sp-group-memory-add g a2))
-  (sp-group-memory-add-3 g a1 a2 a3)
-  (begin (sp-group-memory-add-2 g a1 a2) (sp-group-memory-add g a3)))
+  (sp-declare-event-array id size)
+  (begin (declare id (array sp-event-t size)) (sp-event-array-set-null id size))
+  (sp-declare-event id) (begin (declare id sp-event-t) (sp-event-set-null id))
+  (sp-declare-event-2 id1 id2) (begin (sp-declare-event id1) (sp-declare-event id2))
+  (sp-declare-event-3 id1 id2 id3)
+  (begin (sp-declare-event id1) (sp-declare-event id2) (sp-declare-event id3))
+  (sp-declare-event-4 id1 id2 id3 id4)
+  (begin (sp-declare-event-2 id1 id2) (sp-declare-event-2 id3 id4))
+  (sp-event-memory-add a data) (sp-event-memory-add-handler a data free)
+  (sp-event-memory-add-handler a data_ free)
+  (begin
+    "sp_event_t {void* -> void} void*"
+    (struct-set (array-get a.memory a.memory-used) data data_ free free)
+    (set+ a.memory-used 1))
+  (sp-event-memory-add-2 a data1 data2)
+  (begin (sp-event-memory-add a data1) (sp-event-memory-add a data2))
+  (sp-event-memory-add-3 a data1 data2 data3)
+  (begin (sp-event-memory-add-2 a data1 data2) (sp-event-memory-add a data3))
+  (sp-event-memory-init a size) (sph-helper-malloc (* size (sizeof sp-memory-t)) &a.memory))
 
 (declare
+  sp-memory-free-t (type (function-pointer void void*))
+  sp-memory-t (type (struct (free sp-memory-free-t) (data void*)))
   sp-event-t struct
   sp-event-t
   (type
     (struct
       sp-event-t
-      (state void*)
       (start sp-time-t)
       (end sp-time-t)
+      (state void*)
       (f (function-pointer void sp-time-t sp-time-t sp-block-t (struct sp-event-t*)))
-      (free (function-pointer void (struct sp-event-t*)))))
+      (free (function-pointer void (struct sp-event-t*)))
+      (memory sp-memory-t*)
+      (memory-used sp-time-half-t)))
   sp-event-f-t (type (function-pointer void sp-time-t sp-time-t sp-block-t sp-event-t*))
+  (sp-event-memory-free event) (void sp-event-t*)
+  (sp-event-array-set-null a size) (void sp-event-t* sp-time-t)
   (sp-seq-events-prepare data size) (void sp-event-t* sp-time-t)
   (sp-seq start end out events size) (void sp-time-t sp-time-t sp-block-t sp-event-t* sp-time-t)
   (sp-seq-parallel start end out events size)
@@ -493,11 +516,9 @@
     sp-time-t sp-sample-t sp-time-t sp-random-state-t sp-event-t*))
 
 (array4-declare-type sp-events sp-event-t)
-(declare sp-group-event-state-t (type (struct (events sp-events-t) (memory memreg-register-t))))
 
 (declare
-  (sp-group-new start event-size memory-size out)
-  (status-t sp-time-t sp-group-size-t sp-group-size-t sp-event-t*)
+  (sp-group-new start event-size out) (status-t sp-time-t sp-group-size-t sp-event-t*)
   (sp-group-append a event) (void sp-event-t* sp-event-t)
   (sp-group-event-f start end out event) (void sp-time-t sp-time-t sp-block-t sp-event-t*)
   (sp-group-event-parallel-f start end out event) (void sp-time-t sp-time-t sp-block-t sp-event-t*)

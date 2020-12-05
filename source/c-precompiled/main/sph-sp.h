@@ -41,6 +41,9 @@
 #ifndef sp_time_t
 #define sp_time_t uint32_t
 #endif
+#ifndef sp_time_half_t
+#define sp_time_half_t uint16_t
+#endif
 #ifndef sp_times_random
 #define sp_times_random sph_random_u32_array
 #endif
@@ -123,6 +126,9 @@
 #define sp_abs(a) ((0 > a) ? (-1 * a) : a)
 #define sp_no_underflow_subtract(a, b) ((a > b) ? (a - b) : 0)
 #define sp_no_zero_divide(a, b) ((0 == b) ? 0 : (a / b))
+#define sp_status_set(id) \
+  status.id = sp_s_id_memory; \
+  status.group = sp_s_group_sp
 typedef struct {
   sp_channel_count_t channels;
   sp_time_t size;
@@ -402,43 +408,72 @@ void sp_plot_spectrum(sp_sample_t* a, sp_time_t a_size);
 #define sp_cheap_noise_event_hp(start, end, amp, ...) sp_cheap_noise_event(start, end, amp, sp_state_variable_filter_hp, __VA_ARGS__)
 #define sp_cheap_noise_event_bp(start, end, amp, ...) sp_cheap_noise_event(start, end, amp, sp_state_variable_filter_bp, __VA_ARGS__)
 #define sp_cheap_noise_event_br(start, end, amp, ...) sp_cheap_noise_event(start, end, amp, sp_state_variable_filter_br, __VA_ARGS__)
-#define sp_group_size_t uint32_t
-#define sp_group_events(a) ((sp_group_event_state_t*)(a.state))->events
-#define sp_group_memory(a) ((sp_group_event_state_t*)(a.state))->memory
-#define sp_group_memory_add(a, pointer) \
-  if (array4_not_full((sp_group_memory(a)))) { \
-    array4_add((sp_group_memory(a)), pointer); \
-  }
+#define sp_group_size_t uint16_t
+#define sp_group_events(a) *((sp_events_t*)(a.state))
 #define sp_group_add(a, event) \
-  if (array4_not_full((sp_group_events(a)))) { \
-    array4_add((sp_group_events(a)), event); \
-    if (a.end < event.end) { \
-      a.end = event.end; \
-    }; \
+  array4_add((sp_group_events(a)), event); \
+  if (a.end < event.end) { \
+    a.end = event.end; \
   }
 #define sp_group_prepare(a) sp_seq_events_prepare(((sp_group_events(a)).data), (array4_size((sp_group_events(a)))))
+/** set so that duration is zero, state is zero if not allocated, and sp-event-memory-free does not fail */
 #define sp_event_set_null(a) \
+  a.start = 0; \
+  a.end = 0; \
   a.state = 0; \
-  a.end = 0
+  a.memory_used = 0; \
+  a.memory = 0
 #define sp_group_free(a) \
   if (a.state) { \
     (a.free)((&a)); \
   }
-#define sp_group_memory_add_2(g, a1, a2) \
-  sp_group_memory_add(g, a1); \
-  sp_group_memory_add(g, a2)
-#define sp_group_memory_add_3(g, a1, a2, a3) \
-  sp_group_memory_add_2(g, a1, a2); \
-  sp_group_memory_add(g, a3)
+#define sp_declare_event_array(id, size) \
+  sp_event_t id[size]; \
+  sp_event_array_set_null(id, size)
+#define sp_declare_event(id) \
+  sp_event_t id; \
+  sp_event_set_null(id)
+#define sp_declare_event_2(id1, id2) \
+  sp_declare_event(id1); \
+  sp_declare_event(id2)
+#define sp_declare_event_3(id1, id2, id3) \
+  sp_declare_event(id1); \
+  sp_declare_event(id2); \
+  sp_declare_event(id3)
+#define sp_declare_event_4(id1, id2, id3, id4) \
+  sp_declare_event_2(id1, id2); \
+  sp_declare_event_2(id3, id4)
+#define sp_event_memory_add(a, data) sp_event_memory_add_handler(a, data, free)
+/** sp_event_t {void* -> void} void* */
+#define sp_event_memory_add_handler(a, data_, free) \
+  ((a.memory)[a.memory_used]).data = data_; \
+  ((a.memory)[a.memory_used]).free = free; \
+  a.memory_used += 1
+#define sp_event_memory_add_2(a, data1, data2) \
+  sp_event_memory_add(a, data1); \
+  sp_event_memory_add(a, data2)
+#define sp_event_memory_add_3(a, data1, data2, data3) \
+  sp_event_memory_add_2(a, data1, data2); \
+  sp_event_memory_add(a, data3)
+#define sp_event_memory_init(a, size) sph_helper_malloc((size * sizeof(sp_memory_t)), (&(a.memory)))
+typedef void (*sp_memory_free_t)(void*);
+typedef struct {
+  sp_memory_free_t free;
+  void* data;
+} sp_memory_t;
 struct sp_event_t;
 typedef struct sp_event_t {
-  void* state;
   sp_time_t start;
   sp_time_t end;
+  void* state;
   void (*f)(sp_time_t, sp_time_t, sp_block_t, struct sp_event_t*);
   void (*free)(struct sp_event_t*);
+  sp_memory_t* memory;
+  sp_time_half_t memory_used;
 } sp_event_t;
 typedef void (*sp_event_f_t)(sp_time_t, sp_time_t, sp_block_t, sp_event_t*);
+void sp_event_memory_free(sp_event_t* event);
+void sp_event_array_set_null(sp_event_t* a, sp_time_t size);
 void sp_seq_events_prepare(sp_event_t* data, sp_time_t size);
 void sp_seq(sp_time_t start, sp_time_t end, sp_block_t out, sp_event_t* events, sp_time_t size);
 status_t sp_seq_parallel(sp_time_t start, sp_time_t end, sp_block_t out, sp_event_t* events, sp_time_t size);
@@ -450,11 +485,7 @@ sp_wave_event_state_t sp_wave_event_state_1(sp_wave_state_t wave_state);
 sp_wave_event_state_t sp_wave_event_state_2(sp_wave_state_t wave_state_1, sp_wave_state_t wave_state_2);
 status_t sp_cheap_noise_event(sp_time_t start, sp_time_t end, sp_sample_t** amp, sp_state_variable_filter_t type, sp_sample_t* cut, sp_time_t passes, sp_sample_t q_factor, sp_time_t resolution, sp_random_state_t random_state, sp_event_t* out_event);
 array4_declare_type(sp_events, sp_event_t);
-typedef struct {
-  sp_events_t events;
-  memreg_register_t memory;
-} sp_group_event_state_t;
-status_t sp_group_new(sp_time_t start, sp_group_size_t event_size, sp_group_size_t memory_size, sp_event_t* out);
+status_t sp_group_new(sp_time_t start, sp_group_size_t event_size, sp_event_t* out);
 void sp_group_append(sp_event_t* a, sp_event_t event);
 void sp_group_event_f(sp_time_t start, sp_time_t end, sp_block_t out, sp_event_t* event);
 void sp_group_event_parallel_f(sp_time_t start, sp_time_t end, sp_block_t out, sp_event_t* event);
