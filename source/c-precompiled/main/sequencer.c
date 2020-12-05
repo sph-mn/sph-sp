@@ -142,7 +142,10 @@ void sp_wave_event_f(sp_time_t start, sp_time_t end, sp_block_t out, sp_event_t*
     sp_wave(start, (end - start), wave_state, ((out.samples)[chn_i]));
   };
 }
-void sp_wave_event_free(sp_event_t* event) { free((event->state)); }
+void sp_wave_event_free(sp_event_t* a) {
+  free((a->state));
+  sp_event_memory_free(a);
+}
 /** in wave_event_state, unset wave states or wave states with amp set to null will generate no output.
    the state struct is copied and freed with event.free so that stack declared structs can be used.
    sp_wave_event, sp_wave_event_f and sp_wave_event_free are a good example for custom events */
@@ -215,6 +218,7 @@ void sp_noise_event_free(sp_event_t* a) {
   free((s->temp));
   sp_convolution_filter_state_free((s->filter_state));
   free((a->state));
+  sp_event_memory_free(a);
 }
 /** an event for noise filtered by a windowed-sinc filter.
    very processing intensive if parameters change with low resolution.
@@ -224,8 +228,8 @@ status_t sp_noise_event(sp_time_t start, sp_time_t end, sp_sample_t** amp, sp_sa
   sp_sample_t* temp;
   sp_sample_t* temp_noise;
   sp_time_t ir_len;
-  sp_event_t e;
   sp_noise_event_state_t* s;
+  sp_declare_event(e);
   resolution = (resolution ? sp_min(resolution, (end - start)) : 96);
   status_require((sph_helper_malloc((sizeof(sp_noise_event_state_t)), (&s))));
   status_require((sph_helper_malloc((resolution * sizeof(sp_sample_t)), (&(s->noise)))));
@@ -310,6 +314,7 @@ void sp_cheap_noise_event_free(sp_event_t* a) {
   free((s->temp));
   sp_cheap_filter_state_free((&(s->filter_state)));
   free((a->state));
+  sp_event_memory_free(a);
 }
 /** an event for noise filtered by a state-variable filter.
    lower processing costs even when parameters change with high resolution.
@@ -317,8 +322,8 @@ void sp_cheap_noise_event_free(sp_event_t* a) {
    memory for event.state will be allocated and then owned by the caller */
 status_t sp_cheap_noise_event(sp_time_t start, sp_time_t end, sp_sample_t** amp, sp_state_variable_filter_t type, sp_sample_t* cut, sp_time_t passes, sp_sample_t q_factor, sp_time_t resolution, sp_random_state_t random_state, sp_event_t* out_event) {
   status_declare;
-  sp_event_t e;
   sp_cheap_noise_event_state_t* s;
+  sp_declare_event(e);
   resolution = (resolution ? sp_min(resolution, (end - start)) : 96);
   status_require((sph_helper_malloc((sizeof(sp_cheap_noise_event_state_t)), (&s))));
   status_require((sph_helper_malloc((resolution * sizeof(sp_sample_t)), (&(s->noise)))));
@@ -358,8 +363,8 @@ void sp_group_event_free(sp_event_t* a) {
     array4_forward(s);
   };
   array4_free(s);
-  sp_event_memory_free(a);
   free((a->state));
+  sp_event_memory_free(a);
 }
 /** free past events early, they might be sub-group trees */
 void sp_group_event_f(sp_time_t start, sp_time_t end, sp_block_t out, sp_event_t* event) {
@@ -414,4 +419,61 @@ void sp_event_array_set_null(sp_event_t* a, sp_time_t size) {
   for (i = 0; (i < size); i += 1) {
     sp_event_set_null((a[i]));
   };
+}
+typedef void (*sp_map_event_f_t)(sp_time_t, sp_time_t, sp_block_t, sp_block_t, sp_event_t*, void*);
+typedef struct {
+  sp_event_t event;
+  sp_map_event_f_t f;
+  void* state;
+} sp_map_event_state_t;
+void sp_map_event_free(sp_event_t* a) {
+  sp_map_event_state_t* s;
+  s = a->state;
+  if (s->event.free) {
+    (s->event.free)((&(s->event)));
+  };
+  free((a->state));
+}
+/** creates temporary output, lets event write to it, and passes the result to a user function */
+void sp_map_event_f(sp_time_t start, sp_time_t end, sp_block_t out, sp_event_t* event) {
+  sp_map_event_state_t* s;
+  s = event->state;
+  (s->event.f)(start, end, out, (&(s->event)));
+  (s->f)(start, end, out, out, (&(s->event)), (s->state));
+}
+/** creates temporary output, lets event write to it, and passes the result to a user function */
+void sp_map_event_isolated_f(sp_time_t start, sp_time_t end, sp_block_t out, sp_event_t* event) {
+  sp_map_event_state_t* s;
+  sp_block_t temp_out;
+  status_declare;
+  status = sp_block_new((out.channels), (out.size), (&temp_out));
+  if (status_is_failure) {
+    return;
+  };
+  s = event->state;
+  (s->event.f)(start, end, temp_out, (&(s->event)));
+  (s->f)(start, end, temp_out, out, (&(s->event)), (s->state));
+  sp_block_free(temp_out);
+}
+/** f: function(start end sp_block_t:in sp_block_t:out sp_event_t*:event void*:state)
+   isolate: use a dedicated output buffer for event
+     events can be wrapped in multiple sp_map_event with an isolated sp_map_event on top that
+     finally writes to main out to mix with other events
+   use cases: filter chains, post processing */
+status_t sp_map_event(sp_event_t event, sp_map_event_f_t f, void* state, uint8_t isolate, sp_event_t* out) {
+  status_declare;
+  sp_map_event_state_t* s;
+  sp_declare_event(e);
+  status_require((sph_helper_malloc((sizeof(sp_map_event_state_t)), (&s))));
+  s->event = event;
+  s->state = state;
+  s->f = f;
+  e.state = s;
+  e.start = event.start;
+  e.end = event.end;
+  e.f = (isolate ? sp_map_event_isolated_f : sp_map_event_f);
+  e.free = sp_map_event_free;
+  *out = e;
+exit:
+  status_return;
 }

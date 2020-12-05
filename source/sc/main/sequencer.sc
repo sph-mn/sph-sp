@@ -119,7 +119,7 @@
     (if (not wave-state:amp) continue)
     (sp-wave start (- end start) wave-state (array-get out.samples chn-i))))
 
-(define (sp-wave-event-free event) (void sp-event-t*) (free event:state))
+(define (sp-wave-event-free a) (void sp-event-t*) (free a:state) (sp-event-memory-free a))
 
 (define (sp-wave-event start end state out)
   (status-t sp-time-t sp-time-t sp-wave-event-state-t sp-event-t*)
@@ -193,7 +193,8 @@
   (free s:noise)
   (free s:temp)
   (sp-convolution-filter-state-free s:filter-state)
-  (free a:state))
+  (free a:state)
+  (sp-event-memory-free a))
 
 (define
   (sp-noise-event start end amp cut-l cut-h trn-l trn-h is-reject resolution random-state out-event)
@@ -202,12 +203,8 @@
    very processing intensive if parameters change with low resolution.
    memory for event.state will be allocated and then owned by the caller"
   status-declare
-  (declare
-    temp sp-sample-t*
-    temp-noise sp-sample-t*
-    ir-len sp-time-t
-    e sp-event-t
-    s sp-noise-event-state-t*)
+  (declare temp sp-sample-t* temp-noise sp-sample-t* ir-len sp-time-t s sp-noise-event-state-t*)
+  (sp-declare-event e)
   (set resolution (if* resolution (sp-min resolution (- end start)) 96))
   (status-require (sph-helper-malloc (sizeof sp-noise-event-state-t) &s))
   (status-require (sph-helper-malloc (* resolution (sizeof sp-sample-t)) &s:noise))
@@ -296,7 +293,8 @@
   (free s:noise)
   (free s:temp)
   (sp-cheap-filter-state-free &s:filter-state)
-  (free a:state))
+  (free a:state)
+  (sp-event-memory-free a))
 
 (define
   (sp-cheap-noise-event start end amp type cut passes q-factor resolution random-state out-event)
@@ -306,7 +304,8 @@
    multiple passes almost multiply performance costs.
    memory for event.state will be allocated and then owned by the caller"
   status-declare
-  (declare e sp-event-t s sp-cheap-noise-event-state-t*)
+  (declare s sp-cheap-noise-event-state-t*)
+  (sp-declare-event e)
   (set resolution (if* resolution (sp-min resolution (- end start)) 96))
   (status-require (sph-helper-malloc (sizeof sp-cheap-noise-event-state-t) &s))
   (status-require (sph-helper-malloc (* resolution (sizeof sp-sample-t)) &s:noise))
@@ -343,8 +342,8 @@
     (if (struct-get (array4-get s) free) ((struct-get (array4-get s) free) (array4-get-address s)))
     (array4-forward s))
   (array4-free s)
-  (sp-event-memory-free a)
-  (free a:state))
+  (free a:state)
+  (sp-event-memory-free a))
 
 (define (sp-group-event-f start end out event) (void sp-time-t sp-time-t sp-block-t sp-event-t*)
   "free past events early, they might be sub-group trees"
@@ -385,3 +384,56 @@
 (define (sp-event-array-set-null a size) (void sp-event-t* sp-time-t)
   (declare i sp-time-t)
   (for ((set i 0) (< i size) (set+ i 1)) (sp-event-set-null (array-get a i))))
+
+(declare
+  sp-map-event-f-t
+  (type (function-pointer void sp-time-t sp-time-t sp-block-t sp-block-t sp-event-t* void*))
+  sp-map-event-state-t (type (struct (event sp-event-t) (f sp-map-event-f-t) (state void*))))
+
+(define (sp-map-event-free a) (void sp-event-t*)
+  (declare s sp-map-event-state-t*)
+  (set s a:state)
+  (if s:event.free (s:event.free &s:event))
+  (free a:state))
+
+(define (sp-map-event-f start end out event) (void sp-time-t sp-time-t sp-block-t sp-event-t*)
+  "creates temporary output, lets event write to it, and passes the result to a user function"
+  (declare s sp-map-event-state-t*)
+  (set s event:state)
+  (s:event.f start end out &s:event)
+  (s:f start end out out &s:event s:state))
+
+(define (sp-map-event-isolated-f start end out event)
+  (void sp-time-t sp-time-t sp-block-t sp-event-t*)
+  "creates temporary output, lets event write to it, and passes the result to a user function"
+  (declare s sp-map-event-state-t* temp-out sp-block-t)
+  status-declare
+  (set status (sp-block-new out.channels out.size &temp-out))
+  (if status-is-failure return)
+  (set s event:state)
+  (s:event.f start end temp-out &s:event)
+  (s:f start end temp-out out &s:event s:state)
+  (sp-block-free temp-out))
+
+(define (sp-map-event event f state isolate out)
+  (status-t sp-event-t sp-map-event-f-t void* uint8-t sp-event-t*)
+  "f: function(start end sp_block_t:in sp_block_t:out sp_event_t*:event void*:state)
+   isolate: use a dedicated output buffer for event
+     events can be wrapped in multiple sp_map_event with an isolated sp_map_event on top that
+     finally writes to main out to mix with other events
+   use cases: filter chains, post processing"
+  status-declare
+  (declare s sp-map-event-state-t*)
+  (sp-declare-event e)
+  (status-require (sph-helper-malloc (sizeof sp-map-event-state-t) &s))
+  (set
+    s:event event
+    s:state state
+    s:f f
+    e.state s
+    e.start event.start
+    e.end event.end
+    e.f (if* isolate sp-map-event-isolated-f sp-map-event-f)
+    e.free sp-map-event-free)
+  (set *out e)
+  (label exit status-return))
