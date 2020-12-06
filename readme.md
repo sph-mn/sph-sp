@@ -87,14 +87,14 @@ routines return `status_t`, which is a `struct {int id, uint8-t* group}` and inc
 status.id zero is success
 
 # api
-## routines
-```
+## functions
+~~~
 sp_block_to_file :: sp_block_t:block uint8_t*:path sp_time_t:rate -> status_t
 sp_block_free :: sp_block_t:a -> void
-sp_block_new :: sp_channels_t:channel_count sp_time_t:sample_count sp_block_t*:out_block -> status_t
+sp_block_new :: sp_channel_count_t:channel_count sp_time_t:sample_count sp_block_t*:out_block -> status_t
 sp_block_with_offset :: sp_block_t:a sp_time_t:offset -> sp_block_t
 sp_block_zero :: sp_block_t:a -> void
-sp_cheap_filter :: sp_state_variable_filter_t:type sp_sample_t*:in sp_time_t:in_size sp_float_t:cutoff sp_time_t:passes sp_float_t:q_factor uint8_t:unity_gain sp_cheap_filter_state_t*:state sp_sample_t*:out -> void
+sp_cheap_filter :: sp_state_variable_filter_t:type sp_sample_t*:in sp_time_t:in_size sp_float_t:cutoff sp_time_t:passes sp_float_t:q_factor sp_cheap_filter_state_t*:state sp_sample_t*:out -> void
 sp_cheap_filter_state_free :: sp_cheap_filter_state_t*:a -> void
 sp_cheap_filter_state_new :: sp_time_t:max_size sp_time_t:max_passes sp_cheap_filter_state_t*:out_state -> status_t
 sp_cheap_noise_event :: sp_time_t:start sp_time_t:end sp_sample_t**:amp sp_state_variable_filter_t:type sp_sample_t*:cut sp_time_t:passes sp_sample_t:q_factor sp_time_t:resolution sp_random_state_t:random_state sp_event_t*:out_event -> status_t
@@ -104,11 +104,13 @@ sp_convolution_filter_state_free :: sp_convolution_filter_state_t*:state -> void
 sp_convolution_filter_state_set :: sp_convolution_filter_ir_f_t:ir_f void*:ir_f_arguments uint8_t:ir_f_arguments_len sp_convolution_filter_state_t**:out_state -> status_t
 sp_convolve :: sp_sample_t*:a sp_time_t:a_len sp_sample_t*:b sp_time_t:b_len sp_time_t:result_carryover_len sp_sample_t*:result_carryover sp_sample_t*:result_samples -> void
 sp_convolve_one :: sp_sample_t*:a sp_time_t:a_len sp_sample_t*:b sp_time_t:b_len sp_sample_t*:result_samples -> void
+sp_event_array_set_null :: sp_event_t*:a sp_time_t:size -> void
+sp_event_memory_free :: sp_event_t*:event -> void
 sp_events_array_free :: sp_event_t*:events sp_time_t:size -> void
 sp_fft :: sp_time_t:input_len double*:input_or_output_real double*:input_or_output_imag -> int
 sp_ffti :: sp_time_t:input_len double*:input_or_output_real double*:input_or_output_imag -> int
 sp_file_close :: sp_file_t:a -> status_t
-sp_file_open :: uint8_t*:path int:mode sp_channels_t:channel_count sp_sample_rate_t:sample_rate sp_file_t*:result_file -> status_t
+sp_file_open :: uint8_t*:path int:mode sp_channel_count_t:channel_count sp_sample_rate_t:sample_rate sp_file_t*:result_file -> status_t
 sp_file_position :: sp_file_t*:file sp_time_t*:result_position -> status_t
 sp_file_position_set :: sp_file_t*:file sp_time_t:sample_offset -> status_t
 sp_file_read :: sp_file_t*:file sp_time_t:sample_count sp_sample_t**:result_block sp_time_t*:result_sample_count -> status_t
@@ -118,8 +120,8 @@ sp_group_append :: sp_event_t*:a sp_event_t:event -> void
 sp_group_event_f :: sp_time_t:start sp_time_t:end sp_block_t:out sp_event_t*:event -> void
 sp_group_event_free :: sp_event_t*:a -> void
 sp_group_event_parallel_f :: sp_time_t:start sp_time_t:end sp_block_t:out sp_event_t*:event -> void
-sp_group_new :: sp_time_t:start sp_group_size_t:event_size sp_group_size_t:memory_size sp_event_t*:out -> status_t
-sp_initialise :: uint16_t:cpu_count sp_channels_t:channels sp_time_t:rate -> status_t
+sp_group_new :: sp_time_t:start sp_group_size_t:event_size sp_event_t*:out -> status_t
+sp_initialise :: uint16_t:cpu_count sp_channel_count_t:channels sp_time_t:rate -> status_t
 sp_moving_average :: sp_sample_t*:in sp_time_t:in_size sp_sample_t*:prev sp_sample_t*:next sp_time_t:radius sp_sample_t*:out -> void
 sp_noise_event :: sp_time_t:start sp_time_t:end sp_sample_t**:amp sp_sample_t*:cut_l sp_sample_t*:cut_h sp_sample_t*:trn_l sp_sample_t*:trn_h uint8_t:is_reject sp_time_t:resolution sp_random_state_t:random_state sp_event_t*:out_event -> status_t
 sp_null_ir :: sp_sample_t**:out_ir sp_time_t*:out_len -> status_t
@@ -127,14 +129,14 @@ sp_passthrough_ir :: sp_sample_t**:out_ir sp_time_t*:out_len -> status_t
 sp_path_derivation :: sp_path_t:path sp_sample_t**:x_changes sp_sample_t**:y_changes sp_time_t:index sp_path_t*:out -> status_t
 sp_path_derivations_normalized :: sp_path_t:base sp_time_t:count sp_sample_t**:x_changes sp_sample_t**:y_changes sp_path_t**:out -> status_t
 sp_path_multiply :: sp_path_t:path sp_sample_t:x_factor sp_sample_t:y_factor -> void
-sp_path_samples :: sp_path_segment_t*:segments sp_path_segment_count_t:segments_count sp_path_time_t:size sp_sample_t**:out -> status_t
+sp_path_samples :: sp_path_t:path sp_path_time_t:size sp_sample_t**:out -> status_t
 sp_path_samples_1 :: sp_sample_t**:out sp_time_t:size sp_path_segment_t:s1 -> status_t
 sp_path_samples_2 :: sp_sample_t**:out sp_time_t:size sp_path_segment_t:s1 sp_path_segment_t:s2 -> status_t
 sp_path_samples_3 :: sp_sample_t**:out sp_time_t:size sp_path_segment_t:s1 sp_path_segment_t:s2 sp_path_segment_t:s3 -> status_t
 sp_path_samples_4 :: sp_sample_t**:out sp_time_t:size sp_path_segment_t:s1 sp_path_segment_t:s2 sp_path_segment_t:s3 sp_path_segment_t:s4 -> status_t
 sp_path_samples_derivation :: sp_path_t:path sp_sample_t**:x_changes sp_sample_t**:y_changes sp_time_t:index sp_sample_t**:out sp_path_time_t*:out_size -> status_t
 sp_path_samples_derivations_normalized :: sp_path_t:path sp_time_t:count sp_sample_t**:x_changes sp_sample_t**:y_changes sp_sample_t***:out sp_time_t**:out_sizes -> status_t
-sp_path_times :: sp_path_segment_t*:segments sp_path_segment_count_t:segments_count sp_path_time_t:size sp_time_t**:out -> status_t
+sp_path_times :: sp_path_t:path sp_path_time_t:size sp_time_t**:out -> status_t
 sp_path_times_1 :: sp_time_t**:out sp_time_t:size sp_path_segment_t:s1 -> status_t
 sp_path_times_2 :: sp_time_t**:out sp_time_t:size sp_path_segment_t:s1 sp_path_segment_t:s2 -> status_t
 sp_path_times_3 :: sp_time_t**:out sp_time_t:size sp_path_segment_t:s1 sp_path_segment_t:s2 sp_path_segment_t:s3 -> status_t
@@ -152,7 +154,7 @@ sp_plot_spectrum_file :: uint8_t*:path -> void
 sp_plot_times :: sp_time_t*:a sp_time_t:a_size -> void
 sp_plot_times_to_file :: sp_time_t*:a sp_time_t:a_size uint8_t*:path -> void
 sp_render_block :: sp_event_t:event sp_time_t:start sp_time_t:end sp_render_config_t:config sp_block_t*:out -> status_t
-sp_render_config :: sp_channels_t:channels sp_time_t:rate sp_time_t:block_size -> sp_render_config_t
+sp_render_config :: sp_channel_count_t:channels sp_time_t:rate sp_time_t:block_size -> sp_render_config_t
 sp_render_file :: sp_event_t:event sp_time_t:start sp_time_t:end sp_render_config_t:config uint8_t*:path -> status_t
 sp_render_quick :: sp_event_t:a uint8_t:file_or_plot -> status_t
 sp_sample_random_custom :: sp_random_state_t*:state sp_time_t*:cudist sp_time_t:cudist_size sp_sample_t:range -> sp_sample_t
@@ -163,22 +165,24 @@ sp_samples_add_1 :: sp_sample_t*:a sp_time_t:size sp_sample_t:n sp_sample_t*:out
 sp_samples_additions :: sp_sample_t:start sp_sample_t:summand sp_time_t:count sp_sample_t*:out -> void
 sp_samples_and :: sp_sample_t*:a sp_sample_t*:b sp_time_t:size sp_sample_t:limit sp_sample_t*:out -> void
 sp_samples_array_free :: sp_sample_t**:a sp_time_t:size -> void
-sp_samples_copy :: sp_sample_t*:a sp_time_t:size sp_sample_t**:out -> status_t
+sp_samples_blend :: sp_sample_t*:a sp_sample_t*:b sp_sample_t:fraction sp_time_t:size sp_sample_t*:out -> void
 sp_samples_differences :: sp_sample_t*:a sp_time_t:size sp_sample_t*:out -> void
 sp_samples_display :: sp_sample_t*:a sp_time_t:size -> void
 sp_samples_divide :: sp_sample_t*:a sp_time_t:size sp_sample_t*:b sp_sample_t*:out -> void
 sp_samples_divide_1 :: sp_sample_t*:a sp_time_t:size sp_sample_t:n sp_sample_t*:out -> void
 sp_samples_divisions :: sp_sample_t:start sp_sample_t:n sp_time_t:count sp_sample_t*:out -> void
+sp_samples_duplicate :: sp_sample_t*:a sp_time_t:size sp_sample_t**:out -> status_t
 sp_samples_equal_1 :: sp_sample_t*:a sp_time_t:size sp_sample_t:n -> uint8_t
 sp_samples_every_equal :: sp_sample_t*:a sp_time_t:size sp_sample_t:n -> uint8_t
+sp_samples_limit_abs :: sp_sample_t*:a sp_time_t:size sp_sample_t:n sp_sample_t*:out -> void
 sp_samples_multiply :: sp_sample_t*:a sp_time_t:size sp_sample_t*:b sp_sample_t*:out -> void
 sp_samples_multiply_1 :: sp_sample_t*:a sp_time_t:size sp_sample_t:n sp_sample_t*:out -> void
 sp_samples_new :: sp_time_t:size sp_sample_t**:out -> status_t
 sp_samples_or :: sp_sample_t*:a sp_sample_t*:b sp_time_t:size sp_sample_t:limit sp_sample_t*:out -> void
 sp_samples_reverse :: sp_sample_t*:a sp_time_t:size sp_sample_t*:out -> void
 sp_samples_scale_to_times :: sp_sample_t*:a sp_time_t:size sp_time_t:max sp_time_t*:out -> void
+sp_samples_scale_sum :: sp_sample_t*:a sp_time_t:size sp_sample_t:n sp_sample_t*:out -> void
 sp_samples_scale_y :: sp_sample_t*:a sp_time_t:size sp_sample_t:n sp_sample_t*:out -> void
-sp_samples_scale_y_sum :: sp_sample_t*:a sp_time_t:size sp_sample_t:n sp_sample_t*:out -> void
 sp_samples_set_1 :: sp_sample_t*:a sp_time_t:size sp_sample_t:n sp_sample_t*:out -> void
 sp_samples_set_unity_gain :: sp_sample_t*:in sp_time_t:in_size sp_sample_t*:out -> void
 sp_samples_smooth :: sp_sample_t*:a sp_time_t:size sp_time_t:radius sp_sample_t*:out -> status_t
@@ -192,35 +196,39 @@ sp_seq :: sp_time_t:start sp_time_t:end sp_block_t:out sp_event_t*:events sp_tim
 sp_seq_events_prepare :: sp_event_t*:data sp_time_t:size -> void
 sp_seq_parallel :: sp_time_t:start sp_time_t:end sp_block_t:out sp_event_t*:events sp_time_t:size -> status_t
 sp_sequence_max :: sp_time_t:size sp_time_t:min_size -> sp_time_t
+sp_sequence_set_hash :: sp_sequence_set_key_t:a sp_time_t:memory_size -> uint64_t
 sp_set_sequence_max :: sp_time_t:set_size sp_time_t:selection_size -> sp_time_t
 sp_shuffle :: sp_random_state_t*:state function_pointer void void* size_t size_t:swap void*:a size_t:size -> void
 sp_sin_lq :: sp_float_t:a -> sp_sample_t
 sp_sinc :: sp_float_t:a -> sp_float_t
-sp_sine_cluster :: sp_time_t:prt_count sp_path_t:amp sp_path_t:frq sp_time_t*:phs sp_sample_t**:ax sp_sample_t**:ay sp_sample_t**:fx sp_sample_t**:fy sp_event_t*:out -> status_t
 sp_sine_period :: sp_time_t:size sp_sample_t*:out -> void
 sp_spectral_inversion_ir :: sp_sample_t*:a sp_time_t:a_len -> void
 sp_spectral_reversal_ir :: sp_sample_t*:a sp_time_t:a_len -> void
 sp_square :: sp_time_t:t sp_time_t:size -> sp_sample_t
-sp_stat_samples :: sp_sample_t*:a sp_time_t:a_size sp_stat_type_t*:stats sp_time_t:size sp_sample_t*:out -> status_t
+sp_stat_repetition_all_max :: sp_time_t:size -> sp_time_t
+sp_stat_repetition_max :: sp_time_t:size sp_time_t:width -> sp_time_t
 sp_stat_samples_center :: sp_sample_t*:a sp_time_t:size sp_sample_t*:out -> uint8_t
-sp_stat_samples_repetition :: sp_sample_t*:a sp_time_t:size sp_sample_t*:out -> uint8_t
 sp_stat_samples_deviation :: sp_sample_t*:a sp_time_t:size sp_sample_t*:out -> uint8_t
 sp_stat_samples_inharmonicity :: sp_sample_t*:a sp_time_t:size sp_sample_t*:out -> uint8_t
 sp_stat_samples_kurtosis :: sp_sample_t*:a sp_time_t:size sp_sample_t*:out -> uint8_t
 sp_stat_samples_mean :: sp_sample_t*:a sp_time_t:size sp_sample_t*:out -> uint8_t
 sp_stat_samples_median :: sp_sample_t*:a sp_time_t:size sp_sample_t*:out -> uint8_t
 sp_stat_samples_range :: sp_sample_t*:a sp_time_t:size sp_sample_t*:out -> uint8_t
+sp_stat_samples_repetition_all :: sp_sample_t*:a sp_time_t:size sp_sample_t*:out -> uint8_t
 sp_stat_samples_skewness :: sp_sample_t*:a sp_time_t:size sp_sample_t*:out -> uint8_t
-sp_stat_times :: sp_time_t*:a sp_time_t:a_size sp_stat_type_t*:stats sp_time_t:size sp_sample_t*:out -> status_t
 sp_stat_times_center :: sp_time_t*:a sp_time_t:size sp_sample_t*:out -> uint8_t
-sp_stat_times_repetition :: sp_time_t*:a sp_time_t:size sp_sample_t*:out -> uint8_t
 sp_stat_times_deviation :: sp_time_t*:a sp_time_t:size sp_sample_t*:out -> uint8_t
 sp_stat_times_inharmonicity :: sp_time_t*:a sp_time_t:size sp_sample_t*:out -> uint8_t
 sp_stat_times_kurtosis :: sp_time_t*:a sp_time_t:size sp_sample_t*:out -> uint8_t
 sp_stat_times_mean :: sp_time_t*:a sp_time_t:size sp_sample_t*:out -> uint8_t
 sp_stat_times_median :: sp_time_t*:a sp_time_t:size sp_sample_t*:out -> uint8_t
 sp_stat_times_range :: sp_time_t*:a sp_time_t:size sp_sample_t*:out -> uint8_t
+sp_stat_times_repetition :: sp_time_t*:a sp_time_t:size sp_time_t:width sp_sample_t*:out -> uint8_t
+sp_stat_times_repetition :: sp_time_t*:a sp_time_t:size sp_time_t:width sp_sample_t*:out -> uint8_t
+sp_stat_times_repetition_all :: sp_time_t*:a sp_time_t:size sp_sample_t*:out -> uint8_t
 sp_stat_times_skewness :: sp_time_t*:a sp_time_t:size sp_sample_t*:out -> uint8_t
+sp_stat_unique_all_max :: sp_time_t:size -> sp_time_t
+sp_stat_unique_max :: sp_time_t:size sp_time_t:width -> sp_time_t
 sp_state_variable_filter_all :: sp_sample_t*:out sp_sample_t*:in sp_float_t:in_count sp_float_t:cutoff sp_time_t:q_factor sp_sample_t*:state -> void
 sp_state_variable_filter_bp :: sp_sample_t*:out sp_sample_t*:in sp_float_t:in_count sp_float_t:cutoff sp_time_t:q_factor sp_sample_t*:state -> void
 sp_state_variable_filter_br :: sp_sample_t*:out sp_sample_t*:in sp_float_t:in_count sp_float_t:cutoff sp_time_t:q_factor sp_sample_t*:state -> void
@@ -240,20 +248,27 @@ sp_times_additions :: sp_time_t:start sp_time_t:summand sp_time_t:count sp_time_
 sp_times_and :: sp_time_t*:a sp_time_t*:b sp_time_t:size sp_time_t:limit sp_time_t*:out -> void
 sp_times_array_free :: sp_time_t**:a sp_time_t:size -> void
 sp_times_bits_to_times :: sp_time_t*:a sp_time_t:size sp_time_t*:out -> void
+sp_times_blend :: sp_time_t*:a sp_time_t*:b sp_sample_t:fraction sp_time_t:size sp_time_t*:out -> void
 sp_times_compositions :: sp_time_t:sum sp_time_t***:out sp_time_t*:out_size sp_time_t**:out_sizes -> status_t
 sp_times_constant :: sp_time_t:a sp_time_t:size sp_time_t:value sp_time_t**:out -> status_t
 sp_times_contains :: sp_time_t*:a sp_time_t:size sp_time_t:b -> uint8_t
-sp_times_copy :: sp_time_t:a sp_time_t:size sp_time_t**:out -> status_t
+sp_times_counted_sequences :: sp_sequence_hashtable_t:known sp_time_t:limit sp_times_counted_sequences_t*:out sp_time_t*:out_size -> void
+sp_times_counted_sequences_hash :: sp_time_t*:a sp_time_t:size sp_time_t:width sp_sequence_hashtable_t:out -> void
+sp_times_counted_sequences_sort_greater :: void*:a ssize_t:b ssize_t:c -> uint8_t
+sp_times_counted_sequences_sort_less :: void*:a ssize_t:b ssize_t:c -> uint8_t
+sp_times_counted_sequences_sort_swap :: void*:a ssize_t:b ssize_t:c -> void
 sp_times_cusum :: sp_time_t*:a sp_time_t:size sp_time_t*:out -> void
+sp_times_deduplicate :: sp_time_t*:a sp_time_t:size sp_time_t*:out sp_time_t*:out_size -> status_t
 sp_times_differences :: sp_time_t*:a sp_time_t:size sp_time_t*:out -> void
 sp_times_display :: sp_time_t*:a sp_time_t:size -> void
 sp_times_divide :: sp_time_t*:a sp_time_t:size sp_time_t*:b sp_time_t*:out -> void
 sp_times_divide_1 :: sp_time_t*:a sp_time_t:size sp_time_t:n sp_time_t*:out -> void
+sp_times_duplicate :: sp_time_t:a sp_time_t:size sp_time_t**:out -> status_t
 sp_times_equal_1 :: sp_time_t*:a sp_time_t:size sp_time_t:n -> uint8_t
-sp_times_select :: sp_time_t*:a sp_time_t*:indices sp_time_t:size sp_time_t*:out -> void
-sp_times_select_random :: sp_random_state_t*:state sp_time_t*:a sp_time_t:size sp_time_t*:out sp_time_t*:out_size -> void
 sp_times_gt_indices :: sp_time_t*:a sp_time_t:size sp_time_t:n sp_time_t*:out sp_time_t*:out_size -> void
+sp_times_insert_space :: sp_time_t*:in sp_time_t:size sp_time_t:index sp_time_t:count sp_time_t*:out -> void
 sp_times_limit :: sp_time_t*:a sp_time_t:size sp_time_t:n sp_time_t*:out -> void
+sp_times_mask :: sp_time_t*:a sp_time_t*:b sp_sample_t*:coefficients sp_time_t:size sp_time_t*:out -> void
 sp_times_multiplications :: sp_time_t:start sp_time_t:factor sp_time_t:count sp_time_t*:out -> void
 sp_times_multiply :: sp_time_t*:a sp_time_t:size sp_time_t*:b sp_time_t*:out -> void
 sp_times_multiply_1 :: sp_time_t*:a sp_time_t:size sp_time_t:n sp_time_t*:out -> void
@@ -264,8 +279,11 @@ sp_times_random_binary :: sp_random_state_t*:state sp_time_t:size sp_time_t*:out
 sp_times_random_discrete :: sp_random_state_t*:state sp_time_t*:cudist sp_time_t:cudist_size sp_time_t:count sp_time_t*:out -> void
 sp_times_random_discrete_unique :: sp_random_state_t*:state sp_time_t*:cudist sp_time_t:cudist_size sp_time_t:size sp_time_t*:out -> void
 sp_times_range :: sp_time_t:start sp_time_t:end sp_time_t*:out -> void
+sp_times_remove :: sp_time_t*:in sp_time_t:size sp_time_t:index sp_time_t:count sp_time_t*:out -> void
 sp_times_reverse :: sp_time_t*:a sp_time_t:size sp_time_t*:out -> void
 sp_times_scale :: sp_time_t*:a sp_time_t:a_size sp_time_t:factor sp_time_t*:out -> status_t
+sp_times_select :: sp_time_t*:a sp_time_t*:indices sp_time_t:size sp_time_t*:out -> void
+sp_times_select_random :: sp_random_state_t*:state sp_time_t*:a sp_time_t:size sp_time_t*:out sp_time_t*:out_size -> void
 sp_times_sequence_increment :: sp_time_t*:a sp_time_t:size sp_time_t:set_size -> void
 sp_times_sequences :: sp_time_t:base sp_time_t:digits sp_time_t:size sp_time_t*:out -> void
 sp_times_set_1 :: sp_time_t*:a sp_time_t:size sp_time_t:n sp_time_t*:out -> void
@@ -274,17 +292,19 @@ sp_times_shuffle_swap :: void*:a size_t:i1 size_t:i2 -> void
 sp_times_sort_less :: void*:a ssize_t:b ssize_t:c -> uint8_t
 sp_times_sort_swap :: void*:a ssize_t:b ssize_t:c -> void
 sp_times_square :: sp_time_t*:a sp_time_t:size sp_time_t*:out -> void
+sp_times_subdivide :: sp_time_t*:a sp_time_t:size sp_time_t:index sp_time_t:count sp_time_t*:out -> void
 sp_times_subtract :: sp_time_t*:a sp_time_t:size sp_time_t*:b sp_time_t*:out -> void
 sp_times_subtract_1 :: sp_time_t*:a sp_time_t:size sp_time_t:n sp_time_t*:out -> void
 sp_times_swap :: sp_time_t*:a ssize_t:i1 ssize_t:i2 -> void
 sp_times_xor :: sp_time_t*:a sp_time_t*:b sp_time_t:size sp_time_t:limit sp_time_t*:out -> void
 sp_triangle :: sp_time_t:t sp_time_t:a sp_time_t:b -> sp_sample_t
 sp_u64_from_array :: uint8_t*:a sp_time_t:size -> uint64_t
-sp_wave :: sp_time_t:start sp_time_t:duration sp_wave_state_t*:state sp_block_t:out -> void
-sp_wave_event :: sp_time_t:start sp_time_t:end sp_wave_state_t:state sp_event_t*:out -> status_t
+sp_wave :: sp_time_t:offset sp_time_t:duration sp_wave_state_t*:state sp_sample_t*:out -> void
+sp_wave_event :: sp_time_t:start sp_time_t:end sp_wave_event_state_t:state sp_event_t*:out -> status_t
 sp_wave_event_f :: sp_time_t:start sp_time_t:end sp_block_t:out sp_event_t*:event -> void
-sp_wave_state_1 :: sp_sample_t*:wvf sp_time_t:wvf_size sp_time_t:size sp_time_t*:frq sp_sample_t*:amp sp_time_t:phs -> sp_wave_state_t
-sp_wave_state_2 :: sp_sample_t*:wvf sp_time_t:wvf_size sp_time_t:size sp_time_t*:frq sp_sample_t*:amp1 sp_sample_t*:amp2 sp_time_t:phs1 sp_time_t:phs2 -> sp_wave_state_t
+sp_wave_event_state_1 :: sp_wave_state_t:wave_state -> sp_wave_event_state_t
+sp_wave_event_state_2 :: sp_wave_state_t:wave_state_1 sp_wave_state_t:wave_state_2 -> sp_wave_event_state_t
+sp_wave_state :: sp_sample_t*:wvf sp_time_t:wvf_size sp_time_t:size sp_time_t*:frq sp_time_t:frq_fixed sp_sample_t*:amp sp_time_t:phs -> sp_wave_state_t
 sp_window_blackman :: sp_float_t:a sp_time_t:width -> sp_float_t
 sp_windowed_sinc_bp_br :: sp_sample_t*:in sp_time_t:in_len sp_float_t:cutoff_l sp_float_t:cutoff_h sp_float_t:transition_l sp_float_t:transition_h boolean:is_reject sp_convolution_filter_state_t**:out_state sp_sample_t*:out_samples -> status_t
 sp_windowed_sinc_bp_br_ir :: sp_float_t:cutoff_l sp_float_t:cutoff_h sp_float_t:transition_l sp_float_t:transition_h boolean:is_reject sp_sample_t**:out_ir sp_time_t*:out_len -> status_t
@@ -295,17 +315,19 @@ sp_windowed_sinc_lp_hp_ir :: sp_float_t:cutoff sp_float_t:transition boolean:is_
 sp_windowed_sinc_lp_hp_ir :: sp_float_t:cutoff sp_float_t:transition boolean:is_high_pass sp_sample_t**:out_ir sp_time_t*:out_len -> status_t
 sp_windowed_sinc_lp_hp_ir_f :: void*:arguments sp_sample_t**:out_ir sp_time_t*:out_len -> status_t
 sp_windowed_sinc_lp_hp_ir_length :: sp_float_t:transition -> sp_time_t
-```
+~~~
 
 ## macros
-```
+~~~
 boolean
 f64
 rt(n, d)
+sp_abs(a)
+sp_absolute_difference(a, b)
 sp_block_declare(a)
 sp_block_plot_1(a)
+sp_channel_count_t
 sp_channel_limit
-sp_channels_t
 sp_cheap_ceiling_positive(a)
 sp_cheap_filter_bp(...)
 sp_cheap_filter_br(...)
@@ -318,8 +340,18 @@ sp_cheap_noise_event_br(start, end, amp, ...)
 sp_cheap_noise_event_hp(start, end, amp, ...)
 sp_cheap_noise_event_lp(start, end, amp, ...)
 sp_cheap_round_positive(a)
+sp_declare_event(id)
+sp_declare_event_2(id1, id2)
+sp_declare_event_3(id1, id2, id3)
+sp_declare_event_4(id1, id2, id3, id4)
+sp_declare_event_array(id, size)
 sp_event_duration(a)
 sp_event_duration_set(a, duration)
+sp_event_memory_add(a, data)
+sp_event_memory_add_2(a, data1, data2)
+sp_event_memory_add_3(a, data1, data2, data3)
+sp_event_memory_add_handler(a, data_, free)
+sp_event_memory_init(a, size)
 sp_event_move(a, start)
 sp_event_set_null(a)
 sp_file_bit_input
@@ -336,14 +368,12 @@ sp_float_t
 sp_group_add(a, event)
 sp_group_events(a)
 sp_group_free(a)
-sp_group_memory(a)
-sp_group_memory_add(a, pointer)
-sp_group_memory_add_2(g, a1, a2)
-sp_group_memory_add_3(g, a1, a2, a3)
 sp_group_prepare(a)
 sp_group_size_t
 sp_max(a, b)
 sp_min(a, b)
+sp_no_underflow_subtract(a, b)
+sp_no_zero_divide(a, b)
 sp_path_bezier
 sp_path_constant
 sp_path_end
@@ -362,6 +392,7 @@ sp_path_prepare_segments
 sp_path_samples_constant(out, size, value)
 sp_path_segment_count_t
 sp_path_segment_t
+sp_path_set
 sp_path_size
 sp_path_t
 sp_path_time_t
@@ -387,18 +418,23 @@ sp_s_id_invalid_argument
 sp_s_id_memory
 sp_s_id_not_implemented
 sp_s_id_undefined
+sp_sample_array_nearly_equal
 sp_sample_interpolate_linear(a, b, t)
+sp_sample_nearly_equal
 sp_sample_random
 sp_sample_rate_t
 sp_sample_t
 sp_samples_random
+sp_samples_random_bounded
 sp_samples_sum
 sp_samples_zero(a, size)
+sp_sequence_set_equal(a, b)
 sp_sf_read
 sp_sf_write
-sp_sine_state_1(size, frq, amp, phs)
-sp_sine_state_2(size, frq, amp1, amp2, phs1, phs2)
-sp_stat_types_count
+sp_sine_state(size, frq, frq_fixed, amp, phs)
+sp_sine_state_lfo(size, frq, frq_fixed, amp, phs)
+sp_status_set(id)
+sp_time_half_t
 sp_time_interpolate_linear(a, b, t)
 sp_time_random
 sp_time_random_bounded
@@ -408,29 +444,30 @@ sp_times_random_bounded
 sp_times_zero(a, size)
 spline_path_time_t
 spline_path_value_t
-```
+~~~
 
 ## variables
-```
-sp_channels_t sp_channels
+~~~
+sp_channel_count_t sp_channels
 sp_random_state_t sp_default_random_state
 sp_sample_t* sp_sine_table
+sp_sample_t* sp_sine_table_lfo
+sp_sequence_set_key_t sp_sequence_set_null
 sp_time_t sp_rate
+sp_time_t sp_sine_lfo_factor
 uint32_t sp_cpu_count
-```
+~~~
 
 ## types
-```
-sp_stat_type_t: enum sp_stat_center 0u sp_stat_repetition sp_stat_deviation sp_stat_inharmonicity sp_stat_kurtosis sp_stat_mean sp_stat_median sp_stat_range sp_stat_range_min sp_stat_range_max sp_stat_skewness
+~~~
 sp_convolution_filter_ir_f_t: void* sp_sample_t** sp_time_t* -> status_t
 sp_event_f_t: sp_time_t sp_time_t sp_block_t sp_event_t* -> void
+sp_memory_free_t: void* -> void
 sp_stat_samples_f_t: sp_sample_t* sp_time_t sp_sample_t* -> uint8_t
 sp_stat_times_f_t: sp_time_t* sp_time_t sp_sample_t* -> uint8_t
-sp_stat2_samples_f_t: sp_sample_t* sp_sample_t* sp_time_t sp_sample_t* -> uint8_t
-sp_stat2_times_f_t: sp_time_t* sp_time_t* sp_time_t sp_sample_t* -> uint8_t
 sp_state_variable_filter_t: sp_sample_t* sp_sample_t* sp_float_t sp_float_t sp_time_t sp_sample_t* -> void
 sp_block_t: struct
-  channels: sp_channels_t
+  channels: sp_channel_count_t
   size: sp_time_t
   samples: array sp_sample_t* sp_channel_limit
 sp_cheap_filter_state_t: struct
@@ -447,11 +484,13 @@ sp_convolution_filter_state_t: struct
   ir_f_arguments_len: uint8_t
   ir_len: sp_time_t
 sp_event_t: struct sp_event_t
-  state: void*
   start: sp_time_t
   end: sp_time_t
+  state: void*
   f: function_pointer void sp_time_t sp_time_t sp_block_t struct sp_event_t*
   free: function_pointer void struct sp_event_t*
+  memory: sp_memory_t*
+  memory_used: sp_time_half_t
 sp_events_t: struct
   data: void*
   size: size_t
@@ -460,36 +499,46 @@ sp_events_t: struct
 sp_file_t: struct
   flags: uint8_t
   sample_rate: sp_sample_rate_t
-  channel_count: sp_channels_t
+  channel_count: sp_channel_count_t
   data: void*
-sp_group_event_state_t: struct
-  events: sp_events_t
-  memory: memreg_register_t
+sp_memory_t: struct
+  free: sp_memory_free_t
+  data: void*
 sp_path_segments_t: struct
   data: void*
   size: size_t
   used: size_t
 sp_render_config_t: struct
-  channels: sp_channels_t
+  channels: sp_channel_count_t
   rate: sp_time_t
   block_size: sp_time_t
 sp_samples_t: struct
   data: void*
   size: size_t
   used: size_t
+sp_sequence_set_key_t: struct
+  size: sp_time_t
+  data: uint8_t*
+sp_times_counted_sequences_t: struct
+  count: sp_time_t
+  sequence: sp_time_t*
 sp_times_t: struct
   data: void*
   size: size_t
   used: size_t
+sp_wave_event_state_t: struct
+  wave_states: array sp_wave_state_t sp_channel_limit
+  channels: sp_time_t
 sp_wave_state_t: struct
-  amp: array sp_sample_t* sp_channel_limit
-  phs: array sp_time_t sp_channel_limit
+  amp: sp_sample_t*
+  phs: sp_time_t
   frq: sp_time_t*
+  frq_fixed: sp_time_t
   wvf_size: sp_time_t
   wvf: sp_sample_t*
+  channels: sp_channel_count_t
   size: sp_time_t
-  channels: sp_channels_t
-```
+~~~
 
 # license
 * files under `source/c/foreign/nayuki-fft`: mit license
