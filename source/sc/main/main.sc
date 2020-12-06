@@ -33,7 +33,7 @@
   (set (array-get (array-get a channel) a-size) (array-get b b-size)))
 
 (define (sp-status-description a) (uint8-t* status-t)
-  "get a string description for a status id in a status-t"
+  "get a string description for a status id in a status_t"
   (declare b uint8-t*)
   (cond
     ( (not (strcmp sp-s-group-sp a.group))
@@ -53,7 +53,7 @@
   (return b))
 
 (define (sp-status-name a) (uint8-t* status-t)
-  "get a one word identifier for a status id in a status-t"
+  "get a one word identifier for status id in status_t"
   (declare b uint8-t*)
   (cond
     ( (= 0 (strcmp sp-s-group-sp a.group))
@@ -288,7 +288,7 @@
 
 (define (sp-render-file event start end config path)
   (status-t sp-event-t sp-time-t sp-time-t sp-render-config-t uint8-t*)
-  "render a single event to file. event can be a group"
+  "render a single event with sp_seq to file"
   status-declare
   (declare block-end sp-time-t remainder sp-time-t i sp-time-t written sp-time-t)
   (sp-block-declare block)
@@ -310,7 +310,7 @@
 
 (define (sp-render-block event start end config out)
   (status-t sp-event-t sp-time-t sp-time-t sp-render-config-t sp-block-t*)
-  "render a single event to block arrays. event can be a group"
+  "render a single event with sp_seq to sample arrays in sp_block_t"
   status-declare
   (declare block sp-block-t i sp-time-t)
   (status-require (sp-block-new config.channels (- end start) &block))
@@ -336,7 +336,7 @@
 
 (define (sp-initialise cpu-count channels rate) (status-t uint16-t sp-channel-count-t sp-time-t)
   "fills the sine wave lookup table.
-   rate and channels are used to set sp-rate and sp-channels,
+   rate and channels are used to set sp_rate and sp_channels,
    which are used as defaults in a few cases"
   status-declare
   (if cpu-count (begin (set status.id (future-init cpu-count)) (if status.id status-return)))

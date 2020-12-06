@@ -6,10 +6,10 @@ void sp_event_sort_swap(void* a, ssize_t b, ssize_t c) {
 }
 uint8_t sp_event_sort_less_p(void* a, ssize_t b, ssize_t c) { return (((((sp_event_t*)(a))[b]).start < (((sp_event_t*)(a))[c]).start)); }
 void sp_seq_events_prepare(sp_event_t* data, sp_time_t size) { quicksort(sp_event_sort_less_p, sp_event_sort_swap, data, 0, (size - 1)); }
-/** event arrays must have been prepared/sorted with sp-seq-event-prepare for seq to work correctly.
-   event functions receive event relative start/end time and block has index 0 at start.
+/** event arrays must have been prepared/sorted with sp_seq_event_prepare for seq to work correctly.
+   event functions receive event relative start/end time, and output blocks begin at event start.
    as for paths, start is inclusive, end is exclusive, so that 0..100 and 100..200 attach seamless.
-   size is events size */
+   $size is the number of events */
 void sp_seq(sp_time_t start, sp_time_t end, sp_block_t out, sp_event_t* events, sp_time_t size) {
   sp_time_t e_out_start;
   sp_event_t e;

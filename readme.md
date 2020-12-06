@@ -68,6 +68,9 @@ non-exhaustive list of options:
 |sp_sf_write|sf_writef_double|libsndfile file writer function to use|
 |sp_time_t|uint64_t|integer data type for sample counts (discrete)|
 
+# documentation
+see the [sph-sp manual](other/documentation/manual.md), the api listing below and comments above function definitions in the code
+
 # c usage
 ```
 #include <sph-sp.h>

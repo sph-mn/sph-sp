@@ -49,7 +49,7 @@ void sp_times_display(sp_time_t* a, sp_time_t size) {
   };
   printf("\n");
 }
-/** scale amplitude of out to match the one of in */
+/** scale amplitude of $out to match the one of $in */
 void sp_samples_set_unity_gain(sp_sample_t* in, sp_time_t in_size, sp_sample_t* out) {
   sp_time_t i;
   sp_sample_t in_max;
@@ -669,9 +669,9 @@ void sp_times_range(sp_time_t start, sp_time_t end, sp_time_t* out) {
 }
 /** round to the next integer multiple of base  */
 sp_time_t sp_time_round_to_multiple(sp_time_t a, sp_time_t base) { return (((0 == a) ? base : sp_cheap_round_positive(((a / ((sp_sample_t)(base))) * base)))); }
-/** writes the unique elements of a to out.
-   out is lend by the owner. out size should be equal to a-size.
-   out-size will be set to the number of unique elements */
+/** writes the unique elements of $a to $out.
+   $out is lend by the owner. size of $out should be equal or greater than size of $a.
+   $out-size will be set to the number of unique elements */
 status_t sp_times_deduplicate(sp_time_t* a, sp_time_t size, sp_time_t* out, sp_time_t* out_size) {
   status_declare;
   sp_time_set_t unique;
@@ -748,7 +748,7 @@ void sp_times_remove(sp_time_t* in, sp_time_t size, sp_time_t index, sp_time_t c
     memcpy((out + index), (in + index + count), ((size - index - count) * sizeof(sp_time_t)));
   };
 }
-/** insert unset elements before index */
+/** insert an new area of unset elements before index */
 void sp_times_insert_space(sp_time_t* in, sp_time_t size, sp_time_t index, sp_time_t count, sp_time_t* out) {
   if (0 == index) {
     memcpy((out + count), in, (size * sizeof(sp_time_t)));

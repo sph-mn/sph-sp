@@ -27,26 +27,17 @@
   sp-sample-array-nearly-equal f64-array-nearly-equal)
 
 (pre-include "sph/status.c" "sph/spline-path.h"
-  "sph/random.c" "sph/array3.c" "sph/array4.c"
-  "sph/memreg-heap.c" "sph/float.c" "sph/set.c" "sph/hashtable.c")
+  "sph/random.c" "sph/array3.c" "sph/array4.c" "sph/float.c" "sph/set.c" "sph/hashtable.c")
 
 (sc-comment "main")
 
 (pre-define
   boolean uint8-t
   f64 double
-  sp-file-bit-input 1
-  sp-file-bit-output 2
-  sp-file-bit-position 4
-  sp-file-mode-read 1
-  sp-file-mode-write 2
-  sp-file-mode-read-write 3
   sp-s-group-libc "libc"
   sp-s-group-sndfile "sndfile"
   sp-s-group-sp "sp"
   sp-s-group-sph "sph"
-  sp-random-state-t sph-random-state-t
-  sp-random-state-new sph-random-state-new
   sp-s-id-undefined 1
   sp-s-id-file-channel-mismatch 2
   sp-s-id-file-encoding 3
@@ -61,6 +52,14 @@
   sp-s-id-file-closed 11
   sp-s-id-file-position 12
   sp-s-id-file-type 13
+  sp-file-bit-input 1
+  sp-file-bit-output 2
+  sp-file-bit-position 4
+  sp-file-mode-read 1
+  sp-file-mode-write 2
+  sp-file-mode-read-write 3
+  sp-random-state-t sph-random-state-t
+  sp-random-state-new sph-random-state-new
   (sp-file-declare a) (begin (declare a sp-file-t) (set a.flags 0))
   (sp-block-declare a) (begin (declare a sp-block-t) (set a.size 0))
   (sp-cheap-round-positive a) (convert-type (+ 0.5 a) sp-time-t)
@@ -72,10 +71,16 @@
   (sp-wave-state sp-sine-table-lfo (* sp-rate sp-sine-lfo-factor) size frq frq-fixed amp phs)
   (sp-max a b) (if* (> a b) a b)
   (sp-min a b) (if* (< a b) a b)
-  (sp-absolute-difference a b) (if* (> a b) (- a b) (- b a))
+  (sp-absolute-difference a b)
+  (begin
+    "subtract the smaller number from the greater number,
+     regardless of if the smallest is the first or the second argument"
+    (if* (> a b) (- a b) (- b a)))
   (sp-abs a) (if* (> 0 a) (* -1 a) a)
-  (sp-no-underflow-subtract a b) (if* (> a b) (- a b) 0)
-  (sp-no-zero-divide a b) (if* (= 0 b) 0 (/ a b))
+  (sp-no-underflow-subtract a b)
+  (begin "subtract b from a but return 0 for negative results" (if* (> a b) (- a b) 0))
+  (sp-no-zero-divide a b)
+  (begin "divide a by b (a / b) but return 0 if b is zero" (if* (= 0 b) 0 (/ a b)))
   (sp-status-set id) (set status.id sp-s-id-memory status.group sp-s-group-sp))
 
 (declare
@@ -152,11 +157,7 @@
   (sp-triangle t a b) (sp-sample-t sp-time-t sp-time-t sp-time-t)
   (sp-wave offset duration state out) (void sp-time-t sp-time-t sp-wave-state-t* sp-sample-t*)
   (sp-time-expt base exp) (sp-time-t sp-time-t sp-time-t)
-  (sp-time-factorial a) (sp-time-t sp-time-t)
-  (sp-sequence-max size min-size) (sp-time-t sp-time-t sp-time-t)
-  (sp-set-sequence-max set-size selection-size) (sp-time-t sp-time-t sp-time-t)
-  (sp-permutations-max set-size selection-size) (sp-time-t sp-time-t sp-time-t)
-  (sp-compositions-max sum) (sp-time-t sp-time-t))
+  (sp-time-factorial a) (sp-time-t sp-time-t))
 
 (sc-comment "arrays")
 
@@ -307,37 +308,6 @@
   (sp-samples-blend a b fraction size out)
   (void sp-sample-t* sp-sample-t* sp-sample-t sp-time-t sp-sample-t*))
 
-(sc-comment "statistics")
-
-(declare
-  sp-stat-times-f-t (type (function-pointer uint8-t sp-time-t* sp-time-t sp-sample-t*))
-  sp-stat-samples-f-t (type (function-pointer uint8-t sp-sample-t* sp-time-t sp-sample-t*))
-  (sp-stat-times-range a size out) (uint8-t sp-time-t* sp-time-t sp-sample-t*)
-  (sp-stat-times-repetition a size width out) (uint8-t sp-time-t* sp-time-t sp-time-t sp-sample-t*)
-  (sp-stat-times-repetition-all a size out) (uint8-t sp-time-t* sp-time-t sp-sample-t*)
-  (sp-stat-times-mean a size out) (uint8-t sp-time-t* sp-time-t sp-sample-t*)
-  (sp-stat-times-deviation a size out) (uint8-t sp-time-t* sp-time-t sp-sample-t*)
-  (sp-stat-times-median a size out) (uint8-t sp-time-t* sp-time-t sp-sample-t*)
-  (sp-stat-times-center a size out) (uint8-t sp-time-t* sp-time-t sp-sample-t*)
-  (sp-stat-times-inharmonicity a size out) (uint8-t sp-time-t* sp-time-t sp-sample-t*)
-  (sp-stat-times-kurtosis a size out) (uint8-t sp-time-t* sp-time-t sp-sample-t*)
-  (sp-stat-times-skewness a size out) (uint8-t sp-time-t* sp-time-t sp-sample-t*)
-  (sp-stat-samples-repetition-all a size out) (uint8-t sp-sample-t* sp-time-t sp-sample-t*)
-  (sp-stat-samples-mean a size out) (uint8-t sp-sample-t* sp-time-t sp-sample-t*)
-  (sp-stat-samples-deviation a size out) (uint8-t sp-sample-t* sp-time-t sp-sample-t*)
-  (sp-stat-samples-inharmonicity a size out) (uint8-t sp-sample-t* sp-time-t sp-sample-t*)
-  (sp-stat-samples-median a size out) (uint8-t sp-sample-t* sp-time-t sp-sample-t*)
-  (sp-stat-samples-center a size out) (uint8-t sp-sample-t* sp-time-t sp-sample-t*)
-  (sp-stat-samples-range a size out) (uint8-t sp-sample-t* sp-time-t sp-sample-t*)
-  (sp-stat-samples-kurtosis a size out) (uint8-t sp-sample-t* sp-time-t sp-sample-t*)
-  (sp-stat-samples-skewness a size out) (uint8-t sp-sample-t* sp-time-t sp-sample-t*)
-  (sp-samples-scale->times a size max out) (void sp-sample-t* sp-time-t sp-time-t sp-time-t*)
-  (sp-stat-unique-max size width) (sp-time-t sp-time-t sp-time-t)
-  (sp-stat-unique-all-max size) (sp-time-t sp-time-t)
-  (sp-stat-repetition-all-max size) (sp-time-t sp-time-t)
-  (sp-stat-times-repetition a size width out) (uint8-t sp-time-t* sp-time-t sp-time-t sp-sample-t*)
-  (sp-stat-repetition-max size width) (sp-time-t sp-time-t sp-time-t))
-
 (sc-comment "filter")
 
 (pre-define
@@ -454,7 +424,7 @@
   (sp-seq-events-prepare (struct-get (sp-group-events a) data) (array4-size (sp-group-events a)))
   (sp-event-set-null a)
   (begin
-    "set so that duration is zero, state is zero if not allocated, and sp-event-memory-free does not fail"
+    "set so that duration is zero, state is zero if not allocated, and sp_event_memory_free does not fail"
     (set a.start 0 a.end 0 a.state 0 a.memory-used 0 a.memory 0))
   (sp-group-free a) (if a.state (a.free &a))
   (sp-declare-event-array id size)
@@ -468,7 +438,7 @@
   (sp-event-memory-add a data) (sp-event-memory-add-handler a data free)
   (sp-event-memory-add-handler a data_ free)
   (begin
-    "sp_event_t {void* -> void} void*"
+    "sp_event_t void* function:{void* -> void}"
     (struct-set (array-get a.memory a.memory-used) data data_ free free)
     (set+ a.memory-used 1))
   (sp-event-memory-add-2 a data1 data2)
@@ -584,6 +554,41 @@
   (status-t sp-path-t sp-time-t sp-sample-t** sp-sample-t** sp-path-t**)
   (sp-path-samples-derivations-normalized path count x-changes y-changes out out-sizes)
   (status-t sp-path-t sp-time-t sp-sample-t** sp-sample-t** sp-sample-t*** sp-time-t**))
+
+(sc-comment "statistics")
+
+(declare
+  (sp-sequence-max size min-size) (sp-time-t sp-time-t sp-time-t)
+  (sp-set-sequence-max set-size selection-size) (sp-time-t sp-time-t sp-time-t)
+  (sp-permutations-max set-size selection-size) (sp-time-t sp-time-t sp-time-t)
+  (sp-compositions-max sum) (sp-time-t sp-time-t)
+  sp-stat-times-f-t (type (function-pointer uint8-t sp-time-t* sp-time-t sp-sample-t*))
+  sp-stat-samples-f-t (type (function-pointer uint8-t sp-sample-t* sp-time-t sp-sample-t*))
+  (sp-stat-times-range a size out) (uint8-t sp-time-t* sp-time-t sp-sample-t*)
+  (sp-stat-times-repetition a size width out) (uint8-t sp-time-t* sp-time-t sp-time-t sp-sample-t*)
+  (sp-stat-times-repetition-all a size out) (uint8-t sp-time-t* sp-time-t sp-sample-t*)
+  (sp-stat-times-mean a size out) (uint8-t sp-time-t* sp-time-t sp-sample-t*)
+  (sp-stat-times-deviation a size out) (uint8-t sp-time-t* sp-time-t sp-sample-t*)
+  (sp-stat-times-median a size out) (uint8-t sp-time-t* sp-time-t sp-sample-t*)
+  (sp-stat-times-center a size out) (uint8-t sp-time-t* sp-time-t sp-sample-t*)
+  (sp-stat-times-inharmonicity a size out) (uint8-t sp-time-t* sp-time-t sp-sample-t*)
+  (sp-stat-times-kurtosis a size out) (uint8-t sp-time-t* sp-time-t sp-sample-t*)
+  (sp-stat-times-skewness a size out) (uint8-t sp-time-t* sp-time-t sp-sample-t*)
+  (sp-stat-samples-repetition-all a size out) (uint8-t sp-sample-t* sp-time-t sp-sample-t*)
+  (sp-stat-samples-mean a size out) (uint8-t sp-sample-t* sp-time-t sp-sample-t*)
+  (sp-stat-samples-deviation a size out) (uint8-t sp-sample-t* sp-time-t sp-sample-t*)
+  (sp-stat-samples-inharmonicity a size out) (uint8-t sp-sample-t* sp-time-t sp-sample-t*)
+  (sp-stat-samples-median a size out) (uint8-t sp-sample-t* sp-time-t sp-sample-t*)
+  (sp-stat-samples-center a size out) (uint8-t sp-sample-t* sp-time-t sp-sample-t*)
+  (sp-stat-samples-range a size out) (uint8-t sp-sample-t* sp-time-t sp-sample-t*)
+  (sp-stat-samples-kurtosis a size out) (uint8-t sp-sample-t* sp-time-t sp-sample-t*)
+  (sp-stat-samples-skewness a size out) (uint8-t sp-sample-t* sp-time-t sp-sample-t*)
+  (sp-samples-scale->times a size max out) (void sp-sample-t* sp-time-t sp-time-t sp-time-t*)
+  (sp-stat-unique-max size width) (sp-time-t sp-time-t sp-time-t)
+  (sp-stat-unique-all-max size) (sp-time-t sp-time-t)
+  (sp-stat-repetition-all-max size) (sp-time-t sp-time-t)
+  (sp-stat-times-repetition a size width out) (uint8-t sp-time-t* sp-time-t sp-time-t sp-sample-t*)
+  (sp-stat-repetition-max size width) (sp-time-t sp-time-t sp-time-t))
 
 (sc-comment "main 2")
 

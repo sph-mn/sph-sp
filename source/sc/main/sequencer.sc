@@ -17,10 +17,10 @@
 
 (define (sp-seq start end out events size)
   (void sp-time-t sp-time-t sp-block-t sp-event-t* sp-time-t)
-  "event arrays must have been prepared/sorted with sp-seq-event-prepare for seq to work correctly.
-   event functions receive event relative start/end time and block has index 0 at start.
+  "event arrays must have been prepared/sorted with sp_seq_event_prepare for seq to work correctly.
+   event functions receive event relative start/end time, and output blocks begin at event start.
    as for paths, start is inclusive, end is exclusive, so that 0..100 and 100..200 attach seamless.
-   size is events size"
+   $size is the number of events"
   (declare e-out-start sp-time-t e sp-event-t e-start sp-time-t e-end sp-time-t i sp-time-t)
   (for ((set i 0) (< i size) (set i (+ 1 i)))
     (set e (array-get events i))

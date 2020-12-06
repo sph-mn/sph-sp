@@ -46,7 +46,7 @@
 #define sp_memory_error status_set_goto(sp_s_group_sp, sp_s_id_memory)
 define_sp_interleave(sp_interleave, sp_sample_t, (b[b_size] = (a[channel])[a_size]))
   define_sp_interleave(sp_deinterleave, sp_sample_t, ((a[channel])[a_size] = b[b_size]))
-  /** get a string description for a status id in a status-t */
+  /** get a string description for a status id in a status_t */
   uint8_t* sp_status_description(status_t a) {
   uint8_t* b;
   if (!strcmp(sp_s_group_sp, (a.group))) {
@@ -74,7 +74,7 @@ define_sp_interleave(sp_interleave, sp_sample_t, (b[b_size] = (a[channel])[a_siz
   };
   return (b);
 }
-/** get a one word identifier for a status id in a status-t */
+/** get a one word identifier for status id in status_t */
 uint8_t* sp_status_name(status_t a) {
   uint8_t* b;
   if (0 == strcmp(sp_s_group_sp, (a.group))) {
@@ -349,7 +349,7 @@ sp_render_config_t sp_render_config(sp_channel_count_t channels, sp_time_t rate,
   a.block_size = block_size;
   return (a);
 }
-/** render a single event to file. event can be a group */
+/** render a single event with sp_seq to file */
 status_t sp_render_file(sp_event_t event, sp_time_t start, sp_time_t end, sp_render_config_t config, uint8_t* path) {
   status_declare;
   sp_time_t block_end;
@@ -376,7 +376,7 @@ exit:
   sp_file_close(file);
   status_return;
 }
-/** render a single event to block arrays. event can be a group */
+/** render a single event with sp_seq to sample arrays in sp_block_t */
 status_t sp_render_block(sp_event_t event, sp_time_t start, sp_time_t end, sp_render_config_t config, sp_block_t* out) {
   status_declare;
   sp_block_t block;
@@ -407,7 +407,7 @@ exit:
   status_return;
 }
 /** fills the sine wave lookup table.
-   rate and channels are used to set sp-rate and sp-channels,
+   rate and channels are used to set sp_rate and sp_channels,
    which are used as defaults in a few cases */
 status_t sp_initialise(uint16_t cpu_count, sp_channel_count_t channels, sp_time_t rate) {
   status_declare;

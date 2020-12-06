@@ -76,25 +76,16 @@
 #include <sph/random.c>
 #include <sph/array3.c>
 #include <sph/array4.c>
-#include <sph/memreg-heap.c>
 #include <sph/float.c>
 #include <sph/set.c>
 #include <sph/hashtable.c>
 /* main */
 #define boolean uint8_t
 #define f64 double
-#define sp_file_bit_input 1
-#define sp_file_bit_output 2
-#define sp_file_bit_position 4
-#define sp_file_mode_read 1
-#define sp_file_mode_write 2
-#define sp_file_mode_read_write 3
 #define sp_s_group_libc "libc"
 #define sp_s_group_sndfile "sndfile"
 #define sp_s_group_sp "sp"
 #define sp_s_group_sph "sph"
-#define sp_random_state_t sph_random_state_t
-#define sp_random_state_new sph_random_state_new
 #define sp_s_id_undefined 1
 #define sp_s_id_file_channel_mismatch 2
 #define sp_s_id_file_encoding 3
@@ -109,6 +100,14 @@
 #define sp_s_id_file_closed 11
 #define sp_s_id_file_position 12
 #define sp_s_id_file_type 13
+#define sp_file_bit_input 1
+#define sp_file_bit_output 2
+#define sp_file_bit_position 4
+#define sp_file_mode_read 1
+#define sp_file_mode_write 2
+#define sp_file_mode_read_write 3
+#define sp_random_state_t sph_random_state_t
+#define sp_random_state_new sph_random_state_new
 #define sp_file_declare(a) \
   sp_file_t a; \
   a.flags = 0
@@ -122,9 +121,13 @@
 #define sp_sine_state_lfo(size, frq, frq_fixed, amp, phs) sp_wave_state(sp_sine_table_lfo, (sp_rate * sp_sine_lfo_factor), size, frq, frq_fixed, amp, phs)
 #define sp_max(a, b) ((a > b) ? a : b)
 #define sp_min(a, b) ((a < b) ? a : b)
+/** subtract the smaller number from the greater number,
+     regardless of if the smallest is the first or the second argument */
 #define sp_absolute_difference(a, b) ((a > b) ? (a - b) : (b - a))
 #define sp_abs(a) ((0 > a) ? (-1 * a) : a)
+/** subtract b from a but return 0 for negative results */
 #define sp_no_underflow_subtract(a, b) ((a > b) ? (a - b) : 0)
+/** divide a by b (a / b) but return 0 if b is zero */
 #define sp_no_zero_divide(a, b) ((0 == b) ? 0 : (a / b))
 #define sp_status_set(id) \
   status.id = sp_s_id_memory; \
@@ -195,10 +198,6 @@ sp_sample_t sp_triangle(sp_time_t t, sp_time_t a, sp_time_t b);
 void sp_wave(sp_time_t offset, sp_time_t duration, sp_wave_state_t* state, sp_sample_t* out);
 sp_time_t sp_time_expt(sp_time_t base, sp_time_t exp);
 sp_time_t sp_time_factorial(sp_time_t a);
-sp_time_t sp_sequence_max(sp_time_t size, sp_time_t min_size);
-sp_time_t sp_set_sequence_max(sp_time_t set_size, sp_time_t selection_size);
-sp_time_t sp_permutations_max(sp_time_t set_size, sp_time_t selection_size);
-sp_time_t sp_compositions_max(sp_time_t sum);
 /* arrays */
 #define sp_samples_zero(a, size) memset(a, 0, (size * sizeof(sp_sample_t)))
 #define sp_times_zero(a, size) memset(a, 0, (size * sizeof(sp_time_t)))
@@ -312,34 +311,6 @@ void sp_times_subdivide(sp_time_t* a, sp_time_t size, sp_time_t index, sp_time_t
 void sp_times_blend(sp_time_t* a, sp_time_t* b, sp_sample_t fraction, sp_time_t size, sp_time_t* out);
 void sp_times_mask(sp_time_t* a, sp_time_t* b, sp_sample_t* coefficients, sp_time_t size, sp_time_t* out);
 void sp_samples_blend(sp_sample_t* a, sp_sample_t* b, sp_sample_t fraction, sp_time_t size, sp_sample_t* out);
-/* statistics */
-typedef uint8_t (*sp_stat_times_f_t)(sp_time_t*, sp_time_t, sp_sample_t*);
-typedef uint8_t (*sp_stat_samples_f_t)(sp_sample_t*, sp_time_t, sp_sample_t*);
-uint8_t sp_stat_times_range(sp_time_t* a, sp_time_t size, sp_sample_t* out);
-uint8_t sp_stat_times_repetition(sp_time_t* a, sp_time_t size, sp_time_t width, sp_sample_t* out);
-uint8_t sp_stat_times_repetition_all(sp_time_t* a, sp_time_t size, sp_sample_t* out);
-uint8_t sp_stat_times_mean(sp_time_t* a, sp_time_t size, sp_sample_t* out);
-uint8_t sp_stat_times_deviation(sp_time_t* a, sp_time_t size, sp_sample_t* out);
-uint8_t sp_stat_times_median(sp_time_t* a, sp_time_t size, sp_sample_t* out);
-uint8_t sp_stat_times_center(sp_time_t* a, sp_time_t size, sp_sample_t* out);
-uint8_t sp_stat_times_inharmonicity(sp_time_t* a, sp_time_t size, sp_sample_t* out);
-uint8_t sp_stat_times_kurtosis(sp_time_t* a, sp_time_t size, sp_sample_t* out);
-uint8_t sp_stat_times_skewness(sp_time_t* a, sp_time_t size, sp_sample_t* out);
-uint8_t sp_stat_samples_repetition_all(sp_sample_t* a, sp_time_t size, sp_sample_t* out);
-uint8_t sp_stat_samples_mean(sp_sample_t* a, sp_time_t size, sp_sample_t* out);
-uint8_t sp_stat_samples_deviation(sp_sample_t* a, sp_time_t size, sp_sample_t* out);
-uint8_t sp_stat_samples_inharmonicity(sp_sample_t* a, sp_time_t size, sp_sample_t* out);
-uint8_t sp_stat_samples_median(sp_sample_t* a, sp_time_t size, sp_sample_t* out);
-uint8_t sp_stat_samples_center(sp_sample_t* a, sp_time_t size, sp_sample_t* out);
-uint8_t sp_stat_samples_range(sp_sample_t* a, sp_time_t size, sp_sample_t* out);
-uint8_t sp_stat_samples_kurtosis(sp_sample_t* a, sp_time_t size, sp_sample_t* out);
-uint8_t sp_stat_samples_skewness(sp_sample_t* a, sp_time_t size, sp_sample_t* out);
-void sp_samples_scale_to_times(sp_sample_t* a, sp_time_t size, sp_time_t max, sp_time_t* out);
-sp_time_t sp_stat_unique_max(sp_time_t size, sp_time_t width);
-sp_time_t sp_stat_unique_all_max(sp_time_t size);
-sp_time_t sp_stat_repetition_all_max(sp_time_t size);
-uint8_t sp_stat_times_repetition(sp_time_t* a, sp_time_t size, sp_time_t width, sp_sample_t* out);
-sp_time_t sp_stat_repetition_max(sp_time_t size, sp_time_t width);
 /* filter */
 #define sp_filter_state_t sp_convolution_filter_state_t
 #define sp_filter_state_free sp_convolution_filter_state_free
@@ -416,7 +387,7 @@ void sp_plot_spectrum(sp_sample_t* a, sp_time_t a_size);
     a.end = event.end; \
   }
 #define sp_group_prepare(a) sp_seq_events_prepare(((sp_group_events(a)).data), (array4_size((sp_group_events(a)))))
-/** set so that duration is zero, state is zero if not allocated, and sp-event-memory-free does not fail */
+/** set so that duration is zero, state is zero if not allocated, and sp_event_memory_free does not fail */
 #define sp_event_set_null(a) \
   a.start = 0; \
   a.end = 0; \
@@ -444,7 +415,7 @@ void sp_plot_spectrum(sp_sample_t* a, sp_time_t a_size);
   sp_declare_event_2(id1, id2); \
   sp_declare_event_2(id3, id4)
 #define sp_event_memory_add(a, data) sp_event_memory_add_handler(a, data, free)
-/** sp_event_t {void* -> void} void* */
+/** sp_event_t void* function:{void* -> void} */
 #define sp_event_memory_add_handler(a, data_, free) \
   ((a.memory)[a.memory_used]).data = data_; \
   ((a.memory)[a.memory_used]).free = free; \
@@ -531,6 +502,38 @@ status_t sp_path_times_derivation(sp_path_t path, sp_sample_t** x_changes, sp_sa
 void sp_path_multiply(sp_path_t path, sp_sample_t x_factor, sp_sample_t y_factor);
 status_t sp_path_derivations_normalized(sp_path_t base, sp_time_t count, sp_sample_t** x_changes, sp_sample_t** y_changes, sp_path_t** out);
 status_t sp_path_samples_derivations_normalized(sp_path_t path, sp_time_t count, sp_sample_t** x_changes, sp_sample_t** y_changes, sp_sample_t*** out, sp_time_t** out_sizes);
+/* statistics */
+sp_time_t sp_sequence_max(sp_time_t size, sp_time_t min_size);
+sp_time_t sp_set_sequence_max(sp_time_t set_size, sp_time_t selection_size);
+sp_time_t sp_permutations_max(sp_time_t set_size, sp_time_t selection_size);
+sp_time_t sp_compositions_max(sp_time_t sum);
+typedef uint8_t (*sp_stat_times_f_t)(sp_time_t*, sp_time_t, sp_sample_t*);
+typedef uint8_t (*sp_stat_samples_f_t)(sp_sample_t*, sp_time_t, sp_sample_t*);
+uint8_t sp_stat_times_range(sp_time_t* a, sp_time_t size, sp_sample_t* out);
+uint8_t sp_stat_times_repetition(sp_time_t* a, sp_time_t size, sp_time_t width, sp_sample_t* out);
+uint8_t sp_stat_times_repetition_all(sp_time_t* a, sp_time_t size, sp_sample_t* out);
+uint8_t sp_stat_times_mean(sp_time_t* a, sp_time_t size, sp_sample_t* out);
+uint8_t sp_stat_times_deviation(sp_time_t* a, sp_time_t size, sp_sample_t* out);
+uint8_t sp_stat_times_median(sp_time_t* a, sp_time_t size, sp_sample_t* out);
+uint8_t sp_stat_times_center(sp_time_t* a, sp_time_t size, sp_sample_t* out);
+uint8_t sp_stat_times_inharmonicity(sp_time_t* a, sp_time_t size, sp_sample_t* out);
+uint8_t sp_stat_times_kurtosis(sp_time_t* a, sp_time_t size, sp_sample_t* out);
+uint8_t sp_stat_times_skewness(sp_time_t* a, sp_time_t size, sp_sample_t* out);
+uint8_t sp_stat_samples_repetition_all(sp_sample_t* a, sp_time_t size, sp_sample_t* out);
+uint8_t sp_stat_samples_mean(sp_sample_t* a, sp_time_t size, sp_sample_t* out);
+uint8_t sp_stat_samples_deviation(sp_sample_t* a, sp_time_t size, sp_sample_t* out);
+uint8_t sp_stat_samples_inharmonicity(sp_sample_t* a, sp_time_t size, sp_sample_t* out);
+uint8_t sp_stat_samples_median(sp_sample_t* a, sp_time_t size, sp_sample_t* out);
+uint8_t sp_stat_samples_center(sp_sample_t* a, sp_time_t size, sp_sample_t* out);
+uint8_t sp_stat_samples_range(sp_sample_t* a, sp_time_t size, sp_sample_t* out);
+uint8_t sp_stat_samples_kurtosis(sp_sample_t* a, sp_time_t size, sp_sample_t* out);
+uint8_t sp_stat_samples_skewness(sp_sample_t* a, sp_time_t size, sp_sample_t* out);
+void sp_samples_scale_to_times(sp_sample_t* a, sp_time_t size, sp_time_t max, sp_time_t* out);
+sp_time_t sp_stat_unique_max(sp_time_t size, sp_time_t width);
+sp_time_t sp_stat_unique_all_max(sp_time_t size);
+sp_time_t sp_stat_repetition_all_max(sp_time_t size);
+uint8_t sp_stat_times_repetition(sp_time_t* a, sp_time_t size, sp_time_t width, sp_sample_t* out);
+sp_time_t sp_stat_repetition_max(sp_time_t size, sp_time_t width);
 /* main 2 */
 /** return a sample count relative to the current default sample rate sp_rate.
      (rate / d * n)

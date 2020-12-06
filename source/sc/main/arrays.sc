@@ -47,7 +47,7 @@
   (printf "\n"))
 
 (define (sp-samples-set-unity-gain in in-size out) (void sp-sample-t* sp-time-t sp-sample-t*)
-  "scale amplitude of out to match the one of in"
+  "scale amplitude of $out to match the one of $in"
   (declare
     i sp-time-t
     in-max sp-sample-t
@@ -541,9 +541,9 @@
 
 (define (sp-times-deduplicate a size out out-size)
   (status-t sp-time-t* sp-time-t sp-time-t* sp-time-t*)
-  "writes the unique elements of a to out.
-   out is lend by the owner. out size should be equal to a-size.
-   out-size will be set to the number of unique elements"
+  "writes the unique elements of $a to $out.
+   $out is lend by the owner. size of $out should be equal or greater than size of $a.
+   $out-size will be set to the number of unique elements"
   status-declare
   (declare unique sp-time-set-t i sp-time-t unique-count sp-time-t)
   (set unique.size 0)
@@ -611,7 +611,7 @@
 
 (define (sp-times-insert-space in size index count out)
   (void sp-time-t* sp-time-t sp-time-t sp-time-t sp-time-t*)
-  "insert unset elements before index"
+  "insert an new area of unset elements before index"
   (if (= 0 index) (memcpy (+ out count) in (* size (sizeof sp-time-t)))
     (begin
       (memcpy out in (* index (sizeof sp-time-t)))
