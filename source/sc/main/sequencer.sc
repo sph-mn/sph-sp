@@ -116,7 +116,7 @@
   (set state (convert-type event:state sp-wave-event-state-t*))
   (for ((set chn-i 0) (< chn-i state:channels) (set chn-i (+ 1 chn-i)))
     (set wave-state (+ state:wave-states chn-i))
-    (if (not wave-state:amp) continue)
+    (if (not wave-state:amod) continue)
     (sp-wave start (- end start) wave-state (array-get out.samples chn-i))))
 
 (define (sp-wave-event-free a) (void sp-event-t*) (free a:state) (sp-event-memory-free a))

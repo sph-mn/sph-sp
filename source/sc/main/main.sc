@@ -107,35 +107,29 @@
 (define (sp-wave offset duration state out)
   (void sp-time-t sp-time-t sp-wave-state-t* sp-sample-t*)
   "* sums into out
-   * state.frq (frequency): array with hertz values
+   * state.frq (frequency): fixed frequency, used if fmod set to null
+   * state.fmod (frequency): array with hertz values
    * state.wvf (waveform): array with waveform samples
    * state.wvf-size: size of state.wvf
    * state.phs (phase): one value for the phase offset
-   * state.amp (amplitude): array with values per sample"
+   * state.amod (amplitude): array with values per sample"
   (declare amp sp-sample-t phs sp-time-t i sp-time-t)
   (set phs state:phs)
-  (if state:frq
+  (if state:fmod
     (for ((set i 0) (< i duration) (set i (+ 1 i)))
-      (set+ (array-get out i) (* (array-get state:amp (+ offset i)) (array-get state:wvf phs))
-        phs (array-get state:frq (+ offset i)))
+      (set+ (array-get out i) (* (array-get state:amod (+ offset i)) (array-get state:wvf phs))
+        phs (array-get state:fmod (+ offset i)))
       (if (>= phs state:wvf-size) (set phs (modulo phs state:wvf-size))))
     (for ((set i 0) (< i duration) (set i (+ 1 i)))
-      (set+ (array-get out i) (* (array-get state:amp (+ offset i)) (array-get state:wvf phs))
-        phs state:frq-fixed)
+      (set+ (array-get out i) (* (array-get state:amod (+ offset i)) (array-get state:wvf phs))
+        phs state:frq)
       (if (>= phs state:wvf-size) (set phs (modulo phs state:wvf-size)))))
   (set state:phs phs))
 
-(define (sp-wave-state wvf wvf-size size frq frq-fixed amp phs)
-  (sp-wave-state-t sp-sample-t* sp-time-t sp-time-t sp-time-t* sp-time-t sp-sample-t* sp-time-t)
+(define (sp-wave-state wvf wvf-size size phs frq fmod amod)
+  (sp-wave-state-t sp-sample-t* sp-time-t sp-time-t sp-time-t sp-time-t sp-time-t* sp-sample-t*)
   (declare a sp-wave-state-t)
-  (set
-    a.size size
-    a.frq frq
-    a.frq-fixed frq-fixed
-    a.wvf wvf
-    a.wvf-size wvf-size
-    a.amp amp
-    a.phs phs)
+  (set a.wvf wvf a.wvf-size wvf-size a.phs phs a.frq frq a.fmod fmod a.amod amod a.size size)
   (return a))
 
 (define (sp-triangle t a b) (sp-sample-t sp-time-t sp-time-t sp-time-t)

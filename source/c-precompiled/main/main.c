@@ -148,28 +148,29 @@ sp_time_t sp_phase_float(sp_time_t current, sp_sample_t change, sp_time_t cycle)
   return (((a < cycle) ? a : (a % cycle)));
 }
 /** * sums into out
-   * state.frq (frequency): array with hertz values
+   * state.frq (frequency): fixed frequency, used if fmod set to null
+   * state.fmod (frequency): array with hertz values
    * state.wvf (waveform): array with waveform samples
    * state.wvf-size: size of state.wvf
    * state.phs (phase): one value for the phase offset
-   * state.amp (amplitude): array with values per sample */
+   * state.amod (amplitude): array with values per sample */
 void sp_wave(sp_time_t offset, sp_time_t duration, sp_wave_state_t* state, sp_sample_t* out) {
   sp_sample_t amp;
   sp_time_t phs;
   sp_time_t i;
   phs = state->phs;
-  if (state->frq) {
+  if (state->fmod) {
     for (i = 0; (i < duration); i = (1 + i)) {
-      out[i] += ((state->amp)[(offset + i)] * (state->wvf)[phs]);
-      phs += (state->frq)[(offset + i)];
+      out[i] += ((state->amod)[(offset + i)] * (state->wvf)[phs]);
+      phs += (state->fmod)[(offset + i)];
       if (phs >= state->wvf_size) {
         phs = (phs % state->wvf_size);
       };
     };
   } else {
     for (i = 0; (i < duration); i = (1 + i)) {
-      out[i] += ((state->amp)[(offset + i)] * (state->wvf)[phs]);
-      phs += state->frq_fixed;
+      out[i] += ((state->amod)[(offset + i)] * (state->wvf)[phs]);
+      phs += state->frq;
       if (phs >= state->wvf_size) {
         phs = (phs % state->wvf_size);
       };
@@ -177,15 +178,15 @@ void sp_wave(sp_time_t offset, sp_time_t duration, sp_wave_state_t* state, sp_sa
   };
   state->phs = phs;
 }
-sp_wave_state_t sp_wave_state(sp_sample_t* wvf, sp_time_t wvf_size, sp_time_t size, sp_time_t* frq, sp_time_t frq_fixed, sp_sample_t* amp, sp_time_t phs) {
+sp_wave_state_t sp_wave_state(sp_sample_t* wvf, sp_time_t wvf_size, sp_time_t size, sp_time_t phs, sp_time_t frq, sp_time_t* fmod, sp_sample_t* amod) {
   sp_wave_state_t a;
-  a.size = size;
-  a.frq = frq;
-  a.frq_fixed = frq_fixed;
   a.wvf = wvf;
   a.wvf_size = wvf_size;
-  a.amp = amp;
   a.phs = phs;
+  a.frq = frq;
+  a.fmod = fmod;
+  a.amod = amod;
+  a.size = size;
   return (a);
 }
 /** return a sample for a triangular wave with center offsets a left and b right.

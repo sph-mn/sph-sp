@@ -90,6 +90,7 @@ void sp_block_free(sp_block_t a);
 ## group-event
 * events can be bundled into a single event. this, for example, could represent one sound of an instrument with many sub-events, or a whole portion of a song, a riff, bar or similar
 * the group end time automatically extends to fit the events that are added to it
+* groups with nested events/groups can combine the partials of a digital instrument
 
 ~~~
 status_t sp_group_new(sp_time_t start, sp_group_size_t event_size, sp_group_size_t memory_size, sp_event_t* out);
@@ -143,6 +144,13 @@ sp_sine_state_lfo
 * measuring a frequency spectrum
 
 # composing
-* synthesizing instruments
+## how to play instruments
+~~~
+times: (time ...)
+parameters: (struct/variable/any ...)
+map times, parameters as x, y
+  trigger(x, y) -> event
+~~~
+
 * post-processing
 * generating events from a list of start times with parameters

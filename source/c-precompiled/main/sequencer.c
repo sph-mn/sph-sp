@@ -136,7 +136,7 @@ void sp_wave_event_f(sp_time_t start, sp_time_t end, sp_block_t out, sp_event_t*
   state = ((sp_wave_event_state_t*)(event->state));
   for (chn_i = 0; (chn_i < state->channels); chn_i = (1 + chn_i)) {
     wave_state = (state->wave_states + chn_i);
-    if (!wave_state->amp) {
+    if (!wave_state->amod) {
       continue;
     };
     sp_wave(start, (end - start), wave_state, ((out.samples)[chn_i]));

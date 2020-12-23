@@ -117,8 +117,8 @@
 #define sp_cheap_round_positive(a) ((sp_time_t)((0.5 + a)))
 #define sp_cheap_floor_positive(a) ((sp_time_t)(a))
 #define sp_cheap_ceiling_positive(a) (((sp_time_t)(a)) + (((sp_time_t)(a)) < a))
-#define sp_sine_state(size, frq, frq_fixed, amp, phs) sp_wave_state(sp_sine_table, sp_rate, size, frq, frq_fixed, amp, phs)
-#define sp_sine_state_lfo(size, frq, frq_fixed, amp, phs) sp_wave_state(sp_sine_table_lfo, (sp_rate * sp_sine_lfo_factor), size, frq, frq_fixed, amp, phs)
+#define sp_sine_state(size, phs, frq, fmod, amod) sp_wave_state(sp_sine_table, sp_rate, size, phs, frq, fmod, amod)
+#define sp_sine_state_lfo(size, phs, frq, fmod, amod) sp_wave_state(sp_sine_table_lfo, (sp_rate * sp_sine_lfo_factor), size, phs, frq, fmod, amod)
 #define sp_max(a, b) ((a > b) ? a : b)
 #define sp_min(a, b) ((a < b) ? a : b)
 /** subtract the smaller number from the greater number,
@@ -176,12 +176,12 @@ status_t sp_null_ir(sp_sample_t** out_ir, sp_time_t* out_len);
 status_t sp_passthrough_ir(sp_sample_t** out_ir, sp_time_t* out_len);
 status_t sp_initialise(uint16_t cpu_count, sp_channel_count_t channels, sp_time_t rate);
 typedef struct {
-  sp_sample_t* amp;
-  sp_time_t phs;
-  sp_time_t* frq;
-  sp_time_t frq_fixed;
-  sp_time_t wvf_size;
   sp_sample_t* wvf;
+  sp_time_t wvf_size;
+  sp_time_t phs;
+  sp_time_t frq;
+  sp_sample_t* amod;
+  sp_time_t* fmod;
   sp_channel_count_t channels;
   sp_time_t size;
 } sp_wave_state_t;
@@ -189,7 +189,7 @@ typedef struct {
   sp_wave_state_t wave_states[sp_channel_limit];
   sp_time_t channels;
 } sp_wave_event_state_t;
-sp_wave_state_t sp_wave_state(sp_sample_t* wvf, sp_time_t wvf_size, sp_time_t size, sp_time_t* frq, sp_time_t frq_fixed, sp_sample_t* amp, sp_time_t phs);
+sp_wave_state_t sp_wave_state(sp_sample_t* wvf, sp_time_t wvf_size, sp_time_t size, sp_time_t phs, sp_time_t frq, sp_time_t* fmod, sp_sample_t* amod);
 void sp_sine_period(sp_time_t size, sp_sample_t* out);
 sp_time_t sp_phase(sp_time_t current, sp_time_t change, sp_time_t cycle);
 sp_time_t sp_phase_float(sp_time_t current, double change, sp_time_t cycle);

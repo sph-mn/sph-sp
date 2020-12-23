@@ -409,7 +409,7 @@
     out (array sp-sample-t test-wave-duration)
     frq (array sp-time-t 4 48000 48000 48000 48000)
     amp (array sp-sample-t 4 0.1 0.2 0.3 0.4))
-  (set state (sp-wave-state sp-sine-table _rate test-wave-duration frq 0 amp 0))
+  (set state (sp-wave-state sp-sine-table _rate test-wave-duration 0 0 frq amp))
   (sp-wave 0 test-wave-duration &state out)
   (test-helper-assert "zeros" (= 0 (array-get out 0)))
   (test-helper-assert "non-zeros" (not (= 0 (array-get out 1))))
@@ -433,8 +433,8 @@
   (status-require
     (sp-wave-event 0 sp-wave-event-duration
       (sp-wave-event-state-2
-        (sp-wave-state sp-sine-table _rate sp-wave-event-duration frq 0 amp1 0)
-        (sp-wave-state sp-sine-table _rate sp-wave-event-duration frq 0 amp2 0))
+        (sp-wave-state sp-sine-table _rate sp-wave-event-duration 0 0 frq amp1)
+        (sp-wave-state sp-sine-table _rate sp-wave-event-duration 0 0 frq amp2))
       &event))
   (status-require (sp-block-new 2 sp-wave-event-duration &out))
   (event.f 0 30 out &event)
@@ -457,7 +457,7 @@
     (set (array-get frq i) 1500 (array-get amp i) 1))
   (status-require
     (sp-wave-event 0 sp-wave-event-duration
-      (sp-wave-event-state-1 (sp-sine-state sp-wave-event-duration frq 0 amp 0)) &event))
+      (sp-wave-event-state-1 (sp-sine-state sp-wave-event-duration 0 0 frq amp)) &event))
   (status-require (sp-block-new 1 sp-wave-event-duration &out))
   (sc-comment (sp-render-file event 0 sp-wave-event-duration rc "/tmp/test.wav"))
   (sp-render-block event 0 sp-wave-event-duration rc &out)
@@ -672,7 +672,7 @@
   (status-require (sp-path-times-2 &frq size (sp-path-move 0 200) (sp-path-constant)))
   (for ((set i 0) (< i 10) (set+ i 1))
     (status-require
-      (sp-wave-event 0 size (sp-wave-event-state-1 (sp-sine-state size frq 0 amp 1)) (+ events i))))
+      (sp-wave-event 0 size (sp-wave-event-state-1 (sp-sine-state size 0 1 frq amp)) (+ events i))))
   (status-require (sp-block-new 1 size &block))
   (set step-size _rate)
   (for ((set i 0) (< i size) (set+ i step-size))
@@ -691,7 +691,7 @@
   (status-require (sp-samples-new temp-size &out))
   (status-require (sp-path-times-2 &frq temp-size (sp-path-move 0 2000) (sp-path-constant)))
   (status-require (sp-path-samples-2 &amp temp-size (sp-path-move 0 1.0) (sp-path-constant)))
-  (set state (sp-sine-state temp-size frq 0 amp 0))
+  (set state (sp-sine-state temp-size 0 0 frq amp))
   (sp-wave 0 temp-size &state out)
   (sp-samples-display out temp-size)
   (free out)
