@@ -107,7 +107,7 @@
 (define (sp-wave offset duration state out)
   (void sp-time-t sp-time-t sp-wave-state-t* sp-sample-t*)
   "* sums into out
-   * state.frq (frequency): fixed frequency, used if fmod set to null
+   * state.frq (frequency): fixed frequency, used if fmod is null
    * state.fmod (frequency): array with hertz values
    * state.wvf (waveform): array with waveform samples
    * state.wvf-size: size of state.wvf
@@ -126,10 +126,10 @@
       (if (>= phs state:wvf-size) (set phs (modulo phs state:wvf-size)))))
   (set state:phs phs))
 
-(define (sp-wave-state wvf wvf-size size phs frq fmod amod)
-  (sp-wave-state-t sp-sample-t* sp-time-t sp-time-t sp-time-t sp-time-t sp-time-t* sp-sample-t*)
+(define (sp-wave-state wvf wvf-size phs frq fmod amod)
+  (sp-wave-state-t sp-sample-t* sp-time-t sp-time-t sp-time-t sp-time-t* sp-sample-t*)
   (declare a sp-wave-state-t)
-  (set a.wvf wvf a.wvf-size wvf-size a.phs phs a.frq frq a.fmod fmod a.amod amod a.size size)
+  (set a.wvf wvf a.wvf-size wvf-size a.phs phs a.frq frq a.fmod fmod a.amod amod)
   (return a))
 
 (define (sp-triangle t a b) (sp-sample-t sp-time-t sp-time-t sp-time-t)

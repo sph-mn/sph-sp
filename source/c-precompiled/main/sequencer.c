@@ -1,3 +1,4 @@
+#define sp_modvalue(fixed, array, index) (array ? array[index] : fixed)
 void sp_event_sort_swap(void* a, ssize_t b, ssize_t c) {
   sp_event_t d;
   d = ((sp_event_t*)(a))[b];
@@ -148,6 +149,7 @@ void sp_wave_event_free(sp_event_t* a) {
 }
 /** in wave_event_state, unset wave states or wave states with amp set to null will generate no output.
    the state struct is copied and freed with event.free so that stack declared structs can be used.
+   in wave-event-state, wave-state.amod can be 0 to skip channels.
    sp_wave_event, sp_wave_event_f and sp_wave_event_free are a good example for custom events */
 status_t sp_wave_event(sp_time_t start, sp_time_t end, sp_wave_event_state_t state, sp_event_t* out) {
   status_declare;
@@ -167,51 +169,11 @@ exit:
   status_return;
 }
 typedef struct {
-  sp_sample_t** amp;
-  sp_sample_t* cut_h;
-  sp_sample_t* cut_l;
+  sp_noise_event_config_t config;
   sp_convolution_filter_state_t* filter_state;
-  uint8_t is_reject;
   sp_sample_t* noise;
-  sp_random_state_t random_state;
-  sp_time_t resolution;
   sp_sample_t* temp;
-  sp_sample_t* trn_h;
-  sp_sample_t* trn_l;
 } sp_noise_event_state_t;
-void sp_noise_event_f(sp_time_t start, sp_time_t end, sp_block_t out, sp_event_t* event) {
-  sp_noise_event_state_t* s;
-  sp_time_t block_count;
-  sp_time_t i;
-  sp_time_t block_i;
-  sp_time_t chn_i;
-  sp_sample_t** amp;
-  sp_time_t t;
-  sp_time_t block_offset;
-  sp_time_t duration;
-  sp_time_t block_rest;
-  /* update filter arguments only every resolution number of samples */
-  s = event->state;
-  duration = (end - start);
-  block_count = ((duration == s->resolution) ? 1 : sp_cheap_floor_positive((duration / s->resolution)));
-  block_rest = (duration % s->resolution);
-  for (block_i = 0; (block_i <= block_count); block_i = (1 + block_i)) {
-    block_offset = (s->resolution * block_i);
-    t = (start + block_offset);
-    duration = ((block_count == block_i) ? block_rest : s->resolution);
-    sp_samples_random((&(s->random_state)), duration, (s->noise));
-    sp_windowed_sinc_bp_br((s->noise), duration, ((s->cut_l)[t]), ((s->cut_h)[t]), ((s->trn_l)[t]), ((s->trn_h)[t]), (s->is_reject), (&(s->filter_state)), (s->temp));
-    for (chn_i = 0; (chn_i < out.channels); chn_i = (1 + chn_i)) {
-      amp = (s->amp + chn_i);
-      if (!amp) {
-        continue;
-      };
-      for (i = 0; (i < duration); i = (1 + i)) {
-        (out.samples)[chn_i][(block_offset + i)] += ((*amp)[(t + i)] * (s->temp)[i]);
-      };
-    };
-  };
-}
 void sp_noise_event_free(sp_event_t* a) {
   sp_noise_event_state_t* s = a->state;
   free((s->noise));
@@ -220,45 +182,76 @@ void sp_noise_event_free(sp_event_t* a) {
   free((a->state));
   sp_event_memory_free(a);
 }
+void sp_noise_event_f(sp_time_t start, sp_time_t end, sp_block_t out, sp_event_t* event) {
+  sp_sample_t* amod;
+  sp_time_t block_count;
+  sp_time_t block_i;
+  sp_time_t block_offset;
+  sp_time_t block_rest;
+  sp_time_t chn_i;
+  sp_time_t duration;
+  sp_time_t i;
+  sp_noise_event_state_t s;
+  sp_time_t t;
+  /* update filter arguments only every resolution number of samples */
+  s = *((sp_noise_event_state_t*)(event->state));
+  duration = (end - start);
+  block_count = ((duration == s.config.resolution) ? 1 : sp_cheap_floor_positive((duration / s.config.resolution)));
+  block_rest = (duration % s.config.resolution);
+  for (block_i = 0; (block_i <= block_count); block_i = (1 + block_i)) {
+    block_offset = (s.config.resolution * block_i);
+    t = (start + block_offset);
+    duration = ((block_count == block_i) ? block_rest : s.config.resolution);
+    sp_samples_random((&(s.config.random_state)), duration, (s.noise));
+    sp_windowed_sinc_bp_br((s.noise), duration, (sp_modvalue((s.config.cutl), (s.config.cutl_mod), t)), (sp_modvalue((s.config.cuth), (s.config.cuth_mod), t)), (sp_modvalue((s.config.trnl), (s.config.trnl_mod), t)), (sp_modvalue((s.config.trnh), (s.config.trnh_mod), t)), (s.config.is_reject), (&(s.filter_state)), (s.temp));
+    for (chn_i = 0; (chn_i < out.channels); chn_i += 1) {
+      amod = (s.config.amod)[chn_i];
+      if (!amod) {
+        continue;
+      };
+      for (i = 0; (i < duration); i += 1) {
+        (out.samples)[chn_i][(block_offset + i)] += (amod[(t + i)] * (s.temp)[i]);
+      };
+    };
+  };
+}
 /** an event for noise filtered by a windowed-sinc filter.
    very processing intensive if parameters change with low resolution.
    memory for event.state will be allocated and then owned by the caller */
-status_t sp_noise_event(sp_time_t start, sp_time_t end, sp_sample_t** amp, sp_sample_t* cut_l, sp_sample_t* cut_h, sp_sample_t* trn_l, sp_sample_t* trn_h, uint8_t is_reject, sp_time_t resolution, sp_random_state_t random_state, sp_event_t* out_event) {
+status_t sp_noise_event(sp_time_t start, sp_time_t end, sp_noise_event_config_t config, sp_event_t* out_event) {
   status_declare;
   sp_sample_t* temp;
   sp_sample_t* temp_noise;
   sp_time_t ir_len;
-  sp_noise_event_state_t* s;
-  sp_declare_event(e);
-  resolution = (resolution ? sp_min(resolution, (end - start)) : 96);
-  status_require((sph_helper_malloc((sizeof(sp_noise_event_state_t)), (&s))));
-  status_require((sph_helper_malloc((resolution * sizeof(sp_sample_t)), (&(s->noise)))));
-  status_require((sph_helper_malloc((resolution * sizeof(sp_sample_t)), (&(s->temp)))));
+  sp_noise_event_state_t* state;
+  sp_sample_t trnl;
+  sp_sample_t trnh;
+  sp_time_t resolution;
+  sp_declare_event(event);
+  resolution = (config.resolution ? sp_min((config.resolution), (end - start)) : 96);
+  trnl = sp_modvalue((config.trnl), (config.trnl_mod), 0);
+  trnh = sp_modvalue((config.trnh), (config.trnh_mod), 0);
+  status_require((sph_helper_malloc((sizeof(sp_noise_event_state_t)), (&state))));
+  status_require((sph_helper_malloc((resolution * sizeof(sp_sample_t)), (&(state->noise)))));
+  status_require((sph_helper_malloc((resolution * sizeof(sp_sample_t)), (&(state->temp)))));
   /* the result shows a small delay, circa 40 samples for transition 0.07. the size seems to be related to ir-len.
 the state is initialised with one unused call to skip the delay.
 an added benefit is that the filter-state setup malloc is checked */
-  ir_len = sp_windowed_sinc_lp_hp_ir_length((sp_min((*trn_l), (*trn_h))));
-  s->filter_state = 0;
+  ir_len = sp_windowed_sinc_lp_hp_ir_length((sp_min(trnl, trnh)));
+  state->filter_state = 0;
   status_require((sph_helper_malloc((ir_len * sizeof(sp_sample_t)), (&temp))));
   status_require((sph_helper_malloc((ir_len * sizeof(sp_sample_t)), (&temp_noise))));
-  sp_samples_random((&random_state), ir_len, temp_noise);
-  status_require((sp_windowed_sinc_bp_br(temp_noise, ir_len, (*cut_l), (*cut_h), (*trn_l), (*trn_h), is_reject, (&(s->filter_state)), temp)));
+  sp_samples_random((&(config.random_state)), ir_len, temp_noise);
+  status_require((sp_windowed_sinc_bp_br(temp_noise, ir_len, (sp_modvalue((config.cutl), (config.cutl_mod), 0)), (sp_modvalue((config.cuth), (config.cuth_mod), 0)), trnl, trnh, (config.is_reject), (&(state->filter_state)), temp)));
   free(temp);
   free(temp_noise);
-  s->cut_l = cut_l;
-  s->cut_h = cut_h;
-  s->trn_l = trn_l;
-  s->trn_h = trn_h;
-  s->is_reject = is_reject;
-  s->resolution = resolution;
-  s->random_state = random_state;
-  s->amp = amp;
-  e.start = start;
-  e.end = end;
-  e.f = sp_noise_event_f;
-  e.free = sp_noise_event_free;
-  e.state = s;
-  *out_event = e;
+  state->config = config;
+  event.start = start;
+  event.end = end;
+  event.f = sp_noise_event_f;
+  event.free = sp_noise_event_free;
+  event.state = state;
+  *out_event = event;
 exit:
   status_return;
 }

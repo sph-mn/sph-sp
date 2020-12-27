@@ -273,11 +273,12 @@
   status-declare
   (declare
     events-size sp-time-t
+    config sp-noise-event-config-t
     out sp-block-t
-    cut-l (array sp-sample-t sp-noise-duration)
-    cut-h (array sp-sample-t sp-noise-duration)
-    trn-l (array sp-sample-t sp-noise-duration)
-    trn-h (array sp-sample-t sp-noise-duration)
+    cutl (array sp-sample-t sp-noise-duration)
+    cuth (array sp-sample-t sp-noise-duration)
+    trnl (array sp-sample-t sp-noise-duration)
+    trnh (array sp-sample-t sp-noise-duration)
     amp1 (array sp-sample-t sp-noise-duration)
     amp (array sp-sample-t* sp-channel-limit)
     i sp-time-t)
@@ -286,14 +287,19 @@
   (set (array-get amp 0) amp1)
   (for ((set i 0) (< i sp-noise-duration) (set i (+ 1 i)))
     (set
-      (array-get cut-l i) (if* (< i (/ sp-noise-duration 2)) 0.01 0.1)
-      (array-get cut-h i) 0.11
-      (array-get trn-l i) 0.07
-      (array-get trn-h i) 0.07
+      (array-get cutl i) (if* (< i (/ sp-noise-duration 2)) 0.01 0.1)
+      (array-get cuth i) 0.11
+      (array-get trnl i) 0.07
+      (array-get trnh i) 0.07
       (array-get amp1 i) 1.0))
-  (status-require
-    (sp-noise-event 0 sp-noise-duration
-      amp cut-l cut-h trn-l trn-h #f 30 sp-default-random-state events))
+  (struct-set config
+    cutl-mod cutl
+    cuth-mod cuth
+    trnl-mod trnl
+    trnh-mod trnh
+    amod amp
+    random-state sp-default-random-state)
+  (status-require (sp-noise-event 0 sp-noise-duration config events))
   (set events-size 1)
   (sp-seq 0 sp-noise-duration out events events-size)
   (sp-events-array-free events events-size)
@@ -407,9 +413,9 @@
   (declare
     state sp-wave-state-t
     out (array sp-sample-t test-wave-duration)
-    frq (array sp-time-t 4 48000 48000 48000 48000)
-    amp (array sp-sample-t 4 0.1 0.2 0.3 0.4))
-  (set state (sp-wave-state sp-sine-table _rate test-wave-duration 0 0 frq amp))
+    fmod (array sp-time-t 4 48000 48000 48000 48000)
+    amod (array sp-sample-t 4 0.1 0.2 0.3 0.4))
+  (set state (sp-wave-state sp-sine-table _rate 0 0 fmod amod))
   (sp-wave 0 test-wave-duration &state out)
   (test-helper-assert "zeros" (= 0 (array-get out 0)))
   (test-helper-assert "non-zeros" (not (= 0 (array-get out 1))))
@@ -423,18 +429,17 @@
   status-declare
   (declare
     out sp-block-t
-    frq (array sp-time-t sp-wave-event-duration)
+    fmod (array sp-time-t sp-wave-event-duration)
     amp1 (array sp-sample-t sp-wave-event-duration)
     amp2 (array sp-sample-t sp-wave-event-duration)
     i sp-time-t)
   (sp-declare-event event)
   (for ((set i 0) (< i sp-wave-event-duration) (set+ i 1))
-    (set (array-get frq i) 2000 (array-get amp1 i) 1 (array-get amp2 i) 0.5))
+    (set (array-get fmod i) 2000 (array-get amp1 i) 1 (array-get amp2 i) 0.5))
   (status-require
     (sp-wave-event 0 sp-wave-event-duration
-      (sp-wave-event-state-2
-        (sp-wave-state sp-sine-table _rate sp-wave-event-duration 0 0 frq amp1)
-        (sp-wave-state sp-sine-table _rate sp-wave-event-duration 0 0 frq amp2))
+      (sp-wave-event-state-2 (sp-wave-state sp-sine-table _rate 0 0 fmod amp1)
+        (sp-wave-state sp-sine-table _rate 0 0 fmod amp2))
       &event))
   (status-require (sp-block-new 2 sp-wave-event-duration &out))
   (event.f 0 30 out &event)
@@ -457,7 +462,7 @@
     (set (array-get frq i) 1500 (array-get amp i) 1))
   (status-require
     (sp-wave-event 0 sp-wave-event-duration
-      (sp-wave-event-state-1 (sp-sine-state sp-wave-event-duration 0 0 frq amp)) &event))
+      (sp-wave-event-state-1 (sp-sine-state 0 0 frq amp)) &event))
   (status-require (sp-block-new 1 sp-wave-event-duration &out))
   (sc-comment (sp-render-file event 0 sp-wave-event-duration rc "/tmp/test.wav"))
   (sp-render-block event 0 sp-wave-event-duration rc &out)
@@ -672,7 +677,7 @@
   (status-require (sp-path-times-2 &frq size (sp-path-move 0 200) (sp-path-constant)))
   (for ((set i 0) (< i 10) (set+ i 1))
     (status-require
-      (sp-wave-event 0 size (sp-wave-event-state-1 (sp-sine-state size 0 1 frq amp)) (+ events i))))
+      (sp-wave-event 0 size (sp-wave-event-state-1 (sp-sine-state 0 1 frq amp)) (+ events i))))
   (status-require (sp-block-new 1 size &block))
   (set step-size _rate)
   (for ((set i 0) (< i size) (set+ i step-size))
@@ -691,7 +696,7 @@
   (status-require (sp-samples-new temp-size &out))
   (status-require (sp-path-times-2 &frq temp-size (sp-path-move 0 2000) (sp-path-constant)))
   (status-require (sp-path-samples-2 &amp temp-size (sp-path-move 0 1.0) (sp-path-constant)))
-  (set state (sp-sine-state temp-size 0 0 frq amp))
+  (set state (sp-sine-state 0 0 frq amp))
   (sp-wave 0 temp-size &state out)
   (sp-samples-display out temp-size)
   (free out)

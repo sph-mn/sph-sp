@@ -117,8 +117,8 @@
 #define sp_cheap_round_positive(a) ((sp_time_t)((0.5 + a)))
 #define sp_cheap_floor_positive(a) ((sp_time_t)(a))
 #define sp_cheap_ceiling_positive(a) (((sp_time_t)(a)) + (((sp_time_t)(a)) < a))
-#define sp_sine_state(size, phs, frq, fmod, amod) sp_wave_state(sp_sine_table, sp_rate, size, phs, frq, fmod, amod)
-#define sp_sine_state_lfo(size, phs, frq, fmod, amod) sp_wave_state(sp_sine_table_lfo, (sp_rate * sp_sine_lfo_factor), size, phs, frq, fmod, amod)
+#define sp_sine_state(phs, frq, fmod, amod) sp_wave_state(sp_sine_table, sp_rate, phs, frq, fmod, amod)
+#define sp_sine_state_lfo(phs, frq, fmod, amod) sp_wave_state(sp_sine_table_lfo, (sp_rate * sp_sine_lfo_factor), phs, frq, fmod, amod)
 #define sp_max(a, b) ((a > b) ? a : b)
 #define sp_min(a, b) ((a < b) ? a : b)
 /** subtract the smaller number from the greater number,
@@ -182,14 +182,12 @@ typedef struct {
   sp_time_t frq;
   sp_sample_t* amod;
   sp_time_t* fmod;
-  sp_channel_count_t channels;
-  sp_time_t size;
 } sp_wave_state_t;
 typedef struct {
   sp_wave_state_t wave_states[sp_channel_limit];
-  sp_time_t channels;
+  sp_channel_count_t channels;
 } sp_wave_event_state_t;
-sp_wave_state_t sp_wave_state(sp_sample_t* wvf, sp_time_t wvf_size, sp_time_t size, sp_time_t phs, sp_time_t frq, sp_time_t* fmod, sp_sample_t* amod);
+sp_wave_state_t sp_wave_state(sp_sample_t* wvf, sp_time_t wvf_size, sp_time_t phs, sp_time_t frq, sp_time_t* fmod, sp_sample_t* amod);
 void sp_sine_period(sp_time_t size, sp_sample_t* out);
 sp_time_t sp_phase(sp_time_t current, sp_time_t change, sp_time_t cycle);
 sp_time_t sp_phase_float(sp_time_t current, double change, sp_time_t cycle);
@@ -443,12 +441,26 @@ typedef struct sp_event_t {
   sp_time_half_t memory_used;
 } sp_event_t;
 typedef void (*sp_event_f_t)(sp_time_t, sp_time_t, sp_block_t, sp_event_t*);
+typedef struct {
+  sp_sample_t** amod;
+  sp_sample_t cutl;
+  sp_sample_t cuth;
+  sp_sample_t trnl;
+  sp_sample_t trnh;
+  sp_sample_t* cutl_mod;
+  sp_sample_t* cuth_mod;
+  sp_sample_t* trnl_mod;
+  sp_sample_t* trnh_mod;
+  sp_time_t resolution;
+  uint8_t is_reject;
+  sp_random_state_t random_state;
+} sp_noise_event_config_t;
 void sp_event_memory_free(sp_event_t* event);
 void sp_event_array_set_null(sp_event_t* a, sp_time_t size);
 void sp_seq_events_prepare(sp_event_t* data, sp_time_t size);
 void sp_seq(sp_time_t start, sp_time_t end, sp_block_t out, sp_event_t* events, sp_time_t size);
 status_t sp_seq_parallel(sp_time_t start, sp_time_t end, sp_block_t out, sp_event_t* events, sp_time_t size);
-status_t sp_noise_event(sp_time_t start, sp_time_t end, sp_sample_t** amp, sp_sample_t* cut_l, sp_sample_t* cut_h, sp_sample_t* trn_l, sp_sample_t* trn_h, uint8_t is_reject, sp_time_t resolution, sp_random_state_t random_state, sp_event_t* out_event);
+status_t sp_noise_event(sp_time_t start, sp_time_t end, sp_noise_event_config_t config, sp_event_t* out_event);
 void sp_events_array_free(sp_event_t* events, sp_time_t size);
 void sp_wave_event_f(sp_time_t start, sp_time_t end, sp_block_t out, sp_event_t* event);
 status_t sp_wave_event(sp_time_t start, sp_time_t end, sp_wave_event_state_t state, sp_event_t* out);

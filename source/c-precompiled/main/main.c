@@ -148,7 +148,7 @@ sp_time_t sp_phase_float(sp_time_t current, sp_sample_t change, sp_time_t cycle)
   return (((a < cycle) ? a : (a % cycle)));
 }
 /** * sums into out
-   * state.frq (frequency): fixed frequency, used if fmod set to null
+   * state.frq (frequency): fixed frequency, used if fmod is null
    * state.fmod (frequency): array with hertz values
    * state.wvf (waveform): array with waveform samples
    * state.wvf-size: size of state.wvf
@@ -178,7 +178,7 @@ void sp_wave(sp_time_t offset, sp_time_t duration, sp_wave_state_t* state, sp_sa
   };
   state->phs = phs;
 }
-sp_wave_state_t sp_wave_state(sp_sample_t* wvf, sp_time_t wvf_size, sp_time_t size, sp_time_t phs, sp_time_t frq, sp_time_t* fmod, sp_sample_t* amod) {
+sp_wave_state_t sp_wave_state(sp_sample_t* wvf, sp_time_t wvf_size, sp_time_t phs, sp_time_t frq, sp_time_t* fmod, sp_sample_t* amod) {
   sp_wave_state_t a;
   a.wvf = wvf;
   a.wvf_size = wvf_size;
@@ -186,7 +186,6 @@ sp_wave_state_t sp_wave_state(sp_sample_t* wvf, sp_time_t wvf_size, sp_time_t si
   a.frq = frq;
   a.fmod = fmod;
   a.amod = amod;
-  a.size = size;
   return (a);
 }
 /** return a sample for a triangular wave with center offsets a left and b right.
