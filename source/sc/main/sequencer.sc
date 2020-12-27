@@ -206,16 +206,15 @@
     ir-len sp-time-t
     state sp-noise-event-state-t*
     trnl sp-sample-t
-    trnh sp-sample-t
-    resolution sp-time-t)
+    trnh sp-sample-t)
   (sp-declare-event event)
   (set
-    resolution (if* config.resolution (sp-min config.resolution (- end start)) 96)
+    config.resolution (sp-min config.resolution (- end start))
     trnl (sp-modvalue config.trnl config.trnl-mod 0)
     trnh (sp-modvalue config.trnh config.trnh-mod 0))
   (status-require (sph-helper-malloc (sizeof sp-noise-event-state-t) &state))
-  (status-require (sph-helper-malloc (* resolution (sizeof sp-sample-t)) &state:noise))
-  (status-require (sph-helper-malloc (* resolution (sizeof sp-sample-t)) &state:temp))
+  (status-require (sph-helper-malloc (* config.resolution (sizeof sp-sample-t)) &state:noise))
+  (status-require (sph-helper-malloc (* config.resolution (sizeof sp-sample-t)) &state:temp))
   (sc-comment
     "the result shows a small delay, circa 40 samples for transition 0.07. the size seems to be related to ir-len."
     "the state is initialised with one unused call to skip the delay."
@@ -243,21 +242,15 @@
 (declare sp-cheap-noise-event-state-t
   (type
     (struct
-      (amp sp-sample-t**)
-      (cut sp-sample-t*)
-      (q-factor sp-sample-t)
-      (passes sp-time-t)
+      (config sp-cheap-noise-event-config-t)
       (filter-state sp-cheap-filter-state-t)
-      (type sp-state-variable-filter-t)
       (noise sp-sample-t*)
-      (random-state sp-random-state-t)
-      (resolution sp-time-t)
       (temp sp-sample-t*))))
 
 (define (sp-cheap-noise-event-f start end out event)
   (void sp-time-t sp-time-t sp-block-t sp-event-t*)
   (declare
-    amp sp-sample-t**
+    amod sp-sample-t*
     block-count sp-time-t
     block-i sp-time-t
     block-offset sp-time-t
@@ -265,29 +258,33 @@
     chn-i sp-time-t
     duration sp-time-t
     i sp-time-t
-    s sp-cheap-noise-event-state-t*
+    s sp-cheap-noise-event-state-t
     t sp-time-t)
   (sc-comment "update filter arguments only every resolution number of samples")
+  (set s (pointer-get (convert-type event:state sp-cheap-noise-event-state-t*)))
+  (if (not s.config.resolution) (exit 1))
   (set
-    s event:state
     duration (- end start)
-    block-count (if* (= duration s:resolution) 1 (sp-cheap-floor-positive (/ duration s:resolution)))
-    block-rest (modulo duration s:resolution))
+    block-count
+    (if* (= duration s.config.resolution) 1
+      (sp-cheap-floor-positive (/ duration s.config.resolution)))
+    block-rest (modulo duration s.config.resolution))
   (sc-comment "total block count is block-count plus rest-block")
   (for ((set block-i 0) (<= block-i block-count) (set block-i (+ 1 block-i)))
     (set
-      block-offset (* s:resolution block-i)
+      block-offset (* s.config.resolution block-i)
       t (+ start block-offset)
-      duration (if* (= block-count block-i) block-rest s:resolution))
-    (sp-samples-random &s:random-state duration s:noise)
-    (sp-cheap-filter s:type s:noise
-      duration (array-get s:cut t) s:passes s:q-factor &s:filter-state s:temp)
+      duration (if* (= block-count block-i) block-rest s.config.resolution))
+    (sp-samples-random &s.config.random-state duration s.noise)
+    (sp-cheap-filter s.config.type s.noise
+      duration (sp-modvalue s.config.cut s.config.cut-mod t) s.config.passes
+      s.config.q-factor &s.filter-state s.temp)
     (for ((set chn-i 0) (< chn-i out.channels) (set chn-i (+ 1 chn-i)))
-      (set amp (+ s:amp chn-i))
-      (if (not amp) continue)
+      (set amod (array-get s.config.amod chn-i))
+      (if (not amod) continue)
       (for ((set i 0) (< i duration) (set i (+ 1 i)))
         (set+ (array-get out.samples chn-i (+ block-offset i))
-          (* (array-get *amp (+ t i)) (array-get s:temp i)))))))
+          (* (array-get amod (+ t i)) (array-get s.temp i)))))))
 
 (define (sp-cheap-noise-event-free a) (void sp-event-t*)
   (define s sp-cheap-noise-event-state-t* a:state)
@@ -297,35 +294,28 @@
   (free a:state)
   (sp-event-memory-free a))
 
-(define
-  (sp-cheap-noise-event start end amp type cut passes q-factor resolution random-state out-event)
-  (status-t sp-time-t sp-time-t sp-sample-t** sp-state-variable-filter-t sp-sample-t* sp-time-t sp-sample-t sp-time-t sp-random-state-t sp-event-t*)
+(define (sp-cheap-noise-event start end config out-event)
+  (status-t sp-time-t sp-time-t sp-cheap-noise-event-config-t sp-event-t*)
   "an event for noise filtered by a state-variable filter.
    lower processing costs even when parameters change with high resolution.
    multiple passes almost multiply performance costs.
    memory for event.state will be allocated and then owned by the caller"
   status-declare
-  (declare s sp-cheap-noise-event-state-t*)
-  (sp-declare-event e)
-  (set resolution (if* resolution (sp-min resolution (- end start)) 96))
-  (status-require (sph-helper-malloc (sizeof sp-cheap-noise-event-state-t) &s))
-  (status-require (sph-helper-malloc (* resolution (sizeof sp-sample-t)) &s:noise))
-  (status-require (sph-helper-malloc (* resolution (sizeof sp-sample-t)) &s:temp))
-  (status-require (sp-cheap-filter-state-new resolution passes &s:filter-state))
+  (declare state sp-cheap-noise-event-state-t*)
+  (sp-declare-event event)
+  (set config.resolution (sp-min config.resolution (- end start)))
+  (status-require (sph-helper-malloc (sizeof sp-cheap-noise-event-state-t) &state))
+  (status-require (sph-helper-malloc (* config.resolution (sizeof sp-sample-t)) &state:noise))
+  (status-require (sph-helper-malloc (* config.resolution (sizeof sp-sample-t)) &state:temp))
+  (status-require (sp-cheap-filter-state-new config.resolution config.passes &state:filter-state))
   (set
-    s:cut cut
-    s:q-factor q-factor
-    s:passes passes
-    s:resolution resolution
-    s:random-state random-state
-    s:amp amp
-    s:type type
-    e.start start
-    e.end end
-    e.f sp-cheap-noise-event-f
-    e.free sp-cheap-noise-event-free
-    e.state s)
-  (set *out-event e)
+    state:config config
+    event.start start
+    event.end end
+    event.f sp-cheap-noise-event-f
+    event.free sp-cheap-noise-event-free
+    event.state state)
+  (set *out-event event)
   (label exit status-return))
 
 (pre-define (sp-group-event-free-events events end)

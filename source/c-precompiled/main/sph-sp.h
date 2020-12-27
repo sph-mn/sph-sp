@@ -373,10 +373,6 @@ void sp_plot_spectrum(sp_sample_t* a, sp_time_t a_size);
 #define sp_event_move(a, start) \
   a.end = (start + (a.end - a.start)); \
   a.start = start
-#define sp_cheap_noise_event_lp(start, end, amp, ...) sp_cheap_noise_event(start, end, amp, sp_state_variable_filter_lp, __VA_ARGS__)
-#define sp_cheap_noise_event_hp(start, end, amp, ...) sp_cheap_noise_event(start, end, amp, sp_state_variable_filter_hp, __VA_ARGS__)
-#define sp_cheap_noise_event_bp(start, end, amp, ...) sp_cheap_noise_event(start, end, amp, sp_state_variable_filter_bp, __VA_ARGS__)
-#define sp_cheap_noise_event_br(start, end, amp, ...) sp_cheap_noise_event(start, end, amp, sp_state_variable_filter_br, __VA_ARGS__)
 #define sp_group_size_t uint16_t
 #define sp_group_events(a) *((sp_events_t*)(a.state))
 #define sp_group_add(a, event) \
@@ -425,6 +421,9 @@ void sp_plot_spectrum(sp_sample_t* a, sp_time_t a_size);
   sp_event_memory_add_2(a, data1, data2); \
   sp_event_memory_add(a, data3)
 #define sp_event_memory_init(a, size) sph_helper_malloc((size * sizeof(sp_memory_t)), (&(a.memory)))
+/** optional helper that sets defaults. the mod arrays must be zero if not used */
+#define sp_declare_noise_event_config(name) sp_noise_event_config_t name = { .cutl_mod = 0, .cuth_mod = 0, .trnl_mod = 0, .trnh_mod = 0, .random_state = sp_default_random_state, .resolution = 96 }
+#define sp_declare_cheap_noise_event_config(name) sp_cheap_noise_event_config_t name = { .cut_mod = 0, .passes = 1, .q_factor = 0, .random_state = sp_default_random_state, .resolution = 96 }
 typedef void (*sp_memory_free_t)(void*);
 typedef struct {
   sp_memory_free_t free;
@@ -455,6 +454,16 @@ typedef struct {
   uint8_t is_reject;
   sp_random_state_t random_state;
 } sp_noise_event_config_t;
+typedef struct {
+  sp_sample_t** amod;
+  sp_sample_t cut;
+  sp_sample_t* cut_mod;
+  sp_sample_t q_factor;
+  sp_time_t passes;
+  sp_state_variable_filter_t type;
+  sp_random_state_t random_state;
+  sp_time_t resolution;
+} sp_cheap_noise_event_config_t;
 void sp_event_memory_free(sp_event_t* event);
 void sp_event_array_set_null(sp_event_t* a, sp_time_t size);
 void sp_seq_events_prepare(sp_event_t* data, sp_time_t size);
@@ -466,7 +475,7 @@ void sp_wave_event_f(sp_time_t start, sp_time_t end, sp_block_t out, sp_event_t*
 status_t sp_wave_event(sp_time_t start, sp_time_t end, sp_wave_event_state_t state, sp_event_t* out);
 sp_wave_event_state_t sp_wave_event_state_1(sp_wave_state_t wave_state);
 sp_wave_event_state_t sp_wave_event_state_2(sp_wave_state_t wave_state_1, sp_wave_state_t wave_state_2);
-status_t sp_cheap_noise_event(sp_time_t start, sp_time_t end, sp_sample_t** amp, sp_state_variable_filter_t type, sp_sample_t* cut, sp_time_t passes, sp_sample_t q_factor, sp_time_t resolution, sp_random_state_t random_state, sp_event_t* out_event);
+status_t sp_cheap_noise_event(sp_time_t start, sp_time_t end, sp_cheap_noise_event_config_t config, sp_event_t* out_event);
 array4_declare_type(sp_events, sp_event_t);
 status_t sp_group_new(sp_time_t start, sp_group_size_t event_size, sp_event_t* out);
 void sp_group_append(sp_event_t* a, sp_event_t event);

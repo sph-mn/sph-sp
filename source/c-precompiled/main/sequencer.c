@@ -226,14 +226,13 @@ status_t sp_noise_event(sp_time_t start, sp_time_t end, sp_noise_event_config_t 
   sp_noise_event_state_t* state;
   sp_sample_t trnl;
   sp_sample_t trnh;
-  sp_time_t resolution;
   sp_declare_event(event);
-  resolution = (config.resolution ? sp_min((config.resolution), (end - start)) : 96);
+  config.resolution = sp_min((config.resolution), (end - start));
   trnl = sp_modvalue((config.trnl), (config.trnl_mod), 0);
   trnh = sp_modvalue((config.trnh), (config.trnh_mod), 0);
   status_require((sph_helper_malloc((sizeof(sp_noise_event_state_t)), (&state))));
-  status_require((sph_helper_malloc((resolution * sizeof(sp_sample_t)), (&(state->noise)))));
-  status_require((sph_helper_malloc((resolution * sizeof(sp_sample_t)), (&(state->temp)))));
+  status_require((sph_helper_malloc((config.resolution * sizeof(sp_sample_t)), (&(state->noise)))));
+  status_require((sph_helper_malloc((config.resolution * sizeof(sp_sample_t)), (&(state->temp)))));
   /* the result shows a small delay, circa 40 samples for transition 0.07. the size seems to be related to ir-len.
 the state is initialised with one unused call to skip the delay.
 an added benefit is that the filter-state setup malloc is checked */
@@ -256,19 +255,13 @@ exit:
   status_return;
 }
 typedef struct {
-  sp_sample_t** amp;
-  sp_sample_t* cut;
-  sp_sample_t q_factor;
-  sp_time_t passes;
+  sp_cheap_noise_event_config_t config;
   sp_cheap_filter_state_t filter_state;
-  sp_state_variable_filter_t type;
   sp_sample_t* noise;
-  sp_random_state_t random_state;
-  sp_time_t resolution;
   sp_sample_t* temp;
 } sp_cheap_noise_event_state_t;
 void sp_cheap_noise_event_f(sp_time_t start, sp_time_t end, sp_block_t out, sp_event_t* event) {
-  sp_sample_t** amp;
+  sp_sample_t* amod;
   sp_time_t block_count;
   sp_time_t block_i;
   sp_time_t block_offset;
@@ -276,27 +269,30 @@ void sp_cheap_noise_event_f(sp_time_t start, sp_time_t end, sp_block_t out, sp_e
   sp_time_t chn_i;
   sp_time_t duration;
   sp_time_t i;
-  sp_cheap_noise_event_state_t* s;
+  sp_cheap_noise_event_state_t s;
   sp_time_t t;
   /* update filter arguments only every resolution number of samples */
-  s = event->state;
+  s = *((sp_cheap_noise_event_state_t*)(event->state));
+  if (!s.config.resolution) {
+    exit(1);
+  };
   duration = (end - start);
-  block_count = ((duration == s->resolution) ? 1 : sp_cheap_floor_positive((duration / s->resolution)));
-  block_rest = (duration % s->resolution);
+  block_count = ((duration == s.config.resolution) ? 1 : sp_cheap_floor_positive((duration / s.config.resolution)));
+  block_rest = (duration % s.config.resolution);
   /* total block count is block-count plus rest-block */
   for (block_i = 0; (block_i <= block_count); block_i = (1 + block_i)) {
-    block_offset = (s->resolution * block_i);
+    block_offset = (s.config.resolution * block_i);
     t = (start + block_offset);
-    duration = ((block_count == block_i) ? block_rest : s->resolution);
-    sp_samples_random((&(s->random_state)), duration, (s->noise));
-    sp_cheap_filter((s->type), (s->noise), duration, ((s->cut)[t]), (s->passes), (s->q_factor), (&(s->filter_state)), (s->temp));
+    duration = ((block_count == block_i) ? block_rest : s.config.resolution);
+    sp_samples_random((&(s.config.random_state)), duration, (s.noise));
+    sp_cheap_filter((s.config.type), (s.noise), duration, (sp_modvalue((s.config.cut), (s.config.cut_mod), t)), (s.config.passes), (s.config.q_factor), (&(s.filter_state)), (s.temp));
     for (chn_i = 0; (chn_i < out.channels); chn_i = (1 + chn_i)) {
-      amp = (s->amp + chn_i);
-      if (!amp) {
+      amod = (s.config.amod)[chn_i];
+      if (!amod) {
         continue;
       };
       for (i = 0; (i < duration); i = (1 + i)) {
-        (out.samples)[chn_i][(block_offset + i)] += ((*amp)[(t + i)] * (s->temp)[i]);
+        (out.samples)[chn_i][(block_offset + i)] += (amod[(t + i)] * (s.temp)[i]);
       };
     };
   };
@@ -313,28 +309,22 @@ void sp_cheap_noise_event_free(sp_event_t* a) {
    lower processing costs even when parameters change with high resolution.
    multiple passes almost multiply performance costs.
    memory for event.state will be allocated and then owned by the caller */
-status_t sp_cheap_noise_event(sp_time_t start, sp_time_t end, sp_sample_t** amp, sp_state_variable_filter_t type, sp_sample_t* cut, sp_time_t passes, sp_sample_t q_factor, sp_time_t resolution, sp_random_state_t random_state, sp_event_t* out_event) {
+status_t sp_cheap_noise_event(sp_time_t start, sp_time_t end, sp_cheap_noise_event_config_t config, sp_event_t* out_event) {
   status_declare;
-  sp_cheap_noise_event_state_t* s;
-  sp_declare_event(e);
-  resolution = (resolution ? sp_min(resolution, (end - start)) : 96);
-  status_require((sph_helper_malloc((sizeof(sp_cheap_noise_event_state_t)), (&s))));
-  status_require((sph_helper_malloc((resolution * sizeof(sp_sample_t)), (&(s->noise)))));
-  status_require((sph_helper_malloc((resolution * sizeof(sp_sample_t)), (&(s->temp)))));
-  status_require((sp_cheap_filter_state_new(resolution, passes, (&(s->filter_state)))));
-  s->cut = cut;
-  s->q_factor = q_factor;
-  s->passes = passes;
-  s->resolution = resolution;
-  s->random_state = random_state;
-  s->amp = amp;
-  s->type = type;
-  e.start = start;
-  e.end = end;
-  e.f = sp_cheap_noise_event_f;
-  e.free = sp_cheap_noise_event_free;
-  e.state = s;
-  *out_event = e;
+  sp_cheap_noise_event_state_t* state;
+  sp_declare_event(event);
+  config.resolution = sp_min((config.resolution), (end - start));
+  status_require((sph_helper_malloc((sizeof(sp_cheap_noise_event_state_t)), (&state))));
+  status_require((sph_helper_malloc((config.resolution * sizeof(sp_sample_t)), (&(state->noise)))));
+  status_require((sph_helper_malloc((config.resolution * sizeof(sp_sample_t)), (&(state->temp)))));
+  status_require((sp_cheap_filter_state_new((config.resolution), (config.passes), (&(state->filter_state)))));
+  state->config = config;
+  event.start = start;
+  event.end = end;
+  event.f = sp_cheap_noise_event_f;
+  event.free = sp_cheap_noise_event_free;
+  event.state = state;
+  *out_event = event;
 exit:
   status_return;
 }

@@ -294,7 +294,6 @@ exit:
 status_t test_sp_noise_event() {
   status_declare;
   sp_time_t events_size;
-  sp_noise_event_config_t config;
   sp_block_t out;
   sp_sample_t cutl[sp_noise_duration];
   sp_sample_t cuth[sp_noise_duration];
@@ -303,6 +302,7 @@ status_t test_sp_noise_event() {
   sp_sample_t amp1[sp_noise_duration];
   sp_sample_t* amp[sp_channel_limit];
   sp_time_t i;
+  sp_declare_noise_event_config(config);
   sp_declare_event_array(events, 1);
   status_require((sp_block_new(1, sp_noise_duration, (&out))));
   amp[0] = amp1;
@@ -349,21 +349,23 @@ status_t test_sp_cheap_noise_event() {
   sp_time_t events_size;
   sp_block_t out;
   sp_sample_t cut[sp_noise_duration];
-  sp_sample_t amp1[sp_noise_duration];
-  sp_sample_t* amp[sp_channel_limit];
-  sp_sample_t q_factor;
+  sp_sample_t amod1[sp_noise_duration];
+  sp_sample_t* amod[sp_channel_limit];
   sp_time_t i;
   sp_declare_event_array(events, 1);
+  sp_declare_cheap_noise_event_config(config);
   status_require((sp_block_new(1, sp_noise_duration, (&out))));
-  amp[0] = amp1;
-  q_factor = 0;
+  amod[0] = amod1;
+  events_size = 1;
   for (i = 0; (i < sp_noise_duration); i = (1 + i)) {
     cut[i] = ((i < (sp_noise_duration / 2)) ? 0.01 : 0.1);
     cut[i] = 0.08;
-    amp1[i] = 1.0;
+    amod1[i] = 1.0;
   };
-  status_require((sp_cheap_noise_event_lp(0, sp_noise_duration, amp, cut, 1, 0, 0, sp_default_random_state, events)));
-  events_size = 1;
+  config.type = sp_state_variable_filter_lp;
+  config.amod = amod;
+  config.cut_mod = cut;
+  status_require((sp_cheap_noise_event(0, sp_noise_duration, config, events)));
   sp_seq(0, sp_noise_duration, out, events, events_size);
   sp_events_array_free(events, events_size);
   sp_block_free(out);

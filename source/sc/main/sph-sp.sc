@@ -406,14 +406,6 @@
   (sp-event-duration a) (- a.end a.start)
   (sp-event-duration-set a duration) (set a.end (+ a.start duration))
   (sp-event-move a start) (set a.end (+ start (- a.end a.start)) a.start start)
-  (sp-cheap-noise-event-lp start end amp ...)
-  (sp-cheap-noise-event start end amp sp-state-variable-filter-lp __VA_ARGS__)
-  (sp-cheap-noise-event-hp start end amp ...)
-  (sp-cheap-noise-event start end amp sp-state-variable-filter-hp __VA_ARGS__)
-  (sp-cheap-noise-event-bp start end amp ...)
-  (sp-cheap-noise-event start end amp sp-state-variable-filter-bp __VA_ARGS__)
-  (sp-cheap-noise-event-br start end amp ...)
-  (sp-cheap-noise-event start end amp sp-state-variable-filter-br __VA_ARGS__)
   sp-group-size-t uint16-t
   (sp-group-events a) (pointer-get (convert-type a.state sp-events-t*))
   (sp-group-add a event)
@@ -443,7 +435,17 @@
   (begin (sp-event-memory-add a data1) (sp-event-memory-add a data2))
   (sp-event-memory-add-3 a data1 data2 data3)
   (begin (sp-event-memory-add-2 a data1 data2) (sp-event-memory-add a data3))
-  (sp-event-memory-init a size) (sph-helper-malloc (* size (sizeof sp-memory-t)) &a.memory))
+  (sp-event-memory-init a size) (sph-helper-malloc (* size (sizeof sp-memory-t)) &a.memory)
+  (sp-declare-noise-event-config name)
+  (begin
+    "optional helper that sets defaults. the mod arrays must be zero if not used"
+    (define name sp-noise-event-config-t
+      (struct-literal (cutl-mod 0) (cuth-mod 0)
+        (trnl-mod 0) (trnh-mod 0) (random-state sp-default-random-state) (resolution 96))))
+  (sp-declare-cheap-noise-event-config name)
+  (define name sp-cheap-noise-event-config-t
+    (struct-literal (cut-mod 0) (passes 1)
+      (q-factor 0) (random-state sp-default-random-state) (resolution 96))))
 
 (declare
   sp-memory-free-t (type (function-pointer void void*))
@@ -476,6 +478,17 @@
       (resolution sp-time-t)
       (is-reject uint8-t)
       (random-state sp-random-state-t)))
+  sp-cheap-noise-event-config-t
+  (type
+    (struct
+      (amod sp-sample-t**)
+      (cut sp-sample-t)
+      (cut-mod sp-sample-t*)
+      (q-factor sp-sample-t)
+      (passes sp-time-t)
+      (type sp-state-variable-filter-t)
+      (random-state sp-random-state-t)
+      (resolution sp-time-t)))
   (sp-event-memory-free event) (void sp-event-t*)
   (sp-event-array-set-null a size) (void sp-event-t* sp-time-t)
   (sp-seq-events-prepare data size) (void sp-event-t* sp-time-t)
@@ -491,10 +504,8 @@
   (sp-wave-event-state-1 wave-state) (sp-wave-event-state-t sp-wave-state-t)
   (sp-wave-event-state-2 wave-state-1 wave-state-2)
   (sp-wave-event-state-t sp-wave-state-t sp-wave-state-t)
-  (sp-cheap-noise-event start end amp type cut passes q-factor resolution random-state out-event)
-  (status-t sp-time-t sp-time-t
-    sp-sample-t** sp-state-variable-filter-t sp-sample-t*
-    sp-time-t sp-sample-t sp-time-t sp-random-state-t sp-event-t*))
+  (sp-cheap-noise-event start end config out-event)
+  (status-t sp-time-t sp-time-t sp-cheap-noise-event-config-t sp-event-t*))
 
 (array4-declare-type sp-events sp-event-t)
 
