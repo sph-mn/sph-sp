@@ -293,7 +293,6 @@ exit:
 #define sp_noise_duration 96
 status_t test_sp_noise_event() {
   status_declare;
-  sp_time_t events_size;
   sp_block_t out;
   sp_sample_t cutl[sp_noise_duration];
   sp_sample_t cuth[sp_noise_duration];
@@ -301,9 +300,10 @@ status_t test_sp_noise_event() {
   sp_sample_t trnh[sp_noise_duration];
   sp_sample_t amp1[sp_noise_duration];
   sp_sample_t* amp[sp_channel_limit];
+  sp_event_t event;
   sp_time_t i;
   sp_declare_noise_event_config(config);
-  sp_declare_event_array(events, 1);
+  sp_declare_events(events, 1);
   status_require((sp_block_new(1, sp_noise_duration, (&out))));
   amp[0] = amp1;
   for (i = 0; (i < sp_noise_duration); i = (1 + i)) {
@@ -319,10 +319,10 @@ status_t test_sp_noise_event() {
   config.trnh_mod = trnh;
   config.amod = amp;
   config.random_state = sp_default_random_state;
-  status_require((sp_noise_event(0, sp_noise_duration, config, events)));
-  events_size = 1;
-  sp_seq(0, sp_noise_duration, out, events, events_size);
-  sp_events_array_free(events, events_size);
+  status_require((sp_noise_event(0, sp_noise_duration, config, (&event))));
+  array4_add(events, event);
+  sp_seq(0, sp_noise_duration, out, (&events));
+  sp_seq_events_free((&events));
   sp_block_free(out);
 exit:
   status_return;
@@ -346,17 +346,16 @@ exit:
 }
 status_t test_sp_cheap_noise_event() {
   status_declare;
-  sp_time_t events_size;
   sp_block_t out;
   sp_sample_t cut[sp_noise_duration];
   sp_sample_t amod1[sp_noise_duration];
   sp_sample_t* amod[sp_channel_limit];
+  sp_event_t event;
   sp_time_t i;
-  sp_declare_event_array(events, 1);
+  sp_declare_events(events, 1);
   sp_declare_cheap_noise_event_config(config);
   status_require((sp_block_new(1, sp_noise_duration, (&out))));
   amod[0] = amod1;
-  events_size = 1;
   for (i = 0; (i < sp_noise_duration); i = (1 + i)) {
     cut[i] = ((i < (sp_noise_duration / 2)) ? 0.01 : 0.1);
     cut[i] = 0.08;
@@ -365,9 +364,10 @@ status_t test_sp_cheap_noise_event() {
   config.type = sp_state_variable_filter_lp;
   config.amod = amod;
   config.cut_mod = cut;
-  status_require((sp_cheap_noise_event(0, sp_noise_duration, config, events)));
-  sp_seq(0, sp_noise_duration, out, events, events_size);
-  sp_events_array_free(events, events_size);
+  status_require((sp_cheap_noise_event(0, sp_noise_duration, config, (&event))));
+  array4_add(events, event);
+  sp_seq(0, sp_noise_duration, out, (&events));
+  sp_seq_events_free((&events));
   sp_block_free(out);
 exit:
   status_return;
@@ -377,19 +377,19 @@ status_t test_sp_seq() {
   status_declare;
   sp_block_t out;
   sp_time_t i;
-  sp_declare_event_array(events, sp_seq_event_count);
-  events[0] = test_helper_event(0, 40, 1);
-  events[1] = test_helper_event(41, 100, 2);
-  sp_seq_events_prepare(events, sp_seq_event_count);
+  sp_declare_events(events, sp_seq_event_count);
+  array4_get_at(events, 0) = test_helper_event(0, 40, 1);
+  array4_get_at(events, 1) = test_helper_event(41, 100, 2);
+  sp_seq_events_prepare((&events));
   status_require((sp_block_new(2, 100, (&out))));
-  sp_seq(0, 50, out, events, sp_seq_event_count);
-  sp_seq(50, 100, (sp_block_with_offset(out, 50)), events, sp_seq_event_count);
+  sp_seq(0, 50, out, (&events));
+  sp_seq(50, 100, (sp_block_with_offset(out, 50)), (&events));
   test_helper_assert("block contents 1 event 1", ((1 == (out.samples)[0][0]) && (1 == (out.samples)[0][39])));
   test_helper_assert("block contents 1 gap", (0 == (out.samples)[0][40]));
   test_helper_assert("block contents 1 event 2", ((2 == (out.samples)[0][41]) && (2 == (out.samples)[0][99])));
   /* sp-seq-parallel */
-  status_require((sp_seq_parallel(0, 100, out, events, sp_seq_event_count)));
-  sp_events_array_free(events, sp_seq_event_count);
+  status_require((sp_seq_parallel(0, 100, out, (&events))));
+  sp_seq_events_free((&events));
   sp_block_free(out);
 exit:
   status_return;
@@ -718,7 +718,7 @@ status_t test_sp_seq_parallel() {
   sp_time_t* frq;
   sp_time_t size;
   sp_block_t block;
-  sp_declare_event_array(events, 10);
+  sp_declare_events(events, 10);
   sp_declare_wave_event_config(config);
   status_declare;
   size = (10 * _rate);

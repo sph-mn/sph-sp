@@ -380,7 +380,7 @@ void sp_plot_spectrum(sp_sample_t* a, sp_time_t a_size);
   if (a.end < event.end) { \
     a.end = event.end; \
   }
-#define sp_group_prepare(a) sp_seq_events_prepare(((sp_group_events(a)).data), (array4_size((sp_group_events(a)))))
+#define sp_group_prepare(a) sp_seq_events_prepare(((sp_events_t*)(a.state)))
 /** set so that duration is zero, state is zero if not allocated, and sp_event_memory_free does not fail */
 #define sp_event_set_null(a) \
   a.start = 0; \
@@ -392,9 +392,10 @@ void sp_plot_spectrum(sp_sample_t* a, sp_time_t a_size);
   if (a.state) { \
     (a.free)((&a)); \
   }
-#define sp_declare_event_array(id, size) \
-  sp_event_t id[size]; \
-  sp_event_array_set_null(id, size)
+#define sp_declare_events(id, size) \
+  sp_events_t id; \
+  sp_event_t id##_data[size]; \
+  array4_take(id, id##_data, size, 0)
 #define sp_declare_event(id) \
   sp_event_t id; \
   sp_event_set_null(id)
@@ -485,9 +486,9 @@ typedef struct {
   sp_time_t resolution;
 } sp_cheap_noise_event_config_t;
 array4_declare_type(sp_events, sp_event_t);
+void sp_seq_events_free(sp_events_t* events);
 void sp_event_memory_free(sp_event_t* event);
-void sp_event_array_set_null(sp_event_t* a, sp_time_t size);
-void sp_seq_events_prepare(sp_event_t* data, sp_time_t size);
+void sp_seq_events_prepare(sp_events_t* events);
 status_t sp_seq(sp_time_t start, sp_time_t end, sp_block_t out, sp_events_t* events);
 status_t sp_seq_parallel(sp_time_t start, sp_time_t end, sp_block_t out, sp_events_t* events);
 status_t sp_wave_event(sp_time_t start, sp_time_t end, sp_wave_event_config_t config, sp_event_t* out);
@@ -584,6 +585,6 @@ typedef struct {
   sp_time_t block_size;
 } sp_render_config_t;
 sp_render_config_t sp_render_config(sp_channel_count_t channels, sp_time_t rate, sp_time_t block_size);
-status_t sp_render_file(sp_event_t event, sp_time_t start, sp_time_t end, sp_render_config_t config, uint8_t* path);
-status_t sp_render_block(sp_event_t event, sp_time_t start, sp_time_t end, sp_render_config_t config, sp_block_t* out);
-status_t sp_render_quick(sp_event_t a, uint8_t file_or_plot);
+status_t sp_render_file(sp_events_t events, sp_time_t start, sp_time_t end, sp_render_config_t config, uint8_t* path);
+status_t sp_render_block(sp_events_t events, sp_time_t start, sp_time_t end, sp_render_config_t config, sp_block_t* out);
+status_t sp_render_quick(sp_events_t events, uint8_t file_or_plot);

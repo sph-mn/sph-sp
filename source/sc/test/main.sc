@@ -272,7 +272,6 @@
 (define (test-sp-noise-event) status-t
   status-declare
   (declare
-    events-size sp-time-t
     out sp-block-t
     cutl (array sp-sample-t sp-noise-duration)
     cuth (array sp-sample-t sp-noise-duration)
@@ -280,9 +279,10 @@
     trnh (array sp-sample-t sp-noise-duration)
     amp1 (array sp-sample-t sp-noise-duration)
     amp (array sp-sample-t* sp-channel-limit)
+    event sp-event-t
     i sp-time-t)
   (sp-declare-noise-event-config config)
-  (sp-declare-event-array events 1)
+  (sp-declare-events events 1)
   (status-require (sp-block-new 1 sp-noise-duration &out))
   (set (array-get amp 0) amp1)
   (for ((set i 0) (< i sp-noise-duration) (set i (+ 1 i)))
@@ -299,10 +299,10 @@
     trnh-mod trnh
     amod amp
     random-state sp-default-random-state)
-  (status-require (sp-noise-event 0 sp-noise-duration config events))
-  (set events-size 1)
-  (sp-seq 0 sp-noise-duration out events events-size)
-  (sp-events-array-free events events-size)
+  (status-require (sp-noise-event 0 sp-noise-duration config &event))
+  (array4-add events event)
+  (sp-seq 0 sp-noise-duration out &events)
+  (sp-seq-events-free &events)
   (sp-block-free out)
   (label exit status-return))
 
@@ -326,25 +326,26 @@
 (define (test-sp-cheap-noise-event) status-t
   status-declare
   (declare
-    events-size sp-time-t
     out sp-block-t
     cut (array sp-sample-t sp-noise-duration)
     amod1 (array sp-sample-t sp-noise-duration)
     amod (array sp-sample-t* sp-channel-limit)
+    event sp-event-t
     i sp-time-t)
-  (sp-declare-event-array events 1)
+  (sp-declare-events events 1)
   (sp-declare-cheap-noise-event-config config)
   (status-require (sp-block-new 1 sp-noise-duration &out))
-  (set (array-get amod 0) amod1 events-size 1)
+  (set (array-get amod 0) amod1)
   (for ((set i 0) (< i sp-noise-duration) (set i (+ 1 i)))
     (set
       (array-get cut i) (if* (< i (/ sp-noise-duration 2)) 0.01 0.1)
       (array-get cut i) 0.08
       (array-get amod1 i) 1.0))
   (struct-set config type sp-state-variable-filter-lp amod amod cut-mod cut)
-  (status-require (sp-cheap-noise-event 0 sp-noise-duration config events))
-  (sp-seq 0 sp-noise-duration out events events-size)
-  (sp-events-array-free events events-size)
+  (status-require (sp-cheap-noise-event 0 sp-noise-duration config &event))
+  (array4-add events event)
+  (sp-seq 0 sp-noise-duration out &events)
+  (sp-seq-events-free &events)
   (sp-block-free out)
   (label exit status-return))
 
@@ -353,22 +354,22 @@
 (define (test-sp-seq) status-t
   status-declare
   (declare out sp-block-t i sp-time-t)
-  (sp-declare-event-array events sp-seq-event-count)
+  (sp-declare-events events sp-seq-event-count)
   (set
-    (array-get events 0) (test-helper-event 0 40 1)
-    (array-get events 1) (test-helper-event 41 100 2))
-  (sp-seq-events-prepare events sp-seq-event-count)
+    (array4-get-at events 0) (test-helper-event 0 40 1)
+    (array4-get-at events 1) (test-helper-event 41 100 2))
+  (sp-seq-events-prepare &events)
   (status-require (sp-block-new 2 100 &out))
-  (sp-seq 0 50 out events sp-seq-event-count)
-  (sp-seq 50 100 (sp-block-with-offset out 50) events sp-seq-event-count)
+  (sp-seq 0 50 out &events)
+  (sp-seq 50 100 (sp-block-with-offset out 50) &events)
   (test-helper-assert "block contents 1 event 1"
     (and (= 1 (array-get out.samples 0 0)) (= 1 (array-get out.samples 0 39))))
   (test-helper-assert "block contents 1 gap" (= 0 (array-get out.samples 0 40)))
   (test-helper-assert "block contents 1 event 2"
     (and (= 2 (array-get out.samples 0 41)) (= 2 (array-get out.samples 0 99))))
   (sc-comment "sp-seq-parallel")
-  (status-require (sp-seq-parallel 0 100 out events sp-seq-event-count))
-  (sp-events-array-free events sp-seq-event-count)
+  (status-require (sp-seq-parallel 0 100 out &events))
+  (sp-seq-events-free &events)
   (sp-block-free out)
   (label exit status-return))
 
@@ -669,7 +670,7 @@
     frq sp-time-t*
     size sp-time-t
     block sp-block-t)
-  (sp-declare-event-array events 10)
+  (sp-declare-events events 10)
   (sp-declare-wave-event-config config)
   status-declare
   (set size (* 10 _rate))

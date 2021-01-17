@@ -12,8 +12,8 @@
     (< (struct-get (array-get (convert-type a sp-event-t*) b) start)
       (struct-get (array-get (convert-type a sp-event-t*) c) start))))
 
-(define (sp-seq-events-prepare data size) (void sp-event-t* sp-time-t)
-  (quicksort sp-event-sort-less? sp-event-sort-swap data 0 (- size 1)))
+(define (sp-seq-events-prepare events) (void sp-events-t*)
+  (quicksort sp-event-sort-less? sp-event-sort-swap events:data 0 (- events:used 1)))
 
 (define (sp-seq start end out events) (status-t sp-time-t sp-time-t sp-block-t sp-events-t*)
   "event arrays must have been prepared/sorted with sp_seq_event_prepare for seq to work correctly.
@@ -35,7 +35,7 @@
           (if* (> e.start start) (sp-block-with-offset out (- e.start start)) out) e.state))))
   status-return)
 
-(define (sp-events-free events) (void sp-events-t*)
+(define (sp-seq-events-free events) (void sp-events-t*)
   "free all events starting from the current event. only needed if sp_seq will not further process, and thereby free, the events"
   (declare a sp-events-t f (function-pointer void sp-event-t*))
   (set a *events)
@@ -122,17 +122,17 @@
 
 (define (sp-wave-event-free a) (void sp-event-t*) (free a:state) (sp-event-memory-free a))
 
-(define (sp-wave-event-generate start end out event)
-  (void sp-time-t sp-time-t sp-block-t sp-event-t*)
-  (declare i sp-time-t state-pointer sp-wave-event-state-t* state sp-wave-event-state-t)
-  (set state-pointer (convert-type event:state sp-wave-event-state-t*) state *state-pointer)
-  (for ((set i 0) (< i (- end start)) (set+ i 1))
-    (set+ (array-get out state.config.channel-index i)
-      (* (array-get state.config.amod (+ start i)) (array-get state.config.wvf state.config.phs))
-      state.config.phs (sp-modvalue state.config.frq state.config.fmod mod-index))
-    (if (>= state.config.phs state.config.wvf-size)
-      (set state.config.phs (modulo state.config.phs state.config.wvf-size))))
-  (set state-pointer:config.phs state.config.phs))
+(define (sp-wave-event-generate start end out state) (void sp-time-t sp-time-t sp-block-t void*)
+  (declare i sp-time-t sp sp-wave-event-state-t* s sp-wave-event-state-t ci sp-channel-count-t)
+  (set sp state s *sp)
+  (for ((set ci 0) (< ci out.channels) (set ci (+ 1 ci)))
+    (for ((set i 0) (< i (- end start)) (set+ i 1))
+      (set+ (array-get out.samples ci i)
+        (* (array-get s.config.amod (+ start i)) (array-get s.config.wvf s.config.phs)) s.config.phs
+        (sp-modvalue s.config.frq s.config.fmod (+ start i)))
+      (if (>= s.config.phs s.config.wvf-size)
+        (set s.config.phs (modulo s.config.phs s.config.wvf-size)))))
+  (set sp:config.phs s.config.phs))
 
 (define (sp-wave-event start end config out)
   (status-t sp-time-t sp-time-t sp-wave-event-config-t sp-event-t*)
@@ -148,8 +148,8 @@
   (set
     state:config config
     out:start start
-    out:end delayed-end
-    out:f sp-wave-event-generate
+    out:end end
+    out:generate sp-wave-event-generate
     out:free sp-wave-event-free
     out:state state)
   (label exit status-return))
@@ -170,22 +170,21 @@
   (free a:state)
   (sp-event-memory-free a))
 
-(define (sp-noise-event-generate start end out event)
-  (void sp-time-t sp-time-t sp-block-t sp-event-t*)
+(define (sp-noise-event-generate start end out state) (void sp-time-t sp-time-t sp-block-t void*)
   (declare
     amod sp-sample-t*
     block-count sp-time-t
     block-i sp-time-t
     block-offset sp-time-t
     block-rest sp-time-t
-    chn-i sp-time-t
+    ci sp-time-t
     duration sp-time-t
     i sp-time-t
     s sp-noise-event-state-t
     t sp-time-t)
   (sc-comment "update filter arguments only every resolution number of samples")
   (set
-    s (pointer-get (convert-type event:state sp-noise-event-state-t*))
+    s (pointer-get (convert-type state sp-noise-event-state-t*))
     duration (- end start)
     block-count
     (if* (= duration s.config.resolution) 1
@@ -201,11 +200,11 @@
       (sp-modvalue s.config.cutl s.config.cutl-mod t) (sp-modvalue s.config.cuth s.config.cuth-mod t)
       (sp-modvalue s.config.trnl s.config.trnl-mod t) (sp-modvalue s.config.trnh s.config.trnh-mod t)
       s.config.is-reject &s.filter-state s.temp)
-    (for ((set chn-i 0) (< chn-i out.channels) (set+ chn-i 1))
-      (set amod (array-get s.config.amod chn-i))
+    (for ((set ci 0) (< ci out.channels) (set+ ci 1))
+      (set amod (array-get s.config.amod ci))
       (if (not amod) continue)
       (for ((set i 0) (< i duration) (set+ i 1))
-        (set+ (array-get out.samples chn-i (+ block-offset i))
+        (set+ (array-get out.samples ci (+ block-offset i))
           (* (array-get amod (+ t i)) (array-get s.temp i)))))))
 
 (define (sp-noise-event start end config out-event)
@@ -261,21 +260,21 @@
       (noise sp-sample-t*)
       (temp sp-sample-t*))))
 
-(define (sp-cheap-noise-event-generate start end out event)
-  (void sp-time-t sp-time-t sp-block-t sp-event-t*)
+(define (sp-cheap-noise-event-generate start end out state)
+  (void sp-time-t sp-time-t sp-block-t void*)
   (declare
     amod sp-sample-t*
     block-count sp-time-t
     block-i sp-time-t
     block-offset sp-time-t
     block-rest sp-time-t
-    chn-i sp-time-t
+    ci sp-time-t
     duration sp-time-t
     i sp-time-t
     s sp-cheap-noise-event-state-t
     t sp-time-t)
   (sc-comment "update filter arguments only every resolution number of samples")
-  (set s (pointer-get (convert-type event:state sp-cheap-noise-event-state-t*)))
+  (set s (pointer-get (convert-type state sp-cheap-noise-event-state-t*)))
   (if (not s.config.resolution) (exit 1))
   (set
     duration (- end start)
@@ -293,11 +292,11 @@
     (sp-cheap-filter s.config.type s.noise
       duration (sp-modvalue s.config.cut s.config.cut-mod t) s.config.passes
       s.config.q-factor &s.filter-state s.temp)
-    (for ((set chn-i 0) (< chn-i out.channels) (set chn-i (+ 1 chn-i)))
-      (set amod (array-get s.config.amod chn-i))
+    (for ((set ci 0) (< ci out.channels) (set ci (+ 1 ci)))
+      (set amod (array-get s.config.amod ci))
       (if (not amod) continue)
       (for ((set i 0) (< i duration) (set i (+ 1 i)))
-        (set+ (array-get out.samples chn-i (+ block-offset i))
+        (set+ (array-get out.samples ci (+ block-offset i))
           (* (array-get amod (+ t i)) (array-get s.temp i)))))))
 
 (define (sp-cheap-noise-event-free a) (void sp-event-t*)
@@ -332,7 +331,7 @@
   (set *out-event event)
   (label exit status-return))
 
-(pre-define (sp-group-event-free-events events end)
+(pre-define (sp-group-event-free-past-events events end)
   (begin
     "to free events while the group itself is not finished"
     (while (and (array4-in-range events) (<= (struct-get (array4-get events) end) end))
@@ -350,20 +349,19 @@
   (free a:state)
   (sp-event-memory-free a))
 
-(define (sp-group-event-generate start end out event)
-  (void sp-time-t sp-time-t sp-block-t sp-event-t*)
+(define (sp-group-event-generate start end out state) (void sp-time-t sp-time-t sp-block-t void*)
   "free past events early, they might be sub-group trees"
-  (define s sp-events-t* event:state)
-  (sp-seq start end out (array4-get-address *s) (array4-right-size *s))
-  (sp-group-event-free-events *s end))
+  (define s sp-events-t* state)
+  (sp-seq start end out s)
+  (sp-group-event-free-past-events *s end))
 
-(define (sp-group-event-parallel-generate start end out event)
-  (void sp-time-t sp-time-t sp-block-t sp-event-t*)
+(define (sp-group-event-parallel-generate start end out state)
+  (void sp-time-t sp-time-t sp-block-t void*)
   "can be used in place of sp-group-event-generate.
    seq-parallel can fail if there is not enough memory, but this is ignored currently"
-  (define s sp-events-t* event:state)
-  (sp-seq-parallel start end out (array4-get-address *s) (array4-right-size *s))
-  (sp-group-event-free-events *s end))
+  (define s sp-events-t* state)
+  (sp-seq-parallel start end out s)
+  (sp-group-event-free-past-events *s end))
 
 (define (sp-group-new start event-size out) (status-t sp-time-t sp-group-size-t sp-event-t*)
   status-declare
@@ -373,7 +371,12 @@
   (memreg-add s)
   (if (sp-events-new event-size s) sp-memory-error)
   (memreg-add s:data)
-  (struct-set *out state s start start end start f sp-group-event-generate free sp-group-event-free)
+  (struct-set *out
+    state s
+    start start
+    end start
+    generate sp-group-event-generate
+    free sp-group-event-free)
   (label exit (if status-is-failure memreg-free) (return status)))
 
 (define (sp-group-append a event) (void sp-event-t* sp-event-t)
@@ -387,13 +390,9 @@
     (m.free m.data))
   (free event:memory))
 
-(define (sp-event-array-set-null a size) (void sp-event-t* sp-time-t)
-  (declare i sp-time-t)
-  (for ((set i 0) (< i size) (set+ i 1)) (sp-event-set-null (array-get a i))))
-
 (declare
   sp-map-event-generate-t
-  (type (function-pointer void sp-time-t sp-time-t sp-block-t sp-block-t sp-event-t* void*))
+  (type (function-pointer void sp-time-t sp-time-t sp-block-t sp-block-t void* void*))
   sp-map-event-state-t
   (type (struct (event sp-event-t) (generate sp-map-event-generate-t) (state void*))))
 
@@ -403,22 +402,21 @@
   (if s:event.free (s:event.free &s:event))
   (free a:state))
 
-(define (sp-map-event-generate start end out event)
-  (void sp-time-t sp-time-t sp-block-t sp-event-t*)
+(define (sp-map-event-generate start end out state) (void sp-time-t sp-time-t sp-block-t void*)
   "creates temporary output, lets event write to it, and passes the result to a user function"
   (declare s sp-map-event-state-t*)
-  (set s event:state)
+  (set s state)
   (s:event.generate start end out &s:event)
-  (s:f start end out out &s:event s:state))
+  (s:generate start end out out &s:event s:state))
 
-(define (sp-map-event-isolated-generate start end out event)
-  (void sp-time-t sp-time-t sp-block-t sp-event-t*)
+(define (sp-map-event-isolated-generate start end out state)
+  (void sp-time-t sp-time-t sp-block-t void*)
   "creates temporary output, lets event write to it, and passes the result to a user function"
   (declare s sp-map-event-state-t* temp-out sp-block-t)
   status-declare
   (set status (sp-block-new out.channels out.size &temp-out))
   (if status-is-failure return)
-  (set s event:state)
+  (set s state)
   (s:event.generate start end temp-out &s:event)
   (s:generate start end temp-out out &s:event s:state)
   (sp-block-free temp-out))
