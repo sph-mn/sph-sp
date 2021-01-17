@@ -24,7 +24,8 @@
       (while a-size
         (set a-size (- a-size 1) channel channel-count)
         (while channel (set channel (- channel 1) b-size (- b-size 1)) body))))
-  sp-memory-error (status-set-goto sp-s-group-sp sp-s-id-memory))
+  sp-memory-error (status-set-goto sp-s-group-sp sp-s-id-memory)
+  (sp-modvalue fixed array index) (if* array (array-get array index) fixed))
 
 (define-sp-interleave sp-interleave sp-sample-t
   (set (array-get b b-size) (array-get (array-get a channel) a-size)))
@@ -79,7 +80,7 @@
 
 (define (sp-block-free a) (void sp-block-t)
   (declare i sp-time-t)
-  (if a.size (for ((set i 0) (< i a.channels) (set i (+ 1 i))) (free (array-get a.samples i)))))
+  (if a.size (for ((set i 0) (< i a.channels) (set+ i 1)) (free (array-get a.samples i)))))
 
 (define (sp-block-with-offset a offset) (sp-block-t sp-block-t sp-time-t)
   "return a new block with offset added to all channel sample arrays"
@@ -115,15 +116,10 @@
    * state.amod (amplitude): array with values per sample"
   (declare amp sp-sample-t phs sp-time-t i sp-time-t)
   (set phs state:phs)
-  (if state:fmod
-    (for ((set i 0) (< i duration) (set i (+ 1 i)))
-      (set+ (array-get out i) (* (array-get state:amod (+ offset i)) (array-get state:wvf phs))
-        phs (array-get state:fmod (+ offset i)))
-      (if (>= phs state:wvf-size) (set phs (modulo phs state:wvf-size))))
-    (for ((set i 0) (< i duration) (set i (+ 1 i)))
-      (set+ (array-get out i) (* (array-get state:amod (+ offset i)) (array-get state:wvf phs))
-        phs state:frq)
-      (if (>= phs state:wvf-size) (set phs (modulo phs state:wvf-size)))))
+  (for ((set i 0) (< i duration) (set+ i 1))
+    (set+ (array-get out i) (* (array-get state:amod (+ offset i)) (array-get state:wvf phs))
+      phs (sp-modvalue state:frq state:fmod (+ offset i)))
+    (if (>= phs state:wvf-size) (set phs (modulo phs state:wvf-size))))
   (set state:phs phs))
 
 (define (sp-wave-state wvf wvf-size phs frq fmod amod)

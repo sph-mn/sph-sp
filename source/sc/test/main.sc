@@ -391,8 +391,8 @@
   (sp-event-memory-add g m1)
   (sp-event-memory-add g m2)
   (sp-group-prepare g)
-  (g.f 0 50 block &g)
-  (g.f 50 100 (sp-block-with-offset block 50) &g)
+  (g.generate 0 50 block &g)
+  (g.generate 50 100 (sp-block-with-offset block 50) &g)
   (g.free &g)
   (test-helper-assert "block contents event 1"
     (and (= 1 (array-get block.samples 0 10)) (= 1 (array-get block.samples 0 29))))
@@ -420,7 +420,7 @@
   (test-helper-assert "non-zeros" (not (= 0 (array-get out 1))))
   (label exit status-return))
 
-(pre-define sp-wave-event-duration 100)
+(pre-define test-wave-event-duration 100)
 
 (define (test-wave-event) status-t
   "sp wave values were taken from printing index and value of the result array.
@@ -428,21 +428,21 @@
   status-declare
   (declare
     out sp-block-t
-    fmod (array sp-time-t sp-wave-event-duration)
-    amp1 (array sp-sample-t sp-wave-event-duration)
-    amp2 (array sp-sample-t sp-wave-event-duration)
+    fmod (array sp-time-t test-wave-event-duration)
+    amod1 (array sp-sample-t test-wave-event-duration)
+    amod2 (array sp-sample-t test-wave-event-duration)
     i sp-time-t)
   (sp-declare-event event)
-  (for ((set i 0) (< i sp-wave-event-duration) (set+ i 1))
-    (set (array-get fmod i) 2000 (array-get amp1 i) 1 (array-get amp2 i) 0.5))
-  (status-require
-    (sp-wave-event 0 sp-wave-event-duration
-      (sp-wave-event-state-2 (sp-wave-state sp-sine-table _rate 0 0 fmod amp1)
-        (sp-wave-state sp-sine-table _rate 0 0 fmod amp2))
-      &event))
-  (status-require (sp-block-new 2 sp-wave-event-duration &out))
-  (event.f 0 30 out &event)
-  (event.f 30 sp-wave-event-duration (sp-block-with-offset out 30) &event)
+  (for ((set i 0) (< i test-wave-event-duration) (set+ i 1))
+    (set (array-get fmod i) 2000 (array-get amod1 i) 1 (array-get amod2 i) 0.5))
+  (sp-declare-wave-event-config config)
+  (struct-set config wvf sp-sine-table wvf-size sp-rate fmod fmod amod amod1 channels 2)
+  (struct-set (array-get config.channel-config 1) amod amod2 phs 10 delay 10)
+  (status-require (sp-wave-event 0 test-wave-event-duration config &event))
+  (status-require (sp-block-new 2 test-wave-event-duration &out))
+  (event.generate 0 30 out &event)
+  (event.generate 30 test-wave-event-duration (sp-block-with-offset out 30) &event)
+  (sp-plot-samples (array-get out.samples 0) test-wave-event-duration)
   (sp-block-free out)
   (event.free &event)
   (label exit status-return))
@@ -451,20 +451,20 @@
   status-declare
   (declare
     out sp-block-t
-    frq (array sp-time-t sp-wave-event-duration)
-    amp (array sp-sample-t sp-wave-event-duration)
+    frq (array sp-time-t test-wave-event-duration)
+    amp (array sp-sample-t test-wave-event-duration)
     i sp-time-t
     rc sp-render-config-t)
   (sp-declare-event event)
   (set rc (sp-render-config sp-channels sp-rate sp-rate) rc.block-size 40)
-  (for ((set i 0) (< i sp-wave-event-duration) (set+ i 1))
+  (for ((set i 0) (< i test-wave-event-duration) (set+ i 1))
     (set (array-get frq i) 1500 (array-get amp i) 1))
-  (status-require
-    (sp-wave-event 0 sp-wave-event-duration
-      (sp-wave-event-state-1 (sp-sine-state 0 0 frq amp)) &event))
-  (status-require (sp-block-new 1 sp-wave-event-duration &out))
-  (sc-comment (sp-render-file event 0 sp-wave-event-duration rc "/tmp/test.wav"))
-  (sp-render-block event 0 sp-wave-event-duration rc &out)
+  (sp-declare-wave-event-config config)
+  (struct-set config wvf sp-sine-table wvf-size sp-rate fmod frq amod amp channels 1)
+  (status-require (sp-wave-event 0 test-wave-event-duration config &event))
+  (status-require (sp-block-new 1 test-wave-event-duration &out))
+  (sc-comment (sp-render-file event 0 test-wave-event-duration rc "/tmp/test.wav"))
+  (sp-render-block event 0 test-wave-event-duration rc &out)
   (sc-comment (sp-block-plot-1 out))
   (sp-block-free out)
   (event.free &event)
@@ -670,13 +670,13 @@
     size sp-time-t
     block sp-block-t)
   (sp-declare-event-array events 10)
+  (sp-declare-wave-event-config config)
   status-declare
   (set size (* 10 _rate))
   (status-require (sp-path-samples-2 &amp size (sp-path-move 0 1.0) (sp-path-constant)))
   (status-require (sp-path-times-2 &frq size (sp-path-move 0 200) (sp-path-constant)))
-  (for ((set i 0) (< i 10) (set+ i 1))
-    (status-require
-      (sp-wave-event 0 size (sp-wave-event-state-1 (sp-sine-state 0 1 frq amp)) (+ events i))))
+  (struct-set config wvf sp-sine-table wvf-size sp-rate fmod frq amod amp channels 1)
+  (for ((set i 0) (< i 10) (set+ i 1)) (status-require (sp-wave-event 0 size config (+ events i))))
   (status-require (sp-block-new 1 size &block))
   (set step-size _rate)
   (for ((set i 0) (< i size) (set+ i step-size))
@@ -706,10 +706,11 @@
   status-declare
   (set rs (sp-random-state-new 3))
   (sp-initialise 3 2 _rate)
+  (test-helper-test-one test-wave-event)
+  (goto exit)
   (test-helper-test-one test-moving-average)
   (test-helper-test-one test-statistics)
   (test-helper-test-one test-render-block)
-  (test-helper-test-one test-wave-event)
   (test-helper-test-one test-wave)
   (test-helper-test-one test-path)
   (test-helper-test-one test-file)

@@ -44,6 +44,7 @@
     }; \
   }
 #define sp_memory_error status_set_goto(sp_s_group_sp, sp_s_id_memory)
+#define sp_modvalue(fixed, array, index) (array ? array[index] : fixed)
 define_sp_interleave(sp_interleave, sp_sample_t, (b[b_size] = (a[channel])[a_size]))
   define_sp_interleave(sp_deinterleave, sp_sample_t, ((a[channel])[a_size] = b[b_size]))
   /** get a string description for a status id in a status_t */
@@ -116,7 +117,7 @@ exit:
 void sp_block_free(sp_block_t a) {
   sp_time_t i;
   if (a.size) {
-    for (i = 0; (i < a.channels); i = (1 + i)) {
+    for (i = 0; (i < a.channels); i += 1) {
       free(((a.samples)[i]));
     };
   };
@@ -159,21 +160,11 @@ void sp_wave(sp_time_t offset, sp_time_t duration, sp_wave_state_t* state, sp_sa
   sp_time_t phs;
   sp_time_t i;
   phs = state->phs;
-  if (state->fmod) {
-    for (i = 0; (i < duration); i = (1 + i)) {
-      out[i] += ((state->amod)[(offset + i)] * (state->wvf)[phs]);
-      phs += (state->fmod)[(offset + i)];
-      if (phs >= state->wvf_size) {
-        phs = (phs % state->wvf_size);
-      };
-    };
-  } else {
-    for (i = 0; (i < duration); i = (1 + i)) {
-      out[i] += ((state->amod)[(offset + i)] * (state->wvf)[phs]);
-      phs += state->frq;
-      if (phs >= state->wvf_size) {
-        phs = (phs % state->wvf_size);
-      };
+  for (i = 0; (i < duration); i += 1) {
+    out[i] += ((state->amod)[(offset + i)] * (state->wvf)[phs]);
+    phs += sp_modvalue((state->frq), (state->fmod), (offset + i));
+    if (phs >= state->wvf_size) {
+      phs = (phs % state->wvf_size);
     };
   };
   state->phs = phs;

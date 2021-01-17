@@ -1,4 +1,3 @@
-#define sp_modvalue(fixed, array, index) (array ? array[index] : fixed)
 void sp_event_sort_swap(void* a, ssize_t b, ssize_t c) {
   sp_event_t d;
   d = ((sp_event_t*)(a))[b];
@@ -8,37 +7,47 @@ void sp_event_sort_swap(void* a, ssize_t b, ssize_t c) {
 uint8_t sp_event_sort_less_p(void* a, ssize_t b, ssize_t c) { return (((((sp_event_t*)(a))[b]).start < (((sp_event_t*)(a))[c]).start)); }
 void sp_seq_events_prepare(sp_event_t* data, sp_time_t size) { quicksort(sp_event_sort_less_p, sp_event_sort_swap, data, 0, (size - 1)); }
 /** event arrays must have been prepared/sorted with sp_seq_event_prepare for seq to work correctly.
-   event functions receive event relative start/end time, and output blocks begin at event start.
-   as for paths, start is inclusive, end is exclusive, so that 0..100 and 100..200 attach seamless.
-   $size is the number of events */
-void sp_seq(sp_time_t start, sp_time_t end, sp_block_t out, sp_event_t* events, sp_time_t size) {
-  sp_time_t e_out_start;
+   like for paths, start is inclusive, end is exclusive, so that 0..100 and 100..200 attach seamless.
+   events can have three function pointers: prepare, generate and free.
+   generate receives event relative start/end times, and output blocks that start at the current block.
+   prepare will only be called once and the function pointer will be set to zero afterwards.
+   if prepare fails, sp_seq returns, and events.current will be the event that produced the error.
+   events.current is the first index after past events */
+status_t sp_seq(sp_time_t start, sp_time_t end, sp_block_t out, sp_events_t* events) {
+  status_declare;
   sp_event_t e;
-  sp_time_t e_start;
-  sp_time_t e_end;
+  sp_event_t* ep;
   sp_time_t i;
-  for (i = 0; (i < size); i = (1 + i)) {
-    e = events[i];
+  for (i = events->current; (i < events->used); i += 1) {
+    ep = (events->data + i);
+    e = *ep;
     if (e.end <= start) {
-      continue;
+      (e.free)(ep);
+      array4_forward((*events));
     } else if (end <= e.start) {
       break;
-    } else {
-      e_out_start = ((e.start > start) ? (e.start - start) : 0);
-      e_start = ((start > e.start) ? (start - e.start) : 0);
-      e_end = (sp_min(end, (e.end)) - e.start);
-      (e.f)(e_start, e_end, (e_out_start ? sp_block_with_offset(out, e_out_start) : out), (&e));
+    } else if (e.end > start) {
+      if (e.prepare) {
+        status_require_return(((e.prepare)(ep)));
+        ep->prepare = 0;
+        e.state = ep->state;
+      };
+      (e.generate)(((start > e.start) ? (start - e.start) : 0), (sp_min(end, (e.end)) - e.start), ((e.start > start) ? sp_block_with_offset(out, (e.start - start)) : out), (e.state));
     };
   };
+  status_return;
 }
-void sp_events_array_free(sp_event_t* events, sp_time_t size) {
-  sp_time_t i;
-  void (*event_free)(struct sp_event_t*);
-  for (i = 0; (i < size); i = (1 + i)) {
-    event_free = (events + i)->free;
-    if (event_free) {
-      event_free((events + i));
+/** free all events starting from the current event. only needed if sp_seq will not further process, and thereby free, the events */
+void sp_events_free(sp_events_t* events) {
+  sp_events_t a;
+  void (*f)(sp_event_t*);
+  a = *events;
+  while (array4_in_range(a)) {
+    f = (array4_get(a)).free;
+    if (f) {
+      f((a.data + a.current));
     };
+    array4_forward(a);
   };
 }
 typedef struct {
@@ -47,125 +56,131 @@ typedef struct {
   sp_time_t out_start;
   sp_block_t out;
   sp_event_t* event;
+  status_t status;
   future_t future;
 } sp_seq_future_t;
 void* sp_seq_parallel_future_f(void* data) {
   sp_seq_future_t* a = data;
-  (a->event->f)((a->start), (a->end), (a->out), (a->event));
-}
-/** like sp_seq but evaluates events in parallel */
-status_t sp_seq_parallel(sp_time_t start, sp_time_t end, sp_block_t out, sp_event_t* events, sp_time_t size) {
-  status_declare;
-  sp_time_t e_out_start;
-  sp_event_t e;
-  sp_time_t e_start;
-  sp_time_t e_end;
-  sp_channel_count_t chn_i;
-  sp_seq_future_t* seq_futures;
-  sp_seq_future_t* sf;
-  sp_time_t i;
-  sp_time_t ftr_i;
-  sp_time_t active_count;
-  seq_futures = 0;
-  active_count = 0;
-  /* count events to allocate future object memory */
-  for (i = 0; (i < size); i += 1) {
-    e = events[i];
-    if (e.end <= start) {
-      continue;
-    } else if (end <= e.start) {
-      break;
+  if (a->event->prepare) {
+    a->status = (a->event->prepare)((a->event));
+    if (status_id_success == a->status.id) {
+      a->event->prepare = 0;
     } else {
-      active_count += 1;
+      return (0);
     };
   };
-  status_require((sph_helper_malloc((active_count * sizeof(sp_seq_future_t)), (&seq_futures))));
-  /* parallelise */
-  ftr_i = 0;
-  for (i = 0; (i < size); i += 1) {
-    e = events[i];
+  (a->event->generate)((a->start), (a->end), (a->out), (a->event->state));
+  return (0);
+}
+/** like sp_seq but evaluates events with multiple threads in parallel.
+   there is some overhead, as each event gets its own output block */
+status_t sp_seq_parallel(sp_time_t start, sp_time_t end, sp_block_t out, sp_events_t* events) {
+  status_declare;
+  sp_time_t active;
+  sp_time_t allocated;
+  sp_channel_count_t ci;
+  sp_time_t e_end;
+  sp_event_t* ep;
+  sp_event_t e;
+  sp_time_t e_start;
+  sp_time_t i;
+  sp_seq_future_t* sf_array;
+  sp_time_t sf_i;
+  sp_seq_future_t* sf;
+  sf_array = 0;
+  sf_i = 0;
+  active = 0;
+  for (i = events->current; (i < events->used); i += 1) {
+    ep = (events->data + i);
+    if (end <= ep->start) {
+      break;
+    } else if (ep->end > start) {
+      active += 1;
+    };
+  };
+  status_require((sph_helper_malloc((active * sizeof(sp_seq_future_t)), (&sf_array))));
+  /* distribute */
+  for (i = events->current; (i < events->used); i += 1) {
+    ep = (events->data + i);
+    e = *ep;
     if (e.end <= start) {
-      continue;
+      if (e.free) {
+        (e.free)(ep);
+      };
+      array4_forward((*events));
     } else if (end <= e.start) {
       break;
-    } else {
-      sf = (seq_futures + ftr_i);
-      e_out_start = ((e.start > start) ? (e.start - start) : 0);
+    } else if (e.end > start) {
+      sf = (sf_array + sf_i);
       e_start = ((start > e.start) ? (start - e.start) : 0);
       e_end = (sp_min(end, (e.end)) - e.start);
-      ftr_i += 1;
-      status_require((sp_block_new((out.channels), (e_end - e_start), (&(sf->out)))));
       sf->start = e_start;
       sf->end = e_end;
-      sf->out_start = e_out_start;
-      sf->event = (i + events);
+      sf->out_start = ((e.start > start) ? (e.start - start) : 0);
+      sf->event = (events->data + i);
+      sf->status.id = status_id_success;
+      status_require((sp_block_new((out.channels), (e_end - e_start), (&(sf->out)))));
+      allocated += 1;
+      sf_i += 1;
       future_new(sp_seq_parallel_future_f, sf, (&(sf->future)));
     };
   };
   /* merge */
-  for (ftr_i = 0; (ftr_i < active_count); ftr_i += 1) {
-    sf = (ftr_i + seq_futures);
+  for (sf_i = 0; (sf_i < active); sf_i += 1) {
+    sf = (sf_array + sf_i);
     touch((&(sf->future)));
-    for (chn_i = 0; (chn_i < out.channels); chn_i = (1 + chn_i)) {
-      for (i = 0; (i < sf->out.size); i = (1 + i)) {
-        ((out.samples)[chn_i])[(sf->out_start + i)] += ((sf->out.samples)[chn_i])[i];
+    status_require((sf->status));
+    for (ci = 0; (ci < out.channels); ci += 1) {
+      for (i = 0; (i < sf->out.size); i += 1) {
+        ((out.samples)[ci])[(sf->out_start + i)] += ((sf->out.samples)[ci])[i];
       };
     };
-    sp_block_free((sf->out));
   };
 exit:
-  free(seq_futures);
-  status_return;
-}
-sp_wave_event_state_t sp_wave_event_state_1(sp_wave_state_t wave_state) {
-  sp_wave_event_state_t a;
-  a.channels = 1;
-  (a.wave_states)[0] = wave_state;
-  return (a);
-}
-sp_wave_event_state_t sp_wave_event_state_2(sp_wave_state_t wave_state_1, sp_wave_state_t wave_state_2) {
-  sp_wave_event_state_t a;
-  a.channels = 2;
-  (a.wave_states)[0] = wave_state_1;
-  (a.wave_states)[1] = wave_state_2;
-  return (a);
-}
-void sp_wave_event_f(sp_time_t start, sp_time_t end, sp_block_t out, sp_event_t* event) {
-  sp_channel_count_t chn_i;
-  sp_wave_event_state_t* state;
-  sp_wave_state_t* wave_state;
-  state = ((sp_wave_event_state_t*)(event->state));
-  for (chn_i = 0; (chn_i < state->channels); chn_i = (1 + chn_i)) {
-    wave_state = (state->wave_states + chn_i);
-    if (!wave_state->amod) {
-      continue;
+  if (sf_array) {
+    for (i = 0; (i < allocated); i += 1) {
+      sp_block_free(((sf_array[i]).out));
     };
-    sp_wave(start, (end - start), wave_state, ((out.samples)[chn_i]));
+    free(sf_array);
   };
+  status_return;
 }
 void sp_wave_event_free(sp_event_t* a) {
   free((a->state));
   sp_event_memory_free(a);
 }
-/** in wave_event_state, unset wave states or wave states with amp set to null will generate no output.
-   the state struct is copied and freed with event.free so that stack declared structs can be used.
-   in wave-event-state, wave-state.amod can be 0 to skip channels.
-   sp_wave_event, sp_wave_event_f and sp_wave_event_free are a good example for custom events */
-status_t sp_wave_event(sp_time_t start, sp_time_t end, sp_wave_event_state_t state, sp_event_t* out) {
-  status_declare;
-  sp_wave_state_t* event_state;
-  event_state = 0;
-  status_require((sph_helper_calloc((sizeof(sp_wave_event_state_t)), (&event_state))));
-  memcpy(event_state, (&state), (sizeof(sp_wave_event_state_t)));
-  out->start = start;
-  out->end = end;
-  out->f = sp_wave_event_f;
-  out->free = sp_wave_event_free;
-  out->state = event_state;
-exit:
-  if (status_is_failure) {
-    free(event_state);
+void sp_wave_event_generate(sp_time_t start, sp_time_t end, sp_block_t out, sp_event_t* event) {
+  sp_time_t i;
+  sp_wave_event_state_t* state_pointer;
+  sp_wave_event_state_t state;
+  state_pointer = ((sp_wave_event_state_t*)(event->state));
+  state = *state_pointer;
+  for (i = 0; (i < (end - start)); i += 1) {
+    out[state.config.channel_index][i] += ((state.config.amod)[(start + i)] * (state.config.wvf)[state.config.phs]);
+    state.config.phs += sp_modvalue((state.config.frq), (state.config.fmod), mod_index);
+    if (state.config.phs >= state.config.wvf_size) {
+      state.config.phs = (state.config.phs % state.config.wvf_size);
+    };
   };
+  state_pointer->config.phs = state.config.phs;
+}
+/** create an event playing waveforms from an array.
+   channel config:
+   * settings override the main settings if not 0
+   * amod multiplies main amod
+   * event end will be longer if delay is used
+   if modulation arrays are null, then the fixed value will be used (frq, channel amp) */
+status_t sp_wave_event(sp_time_t start, sp_time_t end, sp_wave_event_config_t config, sp_event_t* out) {
+  status_declare;
+  sp_wave_event_state_t* state;
+  status_require((sph_helper_calloc((sizeof(sp_wave_event_state_t)), (&state))));
+  state->config = config;
+  out->start = start;
+  out->end = delayed_end;
+  out->f = sp_wave_event_generate;
+  out->free = sp_wave_event_free;
+  out->state = state;
+exit:
   status_return;
 }
 typedef struct {
@@ -182,7 +197,7 @@ void sp_noise_event_free(sp_event_t* a) {
   free((a->state));
   sp_event_memory_free(a);
 }
-void sp_noise_event_f(sp_time_t start, sp_time_t end, sp_block_t out, sp_event_t* event) {
+void sp_noise_event_generate(sp_time_t start, sp_time_t end, sp_block_t out, sp_event_t* event) {
   sp_sample_t* amod;
   sp_time_t block_count;
   sp_time_t block_i;
@@ -247,7 +262,7 @@ an added benefit is that the filter-state setup malloc is checked */
   state->config = config;
   event.start = start;
   event.end = end;
-  event.f = sp_noise_event_f;
+  event.generate = sp_noise_event_generate;
   event.free = sp_noise_event_free;
   event.state = state;
   *out_event = event;
@@ -260,7 +275,7 @@ typedef struct {
   sp_sample_t* noise;
   sp_sample_t* temp;
 } sp_cheap_noise_event_state_t;
-void sp_cheap_noise_event_f(sp_time_t start, sp_time_t end, sp_block_t out, sp_event_t* event) {
+void sp_cheap_noise_event_generate(sp_time_t start, sp_time_t end, sp_block_t out, sp_event_t* event) {
   sp_sample_t* amod;
   sp_time_t block_count;
   sp_time_t block_i;
@@ -321,7 +336,7 @@ status_t sp_cheap_noise_event(sp_time_t start, sp_time_t end, sp_cheap_noise_eve
   state->config = config;
   event.start = start;
   event.end = end;
-  event.f = sp_cheap_noise_event_f;
+  event.generate = sp_cheap_noise_event_generate;
   event.free = sp_cheap_noise_event_free;
   event.state = state;
   *out_event = event;
@@ -350,14 +365,14 @@ void sp_group_event_free(sp_event_t* a) {
   sp_event_memory_free(a);
 }
 /** free past events early, they might be sub-group trees */
-void sp_group_event_f(sp_time_t start, sp_time_t end, sp_block_t out, sp_event_t* event) {
+void sp_group_event_generate(sp_time_t start, sp_time_t end, sp_block_t out, sp_event_t* event) {
   sp_events_t* s = event->state;
   sp_seq(start, end, out, (array4_get_address((*s))), (array4_right_size((*s))));
   sp_group_event_free_events((*s), end);
 }
-/** can be used in place of sp-group-event-f.
+/** can be used in place of sp-group-event-generate.
    seq-parallel can fail if there is not enough memory, but this is ignored currently */
-void sp_group_event_parallel_f(sp_time_t start, sp_time_t end, sp_block_t out, sp_event_t* event) {
+void sp_group_event_parallel_generate(sp_time_t start, sp_time_t end, sp_block_t out, sp_event_t* event) {
   sp_events_t* s = event->state;
   sp_seq_parallel(start, end, out, (array4_get_address((*s))), (array4_right_size((*s))));
   sp_group_event_free_events((*s), end);
@@ -375,7 +390,7 @@ status_t sp_group_new(sp_time_t start, sp_group_size_t event_size, sp_event_t* o
   (*out).state = s;
   (*out).start = start;
   (*out).end = start;
-  (*out).f = sp_group_event_f;
+  (*out).f = sp_group_event_generate;
   (*out).free = sp_group_event_free;
 exit:
   if (status_is_failure) {
@@ -403,10 +418,10 @@ void sp_event_array_set_null(sp_event_t* a, sp_time_t size) {
     sp_event_set_null((a[i]));
   };
 }
-typedef void (*sp_map_event_f_t)(sp_time_t, sp_time_t, sp_block_t, sp_block_t, sp_event_t*, void*);
+typedef void (*sp_map_event_generate_t)(sp_time_t, sp_time_t, sp_block_t, sp_block_t, sp_event_t*, void*);
 typedef struct {
   sp_event_t event;
-  sp_map_event_f_t f;
+  sp_map_event_generate_t generate;
   void* state;
 } sp_map_event_state_t;
 void sp_map_event_free(sp_event_t* a) {
@@ -418,14 +433,14 @@ void sp_map_event_free(sp_event_t* a) {
   free((a->state));
 }
 /** creates temporary output, lets event write to it, and passes the result to a user function */
-void sp_map_event_f(sp_time_t start, sp_time_t end, sp_block_t out, sp_event_t* event) {
+void sp_map_event_generate(sp_time_t start, sp_time_t end, sp_block_t out, sp_event_t* event) {
   sp_map_event_state_t* s;
   s = event->state;
-  (s->event.f)(start, end, out, (&(s->event)));
+  (s->event.generate)(start, end, out, (&(s->event)));
   (s->f)(start, end, out, out, (&(s->event)), (s->state));
 }
 /** creates temporary output, lets event write to it, and passes the result to a user function */
-void sp_map_event_isolated_f(sp_time_t start, sp_time_t end, sp_block_t out, sp_event_t* event) {
+void sp_map_event_isolated_generate(sp_time_t start, sp_time_t end, sp_block_t out, sp_event_t* event) {
   sp_map_event_state_t* s;
   sp_block_t temp_out;
   status_declare;
@@ -434,8 +449,8 @@ void sp_map_event_isolated_f(sp_time_t start, sp_time_t end, sp_block_t out, sp_
     return;
   };
   s = event->state;
-  (s->event.f)(start, end, temp_out, (&(s->event)));
-  (s->f)(start, end, temp_out, out, (&(s->event)), (s->state));
+  (s->event.generate)(start, end, temp_out, (&(s->event)));
+  (s->generate)(start, end, temp_out, out, (&(s->event)), (s->state));
   sp_block_free(temp_out);
 }
 /** f: function(start end sp_block_t:in sp_block_t:out sp_event_t*:event void*:state)
@@ -443,18 +458,18 @@ void sp_map_event_isolated_f(sp_time_t start, sp_time_t end, sp_block_t out, sp_
      events can be wrapped in multiple sp_map_event with an isolated sp_map_event on top that
      finally writes to main out to mix with other events
    use cases: filter chains, post processing */
-status_t sp_map_event(sp_event_t event, sp_map_event_f_t f, void* state, uint8_t isolate, sp_event_t* out) {
+status_t sp_map_event(sp_event_t event, sp_map_event_generate_t f, void* state, uint8_t isolate, sp_event_t* out) {
   status_declare;
   sp_map_event_state_t* s;
   sp_declare_event(e);
   status_require((sph_helper_malloc((sizeof(sp_map_event_state_t)), (&s))));
   s->event = event;
   s->state = state;
-  s->f = f;
+  s->generate = f;
   e.state = s;
   e.start = event.start;
   e.end = event.end;
-  e.f = (isolate ? sp_map_event_isolated_f : sp_map_event_f);
+  e.generate = (isolate ? sp_map_event_isolated_generate : sp_map_event_generate);
   e.free = sp_map_event_free;
   *out = e;
 exit:

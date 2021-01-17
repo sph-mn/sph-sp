@@ -417,8 +417,8 @@ status_t test_sp_group() {
   sp_event_memory_add(g, m1);
   sp_event_memory_add(g, m2);
   sp_group_prepare(g);
-  (g.f)(0, 50, block, (&g));
-  (g.f)(50, 100, (sp_block_with_offset(block, 50)), (&g));
+  (g.generate)(0, 50, block, (&g));
+  (g.generate)(50, 100, (sp_block_with_offset(block, 50)), (&g));
   (g.free)((&g));
   test_helper_assert("block contents event 1", ((1 == (block.samples)[0][10]) && (1 == (block.samples)[0][29])));
   test_helper_assert("block contents event 2", ((2 == (block.samples)[0][30]) && (2 == (block.samples)[0][39])));
@@ -443,26 +443,36 @@ status_t test_wave() {
 exit:
   status_return;
 }
-#define sp_wave_event_duration 100
+#define test_wave_event_duration 100
 /** sp wave values were taken from printing index and value of the result array.
    sp-plot-samples can plot the result */
 status_t test_wave_event() {
   status_declare;
   sp_block_t out;
-  sp_time_t fmod[sp_wave_event_duration];
-  sp_sample_t amp1[sp_wave_event_duration];
-  sp_sample_t amp2[sp_wave_event_duration];
+  sp_time_t fmod[test_wave_event_duration];
+  sp_sample_t amod1[test_wave_event_duration];
+  sp_sample_t amod2[test_wave_event_duration];
   sp_time_t i;
   sp_declare_event(event);
-  for (i = 0; (i < sp_wave_event_duration); i += 1) {
+  for (i = 0; (i < test_wave_event_duration); i += 1) {
     fmod[i] = 2000;
-    amp1[i] = 1;
-    amp2[i] = 0.5;
+    amod1[i] = 1;
+    amod2[i] = 0.5;
   };
-  status_require((sp_wave_event(0, sp_wave_event_duration, (sp_wave_event_state_2((sp_wave_state(sp_sine_table, _rate, 0, 0, fmod, amp1)), (sp_wave_state(sp_sine_table, _rate, 0, 0, fmod, amp2)))), (&event))));
-  status_require((sp_block_new(2, sp_wave_event_duration, (&out))));
-  (event.f)(0, 30, out, (&event));
-  (event.f)(30, sp_wave_event_duration, (sp_block_with_offset(out, 30)), (&event));
+  sp_declare_wave_event_config(config);
+  config.wvf = sp_sine_table;
+  config.wvf_size = sp_rate;
+  config.fmod = fmod;
+  config.amod = amod1;
+  config.channels = 2;
+  ((config.channel_config)[1]).amod = amod2;
+  ((config.channel_config)[1]).phs = 10;
+  ((config.channel_config)[1]).delay = 10;
+  status_require((sp_wave_event(0, test_wave_event_duration, config, (&event))));
+  status_require((sp_block_new(2, test_wave_event_duration, (&out))));
+  (event.generate)(0, 30, out, (&event));
+  (event.generate)(30, test_wave_event_duration, (sp_block_with_offset(out, 30)), (&event));
+  sp_plot_samples(((out.samples)[0]), test_wave_event_duration);
   sp_block_free(out);
   (event.free)((&event));
 exit:
@@ -471,21 +481,27 @@ exit:
 status_t test_render_block() {
   status_declare;
   sp_block_t out;
-  sp_time_t frq[sp_wave_event_duration];
-  sp_sample_t amp[sp_wave_event_duration];
+  sp_time_t frq[test_wave_event_duration];
+  sp_sample_t amp[test_wave_event_duration];
   sp_time_t i;
   sp_render_config_t rc;
   sp_declare_event(event);
   rc = sp_render_config(sp_channels, sp_rate, sp_rate);
   rc.block_size = 40;
-  for (i = 0; (i < sp_wave_event_duration); i += 1) {
+  for (i = 0; (i < test_wave_event_duration); i += 1) {
     frq[i] = 1500;
     amp[i] = 1;
   };
-  status_require((sp_wave_event(0, sp_wave_event_duration, (sp_wave_event_state_1((sp_sine_state(0, 0, frq, amp)))), (&event))));
-  status_require((sp_block_new(1, sp_wave_event_duration, (&out))));
-  /* (sp-render-file event 0 sp-wave-event-duration rc /tmp/test.wav) */
-  sp_render_block(event, 0, sp_wave_event_duration, rc, (&out));
+  sp_declare_wave_event_config(config);
+  config.wvf = sp_sine_table;
+  config.wvf_size = sp_rate;
+  config.fmod = frq;
+  config.amod = amp;
+  config.channels = 1;
+  status_require((sp_wave_event(0, test_wave_event_duration, config, (&event))));
+  status_require((sp_block_new(1, test_wave_event_duration, (&out))));
+  /* (sp-render-file event 0 test-wave-event-duration rc /tmp/test.wav) */
+  sp_render_block(event, 0, test_wave_event_duration, rc, (&out));
   /* (sp-block-plot-1 out) */
   sp_block_free(out);
   (event.free)((&event));
@@ -703,12 +719,18 @@ status_t test_sp_seq_parallel() {
   sp_time_t size;
   sp_block_t block;
   sp_declare_event_array(events, 10);
+  sp_declare_wave_event_config(config);
   status_declare;
   size = (10 * _rate);
   status_require((sp_path_samples_2((&amp), size, (sp_path_move(0, (1.0))), (sp_path_constant()))));
   status_require((sp_path_times_2((&frq), size, (sp_path_move(0, 200)), (sp_path_constant()))));
+  config.wvf = sp_sine_table;
+  config.wvf_size = sp_rate;
+  config.fmod = frq;
+  config.amod = amp;
+  config.channels = 1;
   for (i = 0; (i < 10); i += 1) {
-    status_require((sp_wave_event(0, size, (sp_wave_event_state_1((sp_sine_state(0, 1, frq, amp)))), (events + i))));
+    status_require((sp_wave_event(0, size, config, (events + i))));
   };
   status_require((sp_block_new(1, size, (&block))));
   step_size = _rate;
@@ -746,10 +768,11 @@ int main() {
   status_declare;
   rs = sp_random_state_new(3);
   sp_initialise(3, 2, _rate);
+  test_helper_test_one(test_wave_event);
+  goto exit;
   test_helper_test_one(test_moving_average);
   test_helper_test_one(test_statistics);
   test_helper_test_one(test_render_block);
-  test_helper_test_one(test_wave_event);
   test_helper_test_one(test_wave);
   test_helper_test_one(test_path);
   test_helper_test_one(test_file);

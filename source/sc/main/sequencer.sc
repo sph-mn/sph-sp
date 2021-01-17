@@ -1,5 +1,4 @@
 (sc-include-once "./sc-macros")
-(pre-define (sp-modvalue fixed array index) (if* array (array-get array index) fixed))
 
 (define (sp-event-sort-swap a b c) (void void* ssize-t ssize-t)
   (declare d sp-event-t)
@@ -16,28 +15,34 @@
 (define (sp-seq-events-prepare data size) (void sp-event-t* sp-time-t)
   (quicksort sp-event-sort-less? sp-event-sort-swap data 0 (- size 1)))
 
-(define (sp-seq start end out events size)
-  (void sp-time-t sp-time-t sp-block-t sp-event-t* sp-time-t)
+(define (sp-seq start end out events) (status-t sp-time-t sp-time-t sp-block-t sp-events-t*)
   "event arrays must have been prepared/sorted with sp_seq_event_prepare for seq to work correctly.
-   event functions receive event relative start/end time, and output blocks begin at event start.
-   as for paths, start is inclusive, end is exclusive, so that 0..100 and 100..200 attach seamless.
-   $size is the number of events"
-  (declare e-out-start sp-time-t e sp-event-t e-start sp-time-t e-end sp-time-t i sp-time-t)
-  (for ((set i 0) (< i size) (set i (+ 1 i)))
-    (set e (array-get events i))
-    (cond ((<= e.end start) continue) ((<= end e.start) break)
-      (else
-        (set
-          e-out-start (if* (> e.start start) (- e.start start) 0)
-          e-start (if* (> start e.start) (- start e.start) 0)
-          e-end (- (sp-min end e.end) e.start))
-        (e.f e-start e-end (if* e-out-start (sp-block-with-offset out e-out-start) out) &e)))))
+   like for paths, start is inclusive, end is exclusive, so that 0..100 and 100..200 attach seamless.
+   events can have three function pointers: prepare, generate and free.
+   generate receives event relative start/end times, and output blocks that start at the current block.
+   prepare will only be called once and the function pointer will be set to zero afterwards.
+   if prepare fails, sp_seq returns, and events.current will be the event that produced the error.
+   events.current is the first index after past events"
+  status-declare
+  (declare e sp-event-t ep sp-event-t* i sp-time-t)
+  (for ((set i events:current) (< i events:used) (set+ i 1))
+    (set ep (+ events:data i) e *ep)
+    (cond ((<= e.end start) (e.free ep) (array4-forward *events)) ((<= end e.start) break)
+      ( (> e.end start)
+        (if e.prepare
+          (begin (status-require-return (e.prepare ep)) (set ep:prepare 0 e.state ep:state)))
+        (e.generate (if* (> start e.start) (- start e.start) 0) (- (sp-min end e.end) e.start)
+          (if* (> e.start start) (sp-block-with-offset out (- e.start start)) out) e.state))))
+  status-return)
 
-(define (sp-events-array-free events size) (void sp-event-t* sp-time-t)
-  (declare i sp-time-t event-free (function-pointer void (struct sp-event-t*)))
-  (for ((set i 0) (< i size) (set i (+ 1 i)))
-    (set event-free (: (+ events i) free))
-    (if event-free (event-free (+ events i)))))
+(define (sp-events-free events) (void sp-events-t*)
+  "free all events starting from the current event. only needed if sp_seq will not further process, and thereby free, the events"
+  (declare a sp-events-t f (function-pointer void sp-event-t*))
+  (set a *events)
+  (while (array4-in-range a)
+    (set f (struct-get (array4-get a) free))
+    (if f (f (+ a.data a.current)))
+    (array4-forward a)))
 
 (declare sp-seq-future-t
   (type
@@ -47,99 +52,107 @@
       (out-start sp-time-t)
       (out sp-block-t)
       (event sp-event-t*)
+      (status status-t)
       (future future-t))))
 
 (define (sp-seq-parallel-future-f data) (void* void*)
   (define a sp-seq-future-t* data)
-  (a:event:f a:start a:end a:out a:event))
+  (if a:event:prepare
+    (begin
+      (set a:status (a:event:prepare a:event))
+      (if (= status-id-success a:status.id) (set a:event:prepare 0) (return 0))))
+  (a:event:generate a:start a:end a:out a:event:state)
+  (return 0))
 
-(define (sp-seq-parallel start end out events size)
-  (status-t sp-time-t sp-time-t sp-block-t sp-event-t* sp-time-t)
-  "like sp_seq but evaluates events in parallel"
+(define (sp-seq-parallel start end out events)
+  (status-t sp-time-t sp-time-t sp-block-t sp-events-t*)
+  "like sp_seq but evaluates events with multiple threads in parallel.
+   there is some overhead, as each event gets its own output block"
   status-declare
   (declare
-    e-out-start sp-time-t
+    active sp-time-t
+    allocated sp-time-t
+    ci sp-channel-count-t
+    e-end sp-time-t
+    ep sp-event-t*
     e sp-event-t
     e-start sp-time-t
-    e-end sp-time-t
-    chn-i sp-channel-count-t
-    seq-futures sp-seq-future-t*
-    sf sp-seq-future-t*
     i sp-time-t
-    ftr-i sp-time-t
-    active-count sp-time-t)
-  (set seq-futures 0 active-count 0)
-  (sc-comment "count events to allocate future object memory")
-  (for ((set i 0) (< i size) (set+ i 1))
-    (set e (array-get events i))
-    (cond ((<= e.end start) continue) ((<= end e.start) break) (else (set+ active-count 1))))
-  (status-require (sph-helper-malloc (* active-count (sizeof sp-seq-future-t)) &seq-futures))
-  (sc-comment "parallelise")
-  (set ftr-i 0)
-  (for ((set i 0) (< i size) (set+ i 1))
-    (set e (array-get events i))
-    (cond ((<= e.end start) continue) ((<= end e.start) break)
-      (else
+    sf-array sp-seq-future-t*
+    sf-i sp-time-t
+    sf sp-seq-future-t*)
+  (set sf-array 0 sf-i 0 active 0)
+  (for ((set i events:current) (< i events:used) (set+ i 1))
+    (set ep (+ events:data i))
+    (cond ((<= end ep:start) break) ((> ep:end start) (set+ active 1))))
+  (status-require (sph-helper-malloc (* active (sizeof sp-seq-future-t)) &sf-array))
+  (sc-comment "distribute")
+  (for ((set i events:current) (< i events:used) (set+ i 1))
+    (set ep (+ events:data i) e *ep)
+    (cond ((<= e.end start) (if e.free (e.free ep)) (array4-forward *events))
+      ((<= end e.start) break)
+      ( (> e.end start)
         (set
-          sf (+ seq-futures ftr-i)
-          e-out-start (if* (> e.start start) (- e.start start) 0)
+          sf (+ sf-array sf-i)
           e-start (if* (> start e.start) (- start e.start) 0)
-          e-end (- (sp-min end e.end) e.start))
-        (set+ ftr-i 1) (status-require (sp-block-new out.channels (- e-end e-start) &sf:out))
-        (set sf:start e-start sf:end e-end sf:out-start e-out-start sf:event (+ i events))
-        (future-new sp-seq-parallel-future-f sf &sf:future))))
+          e-end (- (sp-min end e.end) e.start)
+          sf:start e-start
+          sf:end e-end
+          sf:out-start (if* (> e.start start) (- e.start start) 0)
+          sf:event (+ events:data i)
+          sf:status.id status-id-success)
+        (status-require (sp-block-new out.channels (- e-end e-start) &sf:out))
+        (set+ allocated 1 sf-i 1) (future-new sp-seq-parallel-future-f sf &sf:future))))
   (sc-comment "merge")
-  (for ((set ftr-i 0) (< ftr-i active-count) (set+ ftr-i 1))
-    (set sf (+ ftr-i seq-futures))
+  (for ((set sf-i 0) (< sf-i active) (set+ sf-i 1))
+    (set sf (+ sf-array sf-i))
     (touch &sf:future)
-    (for ((set chn-i 0) (< chn-i out.channels) (set chn-i (+ 1 chn-i)))
-      (for ((set i 0) (< i sf:out.size) (set i (+ 1 i)))
-        (set+ (array-get (array-get out.samples chn-i) (+ sf:out-start i))
-          (array-get (array-get sf:out.samples chn-i) i))))
-    (sp-block-free sf:out))
-  (label exit (free seq-futures) status-return))
-
-(define (sp-wave-event-state-1 wave-state) (sp-wave-event-state-t sp-wave-state-t)
-  (declare a sp-wave-event-state-t)
-  (set a.channels 1)
-  (array-set* a.wave-states wave-state)
-  (return a))
-
-(define (sp-wave-event-state-2 wave-state-1 wave-state-2)
-  (sp-wave-event-state-t sp-wave-state-t sp-wave-state-t)
-  (declare a sp-wave-event-state-t)
-  (set a.channels 2)
-  (array-set* a.wave-states wave-state-1 wave-state-2)
-  (return a))
-
-(define (sp-wave-event-f start end out event) (void sp-time-t sp-time-t sp-block-t sp-event-t*)
-  (declare chn-i sp-channel-count-t state sp-wave-event-state-t* wave-state sp-wave-state-t*)
-  (set state (convert-type event:state sp-wave-event-state-t*))
-  (for ((set chn-i 0) (< chn-i state:channels) (set chn-i (+ 1 chn-i)))
-    (set wave-state (+ state:wave-states chn-i))
-    (if (not wave-state:amod) continue)
-    (sp-wave start (- end start) wave-state (array-get out.samples chn-i))))
+    (status-require sf:status)
+    (for ((set ci 0) (< ci out.channels) (set+ ci 1))
+      (for ((set i 0) (< i sf:out.size) (set+ i 1))
+        (set+ (array-get (array-get out.samples ci) (+ sf:out-start i))
+          (array-get (array-get sf:out.samples ci) i)))))
+  (label exit
+    (if sf-array
+      (begin
+        (for ((set i 0) (< i allocated) (set+ i 1))
+          (sp-block-free (struct-get (array-get sf-array i) out)))
+        (free sf-array)))
+    status-return))
 
 (define (sp-wave-event-free a) (void sp-event-t*) (free a:state) (sp-event-memory-free a))
 
-(define (sp-wave-event start end state out)
-  (status-t sp-time-t sp-time-t sp-wave-event-state-t sp-event-t*)
-  "in wave_event_state, unset wave states or wave states with amp set to null will generate no output.
-   the state struct is copied and freed with event.free so that stack declared structs can be used.
-   in wave-event-state, wave-state.amod can be 0 to skip channels.
-   sp_wave_event, sp_wave_event_f and sp_wave_event_free are a good example for custom events"
+(define (sp-wave-event-generate start end out event)
+  (void sp-time-t sp-time-t sp-block-t sp-event-t*)
+  (declare i sp-time-t state-pointer sp-wave-event-state-t* state sp-wave-event-state-t)
+  (set state-pointer (convert-type event:state sp-wave-event-state-t*) state *state-pointer)
+  (for ((set i 0) (< i (- end start)) (set+ i 1))
+    (set+ (array-get out state.config.channel-index i)
+      (* (array-get state.config.amod (+ start i)) (array-get state.config.wvf state.config.phs))
+      state.config.phs (sp-modvalue state.config.frq state.config.fmod mod-index))
+    (if (>= state.config.phs state.config.wvf-size)
+      (set state.config.phs (modulo state.config.phs state.config.wvf-size))))
+  (set state-pointer:config.phs state.config.phs))
+
+(define (sp-wave-event start end config out)
+  (status-t sp-time-t sp-time-t sp-wave-event-config-t sp-event-t*)
+  "create an event playing waveforms from an array.
+   channel config:
+   * settings override the main settings if not 0
+   * amod multiplies main amod
+   * event end will be longer if delay is used
+   if modulation arrays are null, then the fixed value will be used (frq, channel amp)"
   status-declare
-  (declare event-state sp-wave-state-t*)
-  (set event-state 0)
-  (status-require (sph-helper-calloc (sizeof sp-wave-event-state-t) &event-state))
-  (memcpy event-state &state (sizeof sp-wave-event-state-t))
+  (declare state sp-wave-event-state-t*)
+  (status-require (sph-helper-calloc (sizeof sp-wave-event-state-t) &state))
   (set
+    state:config config
     out:start start
-    out:end end
-    out:f sp-wave-event-f
+    out:end delayed-end
+    out:f sp-wave-event-generate
     out:free sp-wave-event-free
-    out:state event-state)
-  (label exit (if status-is-failure (free event-state)) status-return))
+    out:state state)
+  (label exit status-return))
 
 (declare sp-noise-event-state-t
   (type
@@ -157,7 +170,8 @@
   (free a:state)
   (sp-event-memory-free a))
 
-(define (sp-noise-event-f start end out event) (void sp-time-t sp-time-t sp-block-t sp-event-t*)
+(define (sp-noise-event-generate start end out event)
+  (void sp-time-t sp-time-t sp-block-t sp-event-t*)
   (declare
     amod sp-sample-t*
     block-count sp-time-t
@@ -233,7 +247,7 @@
     state:config config
     event.start start
     event.end end
-    event.f sp-noise-event-f
+    event.generate sp-noise-event-generate
     event.free sp-noise-event-free
     event.state state
     *out-event event)
@@ -247,7 +261,7 @@
       (noise sp-sample-t*)
       (temp sp-sample-t*))))
 
-(define (sp-cheap-noise-event-f start end out event)
+(define (sp-cheap-noise-event-generate start end out event)
   (void sp-time-t sp-time-t sp-block-t sp-event-t*)
   (declare
     amod sp-sample-t*
@@ -312,7 +326,7 @@
     state:config config
     event.start start
     event.end end
-    event.f sp-cheap-noise-event-f
+    event.generate sp-cheap-noise-event-generate
     event.free sp-cheap-noise-event-free
     event.state state)
   (set *out-event event)
@@ -336,15 +350,16 @@
   (free a:state)
   (sp-event-memory-free a))
 
-(define (sp-group-event-f start end out event) (void sp-time-t sp-time-t sp-block-t sp-event-t*)
+(define (sp-group-event-generate start end out event)
+  (void sp-time-t sp-time-t sp-block-t sp-event-t*)
   "free past events early, they might be sub-group trees"
   (define s sp-events-t* event:state)
   (sp-seq start end out (array4-get-address *s) (array4-right-size *s))
   (sp-group-event-free-events *s end))
 
-(define (sp-group-event-parallel-f start end out event)
+(define (sp-group-event-parallel-generate start end out event)
   (void sp-time-t sp-time-t sp-block-t sp-event-t*)
-  "can be used in place of sp-group-event-f.
+  "can be used in place of sp-group-event-generate.
    seq-parallel can fail if there is not enough memory, but this is ignored currently"
   (define s sp-events-t* event:state)
   (sp-seq-parallel start end out (array4-get-address *s) (array4-right-size *s))
@@ -358,7 +373,7 @@
   (memreg-add s)
   (if (sp-events-new event-size s) sp-memory-error)
   (memreg-add s:data)
-  (struct-set *out state s start start end start f sp-group-event-f free sp-group-event-free)
+  (struct-set *out state s start start end start f sp-group-event-generate free sp-group-event-free)
   (label exit (if status-is-failure memreg-free) (return status)))
 
 (define (sp-group-append a event) (void sp-event-t* sp-event-t)
@@ -377,9 +392,10 @@
   (for ((set i 0) (< i size) (set+ i 1)) (sp-event-set-null (array-get a i))))
 
 (declare
-  sp-map-event-f-t
+  sp-map-event-generate-t
   (type (function-pointer void sp-time-t sp-time-t sp-block-t sp-block-t sp-event-t* void*))
-  sp-map-event-state-t (type (struct (event sp-event-t) (f sp-map-event-f-t) (state void*))))
+  sp-map-event-state-t
+  (type (struct (event sp-event-t) (generate sp-map-event-generate-t) (state void*))))
 
 (define (sp-map-event-free a) (void sp-event-t*)
   (declare s sp-map-event-state-t*)
@@ -387,14 +403,15 @@
   (if s:event.free (s:event.free &s:event))
   (free a:state))
 
-(define (sp-map-event-f start end out event) (void sp-time-t sp-time-t sp-block-t sp-event-t*)
+(define (sp-map-event-generate start end out event)
+  (void sp-time-t sp-time-t sp-block-t sp-event-t*)
   "creates temporary output, lets event write to it, and passes the result to a user function"
   (declare s sp-map-event-state-t*)
   (set s event:state)
-  (s:event.f start end out &s:event)
+  (s:event.generate start end out &s:event)
   (s:f start end out out &s:event s:state))
 
-(define (sp-map-event-isolated-f start end out event)
+(define (sp-map-event-isolated-generate start end out event)
   (void sp-time-t sp-time-t sp-block-t sp-event-t*)
   "creates temporary output, lets event write to it, and passes the result to a user function"
   (declare s sp-map-event-state-t* temp-out sp-block-t)
@@ -402,12 +419,12 @@
   (set status (sp-block-new out.channels out.size &temp-out))
   (if status-is-failure return)
   (set s event:state)
-  (s:event.f start end temp-out &s:event)
-  (s:f start end temp-out out &s:event s:state)
+  (s:event.generate start end temp-out &s:event)
+  (s:generate start end temp-out out &s:event s:state)
   (sp-block-free temp-out))
 
 (define (sp-map-event event f state isolate out)
-  (status-t sp-event-t sp-map-event-f-t void* uint8-t sp-event-t*)
+  (status-t sp-event-t sp-map-event-generate-t void* uint8-t sp-event-t*)
   "f: function(start end sp_block_t:in sp_block_t:out sp_event_t*:event void*:state)
    isolate: use a dedicated output buffer for event
      events can be wrapped in multiple sp_map_event with an isolated sp_map_event on top that
@@ -420,11 +437,11 @@
   (set
     s:event event
     s:state state
-    s:f f
+    s:generate f
     e.state s
     e.start event.start
     e.end event.end
-    e.f (if* isolate sp-map-event-isolated-f sp-map-event-f)
+    e.generate (if* isolate sp-map-event-isolated-generate sp-map-event-generate)
     e.free sp-map-event-free)
   (set *out e)
   (label exit status-return))

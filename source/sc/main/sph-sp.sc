@@ -80,7 +80,13 @@
   (begin "subtract b from a but return 0 for negative results" (if* (> a b) (- a b) 0))
   (sp-no-zero-divide a b)
   (begin "divide a by b (a / b) but return 0 if b is zero" (if* (= 0 b) 0 (/ a b)))
-  (sp-status-set id) (set status.id sp-s-id-memory status.group sp-s-group-sp))
+  (sp-status-set id) (set status.id sp-s-id-memory status.group sp-s-group-sp)
+  (sp-calloc-type count type var)
+  (status-require (sph-helper-calloc (* count (sizeof type)) (addres-of var)))
+  (sp-malloc-type count type var)
+  (status-require (sph-helper-malloc (* count (sizeof type)) (addres-of var)))
+  (sp-realloc-type count type var)
+  (status-require (sph-helper-realloc (* count (sizeof type)) (addres-of var))))
 
 (declare
   sp-block-t
@@ -143,9 +149,6 @@
       (frq sp-time-t)
       (amod sp-sample-t*)
       (fmod sp-time-t*)))
-  sp-wave-event-state-t
-  (type
-    (struct (wave-states (array sp-wave-state-t sp-channel-limit)) (channels sp-channel-count-t)))
   (sp-wave-state wvf wvf-size phs frq fmod amod)
   (sp-wave-state-t sp-sample-t* sp-time-t sp-time-t sp-time-t sp-time-t* sp-sample-t*)
   (sp-sine-period size out) (void sp-time-t sp-sample-t*)
@@ -403,6 +406,7 @@
 (sc-comment "sequencer")
 
 (pre-define
+  (sp-declare-wave-event-config name) (define name sp-wave-event-config-t (struct-literal 0))
   (sp-event-duration a) (- a.end a.start)
   (sp-event-duration-set a duration) (set a.end (+ a.start duration))
   (sp-event-move a start) (set a.end (+ start (- a.end a.start)) a.start start)
@@ -458,11 +462,25 @@
       (start sp-time-t)
       (end sp-time-t)
       (state void*)
-      (f (function-pointer void sp-time-t sp-time-t sp-block-t (struct sp-event-t*)))
+      (generate (function-pointer void sp-time-t sp-time-t sp-block-t void*))
+      (prepare (function-pointer status-t (struct sp-event-t*)))
       (free (function-pointer void (struct sp-event-t*)))
       (memory sp-memory-t*)
       (memory-used sp-time-half-t)))
-  sp-event-f-t (type (function-pointer void sp-time-t sp-time-t sp-block-t sp-event-t*))
+  sp-event-generate-t (type (function-pointer void sp-time-t sp-time-t sp-block-t sp-event-t*))
+  sp-channel-config-t
+  (type (struct (mute boolean) (amp sp-sample-t) (amod sp-sample-t*) (delay sp-time-t)))
+  sp-wave-event-config-t
+  (type
+    (struct
+      (wvf sp-sample-t*)
+      (wvf-size sp-time-t)
+      (phs sp-time-t)
+      (frq sp-time-t)
+      (fmod sp-time-t*)
+      (amod sp-sample-t*)
+      (channel-config (array sp-channel-config-t sp-channel-limit))))
+  sp-wave-event-state-t (type (struct (config sp-wave-event-config-t)))
   sp-noise-event-config-t
   (type
     (struct
@@ -477,7 +495,8 @@
       (trnh-mod sp-sample-t*)
       (resolution sp-time-t)
       (is-reject uint8-t)
-      (random-state sp-random-state-t)))
+      (random-state sp-random-state-t)
+      (channel-config (array sp-channel-config-t sp-channel-limit))))
   sp-cheap-noise-event-config-t
   (type
     (struct
@@ -488,28 +507,25 @@
       (passes sp-time-t)
       (type sp-state-variable-filter-t)
       (random-state sp-random-state-t)
-      (resolution sp-time-t)))
-  (sp-event-memory-free event) (void sp-event-t*)
-  (sp-event-array-set-null a size) (void sp-event-t* sp-time-t)
-  (sp-seq-events-prepare data size) (void sp-event-t* sp-time-t)
-  (sp-seq start end out events size) (void sp-time-t sp-time-t sp-block-t sp-event-t* sp-time-t)
-  (sp-seq-parallel start end out events size)
-  (status-t sp-time-t sp-time-t sp-block-t sp-event-t* sp-time-t)
-  (sp-noise-event start end config out-event)
-  (status-t sp-time-t sp-time-t sp-noise-event-config-t sp-event-t*)
-  (sp-events-array-free events size) (void sp-event-t* sp-time-t)
-  (sp-wave-event-f start end out event) (void sp-time-t sp-time-t sp-block-t sp-event-t*)
-  (sp-wave-event start end state out)
-  (status-t sp-time-t sp-time-t sp-wave-event-state-t sp-event-t*)
-  (sp-wave-event-state-1 wave-state) (sp-wave-event-state-t sp-wave-state-t)
-  (sp-wave-event-state-2 wave-state-1 wave-state-2)
-  (sp-wave-event-state-t sp-wave-state-t sp-wave-state-t)
-  (sp-cheap-noise-event start end config out-event)
-  (status-t sp-time-t sp-time-t sp-cheap-noise-event-config-t sp-event-t*))
+      (resolution sp-time-t))))
 
 (array4-declare-type sp-events sp-event-t)
 
 (declare
+  (sp-event-memory-free event) (void sp-event-t*)
+  (sp-event-array-set-null a size) (void sp-event-t* sp-time-t)
+  (sp-seq-events-prepare data size) (void sp-event-t* sp-time-t)
+  (sp-seq start end out events) (status-t sp-time-t sp-time-t sp-block-t sp-events-t*)
+  (sp-seq-parallel start end out events) (status-t sp-time-t sp-time-t sp-block-t sp-events-t*)
+  (sp-wave-event start end config out)
+  (status-t sp-time-t sp-time-t sp-wave-event-config-t sp-event-t*)
+  (sp-noise-event start end config out-event)
+  (status-t sp-time-t sp-time-t sp-noise-event-config-t sp-event-t*)
+  (sp-events-array-free events size) (void sp-event-t* sp-time-t)
+  (sp-wave-event start end config out)
+  (status-t sp-time-t sp-time-t sp-wave-event-config-t sp-event-t*)
+  (sp-cheap-noise-event start end config out-event)
+  (status-t sp-time-t sp-time-t sp-cheap-noise-event-config-t sp-event-t*)
   (sp-group-new start event-size out) (status-t sp-time-t sp-group-size-t sp-event-t*)
   (sp-group-append a event) (void sp-event-t* sp-event-t)
   (sp-group-event-f start end out event) (void sp-time-t sp-time-t sp-block-t sp-event-t*)
