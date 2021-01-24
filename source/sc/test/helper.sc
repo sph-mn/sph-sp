@@ -10,19 +10,22 @@
   (if status-is-success (printf "--\ntests finished successfully.\n")
     (printf "\ntests failed. %d %s\n" status.id (sp-status-description status))))
 
-(define (test-helper-event-f start end out state) (void sp-time-t sp-time-t sp-block-t void*)
+(define (test-helper-event-generate start end out state)
+  (status-t sp-time-t sp-time-t sp-block-t void*)
+  status-declare
   (declare i sp-time-t channel-i sp-channel-count-t)
   (for ((set i 0) (< i (- end start)) (set+ i 1))
     (for ((set channel-i 0) (< channel-i out.channels) (set+ channel-i 1))
       (set (array-get out.samples channel-i i)
-        (convert-type (convert-type state uint64-t) sp-time-t)))))
+        (convert-type (convert-type state uint64-t) sp-time-t))))
+  status-return)
 
 (define (test-helper-event start end number) (sp-event-t sp-time-t sp-time-t sp-time-t)
   (declare e sp-event-t)
   (set
     e.start start
     e.end end
-    e.generate test-helper-event-f
+    e.generate test-helper-event-generate
     e.free 0
     e.state (convert-type (convert-type number uint64-t) void*))
   (return e))

@@ -67,11 +67,12 @@ void sp_block_free(sp_block_t a);
 
 ## events
 * sp_event_t variables must be declared with sp_declare_event or initialized with sp_event_set_null unless they are overwritten with other events
-* event.f and event.free are custom functions
+* event.generate, event.free and event.prepare are custom functions
 * event.state is for custom data that will be available to the functions during the duration of the event
-* event.f by default receive part of the block passed to sp_seq, where they are supposed to sum to, that means, they add to the output block instead of overwriting it
+* event.generate by default receive part of the block passed to sp_seq, where they are supposed to sum to, that means, they add to the output block instead of overwriting it
 * event parameters can be modulated by the same data by sharing data from a parent context
-* the core events (wave-event, noise-event, etc) can handle any number of channels
+* event.prepare is called before the event is to be rendered and, with groups, allows to build a nested composition where resources are allocated on demand
+* the standard events (wave-event, noise-event, etc) accept channel configuration for muting channels, differing amplitudes and delays between channels
 
 ## custom events
 * define a struct for use as the event state if needed
@@ -81,8 +82,8 @@ void sp_block_free(sp_block_t a);
 
 ## registering memory with events
 * events can receive an arbitrary number of pointers with handler functions that will be called with the pointer on event.free. the default handler is "free" for malloc/calloc allocated memory
-* this could be handled manually using the event state but this feature makes it generic
-* the use case for this is to free memory or deinitialize other resource handles that where passed from a parent context when the event was configured and created. for example, a function that returns a new event might receive arguments that configure the loudness of the event, the event might then depend on an array for amplitude over time, which is to be freed with other event state values when the event has finished
+* the use case for this is to free memory or deinitialize other resource handles from when the event was prepared
+* this could be handled manually using the event state, but this feature makes it generic
 
 ### usage
 * custom free functions need to call sp_event_memory_free(event) if memory is registered

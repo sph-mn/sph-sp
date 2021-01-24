@@ -23,7 +23,8 @@
   } else { \
     printf(("\ntests failed. %d %s\n"), (status.id), (sp_status_description(status))); \
   }
-void test_helper_event_f(sp_time_t start, sp_time_t end, sp_block_t out, void* state) {
+status_t test_helper_event_generate(sp_time_t start, sp_time_t end, sp_block_t out, void* state) {
+  status_declare;
   sp_time_t i;
   sp_channel_count_t channel_i;
   for (i = 0; (i < (end - start)); i += 1) {
@@ -31,12 +32,13 @@ void test_helper_event_f(sp_time_t start, sp_time_t end, sp_block_t out, void* s
       (out.samples)[channel_i][i] = ((sp_time_t)(((uint64_t)(state))));
     };
   };
+  status_return;
 }
 sp_event_t test_helper_event(sp_time_t start, sp_time_t end, sp_time_t number) {
   sp_event_t e;
   e.start = start;
   e.end = end;
-  e.generate = test_helper_event_f;
+  e.generate = test_helper_event_generate;
   e.free = 0;
   e.state = ((void*)(((uint64_t)(number))));
   return (e);

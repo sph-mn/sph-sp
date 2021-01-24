@@ -65,9 +65,6 @@
   (sp-cheap-round-positive a) (convert-type (+ 0.5 a) sp-time-t)
   (sp-cheap-floor-positive a) (convert-type a sp-time-t)
   (sp-cheap-ceiling-positive a) (+ (convert-type a sp-time-t) (< (convert-type a sp-time-t) a))
-  (sp-sine-state phs frq fmod amod) (sp-wave-state sp-sine-table sp-rate phs frq fmod amod)
-  (sp-sine-state-lfo phs frq fmod amod)
-  (sp-wave-state sp-sine-table-lfo (* sp-rate sp-sine-lfo-factor) phs frq fmod amod)
   (sp-max a b) (if* (> a b) a b)
   (sp-min a b) (if* (< a b) a b)
   (sp-absolute-difference a b)
@@ -81,12 +78,12 @@
   (sp-no-zero-divide a b)
   (begin "divide a by b (a / b) but return 0 if b is zero" (if* (= 0 b) 0 (/ a b)))
   (sp-status-set id) (set status.id sp-s-id-memory status.group sp-s-group-sp)
-  (sp-calloc-type count type var)
-  (status-require (sph-helper-calloc (* count (sizeof type)) (addres-of var)))
-  (sp-malloc-type count type var)
-  (status-require (sph-helper-malloc (* count (sizeof type)) (addres-of var)))
-  (sp-realloc-type count type var)
-  (status-require (sph-helper-realloc (* count (sizeof type)) (addres-of var))))
+  (sp-malloc-type count type pointer-address)
+  (status-require (sph-helper-malloc (* count (sizeof type)) pointer-address))
+  (sp-calloc-type count type pointer-address)
+  (status-require (sph-helper-calloc (* count (sizeof type)) pointer-address))
+  (sp-realloc-type count type pointer-address)
+  (status-require (sph-helper-realloc (* count (sizeof type)) pointer-address)))
 
 (declare
   sp-block-t
@@ -140,23 +137,11 @@
   (sp-null-ir out-ir out-len) (status-t sp-sample-t** sp-time-t*)
   (sp-passthrough-ir out-ir out-len) (status-t sp-sample-t** sp-time-t*)
   (sp-initialise cpu-count channels rate) (status-t uint16-t sp-channel-count-t sp-time-t)
-  sp-wave-state-t
-  (type
-    (struct
-      (wvf sp-sample-t*)
-      (wvf-size sp-time-t)
-      (phs sp-time-t)
-      (frq sp-time-t)
-      (amod sp-sample-t*)
-      (fmod sp-time-t*)))
-  (sp-wave-state wvf wvf-size phs frq fmod amod)
-  (sp-wave-state-t sp-sample-t* sp-time-t sp-time-t sp-time-t sp-time-t* sp-sample-t*)
   (sp-sine-period size out) (void sp-time-t sp-sample-t*)
   (sp-phase current change cycle) (sp-time-t sp-time-t sp-time-t sp-time-t)
   (sp-phase-float current change cycle) (sp-time-t sp-time-t double sp-time-t)
   (sp-square t size) (sp-sample-t sp-time-t sp-time-t)
   (sp-triangle t a b) (sp-sample-t sp-time-t sp-time-t sp-time-t)
-  (sp-wave offset duration state out) (void sp-time-t sp-time-t sp-wave-state-t* sp-sample-t*)
   (sp-time-expt base exp) (sp-time-t sp-time-t sp-time-t)
   (sp-time-factorial a) (sp-time-t sp-time-t))
 
@@ -407,6 +392,26 @@
 
 (pre-define
   (sp-declare-wave-event-config name) (define name sp-wave-event-config-t (struct-literal 0))
+  (sp-declare-event id) (define id sp-event-t (struct-literal 0))
+  (sp-declare-event-2 id1 id2) (begin (sp-declare-event id1) (sp-declare-event id2))
+  (sp-declare-event-3 id1 id2 id3)
+  (begin (sp-declare-event id1) (sp-declare-event id2) (sp-declare-event id3))
+  (sp-declare-event-4 id1 id2 id3 id4)
+  (begin (sp-declare-event-2 id1 id2) (sp-declare-event-2 id3 id4))
+  (sp-declare-events id size)
+  (begin
+    (declare id sp-events-t (pre-concat id _data) (array sp-event-t size))
+    (array4-take id (pre-concat id _data) size 0))
+  (sp-declare-noise-event-config name)
+  (begin
+    "optional helper that sets defaults. the mod arrays must be zero if not used"
+    (define name sp-noise-event-config-t
+      (struct-literal (cutl-mod 0) (cuth-mod 0)
+        (trnl-mod 0) (trnh-mod 0) (random-state sp-default-random-state) (resolution 96))))
+  (sp-declare-cheap-noise-event-config name)
+  (define name sp-cheap-noise-event-config-t
+    (struct-literal (cut-mod 0) (passes 1)
+      (q-factor 0) (random-state sp-default-random-state) (resolution 96)))
   (sp-event-duration a) (- a.end a.start)
   (sp-event-duration-set a duration) (set a.end (+ a.start duration))
   (sp-event-move a start) (set a.end (+ start (- a.end a.start)) a.start start)
@@ -414,23 +419,8 @@
   (sp-group-events a) (pointer-get (convert-type a.state sp-events-t*))
   (sp-group-add a event)
   (begin (array4-add (sp-group-events a) event) (if (< a.end event.end) (set a.end event.end)))
-  (sp-group-prepare a)
-  (sp-seq-events-prepare (convert-type a.state sp-events-t*))
-  (sp-event-set-null a)
-  (begin
-    "set so that duration is zero, state is zero if not allocated, and sp_event_memory_free does not fail"
-    (set a.start 0 a.end 0 a.state 0 a.memory-used 0 a.memory 0))
+  (sp-group-prepare a) (sp-seq-events-prepare (convert-type a.state sp-events-t*))
   (sp-group-free a) (if a.state (a.free &a))
-  (sp-declare-events id size)
-  (begin
-    (declare id sp-events-t (pre-concat id _data) (array sp-event-t size))
-    (array4-take id (pre-concat id _data) size 0))
-  (sp-declare-event id) (begin (declare id sp-event-t) (sp-event-set-null id))
-  (sp-declare-event-2 id1 id2) (begin (sp-declare-event id1) (sp-declare-event id2))
-  (sp-declare-event-3 id1 id2 id3)
-  (begin (sp-declare-event id1) (sp-declare-event id2) (sp-declare-event id3))
-  (sp-declare-event-4 id1 id2 id3 id4)
-  (begin (sp-declare-event-2 id1 id2) (sp-declare-event-2 id3 id4))
   (sp-event-memory-add a data) (sp-event-memory-add-handler a data free)
   (sp-event-memory-add-handler a data_ free)
   (begin
@@ -441,17 +431,7 @@
   (begin (sp-event-memory-add a data1) (sp-event-memory-add a data2))
   (sp-event-memory-add-3 a data1 data2 data3)
   (begin (sp-event-memory-add-2 a data1 data2) (sp-event-memory-add a data3))
-  (sp-event-memory-init a size) (sph-helper-malloc (* size (sizeof sp-memory-t)) &a.memory)
-  (sp-declare-noise-event-config name)
-  (begin
-    "optional helper that sets defaults. the mod arrays must be zero if not used"
-    (define name sp-noise-event-config-t
-      (struct-literal (cutl-mod 0) (cuth-mod 0)
-        (trnl-mod 0) (trnh-mod 0) (random-state sp-default-random-state) (resolution 96))))
-  (sp-declare-cheap-noise-event-config name)
-  (define name sp-cheap-noise-event-config-t
-    (struct-literal (cut-mod 0) (passes 1)
-      (q-factor 0) (random-state sp-default-random-state) (resolution 96))))
+  (sp-event-memory-init a size) (sph-helper-malloc (* size (sizeof sp-memory-t)) &a.memory))
 
 (declare
   sp-memory-free-t (type (function-pointer void void*))
@@ -464,14 +444,21 @@
       (start sp-time-t)
       (end sp-time-t)
       (state void*)
-      (generate (function-pointer void sp-time-t sp-time-t sp-block-t void*))
+      (generate (function-pointer status-t sp-time-t sp-time-t sp-block-t void*))
       (prepare (function-pointer status-t (struct sp-event-t*)))
       (free (function-pointer void (struct sp-event-t*)))
       (memory sp-memory-t*)
       (memory-used sp-time-half-t)))
-  sp-event-generate-t (type (function-pointer void sp-time-t sp-time-t sp-block-t sp-event-t*))
+  sp-event-generate-t (type (function-pointer status-t sp-time-t sp-time-t sp-block-t void*))
   sp-channel-config-t
-  (type (struct (mute boolean) (amp sp-sample-t) (amod sp-sample-t*) (delay sp-time-t)))
+  (type
+    (struct
+      (use boolean)
+      (mute boolean)
+      (delay sp-time-t)
+      (phs sp-time-t)
+      (amp sp-sample-t)
+      (amod sp-sample-t*)))
   sp-wave-event-config-t
   (type
     (struct
@@ -480,9 +467,21 @@
       (phs sp-time-t)
       (frq sp-time-t)
       (fmod sp-time-t*)
+      (amp sp-sample-t)
       (amod sp-sample-t*)
-      (channel-config (array sp-channel-config-t sp-channel-limit))))
-  sp-wave-event-state-t (type (struct (config sp-wave-event-config-t)))
+      (chn sp-channel-count-t)
+      (chn-cfg (array sp-channel-config-t sp-channel-limit))))
+  sp-wave-event-state-t
+  (type
+    (struct
+      (wvf sp-sample-t*)
+      (wvf-size sp-time-t)
+      (phs sp-time-t)
+      (frq sp-time-t)
+      (fmod sp-time-t*)
+      (amp sp-sample-t)
+      (amod sp-sample-t*)
+      (chn sp-channel-count-t)))
   sp-noise-event-config-t
   (type
     (struct
@@ -498,7 +497,7 @@
       (resolution sp-time-t)
       (is-reject uint8-t)
       (random-state sp-random-state-t)
-      (channel-config (array sp-channel-config-t sp-channel-limit))))
+      (chn (array sp-channel-config-t sp-channel-limit))))
   sp-cheap-noise-event-config-t
   (type
     (struct
@@ -509,7 +508,11 @@
       (passes sp-time-t)
       (type sp-state-variable-filter-t)
       (random-state sp-random-state-t)
-      (resolution sp-time-t))))
+      (resolution sp-time-t)))
+  sp-map-event-generate-t
+  (type (function-pointer status-t sp-time-t sp-time-t sp-block-t sp-block-t void* void*))
+  sp-map-event-state-t
+  (type (struct (event sp-event-t) (generate sp-map-event-generate-t) (state void*))))
 
 (array4-declare-type sp-events sp-event-t)
 
@@ -532,7 +535,11 @@
   (sp-group-append a event) (void sp-event-t* sp-event-t)
   (sp-group-event-f start end out event) (void sp-time-t sp-time-t sp-block-t sp-event-t*)
   (sp-group-event-parallel-f start end out event) (void sp-time-t sp-time-t sp-block-t sp-event-t*)
-  (sp-group-event-free a) (void sp-event-t*))
+  (sp-group-event-free a) (void sp-event-t*)
+  (sp-map-event event f state isolate out)
+  (status-t sp-event-t sp-map-event-generate-t void* uint8-t sp-event-t*)
+  (sp-channel-config mute delay phs amp amod)
+  (sp-channel-config-t boolean sp-time-t sp-time-t sp-sample-t sp-sample-t*))
 
 (sc-comment "path")
 

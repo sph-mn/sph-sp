@@ -45,6 +45,7 @@
   }
 #define sp_memory_error status_set_goto(sp_s_group_sp, sp_s_id_memory)
 #define sp_modvalue(fixed, array, index) (array ? array[index] : fixed)
+#define sp_array_or_fixed(array, fixed, index) (array ? array[index] : fixed)
 define_sp_interleave(sp_interleave, sp_sample_t, (b[b_size] = (a[channel])[a_size]))
   define_sp_interleave(sp_deinterleave, sp_sample_t, ((a[channel])[a_size] = b[b_size]))
   /** get a string description for a status id in a status_t */
@@ -147,37 +148,6 @@ sp_time_t sp_phase(sp_time_t current, sp_time_t change, sp_time_t cycle) {
 sp_time_t sp_phase_float(sp_time_t current, sp_sample_t change, sp_time_t cycle) {
   sp_time_t a = (current + sp_cheap_ceiling_positive(change));
   return (((a < cycle) ? a : (a % cycle)));
-}
-/** * sums into out
-   * state.frq (frequency): fixed frequency, used if fmod is null
-   * state.fmod (frequency): array with hertz values
-   * state.wvf (waveform): array with waveform samples
-   * state.wvf-size: size of state.wvf
-   * state.phs (phase): one value for the phase offset
-   * state.amod (amplitude): array with values per sample */
-void sp_wave(sp_time_t offset, sp_time_t duration, sp_wave_state_t* state, sp_sample_t* out) {
-  sp_sample_t amp;
-  sp_time_t phs;
-  sp_time_t i;
-  phs = state->phs;
-  for (i = 0; (i < duration); i += 1) {
-    out[i] += ((state->amod)[(offset + i)] * (state->wvf)[phs]);
-    phs += sp_modvalue((state->frq), (state->fmod), (offset + i));
-    if (phs >= state->wvf_size) {
-      phs = (phs % state->wvf_size);
-    };
-  };
-  state->phs = phs;
-}
-sp_wave_state_t sp_wave_state(sp_sample_t* wvf, sp_time_t wvf_size, sp_time_t phs, sp_time_t frq, sp_time_t* fmod, sp_sample_t* amod) {
-  sp_wave_state_t a;
-  a.wvf = wvf;
-  a.wvf_size = wvf_size;
-  a.phs = phs;
-  a.frq = frq;
-  a.fmod = fmod;
-  a.amod = amod;
-  return (a);
 }
 /** return a sample for a triangular wave with center offsets a left and b right.
    creates sawtooth waves if either a or b is 0 */

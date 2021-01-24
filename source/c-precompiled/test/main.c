@@ -428,21 +428,6 @@ status_t test_sp_group() {
 exit:
   status_return;
 }
-#define test_wave_duration 4
-#define test_wave_channels 2
-status_t test_wave() {
-  status_declare;
-  sp_wave_state_t state;
-  sp_sample_t out[test_wave_duration];
-  sp_time_t fmod[4] = { 48000, 48000, 48000, 48000 };
-  sp_sample_t amod[4] = { 0.1, 0.2, 0.3, 0.4 };
-  state = sp_wave_state(sp_sine_table, _rate, 0, 0, fmod, amod);
-  sp_wave(0, test_wave_duration, (&state), out);
-  test_helper_assert("zeros", (0 == out[0]));
-  test_helper_assert("non-zeros", (!(0 == out[1])));
-exit:
-  status_return;
-}
 #define test_wave_event_duration 100
 /** sp wave values were taken from printing index and value of the result array.
    sp-plot-samples can plot the result */
@@ -454,24 +439,23 @@ status_t test_wave_event() {
   sp_sample_t amod2[test_wave_event_duration];
   sp_time_t i;
   sp_declare_event(event);
+  sp_declare_wave_event_config(config);
   for (i = 0; (i < test_wave_event_duration); i += 1) {
     fmod[i] = 2000;
     amod1[i] = 1;
     amod2[i] = 0.5;
   };
-  sp_declare_wave_event_config(config);
   config.wvf = sp_sine_table;
   config.wvf_size = sp_rate;
   config.fmod = fmod;
+  config.amp = 1;
   config.amod = amod1;
-  config.channels = 2;
-  ((config.channel_config)[1]).amod = amod2;
-  ((config.channel_config)[1]).phs = 10;
-  ((config.channel_config)[1]).delay = 10;
+  config.chn = 2;
+  (config.chn_cfg)[1] = sp_channel_config(0, 10, 10, 1, amod2);
   status_require((sp_wave_event(0, test_wave_event_duration, config, (&event))));
   status_require((sp_block_new(2, test_wave_event_duration, (&out))));
-  (event.generate)(0, 30, out, (&event));
-  (event.generate)(30, test_wave_event_duration, (sp_block_with_offset(out, 30)), (&event));
+  status_require(((event.generate)(0, 30, out, (&event))));
+  status_require(((event.generate)(30, test_wave_event_duration, (sp_block_with_offset(out, 30)), (&event))));
   sp_plot_samples(((out.samples)[0]), test_wave_event_duration);
   sp_block_free(out);
   (event.free)((&event));
@@ -482,29 +466,30 @@ status_t test_render_block() {
   status_declare;
   sp_block_t out;
   sp_time_t frq[test_wave_event_duration];
-  sp_sample_t amp[test_wave_event_duration];
+  sp_sample_t amod[test_wave_event_duration];
   sp_time_t i;
   sp_render_config_t rc;
-  sp_declare_event(event);
+  sp_declare_events(events, 1);
   rc = sp_render_config(sp_channels, sp_rate, sp_rate);
   rc.block_size = 40;
   for (i = 0; (i < test_wave_event_duration); i += 1) {
     frq[i] = 1500;
-    amp[i] = 1;
+    amod[i] = 1;
   };
   sp_declare_wave_event_config(config);
   config.wvf = sp_sine_table;
   config.wvf_size = sp_rate;
   config.fmod = frq;
-  config.amod = amp;
-  config.channels = 1;
-  status_require((sp_wave_event(0, test_wave_event_duration, config, (&event))));
+  config.amp = 1;
+  config.amod = amod;
+  config.chn = 1;
+  status_require((sp_wave_event(0, test_wave_event_duration, config, (events.data))));
   status_require((sp_block_new(1, test_wave_event_duration, (&out))));
-  /* (sp-render-file event 0 test-wave-event-duration rc /tmp/test.wav) */
-  sp_render_block(event, 0, test_wave_event_duration, rc, (&out));
+  /* (sp-render-file events test-wave-event-duration rc /tmp/test.wav) */
+  sp_render_block(events, 0, test_wave_event_duration, rc, (&out));
   /* (sp-block-plot-1 out) */
   sp_block_free(out);
-  (event.free)((&event));
+  array4_free(events);
 exit:
   status_return;
 }
@@ -728,38 +713,19 @@ status_t test_sp_seq_parallel() {
   config.wvf_size = sp_rate;
   config.fmod = frq;
   config.amod = amp;
-  config.channels = 1;
+  config.chn = 1;
   for (i = 0; (i < 10); i += 1) {
-    status_require((sp_wave_event(0, size, config, (events + i))));
+    status_require((sp_wave_event(0, size, config, (events.data + i))));
   };
   status_require((sp_block_new(1, size, (&block))));
   step_size = _rate;
   for (i = 0; (i < size); i += step_size) {
-    sp_seq_parallel(i, size, (sp_block_with_offset(block, i)), events, 10);
+    sp_seq_parallel(i, size, (sp_block_with_offset(block, i)), (&events));
   };
-  for (i = 0; (i < 10); i += 1) {
-    ((events[i]).free)((events + i));
-  };
+  sp_seq_events_free((&events));
   free(amp);
   free(frq);
   sp_block_free(block);
-exit:
-  status_return;
-}
-#define temp_size 100
-status_t test_temp() {
-  status_declare;
-  sp_wave_state_t state;
-  sp_sample_t* out;
-  sp_time_t* frq;
-  sp_sample_t* amp;
-  status_require((sp_samples_new(temp_size, (&out))));
-  status_require((sp_path_times_2((&frq), temp_size, (sp_path_move(0, 2000)), (sp_path_constant()))));
-  status_require((sp_path_samples_2((&amp), temp_size, (sp_path_move(0, (1.0))), (sp_path_constant()))));
-  state = sp_sine_state(0, 0, frq, amp);
-  sp_wave(0, temp_size, (&state), out);
-  sp_samples_display(out, temp_size);
-  free(out);
 exit:
   status_return;
 }
@@ -773,7 +739,6 @@ int main() {
   test_helper_test_one(test_moving_average);
   test_helper_test_one(test_statistics);
   test_helper_test_one(test_render_block);
-  test_helper_test_one(test_wave);
   test_helper_test_one(test_path);
   test_helper_test_one(test_file);
   test_helper_test_one(test_sp_group);

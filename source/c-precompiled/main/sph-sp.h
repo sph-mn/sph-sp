@@ -117,8 +117,6 @@
 #define sp_cheap_round_positive(a) ((sp_time_t)((0.5 + a)))
 #define sp_cheap_floor_positive(a) ((sp_time_t)(a))
 #define sp_cheap_ceiling_positive(a) (((sp_time_t)(a)) + (((sp_time_t)(a)) < a))
-#define sp_sine_state(phs, frq, fmod, amod) sp_wave_state(sp_sine_table, sp_rate, phs, frq, fmod, amod)
-#define sp_sine_state_lfo(phs, frq, fmod, amod) sp_wave_state(sp_sine_table_lfo, (sp_rate * sp_sine_lfo_factor), phs, frq, fmod, amod)
 #define sp_max(a, b) ((a > b) ? a : b)
 #define sp_min(a, b) ((a < b) ? a : b)
 /** subtract the smaller number from the greater number,
@@ -132,9 +130,9 @@
 #define sp_status_set(id) \
   status.id = sp_s_id_memory; \
   status.group = sp_s_group_sp
-#define sp_calloc_type(count, type, var) status_require((sph_helper_calloc((count * sizeof(type)), (addres_of(var)))))
-#define sp_malloc_type(count, type, var) status_require((sph_helper_malloc((count * sizeof(type)), (addres_of(var)))))
-#define sp_realloc_type(count, type, var) status_require((sph_helper_realloc((count * sizeof(type)), (addres_of(var)))))
+#define sp_malloc_type(count, type, pointer_address) status_require((sph_helper_malloc((count * sizeof(type)), pointer_address)))
+#define sp_calloc_type(count, type, pointer_address) status_require((sph_helper_calloc((count * sizeof(type)), pointer_address)))
+#define sp_realloc_type(count, type, pointer_address) status_require((sph_helper_realloc((count * sizeof(type)), pointer_address)))
 typedef struct {
   sp_channel_count_t channels;
   sp_time_t size;
@@ -178,21 +176,11 @@ sp_block_t sp_block_with_offset(sp_block_t a, sp_time_t offset);
 status_t sp_null_ir(sp_sample_t** out_ir, sp_time_t* out_len);
 status_t sp_passthrough_ir(sp_sample_t** out_ir, sp_time_t* out_len);
 status_t sp_initialise(uint16_t cpu_count, sp_channel_count_t channels, sp_time_t rate);
-typedef struct {
-  sp_sample_t* wvf;
-  sp_time_t wvf_size;
-  sp_time_t phs;
-  sp_time_t frq;
-  sp_sample_t* amod;
-  sp_time_t* fmod;
-} sp_wave_state_t;
-sp_wave_state_t sp_wave_state(sp_sample_t* wvf, sp_time_t wvf_size, sp_time_t phs, sp_time_t frq, sp_time_t* fmod, sp_sample_t* amod);
 void sp_sine_period(sp_time_t size, sp_sample_t* out);
 sp_time_t sp_phase(sp_time_t current, sp_time_t change, sp_time_t cycle);
 sp_time_t sp_phase_float(sp_time_t current, double change, sp_time_t cycle);
 sp_sample_t sp_square(sp_time_t t, sp_time_t size);
 sp_sample_t sp_triangle(sp_time_t t, sp_time_t a, sp_time_t b);
-void sp_wave(sp_time_t offset, sp_time_t duration, sp_wave_state_t* state, sp_sample_t* out);
 sp_time_t sp_time_expt(sp_time_t base, sp_time_t exp);
 sp_time_t sp_time_factorial(sp_time_t a);
 /* arrays */
@@ -368,6 +356,24 @@ void sp_plot_spectrum_file(uint8_t* path);
 void sp_plot_spectrum(sp_sample_t* a, sp_time_t a_size);
 /* sequencer */
 #define sp_declare_wave_event_config(name) sp_wave_event_config_t name = { 0 }
+#define sp_declare_event(id) sp_event_t id = { 0 }
+#define sp_declare_event_2(id1, id2) \
+  sp_declare_event(id1); \
+  sp_declare_event(id2)
+#define sp_declare_event_3(id1, id2, id3) \
+  sp_declare_event(id1); \
+  sp_declare_event(id2); \
+  sp_declare_event(id3)
+#define sp_declare_event_4(id1, id2, id3, id4) \
+  sp_declare_event_2(id1, id2); \
+  sp_declare_event_2(id3, id4)
+#define sp_declare_events(id, size) \
+  sp_events_t id; \
+  sp_event_t id##_data[size]; \
+  array4_take(id, id##_data, size, 0)
+/** optional helper that sets defaults. the mod arrays must be zero if not used */
+#define sp_declare_noise_event_config(name) sp_noise_event_config_t name = { .cutl_mod = 0, .cuth_mod = 0, .trnl_mod = 0, .trnh_mod = 0, .random_state = sp_default_random_state, .resolution = 96 }
+#define sp_declare_cheap_noise_event_config(name) sp_cheap_noise_event_config_t name = { .cut_mod = 0, .passes = 1, .q_factor = 0, .random_state = sp_default_random_state, .resolution = 96 }
 #define sp_event_duration(a) (a.end - a.start)
 #define sp_event_duration_set(a, duration) a.end = (a.start + duration)
 #define sp_event_move(a, start) \
@@ -381,34 +387,10 @@ void sp_plot_spectrum(sp_sample_t* a, sp_time_t a_size);
     a.end = event.end; \
   }
 #define sp_group_prepare(a) sp_seq_events_prepare(((sp_events_t*)(a.state)))
-/** set so that duration is zero, state is zero if not allocated, and sp_event_memory_free does not fail */
-#define sp_event_set_null(a) \
-  a.start = 0; \
-  a.end = 0; \
-  a.state = 0; \
-  a.memory_used = 0; \
-  a.memory = 0
 #define sp_group_free(a) \
   if (a.state) { \
     (a.free)((&a)); \
   }
-#define sp_declare_events(id, size) \
-  sp_events_t id; \
-  sp_event_t id##_data[size]; \
-  array4_take(id, id##_data, size, 0)
-#define sp_declare_event(id) \
-  sp_event_t id; \
-  sp_event_set_null(id)
-#define sp_declare_event_2(id1, id2) \
-  sp_declare_event(id1); \
-  sp_declare_event(id2)
-#define sp_declare_event_3(id1, id2, id3) \
-  sp_declare_event(id1); \
-  sp_declare_event(id2); \
-  sp_declare_event(id3)
-#define sp_declare_event_4(id1, id2, id3, id4) \
-  sp_declare_event_2(id1, id2); \
-  sp_declare_event_2(id3, id4)
 #define sp_event_memory_add(a, data) sp_event_memory_add_handler(a, data, free)
 /** sp_event_t void* function:{void* -> void} */
 #define sp_event_memory_add_handler(a, data_, free) \
@@ -422,9 +404,6 @@ void sp_plot_spectrum(sp_sample_t* a, sp_time_t a_size);
   sp_event_memory_add_2(a, data1, data2); \
   sp_event_memory_add(a, data3)
 #define sp_event_memory_init(a, size) sph_helper_malloc((size * sizeof(sp_memory_t)), (&(a.memory)))
-/** optional helper that sets defaults. the mod arrays must be zero if not used */
-#define sp_declare_noise_event_config(name) sp_noise_event_config_t name = { .cutl_mod = 0, .cuth_mod = 0, .trnl_mod = 0, .trnh_mod = 0, .random_state = sp_default_random_state, .resolution = 96 }
-#define sp_declare_cheap_noise_event_config(name) sp_cheap_noise_event_config_t name = { .cut_mod = 0, .passes = 1, .q_factor = 0, .random_state = sp_default_random_state, .resolution = 96 }
 typedef void (*sp_memory_free_t)(void*);
 typedef struct {
   sp_memory_free_t free;
@@ -435,18 +414,20 @@ typedef struct sp_event_t {
   sp_time_t start;
   sp_time_t end;
   void* state;
-  void (*generate)(sp_time_t, sp_time_t, sp_block_t, void*);
+  status_t (*generate)(sp_time_t, sp_time_t, sp_block_t, void*);
   status_t (*prepare)(struct sp_event_t*);
   void (*free)(struct sp_event_t*);
   sp_memory_t* memory;
   sp_time_half_t memory_used;
 } sp_event_t;
-typedef void (*sp_event_generate_t)(sp_time_t, sp_time_t, sp_block_t, sp_event_t*);
+typedef status_t (*sp_event_generate_t)(sp_time_t, sp_time_t, sp_block_t, void*);
 typedef struct {
+  boolean use;
   boolean mute;
+  sp_time_t delay;
+  sp_time_t phs;
   sp_sample_t amp;
   sp_sample_t* amod;
-  sp_time_t delay;
 } sp_channel_config_t;
 typedef struct {
   sp_sample_t* wvf;
@@ -454,11 +435,20 @@ typedef struct {
   sp_time_t phs;
   sp_time_t frq;
   sp_time_t* fmod;
+  sp_sample_t amp;
   sp_sample_t* amod;
-  sp_channel_config_t channel_config[sp_channel_limit];
+  sp_channel_count_t chn;
+  sp_channel_config_t chn_cfg[sp_channel_limit];
 } sp_wave_event_config_t;
 typedef struct {
-  sp_wave_event_config_t config;
+  sp_sample_t* wvf;
+  sp_time_t wvf_size;
+  sp_time_t phs;
+  sp_time_t frq;
+  sp_time_t* fmod;
+  sp_sample_t amp;
+  sp_sample_t* amod;
+  sp_channel_count_t chn;
 } sp_wave_event_state_t;
 typedef struct {
   sp_sample_t** amod;
@@ -473,7 +463,7 @@ typedef struct {
   sp_time_t resolution;
   uint8_t is_reject;
   sp_random_state_t random_state;
-  sp_channel_config_t channel_config[sp_channel_limit];
+  sp_channel_config_t chn[sp_channel_limit];
 } sp_noise_event_config_t;
 typedef struct {
   sp_sample_t** amod;
@@ -485,6 +475,12 @@ typedef struct {
   sp_random_state_t random_state;
   sp_time_t resolution;
 } sp_cheap_noise_event_config_t;
+typedef status_t (*sp_map_event_generate_t)(sp_time_t, sp_time_t, sp_block_t, sp_block_t, void*, void*);
+typedef struct {
+  sp_event_t event;
+  sp_map_event_generate_t generate;
+  void* state;
+} sp_map_event_state_t;
 array4_declare_type(sp_events, sp_event_t);
 void sp_seq_events_free(sp_events_t* events);
 void sp_event_memory_free(sp_event_t* event);
@@ -501,6 +497,8 @@ void sp_group_append(sp_event_t* a, sp_event_t event);
 void sp_group_event_f(sp_time_t start, sp_time_t end, sp_block_t out, sp_event_t* event);
 void sp_group_event_parallel_f(sp_time_t start, sp_time_t end, sp_block_t out, sp_event_t* event);
 void sp_group_event_free(sp_event_t* a);
+status_t sp_map_event(sp_event_t event, sp_map_event_generate_t f, void* state, uint8_t isolate, sp_event_t* out);
+sp_channel_config_t sp_channel_config(boolean mute, sp_time_t delay, sp_time_t phs, sp_sample_t amp, sp_sample_t* amod);
 /* path */
 #define sp_path_t spline_path_t
 #define sp_path_time_t spline_path_time_t

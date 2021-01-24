@@ -25,7 +25,9 @@
         (set a-size (- a-size 1) channel channel-count)
         (while channel (set channel (- channel 1) b-size (- b-size 1)) body))))
   sp-memory-error (status-set-goto sp-s-group-sp sp-s-id-memory)
-  (sp-modvalue fixed array index) (if* array (array-get array index) fixed))
+  (sp-modvalue fixed array index) (if* array (array-get array index) fixed)
+  (sp-array-or-fixed array fixed index) (if* array (array-get array index) fixed)
+  )
 
 (define-sp-interleave sp-interleave sp-sample-t
   (set (array-get b b-size) (array-get (array-get a channel) a-size)))
@@ -104,29 +106,6 @@
    change must be a positive value and is rounded to the next larger integer"
   (define a sp-time-t (+ current (sp-cheap-ceiling-positive change)))
   (return (if* (< a cycle) a (modulo a cycle))))
-
-(define (sp-wave offset duration state out)
-  (void sp-time-t sp-time-t sp-wave-state-t* sp-sample-t*)
-  "* sums into out
-   * state.frq (frequency): fixed frequency, used if fmod is null
-   * state.fmod (frequency): array with hertz values
-   * state.wvf (waveform): array with waveform samples
-   * state.wvf-size: size of state.wvf
-   * state.phs (phase): one value for the phase offset
-   * state.amod (amplitude): array with values per sample"
-  (declare amp sp-sample-t phs sp-time-t i sp-time-t)
-  (set phs state:phs)
-  (for ((set i 0) (< i duration) (set+ i 1))
-    (set+ (array-get out i) (* (array-get state:amod (+ offset i)) (array-get state:wvf phs))
-      phs (sp-modvalue state:frq state:fmod (+ offset i)))
-    (if (>= phs state:wvf-size) (set phs (modulo phs state:wvf-size))))
-  (set state:phs phs))
-
-(define (sp-wave-state wvf wvf-size phs frq fmod amod)
-  (sp-wave-state-t sp-sample-t* sp-time-t sp-time-t sp-time-t sp-time-t* sp-sample-t*)
-  (declare a sp-wave-state-t)
-  (set a.wvf wvf a.wvf-size wvf-size a.phs phs a.frq frq a.fmod fmod a.amod amod)
-  (return a))
 
 (define (sp-triangle t a b) (sp-sample-t sp-time-t sp-time-t sp-time-t)
   "return a sample for a triangular wave with center offsets a left and b right.
