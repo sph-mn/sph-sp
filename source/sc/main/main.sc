@@ -244,6 +244,14 @@
   (declare i sp-channel-count-t)
   (for ((set i 0) (< i a.channels) (set+ i 1)) (sp-samples-zero (array-get a.samples i) a.size)))
 
+(define (sp-block-copy a b) (void sp-block-t sp-block-t)
+  "copies all channels and samples from $a to $b.
+   $b channel count and size must be equal or greater than $a"
+  (declare ci sp-channel-count-t i sp-time-t)
+  (for ((set ci 0) (< ci a.channels) (set+ ci 1))
+    (for ((set i 0) (< i a.size) (set+ i 1))
+      (set (array-get b.samples ci i) (array-get a.samples ci i)))))
+
 (pre-include "../main/path.c" "../main/io.c"
   "../main/plot.c" "../main/filter.c" "../main/sequencer.c"
   "../main/statistics.c" "../main/statistics-mod.c")

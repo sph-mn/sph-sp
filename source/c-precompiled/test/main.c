@@ -715,7 +715,6 @@ status_t test_sp_seq_parallel() {
   config.amp = 1;
   config.amod = amod;
   config.chn = 1;
-  /* (array-set config.chn-cfg 1 (sp-channel-config 0 10 10 1 amod2)) */
   for (i = 0; (i < 10); i += 1) {
     status_require((sp_wave_event(0, size, config, (&event))));
     array4_add(events, event);
@@ -733,11 +732,44 @@ status_t test_sp_seq_parallel() {
 exit:
   status_return;
 }
+status_t test_sp_map_event_generate(sp_time_t start, sp_time_t end, sp_block_t in, sp_block_t out, void* state) {
+  status_declare;
+  sp_block_copy(in, out);
+  status_return;
+}
+status_t test_sp_map_event() {
+  status_declare;
+  sp_time_t size;
+  sp_block_t block;
+  sp_sample_t* amod;
+  sp_declare_event(child);
+  sp_declare_event(parent);
+  sp_declare_wave_event_config(config);
+  size = (10 * _rate);
+  status_require((sp_path_samples_2((&amod), size, (sp_path_move(0, (1.0))), (sp_path_constant()))));
+  config.wvf = sp_sine_table;
+  config.wvf_size = sp_rate;
+  config.frq = 300;
+  config.fmod = 0;
+  config.amp = 1;
+  config.amod = amod;
+  config.chn = 1;
+  status_require((sp_wave_event(0, size, config, (&child))));
+  status_require((sp_block_new(1, size, (&block))));
+  sp_map_event(child, test_sp_map_event_generate, 0, 1, (&parent));
+  status_require(((parent.generate)(0, size, block, (parent.state))));
+  (parent.free)((&parent));
+  sp_block_free(block);
+  free(amod);
+exit:
+  status_return;
+}
 /** "goto exit" can skip events */
 int main() {
   status_declare;
   rs = sp_random_state_new(3);
   sp_initialise(3, 2, _rate);
+  test_helper_test_one(test_sp_map_event);
   test_helper_test_one(test_sp_seq_parallel);
   test_helper_test_one(test_sp_seq);
   test_helper_test_one(test_sp_group);

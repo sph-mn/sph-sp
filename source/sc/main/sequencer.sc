@@ -405,7 +405,7 @@
   (declare s sp-map-event-state-t*)
   (set s a:state)
   (if s:event.free (s:event.free &s:event))
-  (free a:state)
+  (free s)
   (sp-event-memory-free a))
 
 (define (sp-map-event-generate start end out state) (status-t sp-time-t sp-time-t sp-block-t void*)
@@ -414,22 +414,24 @@
   (declare s sp-map-event-state-t*)
   (set s state)
   (status-require-return (s:event.generate start end out &s:event))
-  (return (s:generate start end out out &s:event s:state)))
+  (return (s:generate start end out out s:state)))
 
 (define (sp-map-event-isolated-generate start end out state)
   (status-t sp-time-t sp-time-t sp-block-t void*)
   "creates temporary output, lets event write to it, and passes the result to a user function"
-  (declare s sp-map-event-state-t* temp-out sp-block-t)
   status-declare
+  (declare s sp-map-event-state-t* temp-out sp-block-t)
   (status-require-return (sp-block-new out.channels out.size &temp-out))
   (set s state)
-  (status-require (s:event.generate start end temp-out &s:event))
-  (status-require (s:generate start end temp-out out &s:event s:state))
+  (status-require (s:event.generate start end temp-out s:event.state))
+  (status-require (s:generate start end temp-out out s:state))
   (label exit (sp-block-free temp-out) status-return))
 
 (define (sp-map-event event f state isolate out)
   (status-t sp-event-t sp-map-event-generate-t void* uint8-t sp-event-t*)
-  "f: function(start end sp_block_t:in sp_block_t:out sp_event_t*:event void*:state)
+  "f: map function (start end sp_block_t:in sp_block_t:out void*:state)
+   state: custom state value passed to f.
+   the wrapped event will be freed with the map-event.
    isolate: use a dedicated output buffer for event
      events can be wrapped in multiple sp_map_event with an isolated sp_map_event on top that
      finally writes to main out to mix with other events
@@ -437,7 +439,7 @@
   status-declare
   (declare s sp-map-event-state-t*)
   (sp-declare-event e)
-  (status-require (sph-helper-malloc (sizeof sp-map-event-state-t) &s))
+  (sp-malloc-type 1 sp-map-event-state-t &s)
   (set
     s:event event
     s:state state

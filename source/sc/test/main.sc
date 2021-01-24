@@ -661,9 +661,7 @@
   (set size (* 10 _rate))
   (status-require (sp-path-samples-2 &amod size (sp-path-move 0 1.0) (sp-path-constant)))
   (status-require (sp-path-times-2 &fmod size (sp-path-move 0 200) (sp-path-constant)))
-
   (struct-set config wvf sp-sine-table wvf-size sp-rate fmod fmod amp 1 amod amod chn 1)
-  (sc-comment (array-set config.chn-cfg 1 (sp-channel-config 0 10 10 1 amod2)))
   (for ((set i 0) (< i 10) (set+ i 1))
     (status-require (sp-wave-event 0 size config &event))
     (array4-add events event))
@@ -678,11 +676,36 @@
   (sp-block-free block)
   (label exit status-return))
 
+(define (test-sp-map-event-generate start end in out state)
+  (status-t sp-time-t sp-time-t sp-block-t sp-block-t void*)
+  status-declare
+  (sp-block-copy in out)
+  status-return)
+
+(define (test-sp-map-event) status-t
+  status-declare
+  (declare size sp-time-t block sp-block-t amod sp-sample-t*)
+  (sp-declare-event child)
+  (sp-declare-event parent)
+  (sp-declare-wave-event-config config)
+  (set size (* 10 _rate))
+  (status-require (sp-path-samples-2 &amod size (sp-path-move 0 1.0) (sp-path-constant)))
+  (struct-set config wvf sp-sine-table wvf-size sp-rate frq 300 fmod 0 amp 1 amod amod chn 1)
+  (status-require (sp-wave-event 0 size config &child))
+  (status-require (sp-block-new 1 size &block))
+  (sp-map-event child test-sp-map-event-generate 0 #t &parent)
+  (status-require (parent.generate 0 size block parent.state))
+  (parent.free &parent)
+  (sp-block-free block)
+  (free amod)
+  (label exit status-return))
+
 (define (main) int
   "\"goto exit\" can skip events"
   status-declare
   (set rs (sp-random-state-new 3))
   (sp-initialise 3 2 _rate)
+  (test-helper-test-one test-sp-map-event)
   (test-helper-test-one test-sp-seq-parallel)
   (test-helper-test-one test-sp-seq)
   (test-helper-test-one test-sp-group)

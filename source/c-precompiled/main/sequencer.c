@@ -447,7 +447,7 @@ void sp_map_event_free(sp_event_t* a) {
   if (s->event.free) {
     (s->event.free)((&(s->event)));
   };
-  free((a->state));
+  free(s);
   sp_event_memory_free(a);
 }
 /** creates temporary output, lets event write to it, and passes the result to a user function */
@@ -456,22 +456,24 @@ status_t sp_map_event_generate(sp_time_t start, sp_time_t end, sp_block_t out, v
   sp_map_event_state_t* s;
   s = state;
   status_require_return(((s->event.generate)(start, end, out, (&(s->event)))));
-  return (((s->generate)(start, end, out, out, (&(s->event)), (s->state))));
+  return (((s->generate)(start, end, out, out, (s->state))));
 }
 /** creates temporary output, lets event write to it, and passes the result to a user function */
 status_t sp_map_event_isolated_generate(sp_time_t start, sp_time_t end, sp_block_t out, void* state) {
+  status_declare;
   sp_map_event_state_t* s;
   sp_block_t temp_out;
-  status_declare;
   status_require_return((sp_block_new((out.channels), (out.size), (&temp_out))));
   s = state;
-  status_require(((s->event.generate)(start, end, temp_out, (&(s->event)))));
-  status_require(((s->generate)(start, end, temp_out, out, (&(s->event)), (s->state))));
+  status_require(((s->event.generate)(start, end, temp_out, (s->event.state))));
+  status_require(((s->generate)(start, end, temp_out, out, (s->state))));
 exit:
   sp_block_free(temp_out);
   status_return;
 }
-/** f: function(start end sp_block_t:in sp_block_t:out sp_event_t*:event void*:state)
+/** f: map function (start end sp_block_t:in sp_block_t:out void*:state)
+   state: custom state value passed to f.
+   the wrapped event will be freed with the map-event.
    isolate: use a dedicated output buffer for event
      events can be wrapped in multiple sp_map_event with an isolated sp_map_event on top that
      finally writes to main out to mix with other events
@@ -480,7 +482,7 @@ status_t sp_map_event(sp_event_t event, sp_map_event_generate_t f, void* state, 
   status_declare;
   sp_map_event_state_t* s;
   sp_declare_event(e);
-  status_require((sph_helper_malloc((sizeof(sp_map_event_state_t)), (&s))));
+  sp_malloc_type(1, sp_map_event_state_t, (&s));
   s->event = event;
   s->state = state;
   s->generate = f;

@@ -107,6 +107,7 @@
   sp-sine-table-lfo sp-sample-t*
   sp-sine-lfo-factor sp-time-t
   (sp-block-zero a) (void sp-block-t)
+  (sp-block-copy a b) (void sp-block-t sp-block-t)
   (sp-file-read file sample-count result-block result-sample-count)
   (status-t sp-file-t* sp-time-t sp-sample-t** sp-time-t*)
   (sp-file-write file block sample-count result-sample-count)
@@ -511,7 +512,7 @@
       (random-state sp-random-state-t)
       (resolution sp-time-t)))
   sp-map-event-generate-t
-  (type (function-pointer status-t sp-time-t sp-time-t sp-block-t sp-block-t void* void*))
+  (type (function-pointer status-t sp-time-t sp-time-t sp-block-t sp-block-t void*))
   sp-map-event-state-t
   (type (struct (event sp-event-t) (generate sp-map-event-generate-t) (state void*))))
 

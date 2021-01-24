@@ -296,6 +296,17 @@ void sp_block_zero(sp_block_t a) {
     sp_samples_zero(((a.samples)[i]), (a.size));
   };
 }
+/** copies all channels and samples from $a to $b.
+   $b channel count and size must be equal or greater than $a */
+void sp_block_copy(sp_block_t a, sp_block_t b) {
+  sp_channel_count_t ci;
+  sp_time_t i;
+  for (ci = 0; (ci < a.channels); ci += 1) {
+    for (i = 0; (i < a.size); i += 1) {
+      (b.samples)[ci][i] = (a.samples)[ci][i];
+    };
+  };
+}
 #include "../main/path.c"
 #include "../main/io.c"
 #include "../main/plot.c"

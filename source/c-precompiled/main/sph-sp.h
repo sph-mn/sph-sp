@@ -152,6 +152,7 @@ sp_sample_t* sp_sine_table;
 sp_sample_t* sp_sine_table_lfo;
 sp_time_t sp_sine_lfo_factor;
 void sp_block_zero(sp_block_t a);
+void sp_block_copy(sp_block_t a, sp_block_t b);
 status_t sp_file_read(sp_file_t* file, sp_time_t sample_count, sp_sample_t** result_block, sp_time_t* result_sample_count);
 status_t sp_file_write(sp_file_t* file, sp_sample_t** block, sp_time_t sample_count, sp_time_t* result_sample_count);
 status_t sp_file_position(sp_file_t* file, sp_time_t* result_position);
@@ -475,7 +476,7 @@ typedef struct {
   sp_random_state_t random_state;
   sp_time_t resolution;
 } sp_cheap_noise_event_config_t;
-typedef status_t (*sp_map_event_generate_t)(sp_time_t, sp_time_t, sp_block_t, sp_block_t, void*, void*);
+typedef status_t (*sp_map_event_generate_t)(sp_time_t, sp_time_t, sp_block_t, sp_block_t, void*);
 typedef struct {
   sp_event_t event;
   sp_map_event_generate_t generate;
