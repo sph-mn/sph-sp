@@ -26,8 +26,7 @@
         (while channel (set channel (- channel 1) b-size (- b-size 1)) body))))
   sp-memory-error (status-set-goto sp-s-group-sp sp-s-id-memory)
   (sp-modvalue fixed array index) (if* array (array-get array index) fixed)
-  (sp-array-or-fixed array fixed index) (if* array (array-get array index) fixed)
-  )
+  (sp-array-or-fixed array fixed index) (if* array (array-get array index) fixed))
 
 (define-sp-interleave sp-interleave sp-sample-t
   (set (array-get b b-size) (array-get (array-get a channel) a-size)))
@@ -279,9 +278,11 @@
 
 (define (sp-render-block events start end config out)
   (status-t sp-events-t sp-time-t sp-time-t sp-render-config-t sp-block-t*)
-  "render a single event with sp_seq to sample arrays in sp_block_t"
+  "render a single event with sp_seq to sample arrays in sp_block_t.
+   events should have been prepared with sp-seq-events-prepare.
+   block will be allocated"
   status-declare
-  (declare block sp-block-t i sp-time-t)
+  (declare block sp-block-t)
   (status-require (sp-block-new config.channels (- end start) &block))
   (sp-seq start end block &events)
   (set *out block)

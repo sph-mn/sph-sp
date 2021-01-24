@@ -81,7 +81,6 @@
    * invalid paths are possible if x_changes exceed range between the new previous and next point"
   status-declare
   (declare
-    a sp-path-t
     p-i sp-path-time-t
     p sp-path-point-t*
     s-i sp-path-segment-count-t
@@ -157,7 +156,6 @@
     segment-i sp-time-t
     bs sp-path-segment-t*
     bp sp-path-point-t*
-    i sp-time-t
     s sp-path-segment-t*
     p sp-path-point-t*
     point-i sp-time-t
@@ -188,13 +186,7 @@
 (define (sp-path-samples-derivations-normalized path count x-changes y-changes out out-sizes)
   (status-t sp-path-t sp-time-t sp-sample-t** sp-sample-t** sp-sample-t*** sp-time-t**)
   "get sp_path_derivations_normalized as sample arrays. out and out_sizes is allocated and passed to the caller"
-  (declare
-    i sp-time-t
-    samples-i sp-time-t
-    size sp-time-t
-    paths sp-path-t*
-    samples sp-sample-t**
-    sizes sp-time-t*)
+  (declare i sp-time-t size sp-time-t paths sp-path-t* samples sp-sample-t** sizes sp-time-t*)
   status-declare
   (memreg-init 2)
   (status-require (sph-helper-calloc (* count (sizeof sp-sample-t*)) &samples))

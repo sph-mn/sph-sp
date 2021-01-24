@@ -26,16 +26,16 @@
 status_t test_helper_event_generate(sp_time_t start, sp_time_t end, sp_block_t out, void* state) {
   status_declare;
   sp_time_t i;
-  sp_channel_count_t channel_i;
-  for (i = 0; (i < (end - start)); i += 1) {
-    for (channel_i = 0; (channel_i < out.channels); channel_i += 1) {
-      (out.samples)[channel_i][i] = ((sp_time_t)(((uint64_t)(state))));
+  sp_channel_count_t ci;
+  for (i = start; (i < end); i += 1) {
+    for (ci = 0; (ci < out.channels); ci += 1) {
+      (out.samples)[ci][(i - start)] = ((sp_time_t)(((uint64_t)(state))));
     };
   };
   status_return;
 }
 sp_event_t test_helper_event(sp_time_t start, sp_time_t end, sp_time_t number) {
-  sp_event_t e;
+  sp_declare_event(e);
   e.start = start;
   e.end = end;
   e.generate = test_helper_event_generate;

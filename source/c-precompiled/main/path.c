@@ -87,7 +87,6 @@ status_t sp_path_samples_4(sp_sample_t** out, sp_time_t size, sp_path_segment_t 
    * invalid paths are possible if x_changes exceed range between the new previous and next point */
 status_t sp_path_derivation(sp_path_t path, sp_sample_t** x_changes, sp_sample_t** y_changes, sp_time_t index, sp_path_t* out) {
   status_declare;
-  sp_path_t a;
   sp_path_time_t p_i;
   sp_path_point_t* p;
   sp_path_segment_count_t s_i;
@@ -184,7 +183,6 @@ status_t sp_path_derivations_normalized(sp_path_t base, sp_time_t count, sp_samp
   sp_time_t segment_i;
   sp_path_segment_t* bs;
   sp_path_point_t* bp;
-  sp_time_t i;
   sp_path_segment_t* s;
   sp_path_point_t* p;
   sp_time_t point_i;
@@ -235,7 +233,6 @@ exit:
 /** get sp_path_derivations_normalized as sample arrays. out and out_sizes is allocated and passed to the caller */
 status_t sp_path_samples_derivations_normalized(sp_path_t path, sp_time_t count, sp_sample_t** x_changes, sp_sample_t** y_changes, sp_sample_t*** out, sp_time_t** out_sizes) {
   sp_time_t i;
-  sp_time_t samples_i;
   sp_time_t size;
   sp_path_t* paths;
   sp_sample_t** samples;

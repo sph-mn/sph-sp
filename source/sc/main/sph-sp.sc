@@ -166,7 +166,7 @@
 (define sp-sequence-set-null sp-sequence-set-key-t (struct-literal 0 0))
 
 (define (sp-sequence-set-hash a memory-size) (uint64-t sp-sequence-set-key-t sp-time-t)
-  (modulo (sp-u64-from-array a.data a.size) memory-size))
+  (return (modulo (sp-u64-from-array a.data a.size) memory-size)))
 
 (sph-set-declare-type-nonull sp-sequence-set sp-sequence-set-key-t
   sp-sequence-set-hash sp-sequence-set-equal sp-sequence-set-null 2)
@@ -400,7 +400,8 @@
   (begin (sp-declare-event-2 id1 id2) (sp-declare-event-2 id3 id4))
   (sp-declare-events id size)
   (begin
-    (declare id sp-events-t (pre-concat id _data) (array sp-event-t size))
+    (array4-declare id sp-events-t)
+    (declare (pre-concat id _data) (array sp-event-t size))
     (array4-take id (pre-concat id _data) size 0))
   (sp-declare-noise-event-config name)
   (begin

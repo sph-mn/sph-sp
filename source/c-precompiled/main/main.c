@@ -337,11 +337,12 @@ exit:
   sp_file_close(file);
   status_return;
 }
-/** render a single event with sp_seq to sample arrays in sp_block_t */
+/** render a single event with sp_seq to sample arrays in sp_block_t.
+   events should have been prepared with sp-seq-events-prepare.
+   block will be allocated */
 status_t sp_render_block(sp_events_t events, sp_time_t start, sp_time_t end, sp_render_config_t config, sp_block_t* out) {
   status_declare;
   sp_block_t block;
-  sp_time_t i;
   status_require((sp_block_new((config.channels), (end - start), (&block))));
   sp_seq(start, end, block, (&events));
   *out = block;

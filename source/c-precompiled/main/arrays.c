@@ -637,7 +637,6 @@ uint8_t sp_times_contains(sp_time_t* a, sp_time_t size, sp_time_t b) {
    (non-null values in the probability distribution) */
 void sp_times_random_discrete_unique(sp_random_state_t* state, sp_time_t* cudist, sp_time_t cudist_size, sp_time_t size, sp_time_t* out) {
   status_declare;
-  sp_time_t i;
   sp_time_t a;
   sp_time_t remaining;
   remaining = sp_min(size, cudist_size);
@@ -766,7 +765,6 @@ void sp_times_subdivide(sp_time_t* a, sp_time_t size, sp_time_t index, sp_time_t
   sp_time_t i;
   sp_time_t interval;
   sp_time_t value;
-  sp_time_t previous;
   sp_times_insert_space(a, size, (index + 1), count, out);
   interval = (a[(index + 1)] - a[index]);
   value = (interval / (count + 1));
@@ -795,17 +793,17 @@ void sp_samples_blend(sp_sample_t* a, sp_sample_t* b, sp_sample_t fraction, sp_t
     out[i] = sp_sample_interpolate_linear((a[i]), (b[i]), fraction);
   };
 }
+/** set all values greater than n in array to n */
 void sp_times_limit(sp_time_t* a, sp_time_t size, sp_time_t n, sp_time_t* out) {
   sp_time_t i;
-  "set all values greater than n in array to n";
   for (i = 0; (i < size); i += 1) {
     out[i] = ((n < a[i]) ? n : a[i]);
   };
 }
+/** set all values greater than n in array to n */
 void sp_samples_limit_abs(sp_sample_t* a, sp_time_t size, sp_sample_t n, sp_sample_t* out) {
   sp_time_t i;
   sp_sample_t v;
-  "set all values greater than n in array to n";
   for (i = 0; (i < size); i += 1) {
     v = a[i];
     if (0 > v) {

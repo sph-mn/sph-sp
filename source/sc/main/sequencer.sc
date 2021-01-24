@@ -27,7 +27,8 @@
   (declare e sp-event-t ep sp-event-t* i sp-time-t)
   (for ((set i events:current) (< i events:used) (set+ i 1))
     (set ep (+ events:data i) e *ep)
-    (cond ((<= e.end start) (e.free ep) (array4-forward *events)) ((<= end e.start) break)
+    (cond ((<= e.end start) (if e.free (e.free ep)) (array4-forward *events))
+      ((<= end e.start) break)
       ( (> e.end start)
         (if e.prepare (begin (status-require (e.prepare ep)) (set ep:prepare 0 e.state ep:state)))
         (status-require
@@ -81,11 +82,11 @@
     sf-array sp-seq-future-t*
     sf-i sp-time-t
     sf sp-seq-future-t*)
-  (set sf-array 0 sf-i 0 active 0)
+  (set sf-array 0 sf-i 0 active 0 allocated 0)
   (for ((set i events:current) (< i events:used) (set+ i 1))
     (set ep (+ events:data i))
     (cond ((<= end ep:start) break) ((> ep:end start) (set+ active 1))))
-  (status-require (sph-helper-malloc (* active (sizeof sp-seq-future-t)) &sf-array))
+  (sp-malloc-type active sp-seq-future-t &sf-array)
   (sc-comment "distribute")
   (for ((set i events:current) (< i events:used) (set+ i 1))
     (set ep (+ events:data i) e *ep)
@@ -145,13 +146,13 @@
   (set+ event.start a:end event.end a:end)
   (sp-group-add *a event))
 
-(define (sp-wave-event-free a) (void sp-event-t*) (free a:state))
-
 (define (sp-channel-config mute delay phs amp amod)
   (sp-channel-config-t boolean sp-time-t sp-time-t sp-sample-t sp-sample-t*)
   (declare a sp-channel-config-t)
   (struct-set a use #t mute mute delay delay phs phs amp amp amod amod)
   (return a))
+
+(define (sp-wave-event-free a) (void sp-event-t*) (free a:state))
 
 (define (sp-wave-event-generate start end out state)
   (status-t sp-time-t sp-time-t sp-block-t void*)
@@ -179,11 +180,14 @@
    * amp (amplitude): multiplied with amod
    * amod (amplitude): array with sample values"
   status-declare
-  (declare state sp-wave-event-state-t* ci sp-channel-count-t chn sp-channel-config-t)
+  (declare
+    state sp-wave-event-state-t*
+    ci sp-channel-count-t
+    chn sp-channel-config-t
+    event sp-event-t)
   (memreg-init config.chn)
   (sp-declare-event group)
-  (sp-declare-event event)
-  (if (< 1 config.chn) (status-require (sp-group-new config.chn 0 &group)))
+  (if (< 1 config.chn) (status-require (sp-group-new 0 config.chn &group)))
   (for ((set ci 0) (< ci config.chn) (set+ ci 1))
     (set chn (array-get config.chn-cfg ci))
     (if chn.mute continue)
@@ -206,6 +210,7 @@
       generate sp-wave-event-generate
       free sp-wave-event-free)
     (if (< 1 config.chn) (sp-group-add group event) (set group event)))
+  (if (< 1 config.chn) (sp-group-prepare group))
   (set *out group)
   (label exit (if status-is-failure (begin memreg-free (sp-group-free group))) status-return))
 

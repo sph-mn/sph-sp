@@ -195,7 +195,7 @@ typedef struct {
 } sp_sequence_set_key_t;
 uint64_t sp_u64_from_array(uint8_t* a, sp_time_t size);
 sp_sequence_set_key_t sp_sequence_set_null = { 0, 0 };
-uint64_t sp_sequence_set_hash(sp_sequence_set_key_t a, sp_time_t memory_size) { (sp_u64_from_array((a.data), (a.size)) % memory_size); }
+uint64_t sp_sequence_set_hash(sp_sequence_set_key_t a, sp_time_t memory_size) { return ((sp_u64_from_array((a.data), (a.size)) % memory_size)); }
 sph_set_declare_type_nonull(sp_sequence_set, sp_sequence_set_key_t, sp_sequence_set_hash, sp_sequence_set_equal, sp_sequence_set_null, 2);
 sph_set_declare_type(sp_time_set, sp_time_t, sph_set_hash_integer, sph_set_equal_integer, 0, 1, 2);
 hashtable_declare_type(sp_sequence_hashtable, sp_sequence_set_key_t, sp_time_t, sp_sequence_set_hash, sp_sequence_set_equal, 2);
@@ -368,7 +368,7 @@ void sp_plot_spectrum(sp_sample_t* a, sp_time_t a_size);
   sp_declare_event_2(id1, id2); \
   sp_declare_event_2(id3, id4)
 #define sp_declare_events(id, size) \
-  sp_events_t id; \
+  array4_declare(id, sp_events_t); \
   sp_event_t id##_data[size]; \
   array4_take(id, id##_data, size, 0)
 /** optional helper that sets defaults. the mod arrays must be zero if not used */

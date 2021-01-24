@@ -22,7 +22,9 @@ status_t sp_seq(sp_time_t start, sp_time_t end, sp_block_t out, sp_events_t* eve
     ep = (events->data + i);
     e = *ep;
     if (e.end <= start) {
-      (e.free)(ep);
+      if (e.free) {
+        (e.free)(ep);
+      };
       array4_forward((*events));
     } else if (end <= e.start) {
       break;
@@ -91,6 +93,7 @@ status_t sp_seq_parallel(sp_time_t start, sp_time_t end, sp_block_t out, sp_even
   sf_array = 0;
   sf_i = 0;
   active = 0;
+  allocated = 0;
   for (i = events->current; (i < events->used); i += 1) {
     ep = (events->data + i);
     if (end <= ep->start) {
@@ -99,7 +102,7 @@ status_t sp_seq_parallel(sp_time_t start, sp_time_t end, sp_block_t out, sp_even
       active += 1;
     };
   };
-  status_require((sph_helper_malloc((active * sizeof(sp_seq_future_t)), (&sf_array))));
+  sp_malloc_type(active, sp_seq_future_t, (&sf_array));
   /* distribute */
   for (i = events->current; (i < events->used); i += 1) {
     ep = (events->data + i);
@@ -179,7 +182,6 @@ void sp_group_append(sp_event_t* a, sp_event_t event) {
   event.end += a->end;
   sp_group_add((*a), event);
 }
-void sp_wave_event_free(sp_event_t* a) { free((a->state)); }
 sp_channel_config_t sp_channel_config(boolean mute, sp_time_t delay, sp_time_t phs, sp_sample_t amp, sp_sample_t* amod) {
   sp_channel_config_t a;
   a.use = 1;
@@ -190,6 +192,7 @@ sp_channel_config_t sp_channel_config(boolean mute, sp_time_t delay, sp_time_t p
   a.amod = amod;
   return (a);
 }
+void sp_wave_event_free(sp_event_t* a) { free((a->state)); }
 status_t sp_wave_event_generate(sp_time_t start, sp_time_t end, sp_block_t out, void* state) {
   status_declare;
   sp_time_t i;
@@ -223,11 +226,11 @@ status_t sp_wave_event(sp_time_t start, sp_time_t end, sp_wave_event_config_t co
   sp_wave_event_state_t* state;
   sp_channel_count_t ci;
   sp_channel_config_t chn;
+  sp_event_t event;
   memreg_init((config.chn));
   sp_declare_event(group);
-  sp_declare_event(event);
   if (1 < config.chn) {
-    status_require((sp_group_new((config.chn), 0, (&group))));
+    status_require((sp_group_new(0, (config.chn), (&group))));
   };
   for (ci = 0; (ci < config.chn); ci += 1) {
     chn = (config.chn_cfg)[ci];
@@ -255,6 +258,9 @@ status_t sp_wave_event(sp_time_t start, sp_time_t end, sp_wave_event_config_t co
     } else {
       group = event;
     };
+  };
+  if (1 < config.chn) {
+    sp_group_prepare(group);
   };
   *out = group;
 exit:

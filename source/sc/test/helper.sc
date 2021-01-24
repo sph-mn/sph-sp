@@ -13,15 +13,15 @@
 (define (test-helper-event-generate start end out state)
   (status-t sp-time-t sp-time-t sp-block-t void*)
   status-declare
-  (declare i sp-time-t channel-i sp-channel-count-t)
-  (for ((set i 0) (< i (- end start)) (set+ i 1))
-    (for ((set channel-i 0) (< channel-i out.channels) (set+ channel-i 1))
-      (set (array-get out.samples channel-i i)
+  (declare i sp-time-t ci sp-channel-count-t)
+  (for ((set i start) (< i end) (set+ i 1))
+    (for ((set ci 0) (< ci out.channels) (set+ ci 1))
+      (set (array-get out.samples ci (- i start))
         (convert-type (convert-type state uint64-t) sp-time-t))))
   status-return)
 
 (define (test-helper-event start end number) (sp-event-t sp-time-t sp-time-t sp-time-t)
-  (declare e sp-event-t)
+  (sp-declare-event e)
   (set
     e.start start
     e.end end

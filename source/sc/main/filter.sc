@@ -386,7 +386,7 @@
      the for loops correspond to: initial sum, with preceeding outside values, middle values, with succeeding outside values.
      the subtracted value is the first value of the previous window and is therefore
      at an index one less than the first value of the current window")
-  (declare i sp-time-t sum sp-sample-t width sp-time-t prev-range sp-time-t next-range sp-time-t)
+  (declare i sp-time-t sum sp-sample-t width sp-time-t)
   (set width (+ (* radius 2) 1) sum (array-get in 0))
   (if prev
     (for ((set i 0) (< i radius) (set+ i 1))

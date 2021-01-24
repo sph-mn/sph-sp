@@ -406,8 +406,6 @@ void sp_moving_average(sp_sample_t* in, sp_time_t in_size, sp_sample_t* prev, sp
   sp_time_t i;
   sp_sample_t sum;
   sp_time_t width;
-  sp_time_t prev_range;
-  sp_time_t next_range;
   width = ((radius * 2) + 1);
   sum = in[0];
   if (prev) {

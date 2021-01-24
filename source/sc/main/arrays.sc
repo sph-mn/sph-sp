@@ -512,7 +512,7 @@
    size must not be greater than the maximum possible count of unique discrete random values
    (non-null values in the probability distribution)"
   status-declare
-  (declare i sp-time-t a sp-time-t remaining sp-time-t)
+  (declare a sp-time-t remaining sp-time-t)
   (set remaining (sp-min size cudist-size))
   (while remaining
     (set a (sp-time-random-discrete state cudist cudist-size))
@@ -624,7 +624,7 @@
    the second value must be greater than the first.
    $index must not be the last index.
    $out size must be at least $size + $count"
-  (declare i sp-time-t interval sp-time-t value sp-time-t previous sp-time-t)
+  (declare i sp-time-t interval sp-time-t value sp-time-t)
   (sp-times-insert-space a size (+ index 1) count out)
   (set interval (- (array-get a (+ index 1)) (array-get a index)) value (/ interval (+ count 1)))
   (for ((set i (+ index 1)) (< i (+ index (+ count 1))) (set+ i 1))
@@ -656,14 +656,14 @@
     (set (array-get out i) (sp-sample-interpolate-linear (array-get a i) (array-get b i) fraction))))
 
 (define (sp-times-limit a size n out) (void sp-time-t* sp-time-t sp-time-t sp-time-t*)
-  (declare i sp-time-t)
   "set all values greater than n in array to n"
+  (declare i sp-time-t)
   (for ((set i 0) (< i size) (set+ i 1))
     (set (array-get out i) (if* (< n (array-get a i)) n (array-get a i)))))
 
 (define (sp-samples-limit-abs a size n out) (void sp-sample-t* sp-time-t sp-sample-t sp-sample-t*)
-  (declare i sp-time-t v sp-sample-t)
   "set all values greater than n in array to n"
+  (declare i sp-time-t v sp-sample-t)
   (for ((set i 0) (< i size) (set+ i 1))
     (set v (array-get a i))
     (if (> 0 v) (set (array-get out i) (if* (> (* -1 n) v) (* -1 n) v))
