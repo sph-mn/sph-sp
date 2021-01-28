@@ -315,6 +315,13 @@
       (status-require (sp-render-file events 0 end config "/tmp/sp-out.wav"))))
   (label exit status-return))
 
+(define (sp-random-state-new seed) (sp-random-state-t sp-time-t)
+  (define result sp-random-state-t (sph-random-state-new seed))
+  (sc-comment "random state needs warm-up for some reason")
+  (sp-time-random &result)
+  (sp-time-random &result)
+  (return result))
+
 (define (sp-initialise cpu-count channels rate) (status-t uint16-t sp-channel-count-t sp-time-t)
   "fills the sine wave lookup table.
    rate and channels are used to set sp_rate and sp_channels,
@@ -325,11 +332,8 @@
     sp-cpu-count cpu-count
     sp-rate rate
     sp-channels channels
-    sp-default-random-state (sp-random-state-new 1557083953)
+    sp-default-random-state (sp-random-state-new sp-default-random-seed)
     sp-sine-lfo-factor 10)
-  (sc-comment "random state needs warm-up")
-  (sp-time-random &sp-default-random-state)
-  (sp-time-random &sp-default-random-state)
   (status-require (sp-samples-new sp-rate &sp-sine-table))
   (status-require (sp-samples-new (* sp-rate sp-sine-lfo-factor) &sp-sine-table-lfo))
   (sp-sine-period sp-rate sp-sine-table)

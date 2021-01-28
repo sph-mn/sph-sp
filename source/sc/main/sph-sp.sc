@@ -24,7 +24,8 @@
   sp-time-random-bounded sph-random-u32-bounded
   sp-sample-random sph-random-f64
   sp-sample-nearly-equal f64-nearly-equal
-  sp-sample-array-nearly-equal f64-array-nearly-equal)
+  sp-sample-array-nearly-equal f64-array-nearly-equal
+  sp-default-random-seed 1557083953)
 
 (pre-include "sph/status.c" "sph/spline-path.h"
   "sph/random.c" "sph/array3.c" "sph/array4.c" "sph/float.c" "sph/set.c" "sph/hashtable.c")
@@ -59,7 +60,6 @@
   sp-file-mode-write 2
   sp-file-mode-read-write 3
   sp-random-state-t sph-random-state-t
-  sp-random-state-new sph-random-state-new
   (sp-file-declare a) (begin (declare a sp-file-t) (set a.flags 0))
   (sp-block-declare a) (begin (declare a sp-block-t) (set a.size 0))
   (sp-cheap-round-positive a) (convert-type (+ 0.5 a) sp-time-t)
@@ -79,11 +79,11 @@
   (begin "divide a by b (a / b) but return 0 if b is zero" (if* (= 0 b) 0 (/ a b)))
   (sp-status-set id) (set status.id sp-s-id-memory status.group sp-s-group-sp)
   (sp-malloc-type count type pointer-address)
-  (status-require (sph-helper-malloc (* count (sizeof type)) pointer-address))
+  (sph-helper-malloc (* count (sizeof type)) pointer-address)
   (sp-calloc-type count type pointer-address)
-  (status-require (sph-helper-calloc (* count (sizeof type)) pointer-address))
+  (sph-helper-calloc (* count (sizeof type)) pointer-address)
   (sp-realloc-type count type pointer-address)
-  (status-require (sph-helper-realloc (* count (sizeof type)) pointer-address)))
+  (sph-helper-realloc (* count (sizeof type)) pointer-address))
 
 (declare
   sp-block-t
@@ -106,6 +106,7 @@
   sp-sine-table sp-sample-t*
   sp-sine-table-lfo sp-sample-t*
   sp-sine-lfo-factor sp-time-t
+  (sp-random-state-new seed) (sp-random-state-t sp-time-t)
   (sp-block-zero a) (void sp-block-t)
   (sp-block-copy a b) (void sp-block-t sp-block-t)
   (sp-file-read file sample-count result-block result-sample-count)
@@ -304,7 +305,8 @@
   (sp-cheap-filter-lp ...) (sp-cheap-filter sp-state-variable-filter-lp __VA_ARGS__)
   (sp-cheap-filter-hp ...) (sp-cheap-filter sp-state-variable-filter-hp __VA_ARGS__)
   (sp-cheap-filter-bp ...) (sp-cheap-filter sp-state-variable-filter-bp __VA_ARGS__)
-  (sp-cheap-filter-br ...) (sp-cheap-filter sp-state-variable-filter-br __VA_ARGS__))
+  (sp-cheap-filter-br ...) (sp-cheap-filter sp-state-variable-filter-br __VA_ARGS__)
+  (sp-declare-cheap-filter-state name) (define name sp-cheap-filter-state-t (struct-literal 0)))
 
 (declare
   sp-convolution-filter-ir-f-t (type (function-pointer status-t void* sp-sample-t** sp-time-t*))
@@ -407,13 +409,9 @@
   (sp-declare-noise-event-config name)
   (begin
     "optional helper that sets defaults. the mod arrays must be zero if not used"
-    (define name sp-noise-event-config-t
-      (struct-literal (cutl-mod 0) (cuth-mod 0)
-        (trnl-mod 0) (trnh-mod 0) (random-state sp-default-random-state) (resolution 96))))
+    (define name sp-noise-event-config-t (struct-literal 0)))
   (sp-declare-cheap-noise-event-config name)
-  (define name sp-cheap-noise-event-config-t
-    (struct-literal (cut-mod 0) (passes 1)
-      (q-factor 0) (random-state sp-default-random-state) (resolution 96)))
+  (define name sp-cheap-noise-event-config-t (struct-literal 0))
   (sp-event-duration a) (- a.end a.start)
   (sp-event-duration-set a duration) (set a.end (+ a.start duration))
   (sp-event-move a start) (set a.end (+ start (- a.end a.start)) a.start start)
@@ -471,8 +469,8 @@
       (fmod sp-time-t*)
       (amp sp-sample-t)
       (amod sp-sample-t*)
-      (chn sp-channel-count-t)
-      (chn-cfg (array sp-channel-config-t sp-channel-limit))))
+      (channels sp-channel-count-t)
+      (channel-config (array sp-channel-config-t sp-channel-limit))))
   sp-wave-event-state-t
   (type
     (struct
@@ -483,11 +481,12 @@
       (fmod sp-time-t*)
       (amp sp-sample-t)
       (amod sp-sample-t*)
-      (chn sp-channel-count-t)))
+      (channel sp-channel-count-t)))
   sp-noise-event-config-t
   (type
     (struct
-      (amod sp-sample-t**)
+      (amp sp-sample-t)
+      (amod sp-sample-t*)
       (cutl sp-sample-t)
       (cuth sp-sample-t)
       (trnl sp-sample-t)
@@ -498,19 +497,22 @@
       (trnh-mod sp-sample-t*)
       (resolution sp-time-t)
       (is-reject uint8-t)
-      (random-state sp-random-state-t)
-      (chn (array sp-channel-config-t sp-channel-limit))))
+      (channels sp-channel-count-t)
+      (channel-config (array sp-channel-config-t sp-channel-limit))))
   sp-cheap-noise-event-config-t
   (type
     (struct
-      (amod sp-sample-t**)
+      (amp sp-sample-t)
+      (amod sp-sample-t*)
       (cut sp-sample-t)
       (cut-mod sp-sample-t*)
       (q-factor sp-sample-t)
       (passes sp-time-t)
       (type sp-state-variable-filter-t)
-      (random-state sp-random-state-t)
-      (resolution sp-time-t)))
+      (random-state sp-random-state-t*)
+      (resolution sp-time-t)
+      (channels sp-channel-count-t)
+      (channel-config (array sp-channel-config-t sp-channel-limit))))
   sp-map-event-generate-t
   (type (function-pointer status-t sp-time-t sp-time-t sp-block-t sp-block-t void*))
   sp-map-event-state-t

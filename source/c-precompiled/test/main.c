@@ -298,27 +298,25 @@ status_t test_sp_noise_event() {
   sp_sample_t cuth[sp_noise_duration];
   sp_sample_t trnl[sp_noise_duration];
   sp_sample_t trnh[sp_noise_duration];
-  sp_sample_t amp1[sp_noise_duration];
-  sp_sample_t* amp[sp_channel_limit];
+  sp_sample_t amod[sp_noise_duration];
   sp_event_t event;
   sp_time_t i;
   sp_declare_noise_event_config(config);
   sp_declare_events(events, 1);
-  status_require((sp_block_new(1, sp_noise_duration, (&out))));
-  amp[0] = amp1;
+  status_require((sp_block_new(2, sp_noise_duration, (&out))));
   for (i = 0; (i < sp_noise_duration); i = (1 + i)) {
     cutl[i] = ((i < (sp_noise_duration / 2)) ? 0.01 : 0.1);
     cuth[i] = 0.11;
     trnl[i] = 0.07;
     trnh[i] = 0.07;
-    amp1[i] = 1.0;
+    amod[i] = 1.0;
   };
   config.cutl_mod = cutl;
   config.cuth_mod = cuth;
   config.trnl_mod = trnl;
   config.trnh_mod = trnh;
-  config.amod = amp;
-  config.random_state = sp_default_random_state;
+  config.amod = amod;
+  config.channels = 2;
   status_require((sp_noise_event(0, sp_noise_duration, config, (&event))));
   array4_add(events, event);
   sp_seq(0, sp_noise_duration, out, (&events));
@@ -347,23 +345,24 @@ exit:
 status_t test_sp_cheap_noise_event() {
   status_declare;
   sp_block_t out;
-  sp_sample_t cut[sp_noise_duration];
-  sp_sample_t amod1[sp_noise_duration];
-  sp_sample_t* amod[sp_channel_limit];
+  sp_sample_t cut_mod[sp_noise_duration];
+  sp_sample_t amod[sp_noise_duration];
   sp_event_t event;
   sp_time_t i;
   sp_declare_events(events, 1);
   sp_declare_cheap_noise_event_config(config);
-  status_require((sp_block_new(1, sp_noise_duration, (&out))));
-  amod[0] = amod1;
-  for (i = 0; (i < sp_noise_duration); i = (1 + i)) {
-    cut[i] = ((i < (sp_noise_duration / 2)) ? 0.01 : 0.1);
-    cut[i] = 0.08;
-    amod1[i] = 1.0;
+  status_require((sp_block_new(2, sp_noise_duration, (&out))));
+  for (i = 0; (i < sp_noise_duration); i += 1) {
+    cut_mod[i] = ((i < (sp_noise_duration / 2)) ? 0.01 : 0.1);
+    cut_mod[i] = 0.08;
+    amod[i] = 1.0;
   };
   config.type = sp_state_variable_filter_lp;
   config.amod = amod;
-  config.cut_mod = cut;
+  config.cut_mod = cut_mod;
+  config.q_factor = 0.1;
+  config.channels = 2;
+  config.amp = 1;
   status_require((sp_cheap_noise_event(0, sp_noise_duration, config, (&event))));
   array4_add(events, event);
   sp_seq(0, sp_noise_duration, out, (&events));
@@ -450,8 +449,8 @@ status_t test_wave_event() {
   config.fmod = fmod;
   config.amp = 1;
   config.amod = amod1;
-  config.chn = 2;
-  (config.chn_cfg)[1] = sp_channel_config(0, 10, 10, 1, amod2);
+  config.channels = 2;
+  (config.channel_config)[1] = sp_channel_config(0, 10, 10, 1, amod2);
   status_require((sp_wave_event(0, test_wave_event_duration, config, (&event))));
   status_require((sp_block_new(2, test_wave_event_duration, (&out))));
   status_require(((event.generate)(0, 30, out, (event.state))));
@@ -481,7 +480,7 @@ status_t test_render_block() {
   config.fmod = frq;
   config.amp = 1;
   config.amod = amod;
-  config.chn = 1;
+  config.channels = 1;
   status_require((sp_wave_event(0, test_wave_event_duration, config, (events.data))));
   status_require((sp_block_new(1, test_wave_event_duration, (&out))));
   sp_seq_events_prepare((&events));
@@ -714,7 +713,7 @@ status_t test_sp_seq_parallel() {
   config.fmod = fmod;
   config.amp = 1;
   config.amod = amod;
-  config.chn = 1;
+  config.channels = 1;
   for (i = 0; (i < 10); i += 1) {
     status_require((sp_wave_event(0, size, config, (&event))));
     array4_add(events, event);
@@ -753,7 +752,7 @@ status_t test_sp_map_event() {
   config.fmod = 0;
   config.amp = 1;
   config.amod = amod;
-  config.chn = 1;
+  config.channels = 1;
   status_require((sp_wave_event(0, size, config, (&child))));
   status_require((sp_block_new(1, size, (&block))));
   sp_map_event(child, test_sp_map_event_generate, 0, 1, (&parent));
@@ -769,6 +768,8 @@ int main() {
   status_declare;
   rs = sp_random_state_new(3);
   sp_initialise(3, 2, _rate);
+  test_helper_test_one(test_sp_cheap_noise_event);
+  test_helper_test_one(test_sp_noise_event);
   test_helper_test_one(test_sp_map_event);
   test_helper_test_one(test_sp_seq_parallel);
   test_helper_test_one(test_sp_seq);
@@ -779,9 +780,7 @@ int main() {
   test_helper_test_one(test_statistics);
   test_helper_test_one(test_path);
   test_helper_test_one(test_file);
-  test_helper_test_one(test_sp_cheap_noise_event);
   test_helper_test_one(test_sp_cheap_filter);
-  test_helper_test_one(test_sp_noise_event);
   test_helper_test_one(test_sp_random);
   test_helper_test_one(test_sp_triangle_square);
   test_helper_test_one(test_fft);

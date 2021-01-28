@@ -71,6 +71,9 @@
 #ifndef sp_sample_array_nearly_equal
 #define sp_sample_array_nearly_equal f64_array_nearly_equal
 #endif
+#ifndef sp_default_random_seed
+#define sp_default_random_seed 1557083953
+#endif
 #include <sph/status.c>
 #include <sph/spline-path.h>
 #include <sph/random.c>
@@ -107,7 +110,6 @@
 #define sp_file_mode_write 2
 #define sp_file_mode_read_write 3
 #define sp_random_state_t sph_random_state_t
-#define sp_random_state_new sph_random_state_new
 #define sp_file_declare(a) \
   sp_file_t a; \
   a.flags = 0
@@ -130,9 +132,9 @@
 #define sp_status_set(id) \
   status.id = sp_s_id_memory; \
   status.group = sp_s_group_sp
-#define sp_malloc_type(count, type, pointer_address) status_require((sph_helper_malloc((count * sizeof(type)), pointer_address)))
-#define sp_calloc_type(count, type, pointer_address) status_require((sph_helper_calloc((count * sizeof(type)), pointer_address)))
-#define sp_realloc_type(count, type, pointer_address) status_require((sph_helper_realloc((count * sizeof(type)), pointer_address)))
+#define sp_malloc_type(count, type, pointer_address) sph_helper_malloc((count * sizeof(type)), pointer_address)
+#define sp_calloc_type(count, type, pointer_address) sph_helper_calloc((count * sizeof(type)), pointer_address)
+#define sp_realloc_type(count, type, pointer_address) sph_helper_realloc((count * sizeof(type)), pointer_address)
 typedef struct {
   sp_channel_count_t channels;
   sp_time_t size;
@@ -151,6 +153,7 @@ sp_channel_count_t sp_channels;
 sp_sample_t* sp_sine_table;
 sp_sample_t* sp_sine_table_lfo;
 sp_time_t sp_sine_lfo_factor;
+sp_random_state_t sp_random_state_new(sp_time_t seed);
 void sp_block_zero(sp_block_t a);
 void sp_block_copy(sp_block_t a, sp_block_t b);
 status_t sp_file_read(sp_file_t* file, sp_time_t sample_count, sp_sample_t** result_block, sp_time_t* result_sample_count);
@@ -305,6 +308,7 @@ void sp_samples_blend(sp_sample_t* a, sp_sample_t* b, sp_sample_t fraction, sp_t
 #define sp_cheap_filter_hp(...) sp_cheap_filter(sp_state_variable_filter_hp, __VA_ARGS__)
 #define sp_cheap_filter_bp(...) sp_cheap_filter(sp_state_variable_filter_bp, __VA_ARGS__)
 #define sp_cheap_filter_br(...) sp_cheap_filter(sp_state_variable_filter_br, __VA_ARGS__)
+#define sp_declare_cheap_filter_state(name) sp_cheap_filter_state_t name = { 0 }
 typedef status_t (*sp_convolution_filter_ir_f_t)(void*, sp_sample_t**, sp_time_t*);
 typedef struct {
   sp_sample_t* carryover;
@@ -373,8 +377,8 @@ void sp_plot_spectrum(sp_sample_t* a, sp_time_t a_size);
   sp_event_t id##_data[size]; \
   array4_take(id, id##_data, size, 0)
 /** optional helper that sets defaults. the mod arrays must be zero if not used */
-#define sp_declare_noise_event_config(name) sp_noise_event_config_t name = { .cutl_mod = 0, .cuth_mod = 0, .trnl_mod = 0, .trnh_mod = 0, .random_state = sp_default_random_state, .resolution = 96 }
-#define sp_declare_cheap_noise_event_config(name) sp_cheap_noise_event_config_t name = { .cut_mod = 0, .passes = 1, .q_factor = 0, .random_state = sp_default_random_state, .resolution = 96 }
+#define sp_declare_noise_event_config(name) sp_noise_event_config_t name = { 0 }
+#define sp_declare_cheap_noise_event_config(name) sp_cheap_noise_event_config_t name = { 0 }
 #define sp_event_duration(a) (a.end - a.start)
 #define sp_event_duration_set(a, duration) a.end = (a.start + duration)
 #define sp_event_move(a, start) \
@@ -438,8 +442,8 @@ typedef struct {
   sp_time_t* fmod;
   sp_sample_t amp;
   sp_sample_t* amod;
-  sp_channel_count_t chn;
-  sp_channel_config_t chn_cfg[sp_channel_limit];
+  sp_channel_count_t channels;
+  sp_channel_config_t channel_config[sp_channel_limit];
 } sp_wave_event_config_t;
 typedef struct {
   sp_sample_t* wvf;
@@ -449,10 +453,11 @@ typedef struct {
   sp_time_t* fmod;
   sp_sample_t amp;
   sp_sample_t* amod;
-  sp_channel_count_t chn;
+  sp_channel_count_t channel;
 } sp_wave_event_state_t;
 typedef struct {
-  sp_sample_t** amod;
+  sp_sample_t amp;
+  sp_sample_t* amod;
   sp_sample_t cutl;
   sp_sample_t cuth;
   sp_sample_t trnl;
@@ -463,18 +468,21 @@ typedef struct {
   sp_sample_t* trnh_mod;
   sp_time_t resolution;
   uint8_t is_reject;
-  sp_random_state_t random_state;
-  sp_channel_config_t chn[sp_channel_limit];
+  sp_channel_count_t channels;
+  sp_channel_config_t channel_config[sp_channel_limit];
 } sp_noise_event_config_t;
 typedef struct {
-  sp_sample_t** amod;
+  sp_sample_t amp;
+  sp_sample_t* amod;
   sp_sample_t cut;
   sp_sample_t* cut_mod;
   sp_sample_t q_factor;
   sp_time_t passes;
   sp_state_variable_filter_t type;
-  sp_random_state_t random_state;
+  sp_random_state_t* random_state;
   sp_time_t resolution;
+  sp_channel_count_t channels;
+  sp_channel_config_t channel_config[sp_channel_limit];
 } sp_cheap_noise_event_config_t;
 typedef status_t (*sp_map_event_generate_t)(sp_time_t, sp_time_t, sp_block_t, sp_block_t, void*);
 typedef struct {

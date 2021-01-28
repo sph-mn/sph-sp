@@ -383,6 +383,13 @@ status_t sp_render_quick(sp_events_t events, uint8_t file_or_plot) {
 exit:
   status_return;
 }
+sp_random_state_t sp_random_state_new(sp_time_t seed) {
+  sp_random_state_t result = sph_random_state_new(seed);
+  /* random state needs warm-up for some reason */
+  sp_time_random((&result));
+  sp_time_random((&result));
+  return (result);
+}
 /** fills the sine wave lookup table.
    rate and channels are used to set sp_rate and sp_channels,
    which are used as defaults in a few cases */
@@ -397,11 +404,8 @@ status_t sp_initialise(uint16_t cpu_count, sp_channel_count_t channels, sp_time_
   sp_cpu_count = cpu_count;
   sp_rate = rate;
   sp_channels = channels;
-  sp_default_random_state = sp_random_state_new(1557083953);
+  sp_default_random_state = sp_random_state_new(sp_default_random_seed);
   sp_sine_lfo_factor = 10;
-  /* random state needs warm-up */
-  sp_time_random((&sp_default_random_state));
-  sp_time_random((&sp_default_random_state));
   status_require((sp_samples_new(sp_rate, (&sp_sine_table))));
   status_require((sp_samples_new((sp_rate * sp_sine_lfo_factor), (&sp_sine_table_lfo))));
   sp_sine_period(sp_rate, sp_sine_table);

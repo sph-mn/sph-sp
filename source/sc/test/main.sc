@@ -277,28 +277,20 @@
     cuth (array sp-sample-t sp-noise-duration)
     trnl (array sp-sample-t sp-noise-duration)
     trnh (array sp-sample-t sp-noise-duration)
-    amp1 (array sp-sample-t sp-noise-duration)
-    amp (array sp-sample-t* sp-channel-limit)
+    amod (array sp-sample-t sp-noise-duration)
     event sp-event-t
     i sp-time-t)
   (sp-declare-noise-event-config config)
   (sp-declare-events events 1)
-  (status-require (sp-block-new 1 sp-noise-duration &out))
-  (set (array-get amp 0) amp1)
+  (status-require (sp-block-new 2 sp-noise-duration &out))
   (for ((set i 0) (< i sp-noise-duration) (set i (+ 1 i)))
     (set
       (array-get cutl i) (if* (< i (/ sp-noise-duration 2)) 0.01 0.1)
       (array-get cuth i) 0.11
       (array-get trnl i) 0.07
       (array-get trnh i) 0.07
-      (array-get amp1 i) 1.0))
-  (struct-set config
-    cutl-mod cutl
-    cuth-mod cuth
-    trnl-mod trnl
-    trnh-mod trnh
-    amod amp
-    random-state sp-default-random-state)
+      (array-get amod i) 1.0))
+  (struct-set config cutl-mod cutl cuth-mod cuth trnl-mod trnl trnh-mod trnh amod amod channels 2)
   (status-require (sp-noise-event 0 sp-noise-duration config &event))
   (array4-add events event)
   (sp-seq 0 sp-noise-duration out &events)
@@ -327,21 +319,25 @@
   status-declare
   (declare
     out sp-block-t
-    cut (array sp-sample-t sp-noise-duration)
-    amod1 (array sp-sample-t sp-noise-duration)
-    amod (array sp-sample-t* sp-channel-limit)
+    cut-mod (array sp-sample-t sp-noise-duration)
+    amod (array sp-sample-t sp-noise-duration)
     event sp-event-t
     i sp-time-t)
   (sp-declare-events events 1)
   (sp-declare-cheap-noise-event-config config)
-  (status-require (sp-block-new 1 sp-noise-duration &out))
-  (set (array-get amod 0) amod1)
-  (for ((set i 0) (< i sp-noise-duration) (set i (+ 1 i)))
+  (status-require (sp-block-new 2 sp-noise-duration &out))
+  (for ((set i 0) (< i sp-noise-duration) (set+ i 1))
     (set
-      (array-get cut i) (if* (< i (/ sp-noise-duration 2)) 0.01 0.1)
-      (array-get cut i) 0.08
-      (array-get amod1 i) 1.0))
-  (struct-set config type sp-state-variable-filter-lp amod amod cut-mod cut)
+      (array-get cut-mod i) (if* (< i (/ sp-noise-duration 2)) 0.01 0.1)
+      (array-get cut-mod i) 0.08
+      (array-get amod i) 1.0))
+  (struct-set config
+    type sp-state-variable-filter-lp
+    amod amod
+    cut-mod cut-mod
+    q-factor 0.1
+    channels 2
+    amp 1)
   (status-require (sp-cheap-noise-event 0 sp-noise-duration config &event))
   (array4-add events event)
   (sp-seq 0 sp-noise-duration out &events)
@@ -421,8 +417,8 @@
   (sp-declare-wave-event-config config)
   (for ((set i 0) (< i test-wave-event-duration) (set+ i 1))
     (set (array-get fmod i) 2000 (array-get amod1 i) 1 (array-get amod2 i) 0.5))
-  (struct-set config wvf sp-sine-table wvf-size sp-rate fmod fmod amp 1 amod amod1 chn 2)
-  (array-set config.chn-cfg 1 (sp-channel-config 0 10 10 1 amod2))
+  (struct-set config wvf sp-sine-table wvf-size sp-rate fmod fmod amp 1 amod amod1 channels 2)
+  (array-set config.channel-config 1 (sp-channel-config 0 10 10 1 amod2))
   (status-require (sp-wave-event 0 test-wave-event-duration config &event))
   (status-require (sp-block-new 2 test-wave-event-duration &out))
   (status-require (event.generate 0 30 out event.state))
@@ -445,7 +441,7 @@
   (for ((set i 0) (< i test-wave-event-duration) (set+ i 1))
     (set (array-get frq i) 1500 (array-get amod i) 1))
   (sp-declare-wave-event-config config)
-  (struct-set config wvf sp-sine-table wvf-size sp-rate fmod frq amp 1 amod amod chn 1)
+  (struct-set config wvf sp-sine-table wvf-size sp-rate fmod frq amp 1 amod amod channels 1)
   (status-require (sp-wave-event 0 test-wave-event-duration config events.data))
   (status-require (sp-block-new 1 test-wave-event-duration &out))
   (sp-seq-events-prepare &events)
@@ -661,7 +657,7 @@
   (set size (* 10 _rate))
   (status-require (sp-path-samples-2 &amod size (sp-path-move 0 1.0) (sp-path-constant)))
   (status-require (sp-path-times-2 &fmod size (sp-path-move 0 200) (sp-path-constant)))
-  (struct-set config wvf sp-sine-table wvf-size sp-rate fmod fmod amp 1 amod amod chn 1)
+  (struct-set config wvf sp-sine-table wvf-size sp-rate fmod fmod amp 1 amod amod channels 1)
   (for ((set i 0) (< i 10) (set+ i 1))
     (status-require (sp-wave-event 0 size config &event))
     (array4-add events event))
@@ -690,7 +686,7 @@
   (sp-declare-wave-event-config config)
   (set size (* 10 _rate))
   (status-require (sp-path-samples-2 &amod size (sp-path-move 0 1.0) (sp-path-constant)))
-  (struct-set config wvf sp-sine-table wvf-size sp-rate frq 300 fmod 0 amp 1 amod amod chn 1)
+  (struct-set config wvf sp-sine-table wvf-size sp-rate frq 300 fmod 0 amp 1 amod amod channels 1)
   (status-require (sp-wave-event 0 size config &child))
   (status-require (sp-block-new 1 size &block))
   (sp-map-event child test-sp-map-event-generate 0 #t &parent)
@@ -705,6 +701,8 @@
   status-declare
   (set rs (sp-random-state-new 3))
   (sp-initialise 3 2 _rate)
+  (test-helper-test-one test-sp-cheap-noise-event)
+  (test-helper-test-one test-sp-noise-event)
   (test-helper-test-one test-sp-map-event)
   (test-helper-test-one test-sp-seq-parallel)
   (test-helper-test-one test-sp-seq)
@@ -715,9 +713,7 @@
   (test-helper-test-one test-statistics)
   (test-helper-test-one test-path)
   (test-helper-test-one test-file)
-  (test-helper-test-one test-sp-cheap-noise-event)
   (test-helper-test-one test-sp-cheap-filter)
-  (test-helper-test-one test-sp-noise-event)
   (test-helper-test-one test-sp-random)
   (test-helper-test-one test-sp-triangle-square)
   (test-helper-test-one test-fft)

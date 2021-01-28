@@ -86,7 +86,7 @@
   (for ((set i events:current) (< i events:used) (set+ i 1))
     (set ep (+ events:data i))
     (cond ((<= end ep:start) break) ((> ep:end start) (set+ active 1))))
-  (sp-malloc-type active sp-seq-future-t &sf-array)
+  (status-require (sp-malloc-type active sp-seq-future-t &sf-array))
   (sc-comment "distribute")
   (for ((set i events:current) (< i events:used) (set+ i 1))
     (set ep (+ events:data i) e *ep)
@@ -132,7 +132,7 @@
   status-declare
   (declare s sp-events-t*)
   (set s 0)
-  (sp-malloc-type 1 sp-events-t &s)
+  (status-require (sp-malloc-type 1 sp-events-t &s))
   (if (sp-events-new event-size s) sp-memory-error)
   (struct-set *out
     state s
@@ -160,11 +160,37 @@
   (declare i sp-time-t sp sp-wave-event-state-t* s sp-wave-event-state-t)
   (set sp state s *sp)
   (for ((set i start) (< i end) (set+ i 1))
-    (set+ (array-get out.samples s.chn (- i start))
+    (set+ (array-get out.samples s.channel (- i start))
       (* s.amp (array-get s.amod i) (array-get s.wvf s.phs)) s.phs (sp-array-or-fixed s.fmod s.frq i))
     (if (>= s.phs s.wvf-size) (set s.phs (modulo s.phs s.wvf-size))))
   (set sp:phs s.phs)
   status-return)
+
+(define (sp-wave-event-channel duration config channel out)
+  (status-t sp-time-t sp-wave-event-config-t sp-channel-count-t sp-event-t*)
+  status-declare
+  (declare state sp-wave-event-state-t* channel-config sp-channel-config-t)
+  (sp-declare-event event)
+  (set state 0 channel-config (array-get config.channel-config channel))
+  (status-require (sp-malloc-type 1 sp-wave-event-state-t &state))
+  (struct-set *state
+    wvf config.wvf
+    wvf-size config.wvf-size
+    phs (if* channel-config.use channel-config.phs config.phs)
+    frq config.frq
+    fmod config.fmod
+    amp (if* channel-config.use channel-config.amp config.amp)
+    amod (if* channel-config.use channel-config.amod config.amod)
+    channel channel)
+  (struct-set event
+    state state
+    start (if* channel-config.use channel-config.delay 0)
+    end (if* channel-config.use (+ duration channel-config.delay) duration)
+    prepare 0
+    generate sp-wave-event-generate
+    free sp-wave-event-free)
+  (set *out event)
+  (label exit (if status-is-failure (if state (free state))) status-return))
 
 (define (sp-wave-event start end config out)
   (status-t sp-time-t sp-time-t sp-wave-event-config-t sp-event-t*)
@@ -180,219 +206,305 @@
    * amp (amplitude): multiplied with amod
    * amod (amplitude): array with sample values"
   status-declare
-  (declare
-    state sp-wave-event-state-t*
-    ci sp-channel-count-t
-    chn sp-channel-config-t
-    event sp-event-t)
-  (memreg-init config.chn)
+  (declare ci sp-channel-count-t event sp-event-t)
   (sp-declare-event group)
-  (if (< 1 config.chn) (status-require (sp-group-new 0 config.chn &group)))
-  (for ((set ci 0) (< ci config.chn) (set+ ci 1))
-    (set chn (array-get config.chn-cfg ci))
-    (if chn.mute continue)
-    (sp-malloc-type 1 sp-wave-event-state-t &state)
-    (memreg-add state)
-    (struct-set (pointer-get state)
-      wvf config.wvf
-      wvf-size config.wvf-size
-      phs (if* chn.use chn.phs config.phs)
-      frq config.frq
-      fmod config.fmod
-      amp (if* chn.use chn.amp config.amp)
-      amod (if* chn.use chn.amod config.amod)
-      chn ci)
-    (struct-set event
-      state state
-      start (+ start (if* chn.use chn.delay 0))
-      end (+ end (if* chn.use chn.delay 0))
-      prepare 0
-      generate sp-wave-event-generate
-      free sp-wave-event-free)
-    (if (< 1 config.chn) (sp-group-add group event) (set group event)))
-  (if (< 1 config.chn) (sp-group-prepare group))
+  (status-require (sp-group-new 0 config.channels &group))
+  (for ((set ci 0) (< ci config.channels) (set+ ci 1))
+    (if (struct-get (array-get config.channel-config ci) mute) continue)
+    (status-require (sp-wave-event-channel (- start end) config ci &event))
+    (sp-group-add group event))
+  (sp-group-prepare group)
   (set *out group)
-  (label exit (if status-is-failure (begin memreg-free (sp-group-free group))) status-return))
+  (label exit (if status-is-failure (sp-group-free group)) status-return))
 
 (declare sp-noise-event-state-t
   (type
     (struct
-      (config sp-noise-event-config-t)
+      (amp sp-sample-t)
+      (amod sp-sample-t*)
+      (cutl sp-sample-t)
+      (cuth sp-sample-t)
+      (trnl sp-sample-t)
+      (trnh sp-sample-t)
+      (cutl-mod sp-sample-t*)
+      (cuth-mod sp-sample-t*)
+      (trnl-mod sp-sample-t*)
+      (trnh-mod sp-sample-t*)
+      (resolution sp-time-t)
+      (is-reject uint8-t)
+      (random-state sp-random-state-t)
+      (channel sp-channel-count-t)
       (filter-state sp-convolution-filter-state-t*)
       (noise sp-sample-t*)
       (temp sp-sample-t*))))
 
 (define (sp-noise-event-free a) (void sp-event-t*)
   (define s sp-noise-event-state-t* a:state)
-  (free s:noise)
-  (free s:temp)
   (sp-convolution-filter-state-free s:filter-state)
   (free a:state)
   (sp-event-memory-free a))
 
 (define (sp-noise-event-generate start end out state)
   (status-t sp-time-t sp-time-t sp-block-t void*)
+  "updates filter arguments only every resolution number of samples"
+  status-declare
   (declare
-    amod sp-sample-t*
     block-count sp-time-t
     block-i sp-time-t
     block-offset sp-time-t
     block-rest sp-time-t
-    ci sp-time-t
     duration sp-time-t
     i sp-time-t
     s sp-noise-event-state-t
+    sp sp-noise-event-state-t*
     t sp-time-t)
-  (sc-comment "update filter arguments only every resolution number of samples")
   (set
-    s (pointer-get (convert-type state sp-noise-event-state-t*))
+    sp state
+    s *sp
     duration (- end start)
-    block-count
-    (if* (= duration s.config.resolution) 1
-      (sp-cheap-floor-positive (/ duration s.config.resolution)))
-    block-rest (modulo duration s.config.resolution))
-  (for ((set block-i 0) (<= block-i block-count) (set block-i (+ 1 block-i)))
+    block-count (if* (= duration s.resolution) 1 (sp-cheap-floor-positive (/ duration s.resolution)))
+    block-rest (modulo duration s.resolution))
+  (for ((set block-i 0) (<= block-i block-count) (set+ block-i 1))
     (set
-      block-offset (* s.config.resolution block-i)
+      block-offset (* s.resolution block-i)
       t (+ start block-offset)
-      duration (if* (= block-count block-i) block-rest s.config.resolution))
-    (sp-samples-random &s.config.random-state duration s.noise)
+      duration (if* (= block-count block-i) block-rest s.resolution))
+    (sp-samples-random &s.random-state duration s.noise)
     (sp-windowed-sinc-bp-br s.noise duration
-      (sp-modvalue s.config.cutl s.config.cutl-mod t) (sp-modvalue s.config.cuth s.config.cuth-mod t)
-      (sp-modvalue s.config.trnl s.config.trnl-mod t) (sp-modvalue s.config.trnh s.config.trnh-mod t)
-      s.config.is-reject &s.filter-state s.temp)
-    (for ((set ci 0) (< ci out.channels) (set+ ci 1))
-      (set amod (array-get s.config.amod ci))
-      (if (not amod) continue)
-      (for ((set i 0) (< i duration) (set+ i 1))
-        (set+ (array-get out.samples ci (+ block-offset i))
-          (* (array-get amod (+ t i)) (array-get s.temp i)))))))
+      (sp-array-or-fixed s.cutl-mod s.cutl t) (sp-array-or-fixed s.cuth-mod s.cuth t)
+      (sp-array-or-fixed s.trnl-mod s.trnl t) (sp-array-or-fixed s.trnh-mod s.trnh t) s.is-reject
+      &s.filter-state s.temp)
+    (for ((set i 0) (< i duration) (set+ i 1))
+      (set+ (array-get out.samples s.channel (+ block-offset i))
+        (* s.amp (array-get s.amod (+ t i)) (array-get s.temp i)))))
+  (set sp:random-state s.random-state)
+  status-return)
 
-(define (sp-noise-event start end config out-event)
+(define (sp-noise-event-filter-state cutl cuth trnl trnh is-reject rs out)
+  (status-t sp-sample-t sp-sample-t sp-sample-t sp-sample-t boolean sp-random-state-t* sp-convolution-filter-state-t**)
+  "the result shows a small delay, for example, circa 40 samples for transition 0.07. the size seems to be related to ir-len.
+   the filter state is initialised with one unused call to skip the delay."
+  status-declare
+  (declare ir-len sp-time-t temp sp-sample-t* noise sp-sample-t*)
+  (memreg-init 2)
+  (set ir-len (sp-windowed-sinc-lp-hp-ir-length (sp-min trnl trnh)))
+  (sp-malloc-type ir-len sp-sample-t noise)
+  (memreg-add noise)
+  (sp-malloc-type ir-len sp-sample-t temp)
+  (memreg-add temp)
+  (sp-samples-random rs ir-len noise)
+  (status-require (sp-windowed-sinc-bp-br noise ir-len cutl cuth trnl trnh is-reject out temp))
+  (label exit memreg-free status-return))
+
+(define (sp-noise-event-channel duration config channel rs state-noise state-temp out)
+  (status-t sp-time-t sp-noise-event-config-t sp-channel-count-t sp-random-state-t sp-sample-t* sp-sample-t* sp-event-t*)
+  status-declare
+  (declare
+    state sp-noise-event-state-t*
+    channel-config sp-channel-config-t
+    filter-state sp-convolution-filter-state-t*)
+  (sp-declare-event event)
+  (set state 0 filter-state 0 channel-config (array-get config.channel-config channel))
+  (sp-noise-event-filter-state (sp-array-or-fixed config.cutl-mod config.cutl 0)
+    (sp-array-or-fixed config.cuth-mod config.cuth 0)
+    (sp-array-or-fixed config.trnl-mod config.trnl 0)
+    (sp-array-or-fixed config.trnh-mod config.trnh 0) config.is-reject &rs &filter-state)
+  (status-require (sp-malloc-type 1 sp-noise-event-state-t state))
+  (struct-set *state
+    amp (if* channel-config.use channel-config.amp config.amp)
+    amod (if* channel-config.use channel-config.amod config.amod)
+    cutl config.cutl
+    cuth config.cuth
+    trnl config.trnl
+    trnh config.trnh
+    cutl-mod config.cutl-mod
+    cuth-mod config.cuth-mod
+    trnl-mod config.trnl-mod
+    trnh-mod config.trnh-mod
+    resolution config.resolution
+    is-reject config.is-reject
+    random-state rs
+    channel channel
+    noise state-noise
+    temp state-temp)
+  (struct-set event
+    state state
+    start (if* channel-config.use channel-config.delay 0)
+    end (if* channel-config.use (+ duration channel-config.delay) duration)
+    prepare 0
+    generate sp-noise-event-generate
+    free sp-noise-event-free)
+  (set *out event)
+  (label exit
+    (if status-is-failure
+      (begin
+        (if state (free state))
+        (if filter-state (sp-convolution-filter-state-free filter-state))))
+    status-return))
+
+(define (sp-noise-event start end config out)
   (status-t sp-time-t sp-time-t sp-noise-event-config-t sp-event-t*)
   "an event for noise filtered by a windowed-sinc filter.
    very processing intensive if parameters change with low resolution.
-   memory for event.state will be allocated and then owned by the caller"
+   memory for event.state will be allocated and then owned by the caller.
+   the same random-state is used by all channels"
   status-declare
   (declare
-    temp sp-sample-t*
-    temp-noise sp-sample-t*
-    ir-len sp-time-t
-    state sp-noise-event-state-t*
-    trnl sp-sample-t
-    trnh sp-sample-t)
-  (sp-declare-event event)
+    ci sp-channel-count-t
+    duration sp-time-t
+    event sp-event-t
+    rs sp-random-state-t
+    state-noise sp-sample-t*
+    state-temp sp-sample-t*)
+  (sp-declare-event group)
   (set
-    config.resolution (sp-min config.resolution (- end start))
-    trnl (sp-modvalue config.trnl config.trnl-mod 0)
-    trnh (sp-modvalue config.trnh config.trnh-mod 0))
-  (status-require (sph-helper-malloc (sizeof sp-noise-event-state-t) &state))
-  (status-require (sph-helper-malloc (* config.resolution (sizeof sp-sample-t)) &state:noise))
-  (status-require (sph-helper-malloc (* config.resolution (sizeof sp-sample-t)) &state:temp))
-  (sc-comment
-    "the result shows a small delay, circa 40 samples for transition 0.07. the size seems to be related to ir-len."
-    "the state is initialised with one unused call to skip the delay."
-    "an added benefit is that the filter-state setup malloc is checked")
-  (set ir-len (sp-windowed-sinc-lp-hp-ir-length (sp-min trnl trnh)) state:filter-state 0)
-  (status-require (sph-helper-malloc (* ir-len (sizeof sp-sample-t)) &temp))
-  (status-require (sph-helper-malloc (* ir-len (sizeof sp-sample-t)) &temp-noise))
-  (sp-samples-random &config.random-state ir-len temp-noise)
-  (status-require
-    (sp-windowed-sinc-bp-br temp-noise ir-len
-      (sp-modvalue config.cutl config.cutl-mod 0) (sp-modvalue config.cuth config.cuth-mod 0) trnl
-      trnh config.is-reject &state:filter-state temp))
-  (free temp)
-  (free temp-noise)
-  (set
-    state:config config
-    event.start start
-    event.end end
-    event.generate sp-noise-event-generate
-    event.free sp-noise-event-free
-    event.state state
-    *out-event event)
-  (label exit status-return))
+    duration (- end start)
+    config.resolution (if* config.resolution config.resolution 96)
+    config.resolution (sp-min config.resolution duration)
+    rs (sp-random-state-new (sp-time-random &sp-default-random-state)))
+  (status-require (sp-group-new start config.channels &group))
+  (status-require (sp-event-memory-init group 2))
+  (status-require (sp-malloc-type config.resolution sp-sample-t state-noise))
+  (sp-event-memory-add group state-noise)
+  (status-require (sp-malloc-type config.resolution sp-sample-t state-temp))
+  (sp-event-memory-add group state-temp)
+  (for ((set ci 0) (< ci config.channels) (set+ ci 1))
+    (if (struct-get (array-get config.channel-config ci) mute) continue)
+    (status-require (sp-noise-event-channel duration config ci rs state-noise state-temp &event))
+    (sp-group-add group event))
+  (sp-group-prepare group)
+  (set *out group)
+  (label exit (if status-is-failure (sp-group-free group)) status-return))
 
 (declare sp-cheap-noise-event-state-t
   (type
     (struct
-      (config sp-cheap-noise-event-config-t)
+      (amp sp-sample-t)
+      (amod sp-sample-t*)
+      (cut sp-sample-t)
+      (cut-mod sp-sample-t*)
+      (q-factor sp-sample-t)
+      (passes sp-time-t)
+      (type sp-state-variable-filter-t)
+      (random-state sp-random-state-t)
+      (resolution sp-time-t)
+      (channel sp-channel-count-t)
       (filter-state sp-cheap-filter-state-t)
       (noise sp-sample-t*)
       (temp sp-sample-t*))))
+
+(define (sp-cheap-noise-event-free a) (void sp-event-t*)
+  (define s sp-cheap-noise-event-state-t* a:state)
+  (sp-cheap-filter-state-free &s:filter-state)
+  (free a:state)
+  (sp-event-memory-free a))
 
 (define (sp-cheap-noise-event-generate start end out state)
   (status-t sp-time-t sp-time-t sp-block-t void*)
   status-declare
   (declare
-    amod sp-sample-t*
     block-count sp-time-t
     block-i sp-time-t
     block-offset sp-time-t
     block-rest sp-time-t
-    ci sp-time-t
     duration sp-time-t
     i sp-time-t
     s sp-cheap-noise-event-state-t
+    sp sp-cheap-noise-event-state-t*
     t sp-time-t)
   (sc-comment "update filter arguments only every resolution number of samples")
-  (set s (pointer-get (convert-type state sp-cheap-noise-event-state-t*)))
-  (if (not s.config.resolution) (exit 1))
   (set
+    sp state
+    s *sp
     duration (- end start)
-    block-count
-    (if* (= duration s.config.resolution) 1
-      (sp-cheap-floor-positive (/ duration s.config.resolution)))
-    block-rest (modulo duration s.config.resolution))
+    block-count (if* (= duration s.resolution) 1 (sp-cheap-floor-positive (/ duration s.resolution)))
+    block-rest (modulo duration s.resolution))
   (sc-comment "total block count is block-count plus rest-block")
-  (for ((set block-i 0) (<= block-i block-count) (set block-i (+ 1 block-i)))
+  (for ((set block-i 0) (<= block-i block-count) (set+ block-i 1))
     (set
-      block-offset (* s.config.resolution block-i)
+      block-offset (* s.resolution block-i)
       t (+ start block-offset)
-      duration (if* (= block-count block-i) block-rest s.config.resolution))
-    (sp-samples-random &s.config.random-state duration s.noise)
-    (sp-cheap-filter s.config.type s.noise
-      duration (sp-modvalue s.config.cut s.config.cut-mod t) s.config.passes
-      s.config.q-factor &s.filter-state s.temp)
-    (for ((set ci 0) (< ci out.channels) (set ci (+ 1 ci)))
-      (set amod (array-get s.config.amod ci))
-      (if (not amod) continue)
-      (for ((set i 0) (< i duration) (set i (+ 1 i)))
-        (set+ (array-get out.samples ci (+ block-offset i))
-          (* (array-get amod (+ t i)) (array-get s.temp i))))))
+      duration (if* (= block-count block-i) block-rest s.resolution))
+    (sp-samples-random &s.random-state duration s.noise)
+    (sp-cheap-filter s.type s.noise
+      duration (sp-array-or-fixed s.cut-mod s.cut t) s.passes s.q-factor &s.filter-state s.temp)
+    (for ((set i 0) (< i duration) (set+ i 1))
+      (set+ (array-get out.samples s.channel (+ block-offset i))
+        (* s.amp (array-get s.amod (+ t i)) (array-get s.temp i)))))
+  (set sp:random-state s.random-state)
   status-return)
 
-(define (sp-cheap-noise-event-free a) (void sp-event-t*)
-  (define s sp-cheap-noise-event-state-t* a:state)
-  (free s:noise)
-  (free s:temp)
-  (sp-cheap-filter-state-free &s:filter-state)
-  (free a:state)
-  (sp-event-memory-free a))
+(define (sp-cheap-noise-event-channel duration config channel rs state-noise state-temp out)
+  (status-t sp-time-t sp-cheap-noise-event-config-t sp-channel-count-t sp-random-state-t sp-sample-t* sp-sample-t* sp-event-t*)
+  status-declare
+  (declare
+    state sp-cheap-noise-event-state-t*
+    channel-config sp-channel-config-t)
+  (sp-declare-event event)
+  (sp-declare-cheap-filter-state filter-state)
+  (set state 0 channel-config (array-get config.channel-config channel))
+  (status-require (sp-malloc-type 1 sp-cheap-noise-event-state-t state))
+  (status-require (sp-cheap-filter-state-new config.resolution config.passes &filter-state))
+  (struct-set *state
+    amp (if* channel-config.use channel-config.amp config.amp)
+    amod (if* channel-config.use channel-config.amod config.amod)
+    cut config.cut
+    cut-mod config.cut-mod
+    type config.type
+    passes config.passes
+    q-factor config.q-factor
+    resolution config.resolution
+    random-state rs
+    channel channel
+    filter-state filter-state
+    noise state-noise
+    temp state-temp)
+  (struct-set event
+    state state
+    start (if* channel-config.use channel-config.delay 0)
+    end (if* channel-config.use (+ duration channel-config.delay) duration)
+    prepare 0
+    generate sp-cheap-noise-event-generate
+    free sp-cheap-noise-event-free)
+  (set *out event)
+  (label exit
+    (if status-is-failure
+      (begin (if state (free state)) (sp-cheap-filter-state-free &filter-state)))
+    status-return))
 
-(define (sp-cheap-noise-event start end config out-event)
+(define (sp-cheap-noise-event start end config out)
   (status-t sp-time-t sp-time-t sp-cheap-noise-event-config-t sp-event-t*)
   "an event for noise filtered by a state-variable filter.
    lower processing costs even when parameters change with high resolution.
    multiple passes almost multiply performance costs.
    memory for event.state will be allocated and then owned by the caller"
   status-declare
-  (declare state sp-cheap-noise-event-state-t*)
-  (sp-declare-event event)
-  (set config.resolution (sp-min config.resolution (- end start)))
-  (status-require (sph-helper-malloc (sizeof sp-cheap-noise-event-state-t) &state))
-  (status-require (sph-helper-malloc (* config.resolution (sizeof sp-sample-t)) &state:noise))
-  (status-require (sph-helper-malloc (* config.resolution (sizeof sp-sample-t)) &state:temp))
-  (status-require (sp-cheap-filter-state-new config.resolution config.passes &state:filter-state))
+  (declare
+    ci sp-channel-count-t
+    event sp-event-t
+    rs sp-random-state-t
+    state-noise sp-sample-t*
+    state-temp sp-sample-t*)
+  (sp-declare-event group)
   (set
-    state:config config
-    event.start start
-    event.end end
-    event.generate sp-cheap-noise-event-generate
-    event.free sp-cheap-noise-event-free
-    event.state state)
-  (set *out-event event)
-  (label exit status-return))
+    config.passes (if* config.passes config.passes 1)
+    config.resolution (if* config.resolution config.resolution 96)
+    config.resolution (sp-min config.resolution (- end start))
+    rs (sp-random-state-new (sp-time-random &sp-default-random-state)))
+  (status-require (sp-group-new start config.channels &group))
+  (status-require (sp-event-memory-init group 2))
+  (status-require (sp-malloc-type config.resolution sp-sample-t state-noise))
+  (sp-event-memory-add group state-noise)
+  (status-require (sp-malloc-type config.resolution sp-sample-t state-temp))
+  (sp-event-memory-add group state-temp)
+  (for ((set ci 0) (< ci config.channels) (set+ ci 1))
+    (if (struct-get (array-get config.channel-config ci) mute) continue)
+    (status-require
+      (sp-cheap-noise-event-channel (- end start) config ci rs state-noise state-temp &event))
+    (sp-group-add group event))
+  (sp-group-prepare group)
+  (set *out group)
+  (label exit (if status-is-failure (sp-group-free group)) status-return))
 
 (define (sp-event-memory-free event) (void sp-event-t*)
   (declare i sp-time-half-t m sp-memory-t)
@@ -439,7 +551,7 @@
   status-declare
   (declare s sp-map-event-state-t*)
   (sp-declare-event e)
-  (sp-malloc-type 1 sp-map-event-state-t &s)
+  (status-require (sp-malloc-type 1 sp-map-event-state-t &s))
   (set
     s:event event
     s:state state
