@@ -1,6 +1,6 @@
 #!/bin/sh -e
 
-optimisation=0
+optimisation=3
 target_dir=temp
 c=source/c/
 c_sc=source/c-precompiled

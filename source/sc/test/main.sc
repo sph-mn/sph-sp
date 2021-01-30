@@ -370,8 +370,6 @@
   (test-helper-assert "block contents 1 gap" (= 0 (array-get out.samples 0 40)))
   (test-helper-assert "block contents 1 event 2"
     (and (= 2 (array-get out.samples 0 41)) (= 2 (array-get out.samples 0 99))))
-  (sc-comment "sp-seq-parallel")
-  (status-require (sp-seq-parallel 0 100 out &events))
   (sp-seq-events-free &events)
   (sp-block-free out)
   (label exit status-return))
@@ -411,7 +409,7 @@
 
 (pre-define test-wave-event-duration 100)
 
-(define (test-wave-event) status-t
+(define (test-sp-wave-event) status-t
   "sp wave values were taken from printing index and value of the result array.
    sp-plot-samples can plot the result"
   status-declare
@@ -651,6 +649,7 @@
   (label exit status-return))
 
 (define (test-sp-seq-parallel) status-t
+  "sum 10 wave events"
   status-declare
   (declare
     i sp-time-t
@@ -662,18 +661,30 @@
   (sp-declare-event event)
   (sp-declare-events events 10)
   (sp-declare-wave-event-config config)
-  (set size (* 10 _rate))
+  (set size 10000)
   (status-require (sp-path-samples-2 &amod size (sp-path-move 0 1.0) (sp-path-constant)))
-  (status-require (sp-path-times-2 &fmod size (sp-path-move 0 200) (sp-path-constant)))
-  (struct-set config wvf sp-sine-table wvf-size sp-rate fmod fmod amp 1 amod amod channels 1)
+  (status-require (sp-path-times-2 &fmod size (sp-path-move 0 250) (sp-path-constant)))
+  (struct-set config wvf sp-sine-table wvf-size sp-rate fmod fmod amp 1 amod amod channels 2)
   (for ((set i 0) (< i 10) (set+ i 1))
     (status-require (sp-wave-event 0 size config &event))
     (array4-add events event))
-  (status-require (sp-block-new 1 size &block))
+  (status-require (sp-block-new 2 size &block))
   (sp-seq-events-prepare &events)
-  (set step-size _rate)
+  (set step-size (/ size 10))
   (for ((set i 0) (< i size) (set+ i step-size))
-    (sp-seq-parallel i size (sp-block-with-offset block i) &events))
+    (sp-seq-parallel i (+ i step-size) (sp-block-with-offset block i) &events))
+  (test-helper-assert "first 1"
+    (and (sp-sample-nearly-equal 0 (array-get block.samples 0 0) 0.001)
+      (sp-sample-nearly-equal 0 (array-get block.samples 1 0) 0.001)))
+  (test-helper-assert "last 1"
+    (and (sp-sample-nearly-equal -5.956993 (array-get block.samples 0 (- step-size 1)) 0.001)
+      (sp-sample-nearly-equal -5.956993 (array-get block.samples 1 (- step-size 1)) 0.001)))
+  (test-helper-assert "first 2"
+    (and (sp-sample-nearly-equal -6.087614 (array-get block.samples 0 step-size) 0.001)
+      (sp-sample-nearly-equal -6.087614 (array-get block.samples 1 step-size) 0.001)))
+  (test-helper-assert "last 2"
+    (and (sp-sample-nearly-equal 9.615618 (array-get block.samples 0 (- (* 2 step-size) 1)) 0.001)
+      (sp-sample-nearly-equal 9.615618 (array-get block.samples 1 (- (* 2 step-size) 1)) 0.001)))
   (sp-seq-events-free &events)
   (free amod)
   (free fmod)
@@ -709,10 +720,10 @@
   status-declare
   (set rs (sp-random-state-new 3))
   (sp-initialise 3 2 _rate)
+  (test-helper-test-one test-sp-seq-parallel)
+  (test-helper-test-one test-sp-wave-event)
   (test-helper-test-one test-sp-noise-event)
   (test-helper-test-one test-sp-cheap-noise-event)
-  (test-helper-test-one test-wave-event)
-  (test-helper-test-one test-sp-seq-parallel)
   (test-helper-test-one test-sp-seq)
   (test-helper-test-one test-sp-map-event)
   (test-helper-test-one test-sp-group)

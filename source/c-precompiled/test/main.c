@@ -388,8 +388,6 @@ status_t test_sp_seq() {
   test_helper_assert("block contents 1 event 1", ((1 == (out.samples)[0][0]) && (1 == (out.samples)[0][39])));
   test_helper_assert("block contents 1 gap", (0 == (out.samples)[0][40]));
   test_helper_assert("block contents 1 event 2", ((2 == (out.samples)[0][41]) && (2 == (out.samples)[0][99])));
-  /* sp-seq-parallel */
-  status_require((sp_seq_parallel(0, 100, out, (&events))));
   sp_seq_events_free((&events));
   sp_block_free(out);
 exit:
@@ -432,7 +430,7 @@ exit:
 #define test_wave_event_duration 100
 /** sp wave values were taken from printing index and value of the result array.
    sp-plot-samples can plot the result */
-status_t test_wave_event() {
+status_t test_sp_wave_event() {
   status_declare;
   sp_block_t out;
   sp_time_t fmod[test_wave_event_duration];
@@ -696,6 +694,7 @@ status_t test_permutations() {
 exit:
   status_return;
 }
+/** sum 10 wave events */
 status_t test_sp_seq_parallel() {
   status_declare;
   sp_time_t i;
@@ -707,25 +706,29 @@ status_t test_sp_seq_parallel() {
   sp_declare_event(event);
   sp_declare_events(events, 10);
   sp_declare_wave_event_config(config);
-  size = (10 * _rate);
+  size = 10000;
   status_require((sp_path_samples_2((&amod), size, (sp_path_move(0, (1.0))), (sp_path_constant()))));
-  status_require((sp_path_times_2((&fmod), size, (sp_path_move(0, 200)), (sp_path_constant()))));
+  status_require((sp_path_times_2((&fmod), size, (sp_path_move(0, 250)), (sp_path_constant()))));
   config.wvf = sp_sine_table;
   config.wvf_size = sp_rate;
   config.fmod = fmod;
   config.amp = 1;
   config.amod = amod;
-  config.channels = 1;
+  config.channels = 2;
   for (i = 0; (i < 10); i += 1) {
     status_require((sp_wave_event(0, size, config, (&event))));
     array4_add(events, event);
   };
-  status_require((sp_block_new(1, size, (&block))));
+  status_require((sp_block_new(2, size, (&block))));
   sp_seq_events_prepare((&events));
-  step_size = _rate;
+  step_size = (size / 10);
   for (i = 0; (i < size); i += step_size) {
-    sp_seq_parallel(i, size, (sp_block_with_offset(block, i)), (&events));
+    sp_seq_parallel(i, (i + step_size), (sp_block_with_offset(block, i)), (&events));
   };
+  test_helper_assert("first 1", (sp_sample_nearly_equal(0, ((block.samples)[0][0]), (0.001)) && sp_sample_nearly_equal(0, ((block.samples)[1][0]), (0.001))));
+  test_helper_assert("last 1", (sp_sample_nearly_equal((-5.956993), ((block.samples)[0][(step_size - 1)]), (0.001)) && sp_sample_nearly_equal((-5.956993), ((block.samples)[1][(step_size - 1)]), (0.001))));
+  test_helper_assert("first 2", (sp_sample_nearly_equal((-6.087614), ((block.samples)[0][step_size]), (0.001)) && sp_sample_nearly_equal((-6.087614), ((block.samples)[1][step_size]), (0.001))));
+  test_helper_assert("last 2", (sp_sample_nearly_equal((9.615618), ((block.samples)[0][((2 * step_size) - 1)]), (0.001)) && sp_sample_nearly_equal((9.615618), ((block.samples)[1][((2 * step_size) - 1)]), (0.001))));
   sp_seq_events_free((&events));
   free(amod);
   free(fmod);
@@ -770,10 +773,10 @@ int main() {
   status_declare;
   rs = sp_random_state_new(3);
   sp_initialise(3, 2, _rate);
+  test_helper_test_one(test_sp_seq_parallel);
+  test_helper_test_one(test_sp_wave_event);
   test_helper_test_one(test_sp_noise_event);
   test_helper_test_one(test_sp_cheap_noise_event);
-  test_helper_test_one(test_wave_event);
-  test_helper_test_one(test_sp_seq_parallel);
   test_helper_test_one(test_sp_seq);
   test_helper_test_one(test_sp_map_event);
   test_helper_test_one(test_sp_group);
