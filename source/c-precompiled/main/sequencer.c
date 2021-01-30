@@ -337,9 +337,9 @@ status_t sp_noise_event_filter_state(sp_sample_t cutl, sp_sample_t cuth, sp_samp
   sp_sample_t* noise;
   memreg_init(2);
   ir_len = sp_windowed_sinc_lp_hp_ir_length((sp_min(trnl, trnh)));
-  sp_malloc_type(ir_len, sp_sample_t, noise);
+  sp_malloc_type(ir_len, sp_sample_t, (&noise));
   memreg_add(noise);
-  sp_malloc_type(ir_len, sp_sample_t, temp);
+  sp_malloc_type(ir_len, sp_sample_t, (&temp));
   memreg_add(temp);
   sp_samples_random(rs, ir_len, noise);
   status_require((sp_windowed_sinc_bp_br(noise, ir_len, cutl, cuth, trnl, trnh, is_reject, out, temp)));
@@ -356,8 +356,8 @@ status_t sp_noise_event_channel(sp_time_t duration, sp_noise_event_config_t conf
   state = 0;
   filter_state = 0;
   channel_config = (config.channel_config)[channel];
-  sp_noise_event_filter_state((sp_array_or_fixed((config.cutl_mod), (config.cutl), 0)), (sp_array_or_fixed((config.cuth_mod), (config.cuth), 0)), (sp_array_or_fixed((config.trnl_mod), (config.trnl), 0)), (sp_array_or_fixed((config.trnh_mod), (config.trnh), 0)), (config.is_reject), (&rs), (&filter_state));
-  status_require((sp_malloc_type(1, sp_noise_event_state_t, state)));
+  status_require((sp_noise_event_filter_state((sp_array_or_fixed((config.cutl_mod), (config.cutl), 0)), (sp_array_or_fixed((config.cuth_mod), (config.cuth), 0)), (sp_array_or_fixed((config.trnl_mod), (config.trnl), 0)), (sp_array_or_fixed((config.trnh_mod), (config.trnh), 0)), (config.is_reject), (&rs), (&filter_state))));
+  status_require((sp_malloc_type(1, sp_noise_event_state_t, (&state))));
   (*state).amp = (channel_config.use ? channel_config.amp : config.amp);
   (*state).amod = (channel_config.use ? channel_config.amod : config.amod);
   (*state).cutl = config.cutl;
@@ -372,6 +372,7 @@ status_t sp_noise_event_channel(sp_time_t duration, sp_noise_event_config_t conf
   (*state).is_reject = config.is_reject;
   (*state).random_state = rs;
   (*state).channel = channel;
+  (*state).filter_state = filter_state;
   (*state).noise = state_noise;
   (*state).temp = state_temp;
   event.state = state;
@@ -395,7 +396,7 @@ exit:
 /** an event for noise filtered by a windowed-sinc filter.
    very processing intensive if parameters change with low resolution.
    memory for event.state will be allocated and then owned by the caller.
-   the same random-state is used by all channels */
+   all channels use the same initial random-state */
 status_t sp_noise_event(sp_time_t start, sp_time_t end, sp_noise_event_config_t config, sp_event_t* out) {
   status_declare;
   sp_channel_count_t ci;
@@ -411,9 +412,9 @@ status_t sp_noise_event(sp_time_t start, sp_time_t end, sp_noise_event_config_t 
   rs = sp_random_state_new((sp_time_random((&sp_default_random_state))));
   status_require((sp_group_new(start, (config.channels), (&group))));
   status_require((sp_event_memory_init(group, 2)));
-  status_require((sp_malloc_type((config.resolution), sp_sample_t, state_noise)));
+  status_require((sp_malloc_type((config.resolution), sp_sample_t, (&state_noise))));
   sp_event_memory_add(group, state_noise);
-  status_require((sp_malloc_type((config.resolution), sp_sample_t, state_temp)));
+  status_require((sp_malloc_type((config.resolution), sp_sample_t, (&state_temp))));
   sp_event_memory_add(group, state_temp);
   for (ci = 0; (ci < config.channels); ci += 1) {
     if (((config.channel_config)[ci]).mute) {
@@ -490,7 +491,7 @@ status_t sp_cheap_noise_event_channel(sp_time_t duration, sp_cheap_noise_event_c
   sp_declare_cheap_filter_state(filter_state);
   state = 0;
   channel_config = (config.channel_config)[channel];
-  status_require((sp_malloc_type(1, sp_cheap_noise_event_state_t, state)));
+  status_require((sp_malloc_type(1, sp_cheap_noise_event_state_t, (&state))));
   status_require((sp_cheap_filter_state_new((config.resolution), (config.passes), (&filter_state))));
   (*state).amp = (channel_config.use ? channel_config.amp : config.amp);
   (*state).amod = (channel_config.use ? channel_config.amod : config.amod);
@@ -539,9 +540,9 @@ status_t sp_cheap_noise_event(sp_time_t start, sp_time_t end, sp_cheap_noise_eve
   rs = sp_random_state_new((sp_time_random((&sp_default_random_state))));
   status_require((sp_group_new(start, (config.channels), (&group))));
   status_require((sp_event_memory_init(group, 2)));
-  status_require((sp_malloc_type((config.resolution), sp_sample_t, state_noise)));
+  status_require((sp_malloc_type((config.resolution), sp_sample_t, (&state_noise))));
   sp_event_memory_add(group, state_noise);
-  status_require((sp_malloc_type((config.resolution), sp_sample_t, state_temp)));
+  status_require((sp_malloc_type((config.resolution), sp_sample_t, (&state_temp))));
   sp_event_memory_add(group, state_temp);
   for (ci = 0; (ci < config.channels); ci += 1) {
     if (((config.channel_config)[ci]).mute) {

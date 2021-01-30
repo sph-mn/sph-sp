@@ -288,9 +288,9 @@
   (declare ir-len sp-time-t temp sp-sample-t* noise sp-sample-t*)
   (memreg-init 2)
   (set ir-len (sp-windowed-sinc-lp-hp-ir-length (sp-min trnl trnh)))
-  (sp-malloc-type ir-len sp-sample-t noise)
+  (sp-malloc-type ir-len sp-sample-t &noise)
   (memreg-add noise)
-  (sp-malloc-type ir-len sp-sample-t temp)
+  (sp-malloc-type ir-len sp-sample-t &temp)
   (memreg-add temp)
   (sp-samples-random rs ir-len noise)
   (status-require (sp-windowed-sinc-bp-br noise ir-len cutl cuth trnl trnh is-reject out temp))
@@ -305,11 +305,12 @@
     filter-state sp-convolution-filter-state-t*)
   (sp-declare-event event)
   (set state 0 filter-state 0 channel-config (array-get config.channel-config channel))
-  (sp-noise-event-filter-state (sp-array-or-fixed config.cutl-mod config.cutl 0)
-    (sp-array-or-fixed config.cuth-mod config.cuth 0)
-    (sp-array-or-fixed config.trnl-mod config.trnl 0)
-    (sp-array-or-fixed config.trnh-mod config.trnh 0) config.is-reject &rs &filter-state)
-  (status-require (sp-malloc-type 1 sp-noise-event-state-t state))
+  (status-require
+    (sp-noise-event-filter-state (sp-array-or-fixed config.cutl-mod config.cutl 0)
+      (sp-array-or-fixed config.cuth-mod config.cuth 0)
+      (sp-array-or-fixed config.trnl-mod config.trnl 0)
+      (sp-array-or-fixed config.trnh-mod config.trnh 0) config.is-reject &rs &filter-state))
+  (status-require (sp-malloc-type 1 sp-noise-event-state-t &state))
   (struct-set *state
     amp (if* channel-config.use channel-config.amp config.amp)
     amod (if* channel-config.use channel-config.amod config.amod)
@@ -325,6 +326,7 @@
     is-reject config.is-reject
     random-state rs
     channel channel
+    filter-state filter-state
     noise state-noise
     temp state-temp)
   (struct-set event
@@ -347,7 +349,7 @@
   "an event for noise filtered by a windowed-sinc filter.
    very processing intensive if parameters change with low resolution.
    memory for event.state will be allocated and then owned by the caller.
-   the same random-state is used by all channels"
+   all channels use the same initial random-state"
   status-declare
   (declare
     ci sp-channel-count-t
@@ -364,9 +366,9 @@
     rs (sp-random-state-new (sp-time-random &sp-default-random-state)))
   (status-require (sp-group-new start config.channels &group))
   (status-require (sp-event-memory-init group 2))
-  (status-require (sp-malloc-type config.resolution sp-sample-t state-noise))
+  (status-require (sp-malloc-type config.resolution sp-sample-t &state-noise))
   (sp-event-memory-add group state-noise)
-  (status-require (sp-malloc-type config.resolution sp-sample-t state-temp))
+  (status-require (sp-malloc-type config.resolution sp-sample-t &state-temp))
   (sp-event-memory-add group state-temp)
   (for ((set ci 0) (< ci config.channels) (set+ ci 1))
     (if (struct-get (array-get config.channel-config ci) mute) continue)
@@ -437,13 +439,11 @@
 (define (sp-cheap-noise-event-channel duration config channel rs state-noise state-temp out)
   (status-t sp-time-t sp-cheap-noise-event-config-t sp-channel-count-t sp-random-state-t sp-sample-t* sp-sample-t* sp-event-t*)
   status-declare
-  (declare
-    state sp-cheap-noise-event-state-t*
-    channel-config sp-channel-config-t)
+  (declare state sp-cheap-noise-event-state-t* channel-config sp-channel-config-t)
   (sp-declare-event event)
   (sp-declare-cheap-filter-state filter-state)
   (set state 0 channel-config (array-get config.channel-config channel))
-  (status-require (sp-malloc-type 1 sp-cheap-noise-event-state-t state))
+  (status-require (sp-malloc-type 1 sp-cheap-noise-event-state-t &state))
   (status-require (sp-cheap-filter-state-new config.resolution config.passes &filter-state))
   (struct-set *state
     amp (if* channel-config.use channel-config.amp config.amp)
@@ -493,9 +493,9 @@
     rs (sp-random-state-new (sp-time-random &sp-default-random-state)))
   (status-require (sp-group-new start config.channels &group))
   (status-require (sp-event-memory-init group 2))
-  (status-require (sp-malloc-type config.resolution sp-sample-t state-noise))
+  (status-require (sp-malloc-type config.resolution sp-sample-t &state-noise))
   (sp-event-memory-add group state-noise)
-  (status-require (sp-malloc-type config.resolution sp-sample-t state-temp))
+  (status-require (sp-malloc-type config.resolution sp-sample-t &state-temp))
   (sp-event-memory-add group state-temp)
   (for ((set ci 0) (< ci config.channels) (set+ ci 1))
     (if (struct-get (array-get config.channel-config ci) mute) continue)

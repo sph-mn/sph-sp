@@ -284,7 +284,7 @@ status_t test_sp_random() {
   s = sp_random_state_new(80);
   sp_samples_random((&s), 10, out);
   sp_samples_random((&s), 10, (10 + out));
-  test_helper_assert("last value", (f64_nearly_equal((0.6778), (out[19]), error_margin)));
+  test_helper_assert("last value", (f64_nearly_equal((0.2233), (out[19]), error_margin)));
 exit:
   status_return;
 }
@@ -316,6 +316,7 @@ status_t test_sp_noise_event() {
   config.trnl_mod = trnl;
   config.trnh_mod = trnh;
   config.amod = amod;
+  config.amp = 1;
   config.channels = 2;
   status_require((sp_noise_event(0, sp_noise_duration, config, (&event))));
   array4_add(events, event);
@@ -358,6 +359,7 @@ status_t test_sp_cheap_noise_event() {
     amod[i] = 1.0;
   };
   config.type = sp_state_variable_filter_lp;
+  config.amp = 1;
   config.amod = amod;
   config.cut_mod = cut_mod;
   config.q_factor = 0.1;
@@ -768,14 +770,14 @@ int main() {
   status_declare;
   rs = sp_random_state_new(3);
   sp_initialise(3, 2, _rate);
-  test_helper_test_one(test_sp_cheap_noise_event);
   test_helper_test_one(test_sp_noise_event);
-  test_helper_test_one(test_sp_map_event);
+  test_helper_test_one(test_sp_cheap_noise_event);
+  test_helper_test_one(test_wave_event);
   test_helper_test_one(test_sp_seq_parallel);
   test_helper_test_one(test_sp_seq);
+  test_helper_test_one(test_sp_map_event);
   test_helper_test_one(test_sp_group);
   test_helper_test_one(test_render_block);
-  test_helper_test_one(test_wave_event);
   test_helper_test_one(test_moving_average);
   test_helper_test_one(test_statistics);
   test_helper_test_one(test_path);

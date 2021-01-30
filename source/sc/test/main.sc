@@ -263,7 +263,7 @@
   (set s (sp-random-state-new 80))
   (sp-samples-random &s 10 out)
   (sp-samples-random &s 10 (+ 10 out))
-  (test-helper-assert "last value" (f64-nearly-equal 0.6778 (array-get out 19) error-margin))
+  (test-helper-assert "last value" (f64-nearly-equal 0.2233 (array-get out 19) error-margin))
   (label exit status-return))
 
 (pre-define (max a b) (if* (> a b) a b) (min a b) (if* (< a b) a b))
@@ -290,7 +290,14 @@
       (array-get trnl i) 0.07
       (array-get trnh i) 0.07
       (array-get amod i) 1.0))
-  (struct-set config cutl-mod cutl cuth-mod cuth trnl-mod trnl trnh-mod trnh amod amod channels 2)
+  (struct-set config
+    cutl-mod cutl
+    cuth-mod cuth
+    trnl-mod trnl
+    trnh-mod trnh
+    amod amod
+    amp 1
+    channels 2)
   (status-require (sp-noise-event 0 sp-noise-duration config &event))
   (array4-add events event)
   (sp-seq 0 sp-noise-duration out &events)
@@ -333,6 +340,7 @@
       (array-get amod i) 1.0))
   (struct-set config
     type sp-state-variable-filter-lp
+    amp 1
     amod amod
     cut-mod cut-mod
     q-factor 0.1
@@ -701,14 +709,14 @@
   status-declare
   (set rs (sp-random-state-new 3))
   (sp-initialise 3 2 _rate)
-  (test-helper-test-one test-sp-cheap-noise-event)
   (test-helper-test-one test-sp-noise-event)
-  (test-helper-test-one test-sp-map-event)
+  (test-helper-test-one test-sp-cheap-noise-event)
+  (test-helper-test-one test-wave-event)
   (test-helper-test-one test-sp-seq-parallel)
   (test-helper-test-one test-sp-seq)
+  (test-helper-test-one test-sp-map-event)
   (test-helper-test-one test-sp-group)
   (test-helper-test-one test-render-block)
-  (test-helper-test-one test-wave-event)
   (test-helper-test-one test-moving-average)
   (test-helper-test-one test-statistics)
   (test-helper-test-one test-path)
