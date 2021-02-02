@@ -253,8 +253,7 @@
       (set (array-get b.samples ci i) (array-get a.samples ci i)))))
 
 (pre-include "../main/path.c" "../main/io.c"
-  "../main/plot.c" "../main/filter.c" "../main/sequencer.c"
-  "../main/statistics.c" "../main/statistics-mod.c")
+  "../main/plot.c" "../main/filter.c" "../main/sequencer.c" "../main/statistics.c")
 
 (define (sp-render-config channels rate block-size)
   (sp-render-config-t sp-channel-count-t sp-time-t sp-time-t)

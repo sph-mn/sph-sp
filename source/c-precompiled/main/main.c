@@ -313,7 +313,6 @@ void sp_block_copy(sp_block_t a, sp_block_t b) {
 #include "../main/filter.c"
 #include "../main/sequencer.c"
 #include "../main/statistics.c"
-#include "../main/statistics-mod.c"
 sp_render_config_t sp_render_config(sp_channel_count_t channels, sp_time_t rate, sp_time_t block_size) {
   sp_render_config_t a;
   a.channels = channels;

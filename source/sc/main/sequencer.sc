@@ -521,7 +521,6 @@
   (sp-event-memory-free a))
 
 (define (sp-map-event-generate start end out state) (status-t sp-time-t sp-time-t sp-block-t void*)
-  "creates temporary output, lets event write to it, and passes the result to a user function"
   status-declare
   (declare s sp-map-event-state-t*)
   (set s state)
@@ -530,7 +529,7 @@
 
 (define (sp-map-event-isolated-generate start end out state)
   (status-t sp-time-t sp-time-t sp-block-t void*)
-  "creates temporary output, lets event write to it, and passes the result to a user function"
+  "creates temporary output, lets event write to it, and passes the temporary output to a user function"
   status-declare
   (declare s sp-map-event-state-t* temp-out sp-block-t)
   (status-require-return (sp-block-new out.channels out.size &temp-out))

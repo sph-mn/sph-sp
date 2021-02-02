@@ -577,7 +577,6 @@ void sp_map_event_free(sp_event_t* a) {
   free(s);
   sp_event_memory_free(a);
 }
-/** creates temporary output, lets event write to it, and passes the result to a user function */
 status_t sp_map_event_generate(sp_time_t start, sp_time_t end, sp_block_t out, void* state) {
   status_declare;
   sp_map_event_state_t* s;
@@ -585,7 +584,7 @@ status_t sp_map_event_generate(sp_time_t start, sp_time_t end, sp_block_t out, v
   status_require_return(((s->event.generate)(start, end, out, (&(s->event)))));
   return (((s->generate)(start, end, out, out, (s->state))));
 }
-/** creates temporary output, lets event write to it, and passes the result to a user function */
+/** creates temporary output, lets event write to it, and passes the temporary output to a user function */
 status_t sp_map_event_isolated_generate(sp_time_t start, sp_time_t end, sp_block_t out, void* state) {
   status_declare;
   sp_map_event_state_t* s;
