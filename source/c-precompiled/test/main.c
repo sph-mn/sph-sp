@@ -1,3 +1,4 @@
+
 #include "./helper.c"
 #if (sp_sample_format_f64 == sp_sample_format)
 #define sp_sample_nearly_equal f64_nearly_equal
@@ -243,6 +244,7 @@ status_t test_fft() {
 exit:
   status_return;
 }
+
 /** better test separately as it opens gnuplot windows */
 status_t test_sp_plot() {
   status_declare;
@@ -288,6 +290,7 @@ status_t test_sp_random() {
 exit:
   status_return;
 }
+
 #define max(a, b) ((a > b) ? a : b)
 #define min(a, b) ((a < b) ? a : b)
 #define sp_noise_duration 96
@@ -428,6 +431,7 @@ exit:
   status_return;
 }
 #define test_wave_event_duration 100
+
 /** sp wave values were taken from printing index and value of the result array.
    sp-plot-samples can plot the result */
 status_t test_sp_wave_event() {
@@ -694,6 +698,7 @@ status_t test_permutations() {
 exit:
   status_return;
 }
+
 /** sum 10 wave events */
 status_t test_sp_seq_parallel() {
   status_declare;
@@ -768,6 +773,7 @@ status_t test_sp_map_event() {
 exit:
   status_return;
 }
+
 /** "goto exit" can skip events */
 int main() {
   status_declare;

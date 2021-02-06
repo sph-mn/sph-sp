@@ -1,6 +1,8 @@
+
 /* utilities for arrays of sp-time-t or sp-sample-t.
 sp-time-t subtraction is limited to zero.
 sp-time-t addition is not limited. */
+
 /** generic shuffle that works on any array type. fisher-yates algorithm */
 void sp_shuffle(sp_random_state_t* state, void (*swap)(void*, size_t, size_t), void* a, size_t size) {
   size_t i;
@@ -18,6 +20,7 @@ void sp_samples_to_times(sp_sample_t* in, sp_time_t size, sp_time_t* out) {
     out[i] = sp_cheap_round_positive((in[i]));
   };
 }
+
 /** get the maximum value in samples array, disregarding sign */
 sp_sample_t sp_samples_absolute_max(sp_sample_t* in, sp_time_t in_size) {
   sp_sample_t result;
@@ -31,6 +34,7 @@ sp_sample_t sp_samples_absolute_max(sp_sample_t* in, sp_time_t in_size) {
   };
   return (result);
 }
+
 /** display a sample array in one line */
 void sp_samples_display(sp_sample_t* a, sp_time_t size) {
   sp_time_t i;
@@ -40,6 +44,7 @@ void sp_samples_display(sp_sample_t* a, sp_time_t size) {
   };
   printf("\n");
 }
+
 /** display a time array in one line */
 void sp_times_display(sp_time_t* a, sp_time_t size) {
   sp_time_t i;
@@ -49,6 +54,7 @@ void sp_times_display(sp_time_t* a, sp_time_t size) {
   };
   printf("\n");
 }
+
 /** scale amplitude of $out to match the one of $in */
 void sp_samples_set_unity_gain(sp_sample_t* in, sp_time_t in_size, sp_sample_t* out) {
   sp_time_t i;
@@ -67,6 +73,7 @@ void sp_samples_set_unity_gain(sp_sample_t* in, sp_time_t in_size, sp_sample_t* 
     out[i] *= correction;
   };
 }
+
 /** functions that work on single sp-sample-t and sp-time-t */
 #define define_value_functions(prefix, value_t) \
   void prefix##_sort_swap(void* a, ssize_t b, ssize_t c) { \
@@ -76,6 +83,7 @@ void sp_samples_set_unity_gain(sp_sample_t* in, sp_time_t in_size, sp_sample_t* 
     ((value_t*)(a))[c] = d; \
   } \
   uint8_t prefix##_sort_less(void* a, ssize_t b, ssize_t c) { return ((((value_t*)(a))[b] < ((value_t*)(a))[c])); }
+
 /** functions that work the same on sp-sample-t* and sp-time-t* */
 #define define_array_functions(prefix, value_t) \
   /** a/out can not be the same pointer */ \
@@ -198,6 +206,7 @@ define_value_functions(sp_times, sp_time_t)
                                           define_array_combinator_1(sp_samples_set_1, sp_sample_t, n)
                                             define_array_combinator_1(sp_samples_multiply_1, sp_sample_t, (a[i] * n))
                                               define_array_combinator_1(sp_samples_divide_1, sp_sample_t, (a[i] / n))
+
   /** lower value parts of large types are preferred if
    the system byte order is as expected little-endian */
   uint64_t sp_u64_from_array(uint8_t* a, sp_time_t size) {
@@ -219,6 +228,7 @@ define_value_functions(sp_times, sp_time_t)
     return ((*((uint64_t*)(a))));
   };
 }
+
 /* samples */
 status_t sp_samples_duplicate(sp_sample_t* a, sp_time_t size, sp_sample_t** out) {
   status_declare;
@@ -229,6 +239,7 @@ status_t sp_samples_duplicate(sp_sample_t* a, sp_time_t size, sp_sample_t** out)
 exit:
   status_return;
 }
+
 /** write to out the differences between subsequent values of a.
    size must be > 1.
    out-size will be size - 1 */
@@ -238,6 +249,7 @@ void sp_samples_differences(sp_sample_t* a, sp_time_t size, sp_sample_t* out) {
     out[(i - 1)] = (a[i] - a[(i - 1)]);
   };
 }
+
 /* times */
 status_t sp_times_duplicate(sp_time_t a, sp_time_t size, sp_time_t** out) {
   status_declare;
@@ -247,6 +259,7 @@ status_t sp_times_duplicate(sp_time_t a, sp_time_t size, sp_time_t** out) {
 exit:
   status_return;
 }
+
 /** a.size must be > 1. a.size minus 1 elements will be written to out */
 void sp_times_differences(sp_time_t* a, sp_time_t size, sp_time_t* out) {
   sp_time_t i;
@@ -254,6 +267,7 @@ void sp_times_differences(sp_time_t* a, sp_time_t size, sp_time_t* out) {
     out[(i - 1)] = sp_absolute_difference((a[i]), (a[(i - 1)]));
   };
 }
+
 /** calculate cumulative sums from the given numbers.
    (a b c ...) -> (a (+ a b) (+ a b c) ...) */
 void sp_times_cusum(sp_time_t* a, sp_time_t size, sp_time_t* out) {
@@ -266,6 +280,7 @@ void sp_times_cusum(sp_time_t* a, sp_time_t size, sp_time_t* out) {
     out[i] = sum;
   };
 }
+
 /** generate random integers in the range 0..(cudist-size - 1)
    with probability distribution given via cudist, the cumulative sums of the distribution */
 void sp_times_random_discrete(sp_random_state_t* state, sp_time_t* cudist, sp_time_t cudist_size, sp_time_t count, sp_time_t* out) {
@@ -295,6 +310,7 @@ sp_time_t sp_time_random_discrete(sp_random_state_t* state, sp_time_t* cudist, s
   };
   return (cudist_size);
 }
+
 /** get a random number in range with a custom probability distribution given by cudist,
    the cumulative sums of the distribution. the resulting number resolution is proportional to cudist-size */
 sp_time_t sp_time_random_custom(sp_random_state_t* state, sp_time_t* cudist, sp_time_t cudist_size, sp_time_t range) {
@@ -308,6 +324,7 @@ void sp_times_swap(sp_time_t* a, ssize_t i1, ssize_t i2) {
   a[i1] = a[i2];
   a[i2] = temp;
 }
+
 /** increment array as if its elements were digits of a written number of base set-size, lower endian */
 void sp_times_sequence_increment(sp_time_t* a, sp_time_t size, sp_time_t set_size) {
   sp_time_t i;
@@ -320,6 +337,7 @@ void sp_times_sequence_increment(sp_time_t* a, sp_time_t size, sp_time_t set_siz
     };
   };
 }
+
 /** return all permutations of integers that sum to "sum".
    Kelleher 2006, 'Encoding partitions as ascending compositions' */
 status_t sp_times_compositions(sp_time_t sum, sp_time_t*** out, sp_time_t* out_size, sp_time_t** out_sizes) {
@@ -382,6 +400,7 @@ exit:
   };
   status_return;
 }
+
 /** return all permutations of length "size" for "set".
    allocates all needed memory in "out" and passes ownership to caller.
    https://en.wikipedia.org/wiki/Heap's_algorithm */
@@ -454,18 +473,21 @@ void sp_samples_divisions(sp_sample_t start, sp_sample_t n, sp_time_t count, sp_
     start /= n;
   };
 }
+
 /** adjust all values, keeping relative sizes, so that the maximum value is n.
    a/out can be the same pointer */
 void sp_samples_scale_y(sp_sample_t* a, sp_time_t size, sp_sample_t n, sp_sample_t* out) {
   sp_sample_t max = sp_samples_absolute_max(a, size);
   sp_samples_multiply_1(a, size, (n / max), a);
 }
+
 /** adjust all values, keeping relative sizes, so that the sum is n.
    a/out can be the same pointer */
 void sp_samples_scale_sum(sp_sample_t* a, sp_time_t size, sp_sample_t n, sp_sample_t* out) {
   sp_sample_t sum = sp_samples_sum(a, size);
   sp_samples_multiply_1(a, size, (n / sum), a);
 }
+
 /** write count cumulative multiplications with factor from start to out */
 void sp_times_multiplications(sp_time_t start, sp_time_t factor, sp_time_t count, sp_time_t* out) {
   sp_time_t i;
@@ -474,6 +496,7 @@ void sp_times_multiplications(sp_time_t start, sp_time_t factor, sp_time_t count
     start *= factor;
   };
 }
+
 /** write count cumulative additions with summand from start to out.
    use case: generating harmonic frequency values */
 void sp_times_additions(sp_time_t start, sp_time_t summand, sp_time_t count, sp_time_t* out) {
@@ -483,6 +506,7 @@ void sp_times_additions(sp_time_t start, sp_time_t summand, sp_time_t count, sp_
     start += summand;
   };
 }
+
 /** write count cumulative additions with summand from start to out */
 void sp_samples_additions(sp_sample_t start, sp_sample_t summand, sp_time_t count, sp_sample_t* out) {
   sp_time_t i;
@@ -491,6 +515,7 @@ void sp_samples_additions(sp_sample_t start, sp_sample_t summand, sp_time_t coun
     start += summand;
   };
 }
+
 /** take values at indices and write to out.
    a/out can be the same pointer */
 void sp_times_select(sp_time_t* a, sp_time_t* indices, sp_time_t size, sp_time_t* out) {
@@ -499,6 +524,7 @@ void sp_times_select(sp_time_t* a, sp_time_t* indices, sp_time_t size, sp_time_t
     out[i] = a[indices[i]];
   };
 }
+
 /** store the bits of a as uint8 in b. size is the number of bits to take.
    a/out can be the same pointer */
 void sp_times_bits_to_times(sp_time_t* a, sp_time_t size, sp_time_t* out) {
@@ -520,6 +546,7 @@ void sp_times_bits_to_times(sp_time_t* a, sp_time_t size, sp_time_t* out) {
     a_i += 1;
   };
 }
+
 /** modern yates shuffle.
    https://en.wikipedia.org/wiki/Fisher%E2%80%93Yates_shuffle#The_modern_algorithm */
 void sp_times_shuffle(sp_random_state_t* state, sp_time_t* a, sp_time_t size) {
@@ -533,6 +560,7 @@ void sp_times_shuffle(sp_random_state_t* state, sp_time_t* a, sp_time_t size) {
     a[j] = t;
   };
 }
+
 /** write to out values that are randomly either 1 or 0 */
 status_t sp_times_random_binary(sp_random_state_t* state, sp_time_t size, sp_time_t* out) {
   sp_time_t random_size;
@@ -546,6 +574,7 @@ status_t sp_times_random_binary(sp_random_state_t* state, sp_time_t size, sp_tim
 exit:
   status_return;
 }
+
 /** write to out indices of a that are greater than n
    a/out can be the same pointer */
 void sp_times_gt_indices(sp_time_t* a, sp_time_t size, sp_time_t n, sp_time_t* out, sp_time_t* out_size) {
@@ -559,6 +588,7 @@ void sp_times_gt_indices(sp_time_t* a, sp_time_t size, sp_time_t n, sp_time_t* o
   };
   *out_size = i2;
 }
+
 /** a/out can not be the same pointer.
    out-size will be less or equal than size.
    memory is allocated and owned by caller */
@@ -568,6 +598,7 @@ void sp_times_select_random(sp_random_state_t* state, sp_time_t* a, sp_time_t si
   sp_times_gt_indices(out, size, 0, out, out_size);
   sp_times_select(a, out, (*out_size), out);
 }
+
 /** allocate memory for out and set all elements to value */
 status_t sp_times_constant(sp_time_t a, sp_time_t size, sp_time_t value, sp_time_t** out) {
   sp_time_t* temp;
@@ -578,6 +609,7 @@ status_t sp_times_constant(sp_time_t a, sp_time_t size, sp_time_t value, sp_time
 exit:
   status_return;
 }
+
 /** expand by factor. y is scaled by (y * factor), x is scaled by linear interpolation between elements of a.
    out size will be (a-size - 1) * factor */
 status_t sp_times_scale(sp_time_t* a, sp_time_t a_size, sp_time_t factor, sp_time_t* out) {
@@ -596,6 +628,7 @@ status_t sp_times_scale(sp_time_t* a, sp_time_t a_size, sp_time_t factor, sp_tim
 exit:
   status_return;
 }
+
 /** a array value swap function that can be used with sp-shuffle */
 void sp_times_shuffle_swap(void* a, size_t i1, size_t i2) {
   sp_time_t* b;
@@ -603,6 +636,7 @@ void sp_times_shuffle_swap(void* a, size_t i1, size_t i2) {
   ((sp_time_t**)(a))[i1] = ((sp_time_t**)(a))[i2];
   ((sp_time_t**)(a))[i2] = b;
 }
+
 /** free every element array and the container array */
 void sp_times_array_free(sp_time_t** a, sp_time_t size) {
   sp_time_t i;
@@ -611,6 +645,7 @@ void sp_times_array_free(sp_time_t** a, sp_time_t size) {
   };
   free(a);
 }
+
 /** free every element array and the container array */
 void sp_samples_array_free(sp_sample_t** a, sp_time_t size) {
   sp_time_t i;
@@ -619,6 +654,7 @@ void sp_samples_array_free(sp_sample_t** a, sp_time_t size) {
   };
   free(a);
 }
+
 /** true if array a contains element b */
 uint8_t sp_times_contains(sp_time_t* a, sp_time_t size, sp_time_t b) {
   sp_time_t i;
@@ -629,6 +665,7 @@ uint8_t sp_times_contains(sp_time_t* a, sp_time_t size, sp_time_t b) {
   };
   return (0);
 }
+
 /** create size number of discrete random numbers corresponding to the distribution given by cudist
    without duplicates. cudist-size must be equal to a-size.
    a/out should not be the same pointer. out is managed by the caller.
@@ -649,6 +686,7 @@ void sp_times_random_discrete_unique(sp_random_state_t* state, sp_time_t* cudist
     remaining -= 1;
   };
 }
+
 /** out-size must be at least digits * size or base ** digits.
    starts from out + 0. first generated element will be in out + digits.
    out size will contain the sequences appended */
@@ -659,6 +697,7 @@ void sp_times_sequences(sp_time_t base, sp_time_t digits, sp_time_t size, sp_tim
     sp_times_sequence_increment((out + i), digits, base);
   };
 }
+
 /** write into out values from start (inclusively) to end (exclusively) */
 void sp_times_range(sp_time_t start, sp_time_t end, sp_time_t* out) {
   sp_time_t i;
@@ -666,8 +705,10 @@ void sp_times_range(sp_time_t start, sp_time_t end, sp_time_t* out) {
     out[(i - start)] = i;
   };
 }
+
 /** round to the next integer multiple of base  */
 sp_time_t sp_time_round_to_multiple(sp_time_t a, sp_time_t base) { return (((0 == a) ? base : sp_cheap_round_positive(((a / ((sp_sample_t)(base))) * base)))); }
+
 /** writes the unique elements of $a to $out.
    $out is lend by the owner. size of $out should be equal or greater than size of $a.
    $out-size will be set to the number of unique elements */
@@ -705,6 +746,7 @@ void sp_times_counted_sequences_sort_swap(void* a, ssize_t b, ssize_t c) {
 }
 uint8_t sp_times_counted_sequences_sort_less(void* a, ssize_t b, ssize_t c) { return (((((sp_times_counted_sequences_t*)(a))[b]).count < (((sp_times_counted_sequences_t*)(a))[c]).count)); }
 uint8_t sp_times_counted_sequences_sort_greater(void* a, ssize_t b, ssize_t c) { return (((((sp_times_counted_sequences_t*)(a))[b]).count > (((sp_times_counted_sequences_t*)(a))[c]).count)); }
+
 /** associate in hash table $out sub-sequences of $width with their count in $a.
    memory for $out is lend and should be allocated with sp_sequence_hashtable_new(size - (width - 1), &out) */
 void sp_times_counted_sequences_hash(sp_time_t* a, sp_time_t size, sp_time_t width, sp_sequence_hashtable_t out) {
@@ -723,6 +765,7 @@ void sp_times_counted_sequences_hash(sp_time_t* a, sp_time_t size, sp_time_t wid
     };
   };
 }
+
 /** extract counts from a counted-sequences-hash and return as an array of structs */
 void sp_times_counted_sequences(sp_sequence_hashtable_t known, sp_time_t limit, sp_times_counted_sequences_t* out, sp_time_t* out_size) {
   sp_time_t i;
@@ -747,6 +790,7 @@ void sp_times_remove(sp_time_t* in, sp_time_t size, sp_time_t index, sp_time_t c
     memcpy((out + index), (in + index + count), ((size - index - count) * sizeof(sp_time_t)));
   };
 }
+
 /** insert an new area of unset elements before index */
 void sp_times_insert_space(sp_time_t* in, sp_time_t size, sp_time_t index, sp_time_t count, sp_time_t* out) {
   if (0 == index) {
@@ -756,6 +800,7 @@ void sp_times_insert_space(sp_time_t* in, sp_time_t size, sp_time_t index, sp_ti
     memcpy((out + index + count), (in + index), ((size - index) * sizeof(sp_time_t)));
   };
 }
+
 /** insert equally spaced values between the two values at $index and $index + 1.
    a:(4 16) index:0 count:3 -> out:(4 7 10 13 16)
    the second value must be greater than the first.
@@ -772,6 +817,7 @@ void sp_times_subdivide(sp_time_t* a, sp_time_t size, sp_time_t index, sp_time_t
     out[i] = (out[(i - 1)] + value);
   };
 }
+
 /** interpolate values between $a and $b with interpolation distance 0..1 */
 void sp_times_blend(sp_time_t* a, sp_time_t* b, sp_sample_t fraction, sp_time_t size, sp_time_t* out) {
   sp_time_t i;
@@ -779,6 +825,7 @@ void sp_times_blend(sp_time_t* a, sp_time_t* b, sp_sample_t fraction, sp_time_t 
     out[i] = sp_cheap_round_positive((sp_time_interpolate_linear((a[i]), (b[i]), fraction)));
   };
 }
+
 /** interpolate values pointwise between $a and $b with interpolation distance 0..1 from $coefficients */
 void sp_times_mask(sp_time_t* a, sp_time_t* b, sp_sample_t* coefficients, sp_time_t size, sp_time_t* out) {
   sp_time_t i;
@@ -786,6 +833,7 @@ void sp_times_mask(sp_time_t* a, sp_time_t* b, sp_sample_t* coefficients, sp_tim
     out[i] = sp_cheap_round_positive((sp_time_interpolate_linear((a[i]), (b[i]), (coefficients[i]))));
   };
 }
+
 /** interpolate values pointwise between $a and $b with fraction as a fixed interpolation distance 0..1 */
 void sp_samples_blend(sp_sample_t* a, sp_sample_t* b, sp_sample_t fraction, sp_time_t size, sp_sample_t* out) {
   sp_time_t i;
@@ -793,6 +841,7 @@ void sp_samples_blend(sp_sample_t* a, sp_sample_t* b, sp_sample_t fraction, sp_t
     out[i] = sp_sample_interpolate_linear((a[i]), (b[i]), fraction);
   };
 }
+
 /** set all values greater than n in array to n */
 void sp_times_limit(sp_time_t* a, sp_time_t size, sp_time_t n, sp_time_t* out) {
   sp_time_t i;
@@ -800,6 +849,7 @@ void sp_times_limit(sp_time_t* a, sp_time_t size, sp_time_t n, sp_time_t* out) {
     out[i] = ((n < a[i]) ? n : a[i]);
   };
 }
+
 /** set all values greater than n in array to n */
 void sp_samples_limit_abs(sp_sample_t* a, sp_time_t size, sp_sample_t n, sp_sample_t* out) {
   sp_time_t i;

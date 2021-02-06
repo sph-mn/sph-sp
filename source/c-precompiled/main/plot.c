@@ -74,6 +74,7 @@ void sp_plot_times(sp_time_t* a, sp_time_t a_size) {
   sp_plot_times_file(path, 1);
   free(path);
 }
+
 /** take the fft for given samples, convert complex values to magnitudes and write plot data to file */
 void sp_plot_spectrum_to_file(sp_sample_t* a, sp_time_t a_size, uint8_t* path) {
   FILE* file;

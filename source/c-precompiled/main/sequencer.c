@@ -6,6 +6,7 @@ void sp_event_sort_swap(void* a, ssize_t b, ssize_t c) {
 }
 uint8_t sp_event_sort_less_p(void* a, ssize_t b, ssize_t c) { return (((((sp_event_t*)(a))[b]).start < (((sp_event_t*)(a))[c]).start)); }
 void sp_seq_events_prepare(sp_events_t* events) { quicksort(sp_event_sort_less_p, sp_event_sort_swap, (events->data), 0, (events->used - 1)); }
+
 /** event arrays must have been prepared/sorted with sp_seq_event_prepare for seq to work correctly.
    like for paths, start is inclusive, end is exclusive, so that 0..100 and 100..200 attach seamless.
    events can have three function pointers: prepare, generate and free.
@@ -40,6 +41,7 @@ status_t sp_seq(sp_time_t start, sp_time_t end, sp_block_t out, sp_events_t* eve
 exit:
   status_return;
 }
+
 /** free all events starting from the current event. only needed if sp_seq will not further process, and thereby free, the events */
 void sp_seq_events_free(sp_events_t* events) {
   sp_events_t a;
@@ -75,6 +77,7 @@ void* sp_seq_parallel_future_f(void* data) {
   a->status = (a->event->generate)((a->start), (a->end), (a->out), (a->event->state));
   return (0);
 }
+
 /** like sp_seq but evaluates events with multiple threads in parallel.
    there is some overhead, as each event gets its own output block */
 status_t sp_seq_parallel(sp_time_t start, sp_time_t end, sp_block_t out, sp_events_t* events) {
@@ -241,6 +244,7 @@ exit:
   };
   status_return;
 }
+
 /** create an event playing waveforms from an array.
    config should have been declared with defaults using sp-declare-wave-event-config.
    event end will be longer if channel config delay is used.
@@ -298,6 +302,7 @@ void sp_noise_event_free(sp_event_t* a) {
   free((a->state));
   sp_event_memory_free(a);
 }
+
 /** updates filter arguments only every resolution number of samples */
 status_t sp_noise_event_generate(sp_time_t start, sp_time_t end, sp_block_t out, void* state) {
   status_declare;
@@ -328,6 +333,7 @@ status_t sp_noise_event_generate(sp_time_t start, sp_time_t end, sp_block_t out,
   sp->random_state = s.random_state;
   status_return;
 }
+
 /** the result shows a small delay, for example, circa 40 samples for transition 0.07. the size seems to be related to ir-len.
    the filter state is initialised with one unused call to skip the delay. */
 status_t sp_noise_event_filter_state(sp_sample_t cutl, sp_sample_t cuth, sp_sample_t trnl, sp_sample_t trnh, boolean is_reject, sp_random_state_t* rs, sp_convolution_filter_state_t** out) {
@@ -393,6 +399,7 @@ exit:
   };
   status_return;
 }
+
 /** an event for noise filtered by a windowed-sinc filter.
    very processing intensive if parameters change with low resolution.
    memory for event.state will be allocated and then owned by the caller.
@@ -522,6 +529,7 @@ exit:
   };
   status_return;
 }
+
 /** an event for noise filtered by a state-variable filter.
    lower processing costs even when parameters change with high resolution.
    multiple passes almost multiply performance costs.
@@ -584,6 +592,7 @@ status_t sp_map_event_generate(sp_time_t start, sp_time_t end, sp_block_t out, v
   status_require_return(((s->event.generate)(start, end, out, (&(s->event)))));
   return (((s->generate)(start, end, out, out, (s->state))));
 }
+
 /** creates temporary output, lets event write to it, and passes the temporary output to a user function */
 status_t sp_map_event_isolated_generate(sp_time_t start, sp_time_t end, sp_block_t out, void* state) {
   status_declare;
@@ -597,6 +606,7 @@ exit:
   sp_block_free(temp_out);
   status_return;
 }
+
 /** f: map function (start end sp_block_t:in sp_block_t:out void*:state)
    state: custom state value passed to f.
    the wrapped event will be freed with the map-event.

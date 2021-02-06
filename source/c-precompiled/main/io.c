@@ -44,6 +44,7 @@ status_t sp_file_open(uint8_t* path, int mode, sp_channel_count_t channel_count,
 exit:
   status_return;
 }
+
 /** failure status if not all samples could be written (sp-s-id-file-incomplete) */
 status_t sp_file_write(sp_file_t* file, sp_sample_t** channel_data, sp_time_t sample_count, sp_time_t* result_sample_count) {
   status_declare;
@@ -68,6 +69,7 @@ exit:
   memreg_free;
   status_return;
 }
+
 /** failure status only if no results read (sp-s-id-eof) */
 status_t sp_file_read(sp_file_t* file, sp_time_t sample_count, sp_sample_t** result_channel_data, sp_time_t* result_sample_count) {
   status_declare;
@@ -91,6 +93,7 @@ exit:
   memreg_free;
   status_return;
 }
+
 /** seeks are defined in number of (multichannel) frames.
    therefore, a seek in a stereo file from the current position forward with an offset of 1 would skip forward by one sample of both channels */
 status_t sp_file_position_set(sp_file_t* file, sp_time_t a) {

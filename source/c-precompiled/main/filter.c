@@ -1,3 +1,4 @@
+
 /* implementation of a windowed sinc low-pass and high-pass filter for continuous streams of sample arrays.
    sample-rate, cutoff frequency and transition band width is variable per call.
    build with the information from https://tomroelandts.com/articles/how-to-create-a-simple-low-pass-filter */
@@ -10,6 +11,7 @@ void sp_convolution_filter_state_free(sp_convolution_filter_state_t* state) {
   free((state->ir_f_arguments));
   free(state);
 }
+
 /** create or update a previously created state object.
    impulse response array properties are calculated with ir-f using ir-f-arguments.
    eventually frees state.ir.
@@ -83,6 +85,7 @@ exit:
   };
   status_return;
 }
+
 /** convolute samples "in", which can be a segment of a continuous stream, with an impulse response
    kernel created by ir-f with ir-f-arguments. can be used for many types of convolution with dynamic impulse response.
    ir-f is only used when ir-f-arguments changed.
@@ -101,6 +104,7 @@ exit:
   status_return;
 }
 sp_float_t sp_window_blackman(sp_float_t a, sp_time_t width) { return (((0.42 - (0.5 * cos(((2 * M_PI * a) / (width - 1))))) + (0.08 * cos(((4 * M_PI * a) / (width - 1)))))); }
+
 /** approximate impulse response length for a transition factor and
    ensure that the length is odd */
 sp_time_t sp_windowed_sinc_lp_hp_ir_length(sp_float_t transition) {
@@ -123,6 +127,7 @@ status_t sp_passthrough_ir(sp_sample_t** out_ir, sp_time_t* out_len) {
 exit:
   status_return;
 }
+
 /** create an impulse response kernel for a windowed sinc low-pass or high-pass filter.
    uses a truncated blackman window.
    allocates out-ir, sets out-len.
@@ -155,6 +160,7 @@ nan can be set here if the freq and transition values are invalid */
 exit:
   status_return;
 }
+
 /** like sp-windowed-sinc-ir-lp but for a band-pass or band-reject filter.
    optimisation: if one cutoff is at or above maximum then create only either low-pass or high-pass */
 status_t sp_windowed_sinc_bp_br_ir(sp_float_t cutoff_l, sp_float_t cutoff_h, sp_float_t transition_l, sp_float_t transition_h, boolean is_reject, sp_sample_t** out_ir, sp_time_t* out_len) {
@@ -225,6 +231,7 @@ status_t sp_windowed_sinc_bp_br_ir(sp_float_t cutoff_l, sp_float_t cutoff_h, sp_
 exit:
   status_return;
 }
+
 /** maps arguments from the generic ir-f-arguments array.
    arguments is (sp-float-t:cutoff sp-float-t:transition boolean:is-high-pass) */
 status_t sp_windowed_sinc_lp_hp_ir_f(void* arguments, sp_sample_t** out_ir, sp_time_t* out_len) {
@@ -236,6 +243,7 @@ status_t sp_windowed_sinc_lp_hp_ir_f(void* arguments, sp_sample_t** out_ir, sp_t
   is_high_pass = *((boolean*)((2 + ((sp_float_t*)(arguments)))));
   return ((sp_windowed_sinc_lp_hp_ir(cutoff, transition, is_high_pass, out_ir, out_len)));
 }
+
 /** maps arguments from the generic ir-f-arguments array.
    arguments is (sp-float-t:cutoff-l sp-float-t:cutoff-h sp-float-t:transition boolean:is-reject) */
 status_t sp_windowed_sinc_bp_br_ir_f(void* arguments, sp_sample_t** out_ir, sp_time_t* out_len) {
@@ -251,6 +259,7 @@ status_t sp_windowed_sinc_bp_br_ir_f(void* arguments, sp_sample_t** out_ir, sp_t
   is_reject = *((boolean*)((4 + ((sp_float_t*)(arguments)))));
   return ((sp_windowed_sinc_bp_br_ir(cutoff_l, cutoff_h, transition_l, transition_h, is_reject, out_ir, out_len)));
 }
+
 /** a windowed sinc low-pass or high-pass filter for segments of continuous streams with
    variable sample-rate, frequency, transition and impulse response type per call.
    * cutoff: as a fraction of the sample rate, 0..0.5
@@ -272,6 +281,7 @@ status_t sp_windowed_sinc_lp_hp(sp_sample_t* in, sp_time_t in_len, sp_float_t cu
 exit:
   status_return;
 }
+
 /** like sp-windowed-sinc-lp-hp but for a band-pass or band-reject filter */
 status_t sp_windowed_sinc_bp_br(sp_sample_t* in, sp_time_t in_len, sp_float_t cutoff_l, sp_float_t cutoff_h, sp_float_t transition_l, sp_float_t transition_h, boolean is_reject, sp_convolution_filter_state_t** out_state, sp_sample_t* out_samples) {
   status_declare;
@@ -289,6 +299,7 @@ status_t sp_windowed_sinc_bp_br(sp_sample_t* in, sp_time_t in_len, sp_float_t cu
 exit:
   status_return;
 }
+
 /** samples real real pair [integer integer integer] -> state
      define a routine for a fast filter that also supports multiple filter types in one.
      state must hold two elements and is to be allocated and owned by the caller.
@@ -331,9 +342,11 @@ define_sp_state_variable_filter(lp, v2)
       define_sp_state_variable_filter(br, (v0 - (k * v1)))
         define_sp_state_variable_filter(peak, (((2 * v2) - v0) + (k * v1)))
           define_sp_state_variable_filter(all, (v0 - (2 * k * v1)))
+
   /** the sph-sp default precise filter. processing intensive if parameters change frequently.
    memory for out-state will be allocated and has to be freed with sp-filter-state-free */
   status_t sp_filter(sp_sample_t* in, sp_time_t in_size, sp_float_t cutoff_l, sp_float_t cutoff_h, sp_float_t transition_l, sp_float_t transition_h, boolean is_reject, sp_filter_state_t** out_state, sp_sample_t* out_samples) { sp_windowed_sinc_bp_br(in, in_size, cutoff_l, cutoff_h, transition_l, transition_h, is_reject, out_state, out_samples); }
+
 /** one state object per pass.
    allocates and prepares temporary memory for passes and checks if max-passes doesnt exceed the limit.
    heap memory is to be freed with sp-cheap-filter-state-free but only allocated if max-passes is greater than one */
@@ -362,6 +375,7 @@ void sp_cheap_filter_state_free(sp_cheap_filter_state_t* a) {
   free((a->in_temp));
   free((a->out_temp));
 }
+
 /** the sph-sp default fast filter. caller has to manage the state object with
    sp-cheap-filter-state-new and sp-cheap-filter-state-free.
    uses separate svf-state values for multiple passes as it is like filters in series */
@@ -387,6 +401,7 @@ void sp_cheap_filter(sp_state_variable_filter_t filter, sp_sample_t* in, sp_time
     filter(out, in_temp, in_size, cutoff, q_factor, (state->svf_state + (i * 2)));
   };
 }
+
 /** centered moving average balanced for complete data arrays and seamless for continuous data.
    width: radius * 2 + 1.
    width must be smaller than in-size.

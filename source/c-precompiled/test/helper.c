@@ -1,3 +1,4 @@
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <errno.h>
@@ -9,6 +10,7 @@
 #include <sph/memreg.c>
 #include <sph/string.c>
 #include <sph/filesystem.c>
+
 #define test_helper_test_one(func) \
   printf("%s\n", #func); \
   status_require((func()))

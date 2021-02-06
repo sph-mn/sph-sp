@@ -1,3 +1,4 @@
+
 #define define_sp_stat_range(name, value_t) \
   /** out: min, max, range */ \
   uint8_t name(value_t* a, sp_time_t size, sp_sample_t* out) { \
@@ -122,9 +123,11 @@
     *out = min; \
     return (0); \
   }
+
 /** return the maximum number of possible unique overlapping sequences of $width in an array of $size.
    $size must be equal or greater than $width */
 sp_time_t sp_stat_unique_max(sp_time_t size, sp_time_t width) { return ((size - (width - 1))); }
+
 /** return the sum of sp_stat_unique_max for all subsequences of width 1 to $size.
    $size must be greater than 0 */
 sp_time_t sp_stat_unique_all_max(sp_time_t size) {
@@ -140,7 +143,9 @@ sp_time_t sp_stat_unique_all_max(sp_time_t size) {
 }
 sp_time_t sp_stat_repetition_all_max(sp_time_t size) { return ((sp_stat_unique_all_max(size) - size)); }
 sp_time_t sp_stat_repetition_max(sp_time_t size, sp_time_t width) { return ((sp_stat_unique_max(size, width) - 1)); }
+
 /* times */
+
 /** center of mass. the distribution of mass is balanced around the center of mass, and the average of
    the weighted position coordinates of the distributed mass defines its coordinates.
    sum(n * x(n)) / sum(x(n)) */
@@ -158,6 +163,7 @@ uint8_t sp_stat_times_center(sp_time_t* a, sp_time_t size, sp_sample_t* out) {
   return (0);
 }
 define_sp_stat_range(sp_stat_times_range, sp_time_t)
+
   /** return in $out the number of repetitions of subsequences of widths 1 to $size.
    examples
      high: 11111 121212
@@ -191,6 +197,7 @@ define_sp_stat_range(sp_stat_times_range, sp_time_t)
   sp_sequence_set_free(known);
   return (0);
 }
+
 /** return in $out the number of repetitions of subsequences of $width */
 uint8_t sp_stat_times_repetition(sp_time_t* a, sp_time_t size, sp_time_t width, sp_sample_t* out) {
   sp_time_t count;
@@ -233,6 +240,7 @@ define_sp_stat_deviation(sp_stat_times_deviation, sp_stat_times_mean, sp_time_t)
   define_sp_stat_median(sp_stat_times_median, sp_times_sort_less, sp_times_sort_swap, sp_time_t)
     define_sp_stat_skewness(sp_stat_times_skewness, sp_stat_times_mean, sp_time_t)
       define_sp_stat_kurtosis(sp_stat_times_kurtosis, sp_stat_times_mean, sp_time_t)
+
   /* samples */
   uint8_t sp_stat_samples_center(sp_sample_t* a, sp_time_t size, sp_sample_t* out) {
   sp_time_t i;
@@ -248,6 +256,7 @@ define_sp_stat_deviation(sp_stat_times_deviation, sp_stat_times_mean, sp_time_t)
 }
 define_sp_stat_range(sp_stat_samples_range, sp_sample_t)
   define_sp_stat_inharmonicity(sp_stat_times_inharmonicity, sp_time_t)
+
   /** map input samples into the time range 0..max.
    makes all values positive by adding the absolute minimum
    then scales with multiplication so that the largest value is max

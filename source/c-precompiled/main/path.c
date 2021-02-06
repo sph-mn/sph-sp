@@ -1,3 +1,4 @@
+
 /** out memory is allocated */
 status_t sp_path_samples(sp_path_t path, sp_path_time_t size, sp_sample_t** out) {
   status_declare;
@@ -11,6 +12,7 @@ status_t sp_path_samples(sp_path_t path, sp_path_time_t size, sp_sample_t** out)
 exit:
   status_return;
 }
+
 /** return a sp_time_t array from path.
    memory is allocated and ownership transferred to the caller */
 status_t sp_path_times(sp_path_t path, sp_path_time_t size, sp_time_t** out) {
@@ -29,6 +31,7 @@ exit:
   free(temp);
   status_return;
 }
+
 /** return a newly allocated sp_time_t array for a path with one segment */
 status_t sp_path_times_1(sp_time_t** out, sp_time_t size, sp_path_segment_t s1) {
   sp_path_segment_t s[1] = { s1 };
@@ -78,6 +81,7 @@ status_t sp_path_samples_4(sp_sample_t** out, sp_time_t size, sp_path_segment_t 
   spline_path_set((&path), s, 4);
   return ((sp_path_samples(path, size, out)));
 }
+
 /** changes contains per point an array of values which will be multiplied with x or y values for index.
    each is an array with the layout ((number:derivation_change ...):point_change ...).
    index is the current derivation_change index.
@@ -120,6 +124,7 @@ status_t sp_path_derivation(sp_path_t path, sp_sample_t** x_changes, sp_sample_t
 exit:
   status_return;
 }
+
 /** get one derivation as a sp_sample_t array. out memory will be allocated */
 status_t sp_path_samples_derivation(sp_path_t path, sp_sample_t** x_changes, sp_sample_t** y_changes, sp_time_t index, sp_sample_t** out, sp_path_time_t* out_size) {
   status_declare;
@@ -134,6 +139,7 @@ status_t sp_path_samples_derivation(sp_path_t path, sp_sample_t** x_changes, sp_
 exit:
   status_return;
 }
+
 /** get one derivation as a sp_time_t array. out memory will be allocated */
 status_t sp_path_times_derivation(sp_path_t path, sp_sample_t** x_changes, sp_sample_t** y_changes, sp_time_t index, sp_time_t** out, sp_path_time_t* out_size) {
   status_declare;
@@ -150,6 +156,7 @@ exit:
   free(temp);
   status_return;
 }
+
 /** multiply all x and y values of path segments by x_factor and y_factor respectively */
 void sp_path_multiply(sp_path_t path, sp_sample_t x_factor, sp_sample_t y_factor) {
   sp_path_segment_t* s;
@@ -173,6 +180,7 @@ void sp_path_multiply(sp_path_t path, sp_sample_t x_factor, sp_sample_t y_factor
   };
   sp_path_prepare_segments((path.segments), (path.segments_count));
 }
+
 /** get count derived paths and adjust y values so that their sum follows base.y.
    algorithm
      for each (segment, point, path): get sum
@@ -230,6 +238,7 @@ exit:
   };
   status_return;
 }
+
 /** get sp_path_derivations_normalized as sample arrays. out and out_sizes is allocated and passed to the caller */
 status_t sp_path_samples_derivations_normalized(sp_path_t path, sp_time_t count, sp_sample_t** x_changes, sp_sample_t** y_changes, sp_sample_t*** out, sp_time_t** out_sizes) {
   sp_time_t i;

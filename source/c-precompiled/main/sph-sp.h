@@ -1,10 +1,13 @@
+
 #ifndef __USE_POSIX199309
 #define __USE_POSIX199309
 #endif
 #include <byteswap.h>
 #include <inttypes.h>
 #include <string.h>
+
 /* configuration */
+
 #ifndef sp_channel_limit
 #define sp_channel_limit 2
 #endif
@@ -82,7 +85,9 @@
 #include <sph/float.c>
 #include <sph/set.c>
 #include <sph/hashtable.c>
+
 /* main */
+
 #define boolean uint8_t
 #define f64 double
 #define sp_s_group_libc "libc"
@@ -121,12 +126,15 @@
 #define sp_cheap_ceiling_positive(a) (((sp_time_t)(a)) + (((sp_time_t)(a)) < a))
 #define sp_max(a, b) ((a > b) ? a : b)
 #define sp_min(a, b) ((a < b) ? a : b)
+
 /** subtract the smaller number from the greater number,
      regardless of if the smallest is the first or the second argument */
 #define sp_absolute_difference(a, b) ((a > b) ? (a - b) : (b - a))
 #define sp_abs(a) ((0 > a) ? (-1 * a) : a)
+
 /** subtract b from a but return 0 for negative results */
 #define sp_no_underflow_subtract(a, b) ((a > b) ? (a - b) : 0)
+
 /** divide a by b (a / b) but return 0 if b is zero */
 #define sp_no_zero_divide(a, b) ((0 == b) ? 0 : (a / b))
 #define sp_status_set(id) \
@@ -188,6 +196,7 @@ sp_sample_t sp_triangle(sp_time_t t, sp_time_t a, sp_time_t b);
 sp_time_t sp_time_expt(sp_time_t base, sp_time_t exp);
 sp_time_t sp_time_factorial(sp_time_t a);
 /* arrays */
+
 #define sp_samples_zero(a, size) memset(a, 0, (size * sizeof(sp_sample_t)))
 #define sp_times_zero(a, size) memset(a, 0, (size * sizeof(sp_time_t)))
 #define sp_time_interpolate_linear(a, b, t) sp_cheap_round_positive((((1 - ((sp_sample_t)(t))) * ((sp_sample_t)(a))) + (t * ((sp_sample_t)(b)))))
@@ -301,6 +310,7 @@ void sp_times_blend(sp_time_t* a, sp_time_t* b, sp_sample_t fraction, sp_time_t 
 void sp_times_mask(sp_time_t* a, sp_time_t* b, sp_sample_t* coefficients, sp_time_t size, sp_time_t* out);
 void sp_samples_blend(sp_sample_t* a, sp_sample_t* b, sp_sample_t fraction, sp_time_t size, sp_sample_t* out);
 /* filter */
+
 #define sp_filter_state_t sp_convolution_filter_state_t
 #define sp_filter_state_free sp_convolution_filter_state_free
 #define sp_cheap_filter_passes_limit 8
@@ -360,6 +370,7 @@ void sp_plot_spectrum_to_file(sp_sample_t* a, sp_time_t a_size, uint8_t* path);
 void sp_plot_spectrum_file(uint8_t* path);
 void sp_plot_spectrum(sp_sample_t* a, sp_time_t a_size);
 /* sequencer */
+
 #define sp_declare_wave_event_config(name) sp_wave_event_config_t name = { 0 }
 #define sp_declare_event(id) sp_event_t id = { 0 }
 #define sp_declare_event_2(id1, id2) \
@@ -376,6 +387,7 @@ void sp_plot_spectrum(sp_sample_t* a, sp_time_t a_size);
   array4_declare(id, sp_events_t); \
   sp_event_t id##_data[size]; \
   array4_take(id, id##_data, size, 0)
+
 /** optional helper that sets defaults. the mod arrays must be zero if not used */
 #define sp_declare_noise_event_config(name) sp_noise_event_config_t name = { 0 }
 #define sp_declare_cheap_noise_event_config(name) sp_cheap_noise_event_config_t name = { 0 }
@@ -397,6 +409,7 @@ void sp_plot_spectrum(sp_sample_t* a, sp_time_t a_size);
     (a.free)((&a)); \
   }
 #define sp_event_memory_add(a, data) sp_event_memory_add_handler(a, data, free)
+
 /** sp_event_t void* function:{void* -> void} */
 #define sp_event_memory_add_handler(a, data_, free) \
   ((a.memory)[a.memory_used]).data = data_; \
@@ -509,6 +522,7 @@ void sp_group_event_free(sp_event_t* a);
 status_t sp_map_event(sp_event_t event, sp_map_event_generate_t f, void* state, uint8_t isolate, sp_event_t* out);
 sp_channel_config_t sp_channel_config(boolean mute, sp_time_t delay, sp_time_t phs, sp_sample_t amp, sp_sample_t* amod);
 /* path */
+
 #define sp_path_t spline_path_t
 #define sp_path_time_t spline_path_time_t
 #define sp_path_value_t spline_path_value_t
@@ -582,6 +596,7 @@ sp_time_t sp_stat_repetition_all_max(sp_time_t size);
 uint8_t sp_stat_times_repetition(sp_time_t* a, sp_time_t size, sp_time_t width, sp_sample_t* out);
 sp_time_t sp_stat_repetition_max(sp_time_t size, sp_time_t width);
 /* main 2 */
+
 /** return a sample count relative to the current default sample rate sp_rate.
      (rate / d * n)
      example (rt 1 2) returns half of sp_rate */

@@ -1,3 +1,4 @@
+
 /* this file contains basics and includes dependencies */
 #define M_PI 3.141592653589793
 #include <stdio.h>
@@ -12,6 +13,7 @@
 #include <sph/queue.c>
 #include <sph/thread-pool.c>
 #include <sph/futures.c>
+
 #define sp_status_declare status_declare_group(sp_s_group_sp)
 #define sp_libc_s_id(id) \
   if (id < 0) { \
@@ -25,6 +27,7 @@
   } else { \
     status.id = 0; \
   }
+
 /** define a deinterleave, interleave or similar routine.
      a: source
      b: target */
@@ -48,6 +51,7 @@
 #define sp_array_or_fixed(array, fixed, index) (array ? array[index] : fixed)
 define_sp_interleave(sp_interleave, sp_sample_t, (b[b_size] = (a[channel])[a_size]))
   define_sp_interleave(sp_deinterleave, sp_sample_t, ((a[channel])[a_size] = b[b_size]))
+
   /** get a string description for a status id in a status_t */
   uint8_t* sp_status_description(status_t a) {
   uint8_t* b;
@@ -76,6 +80,7 @@ define_sp_interleave(sp_interleave, sp_sample_t, (b[b_size] = (a[channel])[a_siz
   };
   return (b);
 }
+
 /** get a one word identifier for status id in status_t */
 uint8_t* sp_status_name(status_t a) {
   uint8_t* b;
@@ -96,6 +101,7 @@ uint8_t* sp_status_name(status_t a) {
   };
   return (b);
 }
+
 /** return a newly allocated array for channels with data arrays for each channel */
 status_t sp_block_new(sp_channel_count_t channels, sp_time_t size, sp_block_t* out) {
   status_declare;
@@ -123,6 +129,7 @@ void sp_block_free(sp_block_t a) {
     };
   };
 }
+
 /** return a new block with offset added to all channel sample arrays */
 sp_block_t sp_block_with_offset(sp_block_t a, sp_time_t offset) {
   sp_time_t i;
@@ -131,6 +138,7 @@ sp_block_t sp_block_with_offset(sp_block_t a, sp_time_t offset) {
   };
   return (a);
 }
+
 /** lower precision version of sin() that should be faster */
 sp_sample_t sp_sin_lq(sp_float_t a) {
   sp_sample_t b;
@@ -143,12 +151,14 @@ sp_time_t sp_phase(sp_time_t current, sp_time_t change, sp_time_t cycle) {
   sp_time_t a = (current + change);
   return (((a < cycle) ? a : (a % cycle)));
 }
+
 /** accumulate an integer phase with change given as a float value.
    change must be a positive value and is rounded to the next larger integer */
 sp_time_t sp_phase_float(sp_time_t current, sp_sample_t change, sp_time_t cycle) {
   sp_time_t a = (current + sp_cheap_ceiling_positive(change));
   return (((a < cycle) ? a : (a % cycle)));
 }
+
 /** return a sample for a triangular wave with center offsets a left and b right.
    creates sawtooth waves if either a or b is 0 */
 sp_sample_t sp_triangle(sp_time_t t, sp_time_t a, sp_time_t b) {
@@ -157,6 +167,7 @@ sp_sample_t sp_triangle(sp_time_t t, sp_time_t a, sp_time_t b) {
   return (((remainder < a) ? (remainder * (1 / ((sp_sample_t)(a)))) : ((((sp_sample_t)(b)) - (remainder - ((sp_sample_t)(a)))) * (1 / ((sp_sample_t)(b))))));
 }
 sp_sample_t sp_square(sp_time_t t, sp_time_t size) { return (((((2 * t) % (2 * size)) < size) ? -1 : 1)); }
+
 /** writes one full period of a sine wave into out. can be used to create lookup tables */
 void sp_sine_period(sp_time_t size, sp_sample_t* out) {
   sp_time_t i;
@@ -164,15 +175,19 @@ void sp_sine_period(sp_time_t size, sp_sample_t* out) {
     out[i] = sin((i * (M_PI / (size / 2))));
   };
 }
+
 /** the normalised sinc function */
 sp_float_t sp_sinc(sp_float_t a) { return (((0 == a) ? 1 : (sin((M_PI * a)) / (M_PI * a)))); }
+
 /** all arrays should be input-len and are managed by the caller */
 int sp_fft(sp_time_t input_len, double* input_or_output_real, double* input_or_output_imag) { return ((!Fft_transform(input_or_output_real, input_or_output_imag, input_len))); }
+
 /** [[real, imaginary], ...]:complex-numbers -> real-numbers
    input-length > 0
    output-length = input-length
    output is allocated and owned by the caller */
 int sp_ffti(sp_time_t input_len, double* input_or_output_real, double* input_or_output_imag) { return ((!(1 == Fft_inverseTransform(input_or_output_real, input_or_output_imag, input_len)))); }
+
 /** modify an impulse response kernel for spectral inversion.
    a-len must be odd and "a" must have left-right symmetry.
    flips the frequency response top to bottom */
@@ -185,6 +200,7 @@ void sp_spectral_inversion_ir(sp_sample_t* a, sp_time_t a_len) {
   center = ((a_len - 1) / 2);
   a[center] = (1 + a[center]);
 }
+
 /** inverts the sign for samples at odd indexes.
    a-len must be odd and "a" must have left-right symmetry.
    flips the frequency response left to right */
@@ -194,6 +210,7 @@ void sp_spectral_reversal_ir(sp_sample_t* a, sp_time_t a_len) {
     a[a_len] = (-1 * a[a_len]);
   };
 }
+
 /** discrete linear convolution.
    result-samples must be all zeros, its length must be at least a-len + b-len - 1.
    result-samples is owned and allocated by the caller */
@@ -211,6 +228,7 @@ void sp_convolve_one(sp_sample_t* a, sp_time_t a_len, sp_sample_t* b, sp_time_t 
     a_index = (1 + a_index);
   };
 }
+
 /** discrete linear convolution for sample arrays, possibly of a continuous stream. maps segments (a, a-len) to result-samples
    using (b, b-len) as the impulse response. b-len must be greater than zero.
    all heap memory is owned and allocated by the caller.
@@ -285,6 +303,7 @@ sp_time_t sp_time_factorial(sp_time_t a) {
   };
   return (result);
 }
+
 /** return the maximum number of possible distinct selections from a set with length "set-size" */
 sp_time_t sp_set_sequence_max(sp_time_t set_size, sp_time_t selection_size) { return (((0 == set_size) ? 0 : sp_time_expt(set_size, selection_size))); }
 sp_time_t sp_permutations_max(sp_time_t set_size, sp_time_t selection_size) { return ((sp_time_factorial(set_size) / (set_size - selection_size))); }
@@ -296,6 +315,7 @@ void sp_block_zero(sp_block_t a) {
     sp_samples_zero(((a.samples)[i]), (a.size));
   };
 }
+
 /** copies all channels and samples from $a to $b.
    $b channel count and size must be equal or greater than $a */
 void sp_block_copy(sp_block_t a, sp_block_t b) {
@@ -320,6 +340,7 @@ sp_render_config_t sp_render_config(sp_channel_count_t channels, sp_time_t rate,
   a.block_size = block_size;
   return (a);
 }
+
 /** render a events with sp_seq to a file. the file is created or overwritten */
 status_t sp_render_file(sp_events_t events, sp_time_t start, sp_time_t end, sp_render_config_t config, uint8_t* path) {
   status_declare;
@@ -347,6 +368,7 @@ exit:
   sp_file_close(file);
   status_return;
 }
+
 /** render a single event with sp_seq to sample arrays in sp_block_t.
    events should have been prepared with sp-seq-events-prepare.
    block will be allocated */
@@ -359,6 +381,7 @@ status_t sp_render_block(sp_events_t events, sp_time_t start, sp_time_t end, sp_
 exit:
   status_return;
 }
+
 /** render the full duration of events with defaults to /tmp/sp-out.wav or plot the result.
    example: sp_render_quick(event, 2, 48000, 1) */
 status_t sp_render_quick(sp_events_t events, uint8_t file_or_plot) {
@@ -389,6 +412,7 @@ sp_random_state_t sp_random_state_new(sp_time_t seed) {
   sp_time_random((&result));
   return (result);
 }
+
 /** fills the sine wave lookup table.
    rate and channels are used to set sp_rate and sp_channels,
    which are used as defaults in a few cases */
