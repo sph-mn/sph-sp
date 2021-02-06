@@ -1,6 +1,6 @@
 (sc-include-once "./sc-macros")
 
-(define (sp-path-samples path size out) (status-t sp-path-t sp-path-time-t sp-sample-t**)
+(define (sp-path-samples-new path size out) (status-t sp-path-t sp-path-time-t sp-sample-t**)
   "out memory is allocated"
   status-declare
   (declare out-temp sp-sample-t*)
@@ -10,14 +10,14 @@
   (set *out out-temp)
   (label exit status-return))
 
-(define (sp-path-times path size out) (status-t sp-path-t sp-path-time-t sp-time-t**)
+(define (sp-path-times-new path size out) (status-t sp-path-t sp-path-time-t sp-time-t**)
   "return a sp_time_t array from path.
    memory is allocated and ownership transferred to the caller"
   status-declare
   (declare out-temp sp-time-t* temp sp-sample-t*)
   (set temp 0)
   (if (= 0 size) (set size (sp-path-size path)))
-  (status-require (sp-path-samples path size &temp))
+  (status-require (sp-path-samples-new path size &temp))
   (status-require (sp-times-new size &out-temp))
   (sp-samples->times temp size out-temp)
   (set *out out-temp)
@@ -27,48 +27,48 @@
   "return a newly allocated sp_time_t array for a path with one segment"
   (declare s (array sp-path-segment-t 1 s1) path sp-path-t)
   (spline-path-set &path s 1)
-  (return (sp-path-times path size out)))
+  (return (sp-path-times-new path size out)))
 
 (define (sp-path-times-2 out size s1 s2)
   (status-t sp-time-t** sp-time-t sp-path-segment-t sp-path-segment-t)
   (declare s (array sp-path-segment-t 2 s1 s2) path sp-path-t)
   (spline-path-set &path s 2)
-  (return (sp-path-times path size out)))
+  (return (sp-path-times-new path size out)))
 
 (define (sp-path-times-3 out size s1 s2 s3)
   (status-t sp-time-t** sp-time-t sp-path-segment-t sp-path-segment-t sp-path-segment-t)
   (declare s (array sp-path-segment-t 3 s1 s2 s3) path sp-path-t)
   (spline-path-set &path s 3)
-  (return (sp-path-times path size out)))
+  (return (sp-path-times-new path size out)))
 
 (define (sp-path-times-4 out size s1 s2 s3 s4)
   (status-t sp-time-t** sp-time-t sp-path-segment-t sp-path-segment-t sp-path-segment-t sp-path-segment-t)
   (declare s (array sp-path-segment-t 4 s1 s2 s3 s4) path sp-path-t)
   (spline-path-set &path s 4)
-  (return (sp-path-times path size out)))
+  (return (sp-path-times-new path size out)))
 
 (define (sp-path-samples-1 out size s1) (status-t sp-sample-t** sp-time-t sp-path-segment-t)
   (declare s (array sp-path-segment-t 1 s1) path sp-path-t)
   (spline-path-set &path s 1)
-  (return (sp-path-samples path size out)))
+  (return (sp-path-samples-new path size out)))
 
 (define (sp-path-samples-2 out size s1 s2)
   (status-t sp-sample-t** sp-time-t sp-path-segment-t sp-path-segment-t)
   (declare s (array sp-path-segment-t 2 s1 s2) path sp-path-t)
   (spline-path-set &path s 2)
-  (return (sp-path-samples path size out)))
+  (return (sp-path-samples-new path size out)))
 
 (define (sp-path-samples-3 out size s1 s2 s3)
   (status-t sp-sample-t** sp-time-t sp-path-segment-t sp-path-segment-t sp-path-segment-t)
   (declare s (array sp-path-segment-t 3 s1 s2 s3) path sp-path-t)
   (spline-path-set &path s 3)
-  (return (sp-path-samples path size out)))
+  (return (sp-path-samples-new path size out)))
 
 (define (sp-path-samples-4 out size s1 s2 s3 s4)
   (status-t sp-sample-t** sp-time-t sp-path-segment-t sp-path-segment-t sp-path-segment-t sp-path-segment-t)
   (declare s (array sp-path-segment-t 4 s1 s2 s3 s4) path sp-path-t)
   (spline-path-set &path s 4)
-  (return (sp-path-samples path size out)))
+  (return (sp-path-samples-new path size out)))
 
 (define (sp-path-derivation path x-changes y-changes index out)
   (status-t sp-path-t sp-sample-t** sp-sample-t** sp-time-t sp-path-t*)

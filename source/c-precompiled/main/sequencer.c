@@ -227,7 +227,7 @@ status_t sp_wave_event_channel(sp_time_t duration, sp_wave_event_config_t config
   (*state).frq = config.frq;
   (*state).fmod = config.fmod;
   (*state).amp = (channel_config.use ? channel_config.amp : config.amp);
-  (*state).amod = (channel_config.use ? channel_config.amod : config.amod);
+  (*state).amod = ((channel_config.use && channel_config.amod) ? channel_config.amod : config.amod);
   (*state).channel = channel;
   event.state = state;
   event.start = (channel_config.use ? channel_config.delay : 0);
@@ -255,7 +255,13 @@ exit:
    * wvf-size: count of waveform samples
    * phs (phase): initial phase offset
    * amp (amplitude): multiplied with amod
-   * amod (amplitude): array with sample values */
+   * amod (amplitude): array with sample values
+   channel-config (array with one element per channel):
+   * use: if zero, config for this channel will not be applied
+   * mute: non-zero for silencing this channel
+   * delay: integer number of samples
+   * amod: uses main amod if zero
+   * amp: multiplied with amod */
 status_t sp_wave_event(sp_time_t start, sp_time_t end, sp_wave_event_config_t config, sp_event_t* out) {
   status_declare;
   sp_channel_count_t ci;
@@ -266,7 +272,7 @@ status_t sp_wave_event(sp_time_t start, sp_time_t end, sp_wave_event_config_t co
     if (((config.channel_config)[ci]).mute) {
       continue;
     };
-    status_require((sp_wave_event_channel((start - end), config, ci, (&event))));
+    status_require((sp_wave_event_channel((end - start), config, ci, (&event))));
     sp_group_add(group, event);
   };
   sp_group_prepare(group);
@@ -365,7 +371,7 @@ status_t sp_noise_event_channel(sp_time_t duration, sp_noise_event_config_t conf
   status_require((sp_noise_event_filter_state((sp_array_or_fixed((config.cutl_mod), (config.cutl), 0)), (sp_array_or_fixed((config.cuth_mod), (config.cuth), 0)), (sp_array_or_fixed((config.trnl_mod), (config.trnl), 0)), (sp_array_or_fixed((config.trnh_mod), (config.trnh), 0)), (config.is_reject), (&rs), (&filter_state))));
   status_require((sp_malloc_type(1, sp_noise_event_state_t, (&state))));
   (*state).amp = (channel_config.use ? channel_config.amp : config.amp);
-  (*state).amod = (channel_config.use ? channel_config.amod : config.amod);
+  (*state).amod = ((channel_config.use && channel_config.amod) ? channel_config.amod : config.amod);
   (*state).cutl = config.cutl;
   (*state).cuth = config.cuth;
   (*state).trnl = config.trnl;
@@ -501,7 +507,7 @@ status_t sp_cheap_noise_event_channel(sp_time_t duration, sp_cheap_noise_event_c
   status_require((sp_malloc_type(1, sp_cheap_noise_event_state_t, (&state))));
   status_require((sp_cheap_filter_state_new((config.resolution), (config.passes), (&filter_state))));
   (*state).amp = (channel_config.use ? channel_config.amp : config.amp);
-  (*state).amod = (channel_config.use ? channel_config.amod : config.amod);
+  (*state).amod = ((channel_config.use && channel_config.amod) ? channel_config.amod : config.amod);
   (*state).cut = config.cut;
   (*state).cut_mod = config.cut_mod;
   (*state).type = config.type;

@@ -180,7 +180,7 @@
     frq config.frq
     fmod config.fmod
     amp (if* channel-config.use channel-config.amp config.amp)
-    amod (if* channel-config.use channel-config.amod config.amod)
+    amod (if* (and channel-config.use channel-config.amod) channel-config.amod config.amod)
     channel channel)
   (struct-set event
     state state
@@ -204,14 +204,20 @@
    * wvf-size: count of waveform samples
    * phs (phase): initial phase offset
    * amp (amplitude): multiplied with amod
-   * amod (amplitude): array with sample values"
+   * amod (amplitude): array with sample values
+   channel-config (array with one element per channel):
+   * use: if zero, config for this channel will not be applied
+   * mute: non-zero for silencing this channel
+   * delay: integer number of samples
+   * amod: uses main amod if zero
+   * amp: multiplied with amod"
   status-declare
   (declare ci sp-channel-count-t event sp-event-t)
   (sp-declare-event group)
   (status-require (sp-group-new 0 config.channels &group))
   (for ((set ci 0) (< ci config.channels) (set+ ci 1))
     (if (struct-get (array-get config.channel-config ci) mute) continue)
-    (status-require (sp-wave-event-channel (- start end) config ci &event))
+    (status-require (sp-wave-event-channel (- end start) config ci &event))
     (sp-group-add group event))
   (sp-group-prepare group)
   (set *out group)
@@ -313,7 +319,7 @@
   (status-require (sp-malloc-type 1 sp-noise-event-state-t &state))
   (struct-set *state
     amp (if* channel-config.use channel-config.amp config.amp)
-    amod (if* channel-config.use channel-config.amod config.amod)
+    amod (if* (and channel-config.use channel-config.amod) channel-config.amod config.amod)
     cutl config.cutl
     cuth config.cuth
     trnl config.trnl
@@ -447,7 +453,7 @@
   (status-require (sp-cheap-filter-state-new config.resolution config.passes &filter-state))
   (struct-set *state
     amp (if* channel-config.use channel-config.amp config.amp)
-    amod (if* channel-config.use channel-config.amod config.amod)
+    amod (if* (and channel-config.use channel-config.amod) channel-config.amod config.amod)
     cut config.cut
     cut-mod config.cut-mod
     type config.type

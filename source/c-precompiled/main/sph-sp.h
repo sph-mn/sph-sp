@@ -547,12 +547,12 @@ sp_channel_config_t sp_channel_config(boolean mute, sp_time_t delay, sp_time_t p
 #define sp_path_set spline_path_set
 #define sp_path_times_constant(out, size, value) sp_path_times_2(out, size, (sp_path_move(0, value)), (sp_path_constant()))
 #define sp_path_samples_constant(out, size, value) sp_path_samples_2(out, size, (sp_path_move(0, value)), (sp_path_constant()))
-status_t sp_path_samples(sp_path_t path, sp_path_time_t size, sp_sample_t** out);
+status_t sp_path_samples_new(sp_path_t path, sp_path_time_t size, sp_sample_t** out);
 status_t sp_path_samples_1(sp_sample_t** out, sp_time_t size, sp_path_segment_t s1);
 status_t sp_path_samples_2(sp_sample_t** out, sp_time_t size, sp_path_segment_t s1, sp_path_segment_t s2);
 status_t sp_path_samples_3(sp_sample_t** out, sp_time_t size, sp_path_segment_t s1, sp_path_segment_t s2, sp_path_segment_t s3);
 status_t sp_path_samples_4(sp_sample_t** out, sp_time_t size, sp_path_segment_t s1, sp_path_segment_t s2, sp_path_segment_t s3, sp_path_segment_t s4);
-status_t sp_path_times(sp_path_t path, sp_path_time_t size, sp_time_t** out);
+status_t sp_path_times_new(sp_path_t path, sp_path_time_t size, sp_time_t** out);
 status_t sp_path_times_1(sp_time_t** out, sp_time_t size, sp_path_segment_t s1);
 status_t sp_path_times_2(sp_time_t** out, sp_time_t size, sp_path_segment_t s1, sp_path_segment_t s2);
 status_t sp_path_times_3(sp_time_t** out, sp_time_t size, sp_path_segment_t s1, sp_path_segment_t s2, sp_path_segment_t s3);

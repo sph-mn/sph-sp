@@ -1,6 +1,6 @@
 
 /** out memory is allocated */
-status_t sp_path_samples(sp_path_t path, sp_path_time_t size, sp_sample_t** out) {
+status_t sp_path_samples_new(sp_path_t path, sp_path_time_t size, sp_sample_t** out) {
   status_declare;
   sp_sample_t* out_temp;
   if (0 == size) {
@@ -15,7 +15,7 @@ exit:
 
 /** return a sp_time_t array from path.
    memory is allocated and ownership transferred to the caller */
-status_t sp_path_times(sp_path_t path, sp_path_time_t size, sp_time_t** out) {
+status_t sp_path_times_new(sp_path_t path, sp_path_time_t size, sp_time_t** out) {
   status_declare;
   sp_time_t* out_temp;
   sp_sample_t* temp;
@@ -23,7 +23,7 @@ status_t sp_path_times(sp_path_t path, sp_path_time_t size, sp_time_t** out) {
   if (0 == size) {
     size = sp_path_size(path);
   };
-  status_require((sp_path_samples(path, size, (&temp))));
+  status_require((sp_path_samples_new(path, size, (&temp))));
   status_require((sp_times_new(size, (&out_temp))));
   sp_samples_to_times(temp, size, out_temp);
   *out = out_temp;
@@ -37,49 +37,49 @@ status_t sp_path_times_1(sp_time_t** out, sp_time_t size, sp_path_segment_t s1) 
   sp_path_segment_t s[1] = { s1 };
   sp_path_t path;
   spline_path_set((&path), s, 1);
-  return ((sp_path_times(path, size, out)));
+  return ((sp_path_times_new(path, size, out)));
 }
 status_t sp_path_times_2(sp_time_t** out, sp_time_t size, sp_path_segment_t s1, sp_path_segment_t s2) {
   sp_path_segment_t s[2] = { s1, s2 };
   sp_path_t path;
   spline_path_set((&path), s, 2);
-  return ((sp_path_times(path, size, out)));
+  return ((sp_path_times_new(path, size, out)));
 }
 status_t sp_path_times_3(sp_time_t** out, sp_time_t size, sp_path_segment_t s1, sp_path_segment_t s2, sp_path_segment_t s3) {
   sp_path_segment_t s[3] = { s1, s2, s3 };
   sp_path_t path;
   spline_path_set((&path), s, 3);
-  return ((sp_path_times(path, size, out)));
+  return ((sp_path_times_new(path, size, out)));
 }
 status_t sp_path_times_4(sp_time_t** out, sp_time_t size, sp_path_segment_t s1, sp_path_segment_t s2, sp_path_segment_t s3, sp_path_segment_t s4) {
   sp_path_segment_t s[4] = { s1, s2, s3, s4 };
   sp_path_t path;
   spline_path_set((&path), s, 4);
-  return ((sp_path_times(path, size, out)));
+  return ((sp_path_times_new(path, size, out)));
 }
 status_t sp_path_samples_1(sp_sample_t** out, sp_time_t size, sp_path_segment_t s1) {
   sp_path_segment_t s[1] = { s1 };
   sp_path_t path;
   spline_path_set((&path), s, 1);
-  return ((sp_path_samples(path, size, out)));
+  return ((sp_path_samples_new(path, size, out)));
 }
 status_t sp_path_samples_2(sp_sample_t** out, sp_time_t size, sp_path_segment_t s1, sp_path_segment_t s2) {
   sp_path_segment_t s[2] = { s1, s2 };
   sp_path_t path;
   spline_path_set((&path), s, 2);
-  return ((sp_path_samples(path, size, out)));
+  return ((sp_path_samples_new(path, size, out)));
 }
 status_t sp_path_samples_3(sp_sample_t** out, sp_time_t size, sp_path_segment_t s1, sp_path_segment_t s2, sp_path_segment_t s3) {
   sp_path_segment_t s[3] = { s1, s2, s3 };
   sp_path_t path;
   spline_path_set((&path), s, 3);
-  return ((sp_path_samples(path, size, out)));
+  return ((sp_path_samples_new(path, size, out)));
 }
 status_t sp_path_samples_4(sp_sample_t** out, sp_time_t size, sp_path_segment_t s1, sp_path_segment_t s2, sp_path_segment_t s3, sp_path_segment_t s4) {
   sp_path_segment_t s[4] = { s1, s2, s3, s4 };
   sp_path_t path;
   spline_path_set((&path), s, 4);
-  return ((sp_path_samples(path, size, out)));
+  return ((sp_path_samples_new(path, size, out)));
 }
 
 /** changes contains per point an array of values which will be multiplied with x or y values for index.
