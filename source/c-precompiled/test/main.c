@@ -418,7 +418,7 @@ status_t test_sp_group() {
   sp_event_memory_init(g, 2);
   sp_event_memory_add(g, m1);
   sp_event_memory_add(g, m2);
-  sp_group_prepare(g);
+  (g.prepare)((&g));
   (g.generate)(0, 50, block, (g.state));
   (g.generate)(50, 100, (sp_block_with_offset(block, 50)), (g.state));
   (g.free)((&g));
@@ -779,13 +779,13 @@ int main() {
   status_declare;
   rs = sp_random_state_new(3);
   sp_initialise(3, 2, _rate);
+  test_helper_test_one(test_sp_group);
   test_helper_test_one(test_sp_seq_parallel);
   test_helper_test_one(test_sp_wave_event);
   test_helper_test_one(test_sp_noise_event);
   test_helper_test_one(test_sp_cheap_noise_event);
   test_helper_test_one(test_sp_seq);
   test_helper_test_one(test_sp_map_event);
-  test_helper_test_one(test_sp_group);
   test_helper_test_one(test_render_block);
   test_helper_test_one(test_moving_average);
   test_helper_test_one(test_statistics);

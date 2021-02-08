@@ -403,11 +403,6 @@ void sp_plot_spectrum(sp_sample_t* a, sp_time_t a_size);
   if (a.end < event.end) { \
     a.end = event.end; \
   }
-#define sp_group_prepare(a) sp_seq_events_prepare(((sp_events_t*)(a.state)))
-#define sp_group_free(a) \
-  if (a.state) { \
-    (a.free)((&a)); \
-  }
 #define sp_event_memory_add(a, data) sp_event_memory_add_handler(a, data, free)
 
 /** sp_event_t void* function:{void* -> void} */

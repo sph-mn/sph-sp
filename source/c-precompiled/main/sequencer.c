@@ -159,6 +159,20 @@ void sp_group_event_free(sp_event_t* a) {
   free(sp);
   sp_event_memory_free(a);
 }
+status_t sp_group_prepare(sp_event_t* event) {
+  status_declare;
+  sp_seq_events_prepare(((sp_events_t*)(event->state)));
+  status_return;
+}
+void sp_group_free(sp_event_t* event) {
+  if (!event->state) {
+    return;
+  };
+  sp_events_t* events = event->state;
+  sp_seq_events_free(events);
+  array4_free((*events));
+  free(events);
+}
 status_t sp_group_new(sp_time_t start, sp_group_size_t event_size, sp_event_t* out) {
   status_declare;
   sp_events_t* s;
@@ -170,8 +184,9 @@ status_t sp_group_new(sp_time_t start, sp_group_size_t event_size, sp_event_t* o
   (*out).state = s;
   (*out).start = start;
   (*out).end = start;
+  (*out).prepare = sp_group_prepare;
   (*out).generate = ((sp_event_generate_t)(sp_seq));
-  (*out).free = sp_group_event_free;
+  (*out).free = sp_group_free;
 exit:
   if (status_is_failure) {
     if (s) {
@@ -275,11 +290,10 @@ status_t sp_wave_event(sp_time_t start, sp_time_t end, sp_wave_event_config_t co
     status_require((sp_wave_event_channel((end - start), config, ci, (&event))));
     sp_group_add(group, event);
   };
-  sp_group_prepare(group);
   *out = group;
 exit:
   if (status_is_failure) {
-    sp_group_free(group);
+    sp_group_free((&group));
   };
   status_return;
 }
@@ -436,11 +450,10 @@ status_t sp_noise_event(sp_time_t start, sp_time_t end, sp_noise_event_config_t 
     status_require((sp_noise_event_channel(duration, config, ci, rs, state_noise, state_temp, (&event))));
     sp_group_add(group, event);
   };
-  sp_group_prepare(group);
   *out = group;
 exit:
   if (status_is_failure) {
-    sp_group_free(group);
+    sp_group_free((&group));
   };
   status_return;
 }
@@ -565,11 +578,10 @@ status_t sp_cheap_noise_event(sp_time_t start, sp_time_t end, sp_cheap_noise_eve
     status_require((sp_cheap_noise_event_channel((end - start), config, ci, rs, state_noise, state_temp, (&event))));
     sp_group_add(group, event);
   };
-  sp_group_prepare(group);
   *out = group;
 exit:
   if (status_is_failure) {
-    sp_group_free(group);
+    sp_group_free((&group));
   };
   status_return;
 }

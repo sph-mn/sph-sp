@@ -419,8 +419,6 @@
   (sp-group-events a) (pointer-get (convert-type a.state sp-events-t*))
   (sp-group-add a event)
   (begin (array4-add (sp-group-events a) event) (if (< a.end event.end) (set a.end event.end)))
-  (sp-group-prepare a) (sp-seq-events-prepare (convert-type a.state sp-events-t*))
-  (sp-group-free a) (if a.state (a.free &a))
   (sp-event-memory-add a data) (sp-event-memory-add-handler a data free)
   (sp-event-memory-add-handler a data_ free)
   (begin

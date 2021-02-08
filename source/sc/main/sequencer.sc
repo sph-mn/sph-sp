@@ -128,6 +128,18 @@
   (free sp)
   (sp-event-memory-free a))
 
+(define (sp-group-prepare event) (status-t sp-event-t*)
+  status-declare
+  (sp-seq-events-prepare (convert-type event:state sp-events-t*))
+  status-return)
+
+(define (sp-group-free event) (void sp-event-t*)
+  (if (not event:state) return)
+  (define events sp-events-t* event:state)
+  (sp-seq-events-free events)
+  (array4-free *events)
+  (free events))
+
 (define (sp-group-new start event-size out) (status-t sp-time-t sp-group-size-t sp-event-t*)
   status-declare
   (declare s sp-events-t*)
@@ -138,8 +150,9 @@
     state s
     start start
     end start
+    prepare sp-group-prepare
     generate (convert-type sp-seq sp-event-generate-t)
-    free sp-group-event-free)
+    free sp-group-free)
   (label exit (if status-is-failure (if s (free s))) status-return))
 
 (define (sp-group-append a event) (void sp-event-t* sp-event-t)
@@ -219,9 +232,8 @@
     (if (struct-get (array-get config.channel-config ci) mute) continue)
     (status-require (sp-wave-event-channel (- end start) config ci &event))
     (sp-group-add group event))
-  (sp-group-prepare group)
   (set *out group)
-  (label exit (if status-is-failure (sp-group-free group)) status-return))
+  (label exit (if status-is-failure (sp-group-free &group)) status-return))
 
 (declare sp-noise-event-state-t
   (type
@@ -380,9 +392,8 @@
     (if (struct-get (array-get config.channel-config ci) mute) continue)
     (status-require (sp-noise-event-channel duration config ci rs state-noise state-temp &event))
     (sp-group-add group event))
-  (sp-group-prepare group)
   (set *out group)
-  (label exit (if status-is-failure (sp-group-free group)) status-return))
+  (label exit (if status-is-failure (sp-group-free &group)) status-return))
 
 (declare sp-cheap-noise-event-state-t
   (type
@@ -508,9 +519,8 @@
     (status-require
       (sp-cheap-noise-event-channel (- end start) config ci rs state-noise state-temp &event))
     (sp-group-add group event))
-  (sp-group-prepare group)
   (set *out group)
-  (label exit (if status-is-failure (sp-group-free group)) status-return))
+  (label exit (if status-is-failure (sp-group-free &group)) status-return))
 
 (define (sp-event-memory-free event) (void sp-event-t*)
   (declare i sp-time-half-t m sp-memory-t)
