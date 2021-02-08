@@ -1,3 +1,8 @@
+# what parameters of core events should be possible to modulate
+in traditional software pretty much everything can be time dependent.
+allowing modulation is a performance consideration because it needs one extra check per generated sample (per channel).
+but some things are deemed to be a too subtle effect and modulation is currently not supported for thees (ex: transition length of filters), or are intended to be realised with second events (ex: fmod per channel) or custom events if needed.
+
 # moving average filter
 * use cases: smoothing of paths, smoothing of input control streams
 * not as useful: frequency filtering

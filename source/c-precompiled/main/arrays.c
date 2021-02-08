@@ -3,6 +3,8 @@
 sp-time-t subtraction is limited to zero.
 sp-time-t addition is not limited. */
 
+/* this file defines macros only available in sc, that are used as optional helpers to simplify common tasks where c syntax alone offers no good alternative */
+
 /** generic shuffle that works on any array type. fisher-yates algorithm */
 void sp_shuffle(sp_random_state_t* state, void (*swap)(void*, size_t, size_t), void* a, size_t size) {
   size_t i;
@@ -715,14 +717,13 @@ sp_time_t sp_time_round_to_multiple(sp_time_t a, sp_time_t base) { return (((0 =
 status_t sp_times_deduplicate(sp_time_t* a, sp_time_t size, sp_time_t* out, sp_time_t* out_size) {
   status_declare;
   sp_time_set_t unique;
-  sp_time_t i;
   sp_time_t unique_count;
   unique.size = 0;
   if (sp_time_set_new(size, (&unique))) {
     sp_memory_error;
   };
   unique_count = 0;
-  for (i = 0; (i < size); i += 1) {
+  for (sp_time_t i = 0; (i < size); i += 1) {
     if (!sp_time_set_get(unique, (a[i]))) {
       if (!sp_time_set_add(unique, (a[i]))) {
         sp_memory_error;
@@ -750,11 +751,10 @@ uint8_t sp_times_counted_sequences_sort_greater(void* a, ssize_t b, ssize_t c) {
 /** associate in hash table $out sub-sequences of $width with their count in $a.
    memory for $out is lend and should be allocated with sp_sequence_hashtable_new(size - (width - 1), &out) */
 void sp_times_counted_sequences_hash(sp_time_t* a, sp_time_t size, sp_time_t width, sp_sequence_hashtable_t out) {
-  sp_time_t i;
   sp_sequence_set_key_t key;
   sp_time_t* value;
   key.size = width;
-  for (i = 0; (i < (size - (width - 1))); i += 1) {
+  for (sp_time_t i = 0; (i < (size - (width - 1))); i += 1) {
     key.data = ((uint8_t*)((i + a)));
     value = sp_sequence_hashtable_get(out, key);
     /* full-hashtable-error is ignored */
@@ -768,10 +768,9 @@ void sp_times_counted_sequences_hash(sp_time_t* a, sp_time_t size, sp_time_t wid
 
 /** extract counts from a counted-sequences-hash and return as an array of structs */
 void sp_times_counted_sequences(sp_sequence_hashtable_t known, sp_time_t limit, sp_times_counted_sequences_t* out, sp_time_t* out_size) {
-  sp_time_t i;
   sp_time_t count;
   count = 0;
-  for (i = 0; (i < known.size); i += 1) {
+  for (sp_time_t i = 0; (i < known.size); i += 1) {
     if ((known.flags)[i] && (limit < (known.values)[i])) {
       (out[count]).count = (known.values)[i];
       (out[count]).sequence = ((sp_time_t*)(((known.keys)[i]).data));
@@ -820,24 +819,21 @@ void sp_times_subdivide(sp_time_t* a, sp_time_t size, sp_time_t index, sp_time_t
 
 /** interpolate values between $a and $b with interpolation distance 0..1 */
 void sp_times_blend(sp_time_t* a, sp_time_t* b, sp_sample_t fraction, sp_time_t size, sp_time_t* out) {
-  sp_time_t i;
-  for (i = 0; (i < size); i += 1) {
+  for (sp_time_t i = 0; (i < size); i += 1) {
     out[i] = sp_cheap_round_positive((sp_time_interpolate_linear((a[i]), (b[i]), fraction)));
   };
 }
 
 /** interpolate values pointwise between $a and $b with interpolation distance 0..1 from $coefficients */
 void sp_times_mask(sp_time_t* a, sp_time_t* b, sp_sample_t* coefficients, sp_time_t size, sp_time_t* out) {
-  sp_time_t i;
-  for (i = 0; (i < size); i += 1) {
+  for (sp_time_t i = 0; (i < size); i += 1) {
     out[i] = sp_cheap_round_positive((sp_time_interpolate_linear((a[i]), (b[i]), (coefficients[i]))));
   };
 }
 
 /** interpolate values pointwise between $a and $b with fraction as a fixed interpolation distance 0..1 */
 void sp_samples_blend(sp_sample_t* a, sp_sample_t* b, sp_sample_t fraction, sp_time_t size, sp_sample_t* out) {
-  sp_time_t i;
-  for (i = 0; (i < size); i += 1) {
+  for (sp_time_t i = 0; (i < size); i += 1) {
     out[i] = sp_sample_interpolate_linear((a[i]), (b[i]), fraction);
   };
 }

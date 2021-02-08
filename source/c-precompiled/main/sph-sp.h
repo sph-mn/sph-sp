@@ -85,6 +85,7 @@
 #include <sph/float.c>
 #include <sph/set.c>
 #include <sph/hashtable.c>
+#include <sph/memreg.c>
 
 /* main */
 
@@ -143,6 +144,14 @@
 #define sp_malloc_type(count, type, pointer_address) sph_helper_malloc((count * sizeof(type)), pointer_address)
 #define sp_calloc_type(count, type, pointer_address) sph_helper_calloc((count * sizeof(type)), pointer_address)
 #define sp_realloc_type(count, type, pointer_address) sph_helper_realloc((count * sizeof(type)), pointer_address)
+#define free_on_error_init(register_size) memreg2_init_named(error, register_size)
+#define free_on_exit_init(register_size) memreg2_init_named(exit, register_size)
+#define free_on_error_free memreg2_free_named(error)
+#define free_on_exit_free memreg2_free_named(exit)
+#define free_on_error(address, handler) memreg2_add_named(error, address, handler)
+#define free_on_exit(address, handler) memreg2_add_named(exit, address, handler)
+#define free_on_error1(address) free_on_error(address, free)
+#define free_on_exit1(address) free_on_exit(address, free)
 typedef struct {
   sp_channel_count_t channels;
   sp_time_t size;
@@ -417,6 +426,34 @@ void sp_plot_spectrum(sp_sample_t* a, sp_time_t a_size);
   sp_event_memory_add_2(a, data1, data2); \
   sp_event_memory_add(a, data3)
 #define sp_event_memory_init(a, size) sph_helper_malloc((size * sizeof(sp_memory_t)), (&(a.memory)))
+#define sp_events_add array4_add
+#define sp_sine_config_t sp_wave_event_config_t
+#define sp_declare_sine_config(name) \
+  sp_declare_wave_event_config(name); \
+  name.wvf = sp_sine_table; \
+  name.wvf_size = sp_rate; \
+  name.channels = sp_channels; \
+  name.amp = 1
+#define sp_declare_sine_config_lfo(name) \
+  sp_declare_wave_event_config(name); \
+  name.wvf = sp_sine_table_lfo; \
+  name.wvf_size = (sp_rate * sp_sine_lfo_factor); \
+  name.channels = sp_channels; \
+  name.amp = 1
+#define sp_declare_noise_config(name) \
+  sp_declare_noise_event_config(name); \
+  name.channels = sp_channels; \
+  name.amp = 1; \
+  name.cutl = 0; \
+  name.cuth = 0.5; \
+  name.trnl = 0.1; \
+  name.trnh = 0.1
+#define sp_declare_cheap_noise_config(name) \
+  sp_declare_cheap_noise_event_config(name); \
+  name.channels = sp_channels; \
+  name.amp = 1; \
+  name.type = sp_state_variable_filter_lp; \
+  name.cut = 0.5
 typedef void (*sp_memory_free_t)(void*);
 typedef struct {
   sp_memory_free_t free;
@@ -472,8 +509,6 @@ typedef struct {
   sp_sample_t trnh;
   sp_sample_t* cutl_mod;
   sp_sample_t* cuth_mod;
-  sp_sample_t* trnl_mod;
-  sp_sample_t* trnh_mod;
   sp_time_t resolution;
   uint8_t is_reject;
   sp_channel_count_t channels;

@@ -1,4 +1,6 @@
 
+/* this file defines macros only available in sc, that are used as optional helpers to simplify common tasks where c syntax alone offers no good alternative */
+
 /** out memory is allocated */
 status_t sp_path_samples_new(sp_path_t path, sp_path_time_t size, sp_sample_t** out) {
   status_declare;
@@ -161,11 +163,9 @@ exit:
 void sp_path_multiply(sp_path_t path, sp_sample_t x_factor, sp_sample_t y_factor) {
   sp_path_segment_t* s;
   sp_path_point_t* p;
-  sp_path_segment_count_t s_i;
-  sp_path_segment_count_t sp_i;
-  for (s_i = 0; (s_i < path.segments_count); s_i += 1) {
+  for (sp_time_t s_i = 0; (s_i < path.segments_count); s_i += 1) {
     s = (path.segments + s_i);
-    for (sp_i = 0; (sp_i < spline_path_segment_points_count((*s))); sp_i += 1) {
+    for (sp_time_t sp_i = 0; (sp_i < (sp_i < spline_path_segment_points_count((*s)))); sp_i += 1) {
       if (spline_path_i_constant == s->interpolator) {
         break;
       } else {
@@ -188,22 +188,19 @@ void sp_path_multiply(sp_path_t path, sp_sample_t x_factor, sp_sample_t y_factor
 status_t sp_path_derivations_normalized(sp_path_t base, sp_time_t count, sp_sample_t** x_changes, sp_sample_t** y_changes, sp_path_t** out) {
   sp_path_t* paths;
   sp_sample_t y_sum;
-  sp_time_t segment_i;
   sp_path_segment_t* bs;
   sp_path_point_t* bp;
   sp_path_segment_t* s;
   sp_path_point_t* p;
-  sp_time_t point_i;
-  sp_time_t path_i;
   sp_sample_t factor;
   status_declare;
   status_require((sph_helper_calloc((count * sizeof(sp_path_t)), (&paths))));
-  for (path_i = 0; (path_i < count); path_i += 1) {
+  for (sp_time_t path_i = 0; (path_i < count); path_i += 1) {
     status_require((sp_path_derivation(base, x_changes, y_changes, path_i, (paths + path_i))));
   };
-  for (segment_i = 0; (segment_i < base.segments_count); segment_i += 1) {
+  for (sp_time_t segment_i = 0; (segment_i < base.segments_count); segment_i += 1) {
     bs = (base.segments + segment_i);
-    for (point_i = 0; (point_i < spline_path_segment_points_count((*bs))); point_i += 1) {
+    for (sp_time_t point_i = 0; (point_i < spline_path_segment_points_count((*bs))); point_i += 1) {
       if (spline_path_i_constant == bs->interpolator) {
         break;
       } else {
@@ -213,20 +210,20 @@ status_t sp_path_derivations_normalized(sp_path_t base, sp_time_t count, sp_samp
       };
       bp = (bs->points + point_i);
       y_sum = 0;
-      for (path_i = 0; (path_i < count); path_i += 1) {
+      for (sp_time_t path_i = 0; (path_i < count); path_i += 1) {
         s = ((paths[path_i]).segments + segment_i);
         p = (s->points + point_i);
         y_sum += p->y;
       };
       factor = ((0 == y_sum) ? 0 : (bp->y / y_sum));
-      for (path_i = 0; (path_i < count); path_i += 1) {
+      for (sp_time_t path_i = 0; (path_i < count); path_i += 1) {
         s = ((paths[path_i]).segments + segment_i);
         p = (s->points + point_i);
         p->y *= factor;
       };
     };
   };
-  for (path_i = 0; (path_i < count); path_i += 1) {
+  for (sp_time_t path_i = 0; (path_i < count); path_i += 1) {
     sp_path_prepare_segments(((paths[path_i]).segments), (base.segments_count));
   };
   *out = paths;
@@ -241,7 +238,6 @@ exit:
 
 /** get sp_path_derivations_normalized as sample arrays. out and out_sizes is allocated and passed to the caller */
 status_t sp_path_samples_derivations_normalized(sp_path_t path, sp_time_t count, sp_sample_t** x_changes, sp_sample_t** y_changes, sp_sample_t*** out, sp_time_t** out_sizes) {
-  sp_time_t i;
   sp_time_t size;
   sp_path_t* paths;
   sp_sample_t** samples;
@@ -253,7 +249,7 @@ status_t sp_path_samples_derivations_normalized(sp_path_t path, sp_time_t count,
   status_require((sph_helper_malloc((count * sizeof(sp_time_t)), (&sizes))));
   memreg_add(sizes);
   status_require((sp_path_derivations_normalized(path, count, x_changes, y_changes, (&paths))));
-  for (i = 0; (i < count); i += 1) {
+  for (sp_time_t i = 0; (i < count); i += 1) {
     size = sp_path_size((paths[i]));
     sizes[i] = size;
     status_require((sp_samples_new(size, (samples + i))));
@@ -263,7 +259,7 @@ status_t sp_path_samples_derivations_normalized(sp_path_t path, sp_time_t count,
   *out_sizes = sizes;
 exit:
   if (status_is_failure) {
-    for (i = 0; (i < count); i += 1) {
+    for (sp_time_t i = 0; (i < count); i += 1) {
       free((samples[i]));
     };
     memreg_free;

@@ -1,4 +1,4 @@
-(sc-define-syntax (for-i index limit body ...)
+(sc-define-syntax (for-each-index index limit body ...)
   (for ((set index 0) (< index limit) (set+ index 1)) body ...))
 
 (pre-define
@@ -7,7 +7,7 @@
     "out: min, max, range"
     (declare i sp-time-t min value-t max value-t b value-t)
     (set min (array-get a 0) max min)
-    (for-i i size (set b (array-get a i)) (if (> b max) (set max b) (if (< b min) (set min b))))
+    (for-each-index i size (set b (array-get a i)) (if (> b max) (set max b) (if (< b min) (set min b))))
     (set (array-get out 0) min (array-get out 1) max (array-get out 2) (- max min))
     (return 0))
   (define-sp-stat-deviation name stat-mean value-t)
@@ -16,7 +16,7 @@
     (declare i sp-time-t sum sp-sample-t dev sp-sample-t mean sp-sample-t)
     (stat-mean a size &mean)
     (set sum 0)
-    (for-i i size (set dev (- (array-get a i) mean) sum (+ sum (* dev dev))))
+    (for-each-index i size (set dev (- (array-get a i) mean) sum (+ sum (* dev dev))))
     (set *out (sqrt (/ sum size)))
     (return 0))
   (define-sp-stat-skewness name stat-mean value-t)
@@ -25,7 +25,7 @@
     (declare i sp-time-t mean sp-sample-t m3 sp-sample-t m2 sp-sample-t b sp-sample-t)
     (set m2 0 m3 0)
     (stat-mean a size &mean)
-    (for-i i size (set b (- (array-get a i) mean) m2 (+ m2 (* b b)) m3 (+ m3 (* b b b))))
+    (for-each-index i size (set b (- (array-get a i) mean) m2 (+ m2 (* b b)) m3 (+ m3 (* b b b))))
     (set m3 (/ m3 size) m2 (/ m2 size) *out (/ m3 (sqrt (* m2 m2 m2))))
     (return 0))
   (define-sp-stat-kurtosis name stat-mean value-t)
@@ -34,7 +34,7 @@
     (declare b sp-sample-t i sp-time-t mean sp-sample-t m2 sp-sample-t m4 sp-sample-t)
     (set m2 0 m4 0)
     (stat-mean a size &mean)
-    (for-i i size (set b (- (array-get a i) mean) m2 (+ m2 (* b b)) m4 (+ m4 (* b b b b))))
+    (for-each-index i size (set b (- (array-get a i) mean) m2 (+ m2 (* b b)) m4 (+ m4 (* b b b b))))
     (set m4 (/ m4 size) m2 (/ m2 size) *out (/ m4 (* m2 m2)))
     (return 0))
   (define-sp-stat-median name sort-less sort-swap value-t)
@@ -59,7 +59,7 @@
     (set sum 0 min size)
     (for ((set i 0) (< i size) (set+ i 1))
       (set sum 0)
-      (for-i i2 size
+      (for-each-index i2 size
         (set
           b (/ (array-get a i2) (convert-type (array-get a i) sp-sample-t))
           b (- b (sp-cheap-floor-positive b))
@@ -97,7 +97,7 @@
    sum(n * x(n)) / sum(x(n))"
   (declare i sp-time-t sum sp-time-t index-sum sp-time-t)
   (set index-sum 0 sum (array-get a 0))
-  (for-i i size (set+ sum (array-get a i) index-sum (* i (array-get a i))))
+  (for-each-index i size (set+ sum (array-get a i) index-sum (* i (array-get a i))))
   (set *out (/ index-sum (convert-type sum sp-sample-t)))
   (return 0))
 
@@ -117,7 +117,7 @@
   (if (sp-sequence-set-new size &known) (return 1))
   (set count 0)
   (for ((set key.size 1) (< key.size size) (set+ key.size 1))
-    (for-i i (- size (- key.size 1))
+    (for-each-index i (- size (- key.size 1))
       (set key.data (convert-type (+ i a) uint8-t*) value (sp-sequence-set-get known key))
       (if value (set+ count 1)
         (if (not (sp-sequence-set-add known key)) (begin (sp-sequence-set-free known) (return 1)))))
@@ -137,7 +137,7 @@
     value sp-sequence-set-key-t*)
   (if (sp-sequence-set-new (sp-stat-unique-max size width) &known) (return 1))
   (set count 0 key.size width)
-  (for-i i (- size (- width 1))
+  (for-each-index i (- size (- width 1))
     (set key.data (convert-type (+ i a) uint8-t*) value (sp-sequence-set-get known key))
     (if value (set+ count 1)
       (if (not (sp-sequence-set-add known key)) (begin (sp-sequence-set-free known) (return 1)))))
@@ -148,7 +148,7 @@
 (define (sp-stat-times-mean a size out) (uint8-t sp-time-t* sp-time-t sp-sample-t*)
   (declare i sp-time-t sum sp-time-t)
   (set sum 0)
-  (for-i i size (set+ sum (array-get a i)))
+  (for-each-index i size (set+ sum (array-get a i)))
   (set *out (/ sum (convert-type size sp-sample-t)))
   (return 0))
 
@@ -161,7 +161,7 @@
 (define (sp-stat-samples-center a size out) (uint8-t sp-sample-t* sp-time-t sp-sample-t*)
   (declare i sp-time-t sum sp-sample-t index-sum sp-sample-t)
   (set index-sum 0 sum (sp-samples-sum a size))
-  (for-i i size (set+ index-sum (* i (array-get a i))))
+  (for-each-index i size (set+ index-sum (* i (array-get a i))))
   (set *out (/ index-sum sum))
   (return 0))
 
@@ -177,7 +177,7 @@
   (sc-comment "returns min, max, range")
   (sp-stat-samples-range a size range)
   (set addition (if* (> 0 (array-get range 0)) (fabs (array-get range 0)) 0))
-  (for-i i size
+  (for-each-index i size
     (set (array-get out i)
       (sp-cheap-round-positive (* (+ (array-get a i) addition) (/ max (array-get range 2)))))))
 

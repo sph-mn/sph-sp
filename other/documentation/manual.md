@@ -155,3 +155,11 @@ map times, parameters as x, y
 
 * post-processing
 * generating events from a list of start times with parameters
+
+# how to
+## how to do phase modulation
+slight changes of frequency over a short period of time by using the fmod frequency modulation feature of sp-wave-event.
+
+## how could live input data be incorporated
+for example with a long running event that on generate reads user input.
+user input might have to be read in a separate thread and buffered for the time between one block and the next.

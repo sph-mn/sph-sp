@@ -293,8 +293,6 @@
   (struct-set config
     cutl-mod cutl
     cuth-mod cuth
-    trnl-mod trnl
-    trnh-mod trnh
     amod amod
     amp 1
     channels 2)

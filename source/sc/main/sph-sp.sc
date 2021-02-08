@@ -28,7 +28,8 @@
   sp-default-random-seed 1557083953)
 
 (pre-include "sph/status.c" "sph/spline-path.h"
-  "sph/random.c" "sph/array3.c" "sph/array4.c" "sph/float.c" "sph/set.c" "sph/hashtable.c")
+  "sph/random.c" "sph/array3.c" "sph/array4.c"
+  "sph/float.c" "sph/set.c" "sph/hashtable.c" "sph/memreg.c")
 
 (sc-comment "main")
 
@@ -83,7 +84,15 @@
   (sp-calloc-type count type pointer-address)
   (sph-helper-calloc (* count (sizeof type)) pointer-address)
   (sp-realloc-type count type pointer-address)
-  (sph-helper-realloc (* count (sizeof type)) pointer-address))
+  (sph-helper-realloc (* count (sizeof type)) pointer-address)
+  (free-on-error-init register-size) (memreg2-init-named error register-size)
+  (free-on-exit-init register-size) (memreg2-init-named exit register-size)
+  free-on-error-free (memreg2-free-named error)
+  free-on-exit-free (memreg2-free-named exit)
+  (free-on-error address handler) (memreg2-add-named error address handler)
+  (free-on-exit address handler) (memreg2-add-named exit address handler)
+  (free-on-error1 address) (free-on-error address free)
+  (free-on-exit1 address) (free-on-exit address free))
 
 (declare
   sp-block-t
@@ -429,7 +438,29 @@
   (begin (sp-event-memory-add a data1) (sp-event-memory-add a data2))
   (sp-event-memory-add-3 a data1 data2 data3)
   (begin (sp-event-memory-add-2 a data1 data2) (sp-event-memory-add a data3))
-  (sp-event-memory-init a size) (sph-helper-malloc (* size (sizeof sp-memory-t)) &a.memory))
+  (sp-event-memory-init a size) (sph-helper-malloc (* size (sizeof sp-memory-t)) &a.memory)
+  sp-events-add array4-add
+  sp-sine-config-t sp-wave-event-config-t
+  (sp-declare-sine-config name)
+  (begin
+    (sp-declare-wave-event-config name)
+    (struct-set name wvf sp-sine-table wvf-size sp-rate channels sp-channels amp 1))
+  (sp-declare-sine-config-lfo name)
+  (begin
+    (sp-declare-wave-event-config name)
+    (struct-set name
+      wvf sp-sine-table-lfo
+      wvf-size (* sp-rate sp-sine-lfo-factor)
+      channels sp-channels
+      amp 1))
+  (sp-declare-noise-config name)
+  (begin
+    (sp-declare-noise-event-config name)
+    (struct-set name channels sp-channels amp 1 cutl 0 cuth 0.5 trnl 0.1 trnh 0.1))
+  (sp-declare-cheap-noise-config name)
+  (begin
+    (sp-declare-cheap-noise-event-config name)
+    (struct-set name channels sp-channels amp 1 type sp-state-variable-filter-lp cut 0.5)))
 
 (declare
   sp-memory-free-t (type (function-pointer void void*))
@@ -491,8 +522,6 @@
       (trnh sp-sample-t)
       (cutl-mod sp-sample-t*)
       (cuth-mod sp-sample-t*)
-      (trnl-mod sp-sample-t*)
-      (trnh-mod sp-sample-t*)
       (resolution sp-time-t)
       (is-reject uint8-t)
       (channels sp-channel-count-t)

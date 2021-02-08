@@ -130,18 +130,13 @@
 
 (define (sp-path-multiply path x-factor y-factor) (void sp-path-t sp-sample-t sp-sample-t)
   "multiply all x and y values of path segments by x_factor and y_factor respectively"
-  (declare
-    s sp-path-segment-t*
-    p sp-path-point-t*
-    s-i sp-path-segment-count-t
-    sp-i sp-path-segment-count-t)
-  (for-i s-i path.segments-count
+  (declare s sp-path-segment-t* p sp-path-point-t*)
+  (for-each-index s-i path.segments-count
     (set s (+ path.segments s-i))
-    (for ((set sp-i 0) (< sp-i (spline-path-segment-points-count *s)) (set+ sp-i 1))
+    (for-each-index sp-i (< sp-i (spline-path-segment-points-count *s))
       (if (= spline-path-i-constant s:interpolator) break
         (if (= spline-path-i-path s:interpolator) continue))
-      (set p (+ sp-i s:points))
-      (set* p:x x-factor p:y y-factor)))
+      (set p (+ sp-i s:points)) (set* p:x x-factor p:y y-factor)))
   (sp-path-prepare-segments path.segments path.segments-count))
 
 (define (sp-path-derivations-normalized base count x-changes y-changes out)
@@ -153,32 +148,29 @@
   (declare
     paths sp-path-t*
     y-sum sp-sample-t
-    segment-i sp-time-t
     bs sp-path-segment-t*
     bp sp-path-point-t*
     s sp-path-segment-t*
     p sp-path-point-t*
-    point-i sp-time-t
-    path-i sp-time-t
     factor sp-sample-t)
   status-declare
   (status-require (sph-helper-calloc (* count (sizeof sp-path-t)) &paths))
-  (for-i path-i count
+  (for-each-index path-i count
     (status-require (sp-path-derivation base x-changes y-changes path-i (+ paths path-i))))
-  (for-i segment-i base.segments-count
+  (for-each-index segment-i base.segments-count
     (set bs (+ base.segments segment-i))
-    (for-i point-i (spline-path-segment-points-count *bs)
+    (for-each-index point-i (spline-path-segment-points-count *bs)
       (if (= spline-path-i-constant bs:interpolator) break
         (if (= spline-path-i-path bs:interpolator) continue))
       (set bp (+ bs:points point-i) y-sum 0)
-      (for-i path-i count
+      (for-each-index path-i count
         (set s (+ (struct-get (array-get paths path-i) segments) segment-i) p (+ s:points point-i))
         (set+ y-sum p:y))
       (set factor (if* (= 0 y-sum) 0 (/ bp:y y-sum)))
-      (for-i path-i count
+      (for-each-index path-i count
         (set s (+ (struct-get (array-get paths path-i) segments) segment-i) p (+ s:points point-i))
         (set* p:y factor))))
-  (for-i path-i count
+  (for-each-index path-i count
     (sp-path-prepare-segments (struct-get (array-get paths path-i) segments) base.segments-count))
   (set *out paths)
   (label exit (if status-is-failure (if paths (free paths))) status-return))
@@ -186,7 +178,7 @@
 (define (sp-path-samples-derivations-normalized path count x-changes y-changes out out-sizes)
   (status-t sp-path-t sp-time-t sp-sample-t** sp-sample-t** sp-sample-t*** sp-time-t**)
   "get sp_path_derivations_normalized as sample arrays. out and out_sizes is allocated and passed to the caller"
-  (declare i sp-time-t size sp-time-t paths sp-path-t* samples sp-sample-t** sizes sp-time-t*)
+  (declare size sp-time-t paths sp-path-t* samples sp-sample-t** sizes sp-time-t*)
   status-declare
   (memreg-init 2)
   (status-require (sph-helper-calloc (* count (sizeof sp-sample-t*)) &samples))
@@ -194,12 +186,12 @@
   (status-require (sph-helper-malloc (* count (sizeof sp-time-t)) &sizes))
   (memreg-add sizes)
   (status-require (sp-path-derivations-normalized path count x-changes y-changes &paths))
-  (for-i i count
+  (for-each-index i count
     (set size (sp-path-size (array-get paths i)) (array-get sizes i) size)
     (status-require (sp-samples-new size (+ samples i)))
     (sp-path-get (array-get paths i) 0 size (array-get samples i)))
   (set *out samples *out-sizes sizes)
   (label exit
-    (if status-is-failure (begin (for-i i count (free (array-get samples i))) memreg-free))
+    (if status-is-failure (begin (for-each-index i count (free (array-get samples i))) memreg-free))
     (if paths (free paths))
     status-return))

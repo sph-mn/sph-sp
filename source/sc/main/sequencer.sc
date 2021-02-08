@@ -246,8 +246,6 @@
       (trnh sp-sample-t)
       (cutl-mod sp-sample-t*)
       (cuth-mod sp-sample-t*)
-      (trnl-mod sp-sample-t*)
-      (trnh-mod sp-sample-t*)
       (resolution sp-time-t)
       (is-reject uint8-t)
       (random-state sp-random-state-t)
@@ -289,9 +287,8 @@
       duration (if* (= block-count block-i) block-rest s.resolution))
     (sp-samples-random &s.random-state duration s.noise)
     (sp-windowed-sinc-bp-br s.noise duration
-      (sp-array-or-fixed s.cutl-mod s.cutl t) (sp-array-or-fixed s.cuth-mod s.cuth t)
-      (sp-array-or-fixed s.trnl-mod s.trnl t) (sp-array-or-fixed s.trnh-mod s.trnh t) s.is-reject
-      &s.filter-state s.temp)
+      (sp-array-or-fixed s.cutl-mod s.cutl t) (sp-array-or-fixed s.cuth-mod s.cuth t) s.trnl
+      s.trnh s.is-reject &s.filter-state s.temp)
     (for ((set i 0) (< i duration) (set+ i 1))
       (set+ (array-get out.samples s.channel (+ block-offset i))
         (* s.amp (array-get s.amod (+ t i)) (array-get s.temp i)))))
@@ -325,9 +322,8 @@
   (set state 0 filter-state 0 channel-config (array-get config.channel-config channel))
   (status-require
     (sp-noise-event-filter-state (sp-array-or-fixed config.cutl-mod config.cutl 0)
-      (sp-array-or-fixed config.cuth-mod config.cuth 0)
-      (sp-array-or-fixed config.trnl-mod config.trnl 0)
-      (sp-array-or-fixed config.trnh-mod config.trnh 0) config.is-reject &rs &filter-state))
+      (sp-array-or-fixed config.cuth-mod config.cuth 0) config.trnl config.trnh
+      config.is-reject &rs &filter-state))
   (status-require (sp-malloc-type 1 sp-noise-event-state-t &state))
   (struct-set *state
     amp (if* channel-config.use channel-config.amp config.amp)
@@ -338,8 +334,6 @@
     trnh config.trnh
     cutl-mod config.cutl-mod
     cuth-mod config.cuth-mod
-    trnl-mod config.trnl-mod
-    trnh-mod config.trnh-mod
     resolution config.resolution
     is-reject config.is-reject
     random-state rs

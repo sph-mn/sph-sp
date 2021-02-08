@@ -1,3 +1,5 @@
+
+/* this file defines macros only available in sc, that are used as optional helpers to simplify common tasks where c syntax alone offers no good alternative */
 void sp_event_sort_swap(void* a, ssize_t b, ssize_t c) {
   sp_event_t d;
   d = ((sp_event_t*)(a))[b];
@@ -306,8 +308,6 @@ typedef struct {
   sp_sample_t trnh;
   sp_sample_t* cutl_mod;
   sp_sample_t* cuth_mod;
-  sp_sample_t* trnl_mod;
-  sp_sample_t* trnh_mod;
   sp_time_t resolution;
   uint8_t is_reject;
   sp_random_state_t random_state;
@@ -345,7 +345,7 @@ status_t sp_noise_event_generate(sp_time_t start, sp_time_t end, sp_block_t out,
     t = (start + block_offset);
     duration = ((block_count == block_i) ? block_rest : s.resolution);
     sp_samples_random((&(s.random_state)), duration, (s.noise));
-    sp_windowed_sinc_bp_br((s.noise), duration, (sp_array_or_fixed((s.cutl_mod), (s.cutl), t)), (sp_array_or_fixed((s.cuth_mod), (s.cuth), t)), (sp_array_or_fixed((s.trnl_mod), (s.trnl), t)), (sp_array_or_fixed((s.trnh_mod), (s.trnh), t)), (s.is_reject), (&(s.filter_state)), (s.temp));
+    sp_windowed_sinc_bp_br((s.noise), duration, (sp_array_or_fixed((s.cutl_mod), (s.cutl), t)), (sp_array_or_fixed((s.cuth_mod), (s.cuth), t)), (s.trnl), (s.trnh), (s.is_reject), (&(s.filter_state)), (s.temp));
     for (i = 0; (i < duration); i += 1) {
       (out.samples)[s.channel][(block_offset + i)] += (s.amp * (s.amod)[(t + i)] * (s.temp)[i]);
     };
@@ -382,7 +382,7 @@ status_t sp_noise_event_channel(sp_time_t duration, sp_noise_event_config_t conf
   state = 0;
   filter_state = 0;
   channel_config = (config.channel_config)[channel];
-  status_require((sp_noise_event_filter_state((sp_array_or_fixed((config.cutl_mod), (config.cutl), 0)), (sp_array_or_fixed((config.cuth_mod), (config.cuth), 0)), (sp_array_or_fixed((config.trnl_mod), (config.trnl), 0)), (sp_array_or_fixed((config.trnh_mod), (config.trnh), 0)), (config.is_reject), (&rs), (&filter_state))));
+  status_require((sp_noise_event_filter_state((sp_array_or_fixed((config.cutl_mod), (config.cutl), 0)), (sp_array_or_fixed((config.cuth_mod), (config.cuth), 0)), (config.trnl), (config.trnh), (config.is_reject), (&rs), (&filter_state))));
   status_require((sp_malloc_type(1, sp_noise_event_state_t, (&state))));
   (*state).amp = (channel_config.use ? channel_config.amp : config.amp);
   (*state).amod = ((channel_config.use && channel_config.amod) ? channel_config.amod : config.amod);
@@ -392,8 +392,6 @@ status_t sp_noise_event_channel(sp_time_t duration, sp_noise_event_config_t conf
   (*state).trnh = config.trnh;
   (*state).cutl_mod = config.cutl_mod;
   (*state).cuth_mod = config.cuth_mod;
-  (*state).trnl_mod = config.trnl_mod;
-  (*state).trnh_mod = config.trnh_mod;
   (*state).resolution = config.resolution;
   (*state).is_reject = config.is_reject;
   (*state).random_state = rs;

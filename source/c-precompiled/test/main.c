@@ -316,8 +316,6 @@ status_t test_sp_noise_event() {
   };
   config.cutl_mod = cutl;
   config.cuth_mod = cuth;
-  config.trnl_mod = trnl;
-  config.trnh_mod = trnh;
   config.amod = amod;
   config.amp = 1;
   config.channels = 2;

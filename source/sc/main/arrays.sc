@@ -545,11 +545,11 @@
    $out is lend by the owner. size of $out should be equal or greater than size of $a.
    $out-size will be set to the number of unique elements"
   status-declare
-  (declare unique sp-time-set-t i sp-time-t unique-count sp-time-t)
+  (declare unique sp-time-set-t unique-count sp-time-t)
   (set unique.size 0)
   (if (sp-time-set-new size &unique) sp-memory-error)
   (set unique-count 0)
-  (for ((set i 0) (< i size) (set+ i 1))
+  (for-each-index i size
     (if (not (sp-time-set-get unique (array-get a i)))
       (begin
         (if (not (sp-time-set-add unique (array-get a i))) sp-memory-error)
@@ -580,9 +580,9 @@
   (void sp-time-t* sp-time-t sp-time-t sp-sequence-hashtable-t)
   "associate in hash table $out sub-sequences of $width with their count in $a.
    memory for $out is lend and should be allocated with sp_sequence_hashtable_new(size - (width - 1), &out)"
-  (declare i sp-time-t key sp-sequence-set-key-t value sp-time-t*)
+  (declare key sp-sequence-set-key-t value sp-time-t*)
   (set key.size width)
-  (for-i i (- size (- width 1))
+  (for-each-index i (- size (- width 1))
     (set key.data (convert-type (+ i a) uint8-t*) value (sp-sequence-hashtable-get out key))
     (sc-comment "full-hashtable-error is ignored")
     (if value (set+ *value 1) (sp-sequence-hashtable-set out key 1))))
@@ -590,9 +590,9 @@
 (define (sp-times-counted-sequences known limit out out-size)
   (void sp-sequence-hashtable-t sp-time-t sp-times-counted-sequences-t* sp-time-t*)
   "extract counts from a counted-sequences-hash and return as an array of structs"
-  (declare i sp-time-t count sp-time-t)
+  (declare count sp-time-t)
   (set count 0)
-  (for-i i known.size
+  (for-each-index i known.size
     (if (and (array-get known.flags i) (< limit (array-get known.values i)))
       (begin
         (set
@@ -633,8 +633,7 @@
 (define (sp-times-blend a b fraction size out)
   (void sp-time-t* sp-time-t* sp-sample-t sp-time-t sp-time-t*)
   "interpolate values between $a and $b with interpolation distance 0..1"
-  (declare i sp-time-t)
-  (for-i i size
+  (for-each-index i size
     (set (array-get out i)
       (sp-cheap-round-positive
         (sp-time-interpolate-linear (array-get a i) (array-get b i) fraction)))))
@@ -642,8 +641,7 @@
 (define (sp-times-mask a b coefficients size out)
   (void sp-time-t* sp-time-t* sp-sample-t* sp-time-t sp-time-t*)
   "interpolate values pointwise between $a and $b with interpolation distance 0..1 from $coefficients"
-  (declare i sp-time-t)
-  (for-i i size
+  (for-each-index i size
     (set (array-get out i)
       (sp-cheap-round-positive
         (sp-time-interpolate-linear (array-get a i) (array-get b i) (array-get coefficients i))))))
@@ -651,8 +649,7 @@
 (define (sp-samples-blend a b fraction size out)
   (void sp-sample-t* sp-sample-t* sp-sample-t sp-time-t sp-sample-t*)
   "interpolate values pointwise between $a and $b with fraction as a fixed interpolation distance 0..1"
-  (declare i sp-time-t)
-  (for-i i size
+  (for-each-index i size
     (set (array-get out i) (sp-sample-interpolate-linear (array-get a i) (array-get b i) fraction))))
 
 (define (sp-times-limit a size n out) (void sp-time-t* sp-time-t sp-time-t sp-time-t*)
