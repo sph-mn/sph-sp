@@ -75,16 +75,18 @@ see the [sph-sp manual](other/documentation/manual.md), the api listing below an
 ```
 #include <sph-sp.h>
 ```
-call sp_initialise(cpu_count, default_sample_rate) once somewhere. for example sp_initialise(2, 96000).
+call sp_initialize(cpu_count, default_channel_count, default_sample_rate) once somewhere. for example sp_initialise(21  2,48000).
 
 compilation with gcc
 ```
 gcc -lsph-sp main.c
 ```
 
+see other/example.c for an example. other/example.sc uses sc macros to reduce the necessary code.
+
 ## error handling
 routines return `status_t`, which is a `struct {int id, uint8-t* group}` and included with sph-sp.h.
-status.id zero is success
+status.id zero is success.
 
 # api
 ## functions
