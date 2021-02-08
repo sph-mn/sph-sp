@@ -3,8 +3,7 @@
 
 (pre-include "stdio.h" "fcntl.h"
   "sndfile.h" "foreign/nayuki-fft/fft.c" "../main/sph-sp.h"
-  "sph/spline-path.c" "sph/helper.c" "sph/memreg.c"
-  "sph/quicksort.c" "sph/queue.c" "sph/thread-pool.c" "sph/futures.c")
+  "sph/spline-path.c" "sph/quicksort.c" "sph/queue.c" "sph/thread-pool.c" "sph/futures.c")
 
 (pre-define
   sp-status-declare (status-declare-group sp-s-group-sp)
@@ -321,7 +320,7 @@
   (sp-time-random &result)
   (return result))
 
-(define (sp-initialise cpu-count channels rate) (status-t uint16-t sp-channel-count-t sp-time-t)
+(define (sp-initialize cpu-count channels rate) (status-t uint16-t sp-channel-count-t sp-time-t)
   "fills the sine wave lookup table.
    rate and channels are used to set sp_rate and sp_channels,
    which are used as defaults in a few cases"

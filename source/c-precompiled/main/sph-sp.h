@@ -86,6 +86,7 @@
 #include <sph/set.c>
 #include <sph/hashtable.c>
 #include <sph/memreg.c>
+#include <sph/helper.c>
 
 /* main */
 
@@ -196,7 +197,7 @@ void sp_block_free(sp_block_t a);
 sp_block_t sp_block_with_offset(sp_block_t a, sp_time_t offset);
 status_t sp_null_ir(sp_sample_t** out_ir, sp_time_t* out_len);
 status_t sp_passthrough_ir(sp_sample_t** out_ir, sp_time_t* out_len);
-status_t sp_initialise(uint16_t cpu_count, sp_channel_count_t channels, sp_time_t rate);
+status_t sp_initialize(uint16_t cpu_count, sp_channel_count_t channels, sp_time_t rate);
 void sp_sine_period(sp_time_t size, sp_sample_t* out);
 sp_time_t sp_phase(sp_time_t current, sp_time_t change, sp_time_t cycle);
 sp_time_t sp_phase_float(sp_time_t current, double change, sp_time_t cycle);
@@ -425,7 +426,7 @@ void sp_plot_spectrum(sp_sample_t* a, sp_time_t a_size);
 #define sp_event_memory_add_3(a, data1, data2, data3) \
   sp_event_memory_add_2(a, data1, data2); \
   sp_event_memory_add(a, data3)
-#define sp_event_memory_init(a, size) sph_helper_malloc((size * sizeof(sp_memory_t)), (&(a.memory)))
+#define sp_event_memory_init(a, size) sp_malloc_type(size, sp_memory_t, (&(a.memory)))
 #define sp_events_add array4_add
 #define sp_sine_config_t sp_wave_event_config_t
 #define sp_declare_sine_config(name) \

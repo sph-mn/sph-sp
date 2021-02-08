@@ -6,8 +6,6 @@
 #include <float.h>
 #include <math.h>
 #include "../main/sph-sp.h"
-#include <sph/helper.c>
-#include <sph/memreg.c>
 #include <sph/string.c>
 #include <sph/filesystem.c>
 

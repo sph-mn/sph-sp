@@ -1,5 +1,6 @@
 (sc-comment
-  "this file defines macros only available in sc, that are used as optional helpers to simplify common tasks where c syntax alone offers no good alternative")
+  "the sc version of this file defines macros which are only available in sc."
+  "the macros are used as optional helpers to simplify common tasks where c syntax alone offers no good alternative")
 
 (sc-define-syntax (for-each-index index limit body ...)
   (for ((define index sp-time-t 0) (< index limit) (set+ index 1)) body ...))
@@ -77,7 +78,7 @@
       (struct-set (unquote config) (unquote-splicing setting))
       (sp-channel-config (struct-get (unquote config) channel-config)
         (unquote-splicing channel-config))
-      (srq ((unquote make-event) (unquote start) (unquote end) (unquote config) (unquote out))))))
+      (status-require ((unquote make-event) (unquote start) (unquote end) (unquote config) (unquote out))))))
 
 (sc-define-syntax (sp-sine out start end config config-settings channel-config ...)
   (sp-channel-config-event "sp-sine" sp-wave-event
@@ -88,5 +89,5 @@
     out start end config config-settings channel-config ...))
 
 (sc-define-syntax (sp-cheap-noise out start end config config-settings channel-config ...)
-  (sp-channel-config-event "sp-chep-noise" sp-cheap-noise-event
+  (sp-channel-config-event "sp-cheap-noise" sp-cheap-noise-event
     out start end config config-settings channel-config ...))

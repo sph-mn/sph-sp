@@ -122,7 +122,7 @@ sp_group_event_f :: sp_time_t:start sp_time_t:end sp_block_t:out sp_event_t*:eve
 sp_group_event_free :: sp_event_t*:a -> void
 sp_group_event_parallel_f :: sp_time_t:start sp_time_t:end sp_block_t:out sp_event_t*:event -> void
 sp_group_new :: sp_time_t:start sp_group_size_t:event_size sp_event_t*:out -> status_t
-sp_initialise :: uint16_t:cpu_count sp_channel_count_t:channels sp_time_t:rate -> status_t
+sp_initialize :: uint16_t:cpu_count sp_channel_count_t:channels sp_time_t:rate -> status_t
 sp_map_event :: sp_event_t:event sp_map_event_generate_t:f void*:state uint8_t:isolate sp_event_t*:out -> status_t
 sp_moving_average :: sp_sample_t*:in sp_time_t:in_size sp_sample_t*:prev sp_sample_t*:next sp_time_t:radius sp_sample_t*:out -> void
 sp_noise_event :: sp_time_t:start sp_time_t:end sp_noise_event_config_t:config sp_event_t*:out_event -> status_t
@@ -131,19 +131,19 @@ sp_passthrough_ir :: sp_sample_t**:out_ir sp_time_t*:out_len -> status_t
 sp_path_derivation :: sp_path_t:path sp_sample_t**:x_changes sp_sample_t**:y_changes sp_time_t:index sp_path_t*:out -> status_t
 sp_path_derivations_normalized :: sp_path_t:base sp_time_t:count sp_sample_t**:x_changes sp_sample_t**:y_changes sp_path_t**:out -> status_t
 sp_path_multiply :: sp_path_t:path sp_sample_t:x_factor sp_sample_t:y_factor -> void
-sp_path_samples :: sp_path_t:path sp_path_time_t:size sp_sample_t**:out -> status_t
 sp_path_samples_1 :: sp_sample_t**:out sp_time_t:size sp_path_segment_t:s1 -> status_t
 sp_path_samples_2 :: sp_sample_t**:out sp_time_t:size sp_path_segment_t:s1 sp_path_segment_t:s2 -> status_t
 sp_path_samples_3 :: sp_sample_t**:out sp_time_t:size sp_path_segment_t:s1 sp_path_segment_t:s2 sp_path_segment_t:s3 -> status_t
 sp_path_samples_4 :: sp_sample_t**:out sp_time_t:size sp_path_segment_t:s1 sp_path_segment_t:s2 sp_path_segment_t:s3 sp_path_segment_t:s4 -> status_t
 sp_path_samples_derivation :: sp_path_t:path sp_sample_t**:x_changes sp_sample_t**:y_changes sp_time_t:index sp_sample_t**:out sp_path_time_t*:out_size -> status_t
 sp_path_samples_derivations_normalized :: sp_path_t:path sp_time_t:count sp_sample_t**:x_changes sp_sample_t**:y_changes sp_sample_t***:out sp_time_t**:out_sizes -> status_t
-sp_path_times :: sp_path_t:path sp_path_time_t:size sp_time_t**:out -> status_t
+sp_path_samples_new :: sp_path_t:path sp_path_time_t:size sp_sample_t**:out -> status_t
 sp_path_times_1 :: sp_time_t**:out sp_time_t:size sp_path_segment_t:s1 -> status_t
 sp_path_times_2 :: sp_time_t**:out sp_time_t:size sp_path_segment_t:s1 sp_path_segment_t:s2 -> status_t
 sp_path_times_3 :: sp_time_t**:out sp_time_t:size sp_path_segment_t:s1 sp_path_segment_t:s2 sp_path_segment_t:s3 -> status_t
 sp_path_times_4 :: sp_time_t**:out sp_time_t:size sp_path_segment_t:s1 sp_path_segment_t:s2 sp_path_segment_t:s3 sp_path_segment_t:s4 -> status_t
 sp_path_times_derivation :: sp_path_t:path sp_sample_t**:x_changes sp_sample_t**:y_changes sp_time_t:index sp_time_t**:out sp_path_time_t*:out_size -> status_t
+sp_path_times_new :: sp_path_t:path sp_path_time_t:size sp_time_t**:out -> status_t
 sp_permutations_max :: sp_time_t:set_size sp_time_t:selection_size -> sp_time_t
 sp_phase :: sp_time_t:current sp_time_t:change sp_time_t:cycle -> sp_time_t
 sp_phase_float :: sp_time_t:current double:change sp_time_t:cycle -> sp_time_t
@@ -321,6 +321,14 @@ sp_windowed_sinc_lp_hp_ir_length :: sp_float_t:transition -> sp_time_t
 ~~~
 boolean
 f64
+free_on_error(address, handler)
+free_on_error1(address)
+free_on_error_free
+free_on_error_init(register_size)
+free_on_exit(address, handler)
+free_on_exit1(address)
+free_on_exit_free
+free_on_exit_init(register_size)
 rt(n, d)
 sp_abs(a)
 sp_absolute_difference(a, b)
@@ -338,13 +346,17 @@ sp_cheap_filter_passes_limit
 sp_cheap_floor_positive(a)
 sp_cheap_round_positive(a)
 sp_declare_cheap_filter_state(name)
+sp_declare_cheap_noise_config(name)
 sp_declare_cheap_noise_event_config(name)
 sp_declare_event(id)
 sp_declare_event_2(id1, id2)
 sp_declare_event_3(id1, id2, id3)
 sp_declare_event_4(id1, id2, id3, id4)
 sp_declare_events(id, size)
+sp_declare_noise_config(name)
 sp_declare_noise_event_config(name)
+sp_declare_sine_config(name)
+sp_declare_sine_config_lfo(name)
 sp_declare_wave_event_config(name)
 sp_default_random_seed
 sp_event_duration(a)
@@ -355,6 +367,7 @@ sp_event_memory_add_3(a, data1, data2, data3)
 sp_event_memory_add_handler(a, data_, free)
 sp_event_memory_init(a, size)
 sp_event_move(a, start)
+sp_events_add
 sp_file_bit_input
 sp_file_bit_output
 sp_file_bit_position
@@ -368,8 +381,6 @@ sp_filter_state_t
 sp_float_t
 sp_group_add(a, event)
 sp_group_events(a)
-sp_group_free(a)
-sp_group_prepare(a)
 sp_group_size_t
 sp_malloc_type(count, type, pointer_address)
 sp_max(a, b)
@@ -433,6 +444,7 @@ sp_samples_zero(a, size)
 sp_sequence_set_equal(a, b)
 sp_sf_read
 sp_sf_write
+sp_sine_config_t
 sp_status_set(id)
 sp_time_half_t
 sp_time_interpolate_linear(a, b, t)
@@ -538,8 +550,6 @@ sp_noise_event_config_t: struct
   trnh: sp_sample_t
   cutl_mod: sp_sample_t*
   cuth_mod: sp_sample_t*
-  trnl_mod: sp_sample_t*
-  trnh_mod: sp_sample_t*
   resolution: sp_time_t
   is_reject: uint8_t
   channels: sp_channel_count_t

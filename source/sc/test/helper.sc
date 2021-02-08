@@ -1,6 +1,5 @@
 (pre-include "stdio.h" "stdlib.h"
-  "errno.h" "pthread.h" "float.h"
-  "math.h" "../main/sph-sp.h" "sph/helper.c" "sph/memreg.c" "sph/string.c" "sph/filesystem.c")
+  "errno.h" "pthread.h" "float.h" "math.h" "../main/sph-sp.h" "sph/string.c" "sph/filesystem.c")
 
 (pre-define
   (test-helper-test-one func) (begin (printf "%s\n" (pre-stringify func)) (status-require (func)))

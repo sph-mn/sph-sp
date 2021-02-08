@@ -3,7 +3,8 @@
 sp-time-t subtraction is limited to zero.
 sp-time-t addition is not limited. */
 
-/* this file defines macros only available in sc, that are used as optional helpers to simplify common tasks where c syntax alone offers no good alternative */
+/* the sc version of this file defines macros which are only available in sc.
+the macros are used as optional helpers to simplify common tasks where c syntax alone offers no good alternative */
 
 /** generic shuffle that works on any array type. fisher-yates algorithm */
 void sp_shuffle(sp_random_state_t* state, void (*swap)(void*, size_t, size_t), void* a, size_t size) {

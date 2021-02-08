@@ -776,7 +776,7 @@ exit:
 int main() {
   status_declare;
   rs = sp_random_state_new(3);
-  sp_initialise(3, 2, _rate);
+  sp_initialize(3, 2, _rate);
   test_helper_test_one(test_sp_group);
   test_helper_test_one(test_sp_seq_parallel);
   test_helper_test_one(test_sp_wave_event);

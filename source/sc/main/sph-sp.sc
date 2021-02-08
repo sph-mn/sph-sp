@@ -29,7 +29,7 @@
 
 (pre-include "sph/status.c" "sph/spline-path.h"
   "sph/random.c" "sph/array3.c" "sph/array4.c"
-  "sph/float.c" "sph/set.c" "sph/hashtable.c" "sph/memreg.c")
+  "sph/float.c" "sph/set.c" "sph/hashtable.c" "sph/memreg.c" "sph/helper.c")
 
 (sc-comment "main")
 
@@ -147,7 +147,7 @@
   (sp-block-with-offset a offset) (sp-block-t sp-block-t sp-time-t)
   (sp-null-ir out-ir out-len) (status-t sp-sample-t** sp-time-t*)
   (sp-passthrough-ir out-ir out-len) (status-t sp-sample-t** sp-time-t*)
-  (sp-initialise cpu-count channels rate) (status-t uint16-t sp-channel-count-t sp-time-t)
+  (sp-initialize cpu-count channels rate) (status-t uint16-t sp-channel-count-t sp-time-t)
   (sp-sine-period size out) (void sp-time-t sp-sample-t*)
   (sp-phase current change cycle) (sp-time-t sp-time-t sp-time-t sp-time-t)
   (sp-phase-float current change cycle) (sp-time-t sp-time-t double sp-time-t)
@@ -438,7 +438,7 @@
   (begin (sp-event-memory-add a data1) (sp-event-memory-add a data2))
   (sp-event-memory-add-3 a data1 data2 data3)
   (begin (sp-event-memory-add-2 a data1 data2) (sp-event-memory-add a data3))
-  (sp-event-memory-init a size) (sph-helper-malloc (* size (sizeof sp-memory-t)) &a.memory)
+  (sp-event-memory-init a size) (sp-malloc-type size sp-memory-t &a.memory)
   sp-events-add array4-add
   sp-sine-config-t sp-wave-event-config-t
   (sp-declare-sine-config name)

@@ -717,7 +717,7 @@
   "\"goto exit\" can skip events"
   status-declare
   (set rs (sp-random-state-new 3))
-  (sp-initialise 3 2 _rate)
+  (sp-initialize 3 2 _rate)
   (test-helper-test-one test-sp-group)
   (test-helper-test-one test-sp-seq-parallel)
   (test-helper-test-one test-sp-wave-event)

@@ -7,8 +7,6 @@
 #include <foreign/nayuki-fft/fft.c>
 #include "../main/sph-sp.h"
 #include <sph/spline-path.c>
-#include <sph/helper.c>
-#include <sph/memreg.c>
 #include <sph/quicksort.c>
 #include <sph/queue.c>
 #include <sph/thread-pool.c>
@@ -416,7 +414,7 @@ sp_random_state_t sp_random_state_new(sp_time_t seed) {
 /** fills the sine wave lookup table.
    rate and channels are used to set sp_rate and sp_channels,
    which are used as defaults in a few cases */
-status_t sp_initialise(uint16_t cpu_count, sp_channel_count_t channels, sp_time_t rate) {
+status_t sp_initialize(uint16_t cpu_count, sp_channel_count_t channels, sp_time_t rate) {
   status_declare;
   if (cpu_count) {
     status.id = future_init(cpu_count);

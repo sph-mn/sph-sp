@@ -1,82 +1,72 @@
-/* creates few seconds long wav file with a synthesised bassdrum.
-an example for using the synthesiser and sequence output using event groups.
-can be compiled with: gcc -lsph-sp example.c -o example.exe */
+
+/* small example that shows how to use the core sound generating events.
+this example depends on gnuplot to be installed.
+when running it, it should display a gnuplot window with a noisy sine wave.
+see exe/compile-example for how to compile it with gcc */
+
+/* the sc version of this file defines macros which are only available in sc.
+the macros are used as optional helpers to simplify common tasks where c syntax alone offers no good alternative */
 #include <stdio.h>
 #include <sph-sp.h>
-status_t
-g1_new(sp_time_t start, sp_time_t rate, sp_event_t* out)
-{
+status_t example_event(sp_sample_t duration, sp_event_t* _out) {
   status_declare;
-  sp_event_t b1;
-  sp_time_t b1_duration;
-  sp_synth_partial_t b1_partials[1];
-  sp_samples_t b1_p1_amp;
-  sp_times_t b1_p1_wvl;
-  sp_group_declare(g);
-  status_require((sp_group_new(0, 2, 4, (&g))));
-  b1_duration = rt(1, 2);
-  status_require((sp_path_samples_3((&b1_p1_amp),
-    b1_duration,
-    (sp_path_line((rt(1, 8)), 1)),
-    (sp_path_line((rt(3, 8)), 0)),
-    (sp_path_line(b1_duration, 0)))));
-  sp_group_memory_add(g, (b1_p1_amp.data));
-  status_require((sp_path_times_3((&b1_p1_wvl),
-    b1_duration,
-    (sp_path_line((rt(1, 8)), (rt(1, 128)))),
-    (sp_path_line((rt(2, 8)), (rt(1, 64)))),
-    (sp_path_line(b1_duration, (rt(1, 16)))))));
-  sp_group_memory_add(g, (b1_p1_wvl.data));
-  b1_partials[0] = sp_synth_partial_2(0,
-    b1_duration,
-    0,
-    (b1_p1_amp.data),
-    (b1_p1_amp.data),
-    (b1_p1_wvl.data),
-    (b1_p1_wvl.data),
-    0,
-    0);
-  status_require((sp_synth_event(0, b1_duration, 2, 1, b1_partials, (&b1))));
-  sp_group_add(g, b1);
-  sp_group_prepare(g);
-  *out = g;
+  sp_declare_event(_result);
+  sp_declare_event(_event);
+  sp_sample_t* amod;
+  sp_declare_event_4(g, s1, n1, n2);
+  sp_declare_sine_config(s1_config);
+  sp_declare_noise_config(n1_config);
+  sp_declare_cheap_noise_config(n2_config);
+  free_on_error_init(1);
+  status_require((sp_group_new(0, 10, (&g))));
+  free_on_error((&g), (g.free));
+  status_require((sp_event_memory_init(g, 1)));
+  sp_path_t _t1;
+  // sp-path
+  sp_path_segment_t _t2[2];
+  _t2[0] = sp_path_line((duration / 2), (1.0));
+  _t2[1] = sp_path_line(duration, 0);
+  spline_path_set((&_t1), _t2, 2);
+  status_require((sp_path_samples_new(_t1, duration, (&amod))));
+  sp_event_memory_add(g, (&amod));
+  // sp-sine
+  s1_config.amod = amod;
+  s1_config.frq = 3;
+  ((s1_config.channel_config)[1]).use = 1;
+  ((s1_config.channel_config)[1]).amp = 0.1;
+  status_require((sp_wave_event(0, duration, s1_config, (&s1))));
+  sp_group_add(g, s1);
+  // sp-noise
+  n1_config.amod = amod;
+  n1_config.cutl = 0.2;
+  ((n1_config.channel_config)[0]).use = 1;
+  ((n1_config.channel_config)[0]).delay = 30000;
+  ((n1_config.channel_config)[0]).amp = 0.2;
+  status_require((sp_noise_event(0, duration, n1_config, (&n1))));
+  sp_group_add(g, n1);
+  // sp-cheap-noise
+  n2_config.amod = amod;
+  n2_config.cut = 0.5;
+  ((n2_config.channel_config)[1]).use = 1;
+  ((n2_config.channel_config)[1]).amp = 0.001;
+  status_require((sp_cheap_noise_event(0, duration, n2_config, (&n2))));
+  sp_group_add(g, n2);
+  _result = g;
+  *_out = _result;
 exit:
   if (status_is_failure) {
-    sp_group_free(g);
+    free_on_error_free;
   };
   status_return;
 }
-status_t
-song_new(sp_time_t rate, sp_event_t* out)
-{
+int main() {
   status_declare;
-  sp_event_t e;
-  sp_group_declare(song);
-  status_require((sp_group_new(0, 2, 0, (&song))));
-  status_require((g1_new(0, rate, (&e))));
-  sp_group_append((&song), e);
-  status_require((g1_new(0, rate, (&e))));
-  sp_group_append((&song), e);
-  sp_group_prepare(song);
-  *out = song;
+  sp_declare_event(event);
+  sp_declare_events(events, 1);
+  sp_initialize(1, 2, 48000);
+  status_require((example_event((sp_rate * 2), (&event))));
+  sp_events_add(events, event);
+  status_require((sp_render_quick(events, 1)));
 exit:
-  return (status);
-}
-int
-main()
-{
-  status_declare;
-  sp_initialise(1);
-  sp_event_t song;
-  sp_time_t rate;
-  declare_render_config(render_config);
-  rate = render_config.rate;
-  status_require((song_new(rate, (&song))));
-  status_require(
-    (sp_render_file(song, 0, (rt(2, 2)), render_config, ("/tmp/song.wav"))));
-  printf("wrote %s\n", ("/tmp/song.wav"));
-  (song.free)((&song));
-exit:
-  printf("status: %s\n", (status.id ? "failure" : "success"));
   return ((status.id));
 }

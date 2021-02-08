@@ -1,0 +1,4 @@
+#!/bin/sh -e
+
+sc other/example.sc other/example.c
+./exe/format-c -i other/example.c

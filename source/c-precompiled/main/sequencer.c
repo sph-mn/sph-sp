@@ -1,5 +1,6 @@
 
-/* this file defines macros only available in sc, that are used as optional helpers to simplify common tasks where c syntax alone offers no good alternative */
+/* the sc version of this file defines macros which are only available in sc.
+the macros are used as optional helpers to simplify common tasks where c syntax alone offers no good alternative */
 void sp_event_sort_swap(void* a, ssize_t b, ssize_t c) {
   sp_event_t d;
   d = ((sp_event_t*)(a))[b];

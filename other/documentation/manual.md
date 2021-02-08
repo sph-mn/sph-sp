@@ -163,3 +163,7 @@ slight changes of frequency over a short period of time by using the fmod freque
 ## how could live input data be incorporated
 for example with a long running event that on generate reads user input.
 user input might have to be read in a separate thread and buffered for the time between one block and the next.
+
+# troubleshooting
+## Floating point exception (core dumped)
+has sp_initialize() been called once to initialize sph-sp? it must be called once for some features to work.
