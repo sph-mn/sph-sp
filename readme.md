@@ -15,12 +15,13 @@ c code and shared library for sound synthesis and sequencing. the sound processo
   * convolution
 * synthesis
   * paths created from interpolation between given points. can be used for amplitude, wavelength and other controls
-  * lookup-table oscillator for sines and other wave shapes with a stable phase, an array for frequency changes and arrays per channel for amplitude changes
+  * lookup-table oscillator for sines and other wave shapes with a stable phase, arrays for time-dependent frequency and amplitude changes
   * sine/triangle/square/sawtooth-wave and noise generator
 * sequencing
-  * event renderer for parallel processing with custom routines
+  * event renderer for parallel block processing with custom routines
   * events for filtered noise and wave output
   * event groups that compose for riffs and songs
+  * per channel configuration with optional delay
 * array processing
   * utilities like array arithmetic, shuffle, permutations, compositions, statistics such as median, deviation, skewness and more
 
@@ -108,7 +109,9 @@ sp_convolution_filter_state_free :: sp_convolution_filter_state_t*:state -> void
 sp_convolution_filter_state_set :: sp_convolution_filter_ir_f_t:ir_f void*:ir_f_arguments uint8_t:ir_f_arguments_len sp_convolution_filter_state_t**:out_state -> status_t
 sp_convolve :: sp_sample_t*:a sp_time_t:a_len sp_sample_t*:b sp_time_t:b_len sp_time_t:result_carryover_len sp_sample_t*:result_carryover sp_sample_t*:result_samples -> void
 sp_convolve_one :: sp_sample_t*:a sp_time_t:a_len sp_sample_t*:b sp_time_t:b_len sp_sample_t*:result_samples -> void
+sp_event_memory_add :: sp_event_t*:event void*:address sp_memory_free_t:handler -> void
 sp_event_memory_free :: sp_event_t*:event -> void
+sp_event_memory_init :: sp_event_t*:a sp_time_t:additional_size -> status_t
 sp_events_array_free :: sp_event_t*:events sp_time_t:size -> void
 sp_fft :: sp_time_t:input_len double*:input_or_output_real double*:input_or_output_imag -> int
 sp_ffti :: sp_time_t:input_len double*:input_or_output_real double*:input_or_output_imag -> int
@@ -363,11 +366,9 @@ sp_declare_wave_event_config(name)
 sp_default_random_seed
 sp_event_duration(a)
 sp_event_duration_set(a, duration)
-sp_event_memory_add(a, data)
-sp_event_memory_add_2(a, data1, data2)
-sp_event_memory_add_3(a, data1, data2, data3)
-sp_event_memory_add_handler(a, data_, free)
-sp_event_memory_init(a, size)
+sp_event_memory_add1(event, address)
+sp_event_memory_add1_2(a, data1, data2)
+sp_event_memory_add1_3(a, data1, data2, data3)
 sp_event_move(a, start)
 sp_events_add
 sp_file_bit_input
@@ -386,6 +387,7 @@ sp_group_events(a)
 sp_group_size_t
 sp_malloc_type(count, type, pointer_address)
 sp_max(a, b)
+sp_memory_add
 sp_min(a, b)
 sp_no_underflow_subtract(a, b)
 sp_no_zero_divide(a, b)
@@ -524,8 +526,7 @@ sp_event_t: struct sp_event_t
   generate: function_pointer status_t sp_time_t sp_time_t sp_block_t void*
   prepare: function_pointer status_t struct sp_event_t*
   free: function_pointer void struct sp_event_t*
-  memory: sp_memory_t*
-  memory_used: sp_time_half_t
+  memory: sp_memory_t
 sp_events_t: struct
   data: void*
   size: size_t
@@ -540,9 +541,6 @@ sp_map_event_state_t: struct
   event: sp_event_t
   generate: sp_map_event_generate_t
   state: void*
-sp_memory_t: struct
-  free: sp_memory_free_t
-  data: void*
 sp_noise_event_config_t: struct
   amp: sp_sample_t
   amod: sp_sample_t*
