@@ -2,7 +2,7 @@
 /* small example that shows how to use the core sound generating events.
 this example depends on gnuplot to be installed.
 when running it, it should display a gnuplot window with a noisy sine wave.
-see exe/compile-example for how to compile it with gcc */
+see exe/run-example for how to compile and run with gcc */
 
 /* the sc version of this file defines macros which are only available in sc.
 the macros are used as optional helpers to simplify common tasks where c syntax alone offers no good alternative */

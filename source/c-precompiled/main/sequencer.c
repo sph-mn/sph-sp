@@ -282,17 +282,17 @@ exit:
    * amp: multiplied with amod */
 status_t sp_wave_event(sp_time_t start, sp_time_t end, sp_wave_event_config_t config, sp_event_t* out) {
   status_declare;
-  sp_channel_count_t ci;
   sp_event_t event;
   sp_declare_event(group);
   status_require((sp_group_new(0, (config.channels), (&group))));
-  for (ci = 0; (ci < config.channels); ci += 1) {
+  for (sp_time_t ci = 0; (ci < config.channels); ci += 1) {
     if (((config.channel_config)[ci]).mute) {
       continue;
     };
     status_require((sp_wave_event_channel((end - start), config, ci, (&event))));
     sp_group_add(group, event);
   };
+  group.memory = out->memory;
   *out = group;
 exit:
   if (status_is_failure) {
@@ -425,7 +425,6 @@ exit:
    all channels use the same initial random-state */
 status_t sp_noise_event(sp_time_t start, sp_time_t end, sp_noise_event_config_t config, sp_event_t* out) {
   status_declare;
-  sp_channel_count_t ci;
   sp_time_t duration;
   sp_event_t event;
   sp_random_state_t rs;
@@ -437,18 +436,19 @@ status_t sp_noise_event(sp_time_t start, sp_time_t end, sp_noise_event_config_t 
   config.resolution = sp_min((config.resolution), duration);
   rs = sp_random_state_new((sp_time_random((&sp_default_random_state))));
   status_require((sp_group_new(start, (config.channels), (&group))));
-  status_require((sp_event_memory_init(group, 2)));
+  status_require((sp_event_memory_init((&group), 2)));
   status_require((sp_malloc_type((config.resolution), sp_sample_t, (&state_noise))));
-  sp_event_memory_add(group, state_noise);
+  sp_event_memory_add1((&group), state_noise);
   status_require((sp_malloc_type((config.resolution), sp_sample_t, (&state_temp))));
-  sp_event_memory_add(group, state_temp);
-  for (ci = 0; (ci < config.channels); ci += 1) {
+  sp_event_memory_add1((&group), state_temp);
+  for (sp_time_t ci = 0; (ci < config.channels); ci += 1) {
     if (((config.channel_config)[ci]).mute) {
       continue;
     };
     status_require((sp_noise_event_channel(duration, config, ci, rs, state_noise, state_temp, (&event))));
     sp_group_add(group, event);
   };
+  group.memory = out->memory;
   *out = group;
 exit:
   if (status_is_failure) {
@@ -554,7 +554,6 @@ exit:
    memory for event.state will be allocated and then owned by the caller */
 status_t sp_cheap_noise_event(sp_time_t start, sp_time_t end, sp_cheap_noise_event_config_t config, sp_event_t* out) {
   status_declare;
-  sp_channel_count_t ci;
   sp_event_t event;
   sp_random_state_t rs;
   sp_sample_t* state_noise;
@@ -565,18 +564,19 @@ status_t sp_cheap_noise_event(sp_time_t start, sp_time_t end, sp_cheap_noise_eve
   config.resolution = sp_min((config.resolution), (end - start));
   rs = sp_random_state_new((sp_time_random((&sp_default_random_state))));
   status_require((sp_group_new(start, (config.channels), (&group))));
-  status_require((sp_event_memory_init(group, 2)));
+  status_require((sp_event_memory_init((&group), 2)));
   status_require((sp_malloc_type((config.resolution), sp_sample_t, (&state_noise))));
-  sp_event_memory_add(group, state_noise);
+  sp_event_memory_add1((&group), state_noise);
   status_require((sp_malloc_type((config.resolution), sp_sample_t, (&state_temp))));
-  sp_event_memory_add(group, state_temp);
-  for (ci = 0; (ci < config.channels); ci += 1) {
+  sp_event_memory_add1((&group), state_temp);
+  for (sp_time_t ci = 0; (ci < config.channels); ci += 1) {
     if (((config.channel_config)[ci]).mute) {
       continue;
     };
     status_require((sp_cheap_noise_event_channel((end - start), config, ci, rs, state_noise, state_temp, (&event))));
     sp_group_add(group, event);
   };
+  group.memory = out->memory;
   *out = group;
 exit:
   if (status_is_failure) {
@@ -584,14 +584,37 @@ exit:
   };
   status_return;
 }
-void sp_event_memory_free(sp_event_t* event) {
-  sp_time_half_t i;
-  sp_memory_t m;
-  for (i = 0; (i < event->memory_used); i += 1) {
-    m = (event->memory)[i];
-    (m.free)((m.data));
+
+/** ensures that event memory is initialized and can take $additional_size more elements */
+status_t sp_event_memory_init(sp_event_t* a, sp_time_t additional_size) {
+  status_declare;
+  if (a->memory.data) {
+    if ((additional_size > array3_unused_size((a->memory))) && sp_memory_resize((&(a->memory)), (array3_max_size((a->memory)) + (additional_size - array3_unused_size((a->memory)))))) {
+      sp_memory_error;
+    };
+  } else {
+    if (sp_memory_new(additional_size, (&(a->memory)))) {
+      sp_memory_error;
+    };
   };
-  free((event->memory));
+exit:
+  status_return;
+}
+void sp_event_memory_add(sp_event_t* a, void* address, sp_memory_free_t handler) {
+  memreg2_t m;
+  m.address = address;
+  m.handler = handler;
+  sp_memory_add((a->memory), m);
+}
+
+/** free all registered memory and unitialize the event-memory register */
+void sp_event_memory_free(sp_event_t* a) {
+  memreg2_t m;
+  for (sp_time_t i = 0; (i < array3_size((a->memory))); i += 1) {
+    m = array3_get((a->memory), i);
+    (m.handler)((m.address));
+  };
+  array3_free((a->memory));
 }
 void sp_map_event_free(sp_event_t* a) {
   sp_map_event_state_t* s;

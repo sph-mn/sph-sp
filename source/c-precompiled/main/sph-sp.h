@@ -413,20 +413,13 @@ void sp_plot_spectrum(sp_sample_t* a, sp_time_t a_size);
   if (a.end < event.end) { \
     a.end = event.end; \
   }
-#define sp_event_memory_add(a, data) sp_event_memory_add_handler(a, data, free)
-
-/** sp_event_t void* function:{void* -> void} */
-#define sp_event_memory_add_handler(a, data_, free) \
-  ((a.memory)[a.memory_used]).data = data_; \
-  ((a.memory)[a.memory_used]).free = free; \
-  a.memory_used += 1
-#define sp_event_memory_add_2(a, data1, data2) \
-  sp_event_memory_add(a, data1); \
-  sp_event_memory_add(a, data2)
-#define sp_event_memory_add_3(a, data1, data2, data3) \
-  sp_event_memory_add_2(a, data1, data2); \
-  sp_event_memory_add(a, data3)
-#define sp_event_memory_init(a, size) sp_malloc_type(size, sp_memory_t, (&(a.memory)))
+#define sp_event_memory_add1(event, address) sp_event_memory_add(event, address, free)
+#define sp_event_memory_add1_2(a, data1, data2) \
+  sp_event_memory_add1(a, data1); \
+  sp_event_memory_add1(a, data2)
+#define sp_event_memory_add1_3(a, data1, data2, data3) \
+  sp_event_memory_add1_2(a, data1, data2); \
+  sp_event_memory_add1(a, data3)
 #define sp_events_add array4_add
 #define sp_sine_config_t sp_wave_event_config_t
 #define sp_declare_sine_config(name) \
@@ -455,11 +448,9 @@ void sp_plot_spectrum(sp_sample_t* a, sp_time_t a_size);
   name.amp = 1; \
   name.type = sp_state_variable_filter_lp; \
   name.cut = 0.5
+#define sp_memory_add array3_add
+array3_declare_type(sp_memory, memreg2_t);
 typedef void (*sp_memory_free_t)(void*);
-typedef struct {
-  sp_memory_free_t free;
-  void* data;
-} sp_memory_t;
 struct sp_event_t;
 typedef struct sp_event_t {
   sp_time_t start;
@@ -468,8 +459,7 @@ typedef struct sp_event_t {
   status_t (*generate)(sp_time_t, sp_time_t, sp_block_t, void*);
   status_t (*prepare)(struct sp_event_t*);
   void (*free)(struct sp_event_t*);
-  sp_memory_t* memory;
-  sp_time_half_t memory_used;
+  sp_memory_t memory;
 } sp_event_t;
 typedef status_t (*sp_event_generate_t)(sp_time_t, sp_time_t, sp_block_t, void*);
 typedef struct {
@@ -536,6 +526,8 @@ typedef struct {
 } sp_map_event_state_t;
 array4_declare_type(sp_events, sp_event_t);
 void sp_seq_events_free(sp_events_t* events);
+status_t sp_event_memory_init(sp_event_t* a, sp_time_t additional_size);
+void sp_event_memory_add(sp_event_t* event, void* address, sp_memory_free_t handler);
 void sp_event_memory_free(sp_event_t* event);
 void sp_seq_events_prepare(sp_events_t* events);
 status_t sp_seq(sp_time_t start, sp_time_t end, sp_block_t out, sp_events_t* events);

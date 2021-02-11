@@ -428,17 +428,11 @@
   (sp-group-events a) (pointer-get (convert-type a.state sp-events-t*))
   (sp-group-add a event)
   (begin (array4-add (sp-group-events a) event) (if (< a.end event.end) (set a.end event.end)))
-  (sp-event-memory-add a data) (sp-event-memory-add-handler a data free)
-  (sp-event-memory-add-handler a data_ free)
-  (begin
-    "sp_event_t void* function:{void* -> void}"
-    (struct-set (array-get a.memory a.memory-used) data data_ free free)
-    (set+ a.memory-used 1))
-  (sp-event-memory-add-2 a data1 data2)
-  (begin (sp-event-memory-add a data1) (sp-event-memory-add a data2))
-  (sp-event-memory-add-3 a data1 data2 data3)
-  (begin (sp-event-memory-add-2 a data1 data2) (sp-event-memory-add a data3))
-  (sp-event-memory-init a size) (sp-malloc-type size sp-memory-t &a.memory)
+  (sp-event-memory-add1 event address) (sp-event-memory-add event address free)
+  (sp-event-memory-add1-2 a data1 data2)
+  (begin (sp-event-memory-add1 a data1) (sp-event-memory-add1 a data2))
+  (sp-event-memory-add1-3 a data1 data2 data3)
+  (begin (sp-event-memory-add1-2 a data1 data2) (sp-event-memory-add1 a data3))
   sp-events-add array4-add
   sp-sine-config-t sp-wave-event-config-t
   (sp-declare-sine-config name)
@@ -460,11 +454,13 @@
   (sp-declare-cheap-noise-config name)
   (begin
     (sp-declare-cheap-noise-event-config name)
-    (struct-set name channels sp-channels amp 1 type sp-state-variable-filter-lp cut 0.5)))
+    (struct-set name channels sp-channels amp 1 type sp-state-variable-filter-lp cut 0.5))
+  sp-memory-add array3-add)
+
+(array3-declare-type sp-memory memreg2-t)
 
 (declare
   sp-memory-free-t (type (function-pointer void void*))
-  sp-memory-t (type (struct (free sp-memory-free-t) (data void*)))
   sp-event-t struct
   sp-event-t
   (type
@@ -476,8 +472,7 @@
       (generate (function-pointer status-t sp-time-t sp-time-t sp-block-t void*))
       (prepare (function-pointer status-t (struct sp-event-t*)))
       (free (function-pointer void (struct sp-event-t*)))
-      (memory sp-memory-t*)
-      (memory-used sp-time-half-t)))
+      (memory sp-memory-t)))
   sp-event-generate-t (type (function-pointer status-t sp-time-t sp-time-t sp-block-t void*))
   sp-channel-config-t
   (type
@@ -549,6 +544,8 @@
 
 (declare
   (sp-seq-events-free events) (void sp-events-t*)
+  (sp-event-memory-init a additional-size) (status-t sp-event-t* sp-time-t)
+  (sp-event-memory-add event address handler) (void sp-event-t* void* sp-memory-free-t)
   (sp-event-memory-free event) (void sp-event-t*)
   (sp-seq-events-prepare events) (void sp-events-t*)
   (sp-seq start end out events) (status-t sp-time-t sp-time-t sp-block-t sp-events-t*)

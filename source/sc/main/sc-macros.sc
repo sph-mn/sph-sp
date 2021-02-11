@@ -39,7 +39,7 @@
    * default sp_event_t variables _result, _event and _out
    * adds free-on-error-free/free-on-exit-free if a use of the feature is found"
   (let*
-    ( (types (qq (status-t (unquote-splicing (any->list types)) sp-event-t*)))
+    ( (types (qq (status-t sp-time-t (unquote-splicing (any->list types)) sp-event-t*)))
       (free-on-error-count (sc-contains-expression (q free-on-error-init) body))
       (free-on-exit-count (sc-contains-expression (q free-on-exit-init) body))
       (free-memory
@@ -52,7 +52,7 @@
             (append body (qq ((label exit (unquote free-memory) (unquote exit-content))))))
           (_ (pair body (qq (label exit (unquote free-memory) status-return)))))))
     (qq
-      (define ((unquote name) (unquote-splicing arguments) _out) (unquote types)
+      (define ((unquote name) _start (unquote-splicing arguments) _out) (unquote types)
         status-declare
         (sp-declare-event _result)
         (sp-declare-event _event)
@@ -78,7 +78,8 @@
       (struct-set (unquote config) (unquote-splicing setting))
       (sp-channel-config (struct-get (unquote config) channel-config)
         (unquote-splicing channel-config))
-      (status-require ((unquote make-event) (unquote start) (unquote end) (unquote config) (unquote out))))))
+      (status-require
+        ((unquote make-event) (unquote start) (unquote end) (unquote config) (unquote out))))))
 
 (sc-define-syntax (sp-sine out start end config config-settings channel-config ...)
   (sp-channel-config-event "sp-sine" sp-wave-event

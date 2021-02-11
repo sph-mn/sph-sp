@@ -225,14 +225,14 @@
    * amod: uses main amod if zero
    * amp: multiplied with amod"
   status-declare
-  (declare ci sp-channel-count-t event sp-event-t)
+  (declare event sp-event-t)
   (sp-declare-event group)
   (status-require (sp-group-new 0 config.channels &group))
-  (for ((set ci 0) (< ci config.channels) (set+ ci 1))
+  (for-each-index ci config.channels
     (if (struct-get (array-get config.channel-config ci) mute) continue)
     (status-require (sp-wave-event-channel (- end start) config ci &event))
     (sp-group-add group event))
-  (set *out group)
+  (set group.memory out:memory *out group)
   (label exit (if status-is-failure (sp-group-free &group)) status-return))
 
 (declare sp-noise-event-state-t
@@ -364,7 +364,6 @@
    all channels use the same initial random-state"
   status-declare
   (declare
-    ci sp-channel-count-t
     duration sp-time-t
     event sp-event-t
     rs sp-random-state-t
@@ -377,16 +376,16 @@
     config.resolution (sp-min config.resolution duration)
     rs (sp-random-state-new (sp-time-random &sp-default-random-state)))
   (status-require (sp-group-new start config.channels &group))
-  (status-require (sp-event-memory-init group 2))
+  (status-require (sp-event-memory-init &group 2))
   (status-require (sp-malloc-type config.resolution sp-sample-t &state-noise))
-  (sp-event-memory-add group state-noise)
+  (sp-event-memory-add1 &group state-noise)
   (status-require (sp-malloc-type config.resolution sp-sample-t &state-temp))
-  (sp-event-memory-add group state-temp)
-  (for ((set ci 0) (< ci config.channels) (set+ ci 1))
+  (sp-event-memory-add1 &group state-temp)
+  (for-each-index ci config.channels
     (if (struct-get (array-get config.channel-config ci) mute) continue)
     (status-require (sp-noise-event-channel duration config ci rs state-noise state-temp &event))
     (sp-group-add group event))
-  (set *out group)
+  (set group.memory out:memory *out group)
   (label exit (if status-is-failure (sp-group-free &group)) status-return))
 
 (declare sp-cheap-noise-event-state-t
@@ -490,12 +489,7 @@
    multiple passes almost multiply performance costs.
    memory for event.state will be allocated and then owned by the caller"
   status-declare
-  (declare
-    ci sp-channel-count-t
-    event sp-event-t
-    rs sp-random-state-t
-    state-noise sp-sample-t*
-    state-temp sp-sample-t*)
+  (declare event sp-event-t rs sp-random-state-t state-noise sp-sample-t* state-temp sp-sample-t*)
   (sp-declare-event group)
   (set
     config.passes (if* config.passes config.passes 1)
@@ -503,25 +497,42 @@
     config.resolution (sp-min config.resolution (- end start))
     rs (sp-random-state-new (sp-time-random &sp-default-random-state)))
   (status-require (sp-group-new start config.channels &group))
-  (status-require (sp-event-memory-init group 2))
+  (status-require (sp-event-memory-init &group 2))
   (status-require (sp-malloc-type config.resolution sp-sample-t &state-noise))
-  (sp-event-memory-add group state-noise)
+  (sp-event-memory-add1 &group state-noise)
   (status-require (sp-malloc-type config.resolution sp-sample-t &state-temp))
-  (sp-event-memory-add group state-temp)
-  (for ((set ci 0) (< ci config.channels) (set+ ci 1))
+  (sp-event-memory-add1 &group state-temp)
+  (for-each-index ci config.channels
     (if (struct-get (array-get config.channel-config ci) mute) continue)
     (status-require
       (sp-cheap-noise-event-channel (- end start) config ci rs state-noise state-temp &event))
     (sp-group-add group event))
-  (set *out group)
+  (set group.memory out:memory *out group)
   (label exit (if status-is-failure (sp-group-free &group)) status-return))
 
-(define (sp-event-memory-free event) (void sp-event-t*)
-  (declare i sp-time-half-t m sp-memory-t)
-  (for ((set i 0) (< i event:memory-used) (set+ i 1))
-    (set m (array-get event:memory i))
-    (m.free m.data))
-  (free event:memory))
+(define (sp-event-memory-init a additional-size) (status-t sp-event-t* sp-time-t)
+  "ensures that event memory is initialized and can take $additional_size more elements"
+  status-declare
+  (if a:memory.data
+    (if
+      (and (> additional-size (array3-unused-size a:memory))
+        (sp-memory-resize &a:memory
+          (+ (array3-max-size a:memory) (- additional-size (array3-unused-size a:memory)))))
+      sp-memory-error)
+    (if (sp-memory-new additional-size &a:memory) sp-memory-error))
+  (label exit status-return))
+
+(define (sp-event-memory-add a address handler) (void sp-event-t* void* sp-memory-free-t)
+  (declare m memreg2-t)
+  (struct-set m address address handler handler)
+  (sp-memory-add a:memory m))
+
+(define (sp-event-memory-free a) (void sp-event-t*)
+  "free all registered memory and unitialize the event-memory register"
+  (declare m memreg2-t)
+  (for-each-index i (array3-size a:memory)
+    (set m (array3-get a:memory i)) (m.handler m.address))
+  (array3-free a:memory))
 
 (define (sp-map-event-free a) (void sp-event-t*)
   (declare s sp-map-event-state-t*)

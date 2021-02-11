@@ -413,9 +413,9 @@ status_t test_sp_group() {
   sp_group_add(g1, e2);
   sp_group_add(g, g1);
   sp_group_add(g, e3);
-  sp_event_memory_init(g, 2);
-  sp_event_memory_add(g, m1);
-  sp_event_memory_add(g, m2);
+  sp_event_memory_init((&g), 2);
+  sp_event_memory_add1((&g), m1);
+  sp_event_memory_add1((&g), m2);
   (g.prepare)((&g));
   (g.generate)(0, 50, block, (g.state));
   (g.generate)(50, 100, (sp_block_with_offset(block, 50)), (g.state));
