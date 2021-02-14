@@ -13,7 +13,6 @@
   (printf "\n"))
 
 (define (sp-event-list-reverse a) (void sp-event-list-t**)
-  "reverse list and set $a to the previously last element"
   (declare current sp-event-list-t* next sp-event-list-t*)
   (set current *a)
   (if (not current) return)
@@ -22,10 +21,12 @@
     (set current next next current:next current:next current:previous current:previous next))
   (set *a current))
 
-(define (sp-event-list-remove-element a element) (void sp-event-list-t** sp-event-list-t*)
-  "sets $a to the next element"
+(define (sp-event-list-remove a element) (void sp-event-list-t** sp-event-list-t*)
+  "removes the list element and frees the event, without having to search in the list.
+   updates the head of the list if element is the first element"
   (if element:previous (set element:previous:next element:next) (set *a element:next))
   (if element:next (set element:next:previous element:previous))
+  (if element:event.free (element:event.free &element:event))
   (free element))
 
 (define (sp-event-list-add a event) (status-t sp-event-list-t** sp-event-t)
@@ -66,13 +67,13 @@
    if prepare fails, sp_seq returns immediately.
    past events including the event list elements are freed when processing the following block"
   status-declare
-  (declare e sp-event-t ep sp-event-t* current sp-event-list-t* temp sp-event-list-t*)
+  (declare e sp-event-t ep sp-event-t* current sp-event-list-t* next sp-event-list-t*)
   (set current *events)
   (while current
     (set ep &current:event e *ep)
     (cond
-      ( (<= e.end start) (if e.free (e.free ep)) (set temp current:next)
-        (sp-event-list-remove-element events current) (set current temp) continue)
+      ( (<= e.end start) (set next current:next) (sp-event-list-remove events current)
+        (set current next) continue)
       ((<= end e.start) break)
       ( (> e.end start)
         (if e.prepare (begin (status-require (e.prepare ep)) (set ep:prepare 0 e.state ep:state)))
@@ -116,7 +117,8 @@
     e sp-event-t
     e-start sp-time-t
     sf-array sp-seq-future-t*
-    sf sp-seq-future-t*)
+    sf sp-seq-future-t*
+    next sp-event-list-t*)
   (set sf-array 0 active 0 allocated 0 current *events)
   (sc-comment "count")
   (while current
@@ -128,8 +130,8 @@
   (while current
     (set ep &current:event e *ep)
     (cond
-      ( (<= e.end start) (if e.free (e.free ep)) (sp-event-list-remove-element events current)
-        continue)
+      ( (<= e.end start) (set next current:next) (sp-event-list-remove events current)
+        (set current next) continue)
       ((<= end e.start) break)
       ( (> e.end start)
         (set

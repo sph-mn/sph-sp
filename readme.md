@@ -109,10 +109,13 @@ sp_convolution_filter_state_free :: sp_convolution_filter_state_t*:state -> void
 sp_convolution_filter_state_set :: sp_convolution_filter_ir_f_t:ir_f void*:ir_f_arguments uint8_t:ir_f_arguments_len sp_convolution_filter_state_t**:out_state -> status_t
 sp_convolve :: sp_sample_t*:a sp_time_t:a_len sp_sample_t*:b sp_time_t:b_len sp_time_t:result_carryover_len sp_sample_t*:result_carryover sp_sample_t*:result_samples -> void
 sp_convolve_one :: sp_sample_t*:a sp_time_t:a_len sp_sample_t*:b sp_time_t:b_len sp_sample_t*:result_samples -> void
+sp_event_list_add :: sp_event_list_t**:a sp_event_t:event -> status_t
+sp_event_list_free :: sp_event_list_t*:events -> void
+sp_event_list_remove_element :: sp_event_list_t**:a sp_event_list_t*:element -> void
+sp_event_list_reverse :: sp_event_list_t**:a -> void
 sp_event_memory_add :: sp_event_t*:event void*:address sp_memory_free_t:handler -> void
 sp_event_memory_free :: sp_event_t*:event -> void
 sp_event_memory_init :: sp_event_t*:a sp_time_t:additional_size -> status_t
-sp_events_array_free :: sp_event_t*:events sp_time_t:size -> void
 sp_fft :: sp_time_t:input_len double*:input_or_output_real double*:input_or_output_imag -> int
 sp_ffti :: sp_time_t:input_len double*:input_or_output_real double*:input_or_output_imag -> int
 sp_file_close :: sp_file_t:a -> status_t
@@ -122,11 +125,12 @@ sp_file_position_set :: sp_file_t*:file sp_time_t:sample_offset -> status_t
 sp_file_read :: sp_file_t*:file sp_time_t:sample_count sp_sample_t**:result_block sp_time_t*:result_sample_count -> status_t
 sp_file_write :: sp_file_t*:file sp_sample_t**:block sp_time_t:sample_count sp_time_t*:result_sample_count -> status_t
 sp_filter :: sp_sample_t*:in sp_time_t:in_size sp_float_t:cutoff_l sp_float_t:cutoff_h sp_float_t:transition_l sp_float_t:transition_h boolean:is_reject sp_filter_state_t**:out_state sp_sample_t*:out_samples -> status_t
-sp_group_append :: sp_event_t*:a sp_event_t:event -> void
+sp_group_add :: sp_event_t*:a sp_event_t:event -> status_t
+sp_group_append :: sp_event_t*:a sp_event_t:event -> status_t
 sp_group_event_f :: sp_time_t:start sp_time_t:end sp_block_t:out sp_event_t*:event -> void
 sp_group_event_free :: sp_event_t*:a -> void
 sp_group_event_parallel_f :: sp_time_t:start sp_time_t:end sp_block_t:out sp_event_t*:event -> void
-sp_group_new :: sp_time_t:start sp_group_size_t:event_size sp_event_t*:out -> status_t
+sp_group_new :: sp_time_t:start sp_event_t*:out -> void
 sp_initialize :: uint16_t:cpu_count sp_channel_count_t:channels sp_time_t:rate -> status_t
 sp_map_event :: sp_event_t:event sp_map_event_generate_t:f void*:state uint8_t:isolate sp_event_t*:out -> status_t
 sp_moving_average :: sp_sample_t*:in sp_time_t:in_size sp_sample_t*:prev sp_sample_t*:next sp_time_t:radius sp_sample_t*:out -> void
@@ -161,10 +165,10 @@ sp_plot_spectrum_file :: uint8_t*:path -> void
 sp_plot_times :: sp_time_t*:a sp_time_t:a_size -> void
 sp_plot_times_to_file :: sp_time_t*:a sp_time_t:a_size uint8_t*:path -> void
 sp_random_state_new :: sp_time_t:seed -> sp_random_state_t
-sp_render_block :: sp_events_t:events sp_time_t:start sp_time_t:end sp_render_config_t:config sp_block_t*:out -> status_t
+sp_render_block :: sp_event_list_t*:events sp_time_t:start sp_time_t:end sp_render_config_t:config sp_block_t*:out -> status_t
 sp_render_config :: sp_channel_count_t:channels sp_time_t:rate sp_time_t:block_size -> sp_render_config_t
-sp_render_file :: sp_events_t:events sp_time_t:start sp_time_t:end sp_render_config_t:config uint8_t*:path -> status_t
-sp_render_quick :: sp_events_t:events uint8_t:file_or_plot -> status_t
+sp_render_file :: sp_event_list_t*:events sp_time_t:start sp_time_t:end sp_render_config_t:config uint8_t*:path -> status_t
+sp_render_quick :: sp_event_list_t*:events uint8_t:file_or_plot -> status_t
 sp_sample_random_custom :: sp_random_state_t*:state sp_time_t*:cudist sp_time_t:cudist_size sp_sample_t:range -> sp_sample_t
 sp_samples_to_times :: sp_sample_t*:in sp_time_t:in_size sp_time_t*:out -> void
 sp_samples_absolute_max :: sp_sample_t*:in sp_time_t:in_size -> sp_sample_t
@@ -200,10 +204,8 @@ sp_samples_square :: sp_sample_t*:a sp_time_t:size sp_sample_t*:out -> void
 sp_samples_subtract :: sp_sample_t*:a sp_time_t:size sp_sample_t*:b sp_sample_t*:out -> void
 sp_samples_subtract_1 :: sp_sample_t*:a sp_time_t:size sp_sample_t:n sp_sample_t*:out -> void
 sp_samples_xor :: sp_sample_t*:a sp_sample_t*:b sp_time_t:size sp_sample_t:limit sp_sample_t*:out -> void
-sp_seq :: sp_time_t:start sp_time_t:end sp_block_t:out sp_events_t*:events -> status_t
-sp_seq_events_free :: sp_events_t*:events -> void
-sp_seq_events_prepare :: sp_events_t*:events -> void
-sp_seq_parallel :: sp_time_t:start sp_time_t:end sp_block_t:out sp_events_t*:events -> status_t
+sp_seq :: sp_time_t:start sp_time_t:end sp_block_t:out sp_event_list_t**:events -> status_t
+sp_seq_parallel :: sp_time_t:start sp_time_t:end sp_block_t:out sp_event_list_t**:events -> status_t
 sp_sequence_max :: sp_time_t:size sp_time_t:min_size -> sp_time_t
 sp_sequence_set_hash :: sp_sequence_set_key_t:a sp_time_t:memory_size -> uint64_t
 sp_set_sequence_max :: sp_time_t:set_size sp_time_t:selection_size -> sp_time_t
@@ -357,7 +359,7 @@ sp_declare_event(id)
 sp_declare_event_2(id1, id2)
 sp_declare_event_3(id1, id2, id3)
 sp_declare_event_4(id1, id2, id3, id4)
-sp_declare_events(id, size)
+sp_declare_event_list(id)
 sp_declare_noise_config(name)
 sp_declare_noise_event_config(name)
 sp_declare_sine_config(name)
@@ -370,7 +372,6 @@ sp_event_memory_add1(event, address)
 sp_event_memory_add1_2(a, data1, data2)
 sp_event_memory_add1_3(a, data1, data2, data3)
 sp_event_move(a, start)
-sp_events_add
 sp_file_bit_input
 sp_file_bit_output
 sp_file_bit_position
@@ -382,7 +383,6 @@ sp_file_mode_write
 sp_filter_state_free
 sp_filter_state_t
 sp_float_t
-sp_group_add(a, event)
 sp_group_events(a)
 sp_group_size_t
 sp_malloc_type(count, type, pointer_address)
@@ -445,6 +445,7 @@ sp_samples_random
 sp_samples_random_bounded
 sp_samples_sum
 sp_samples_zero(a, size)
+sp_seq_events_prepare
 sp_sequence_set_equal(a, b)
 sp_sf_read
 sp_sf_write
@@ -477,7 +478,7 @@ uint32_t sp_cpu_count
 ## types
 ~~~
 sp_convolution_filter_ir_f_t: void* sp_sample_t** sp_time_t* -> status_t
-sp_event_generate_t: sp_time_t sp_time_t sp_block_t void* -> status_t
+sp_event_generate_t: sp_time_t sp_time_t sp_block_t sp_event_t* -> status_t
 sp_map_event_generate_t: sp_time_t sp_time_t sp_block_t sp_block_t void* -> status_t
 sp_memory_free_t: void* -> void
 sp_stat_samples_f_t: sp_sample_t* sp_time_t sp_sample_t* -> uint8_t
@@ -519,11 +520,15 @@ sp_convolution_filter_state_t: struct
   ir_f_arguments: void*
   ir_f_arguments_len: uint8_t
   ir_len: sp_time_t
+sp_event_list_t: struct sp_event_list_struct
+  previous: struct sp_event_list_struct*
+  next: struct sp_event_list_struct*
+  event: sp_event_t
 sp_event_t: struct sp_event_t
   start: sp_time_t
   end: sp_time_t
   state: void*
-  generate: function_pointer status_t sp_time_t sp_time_t sp_block_t void*
+  generate: function_pointer status_t sp_time_t sp_time_t sp_block_t struct sp_event_t*
   prepare: function_pointer status_t struct sp_event_t*
   free: function_pointer void struct sp_event_t*
   memory: sp_memory_t

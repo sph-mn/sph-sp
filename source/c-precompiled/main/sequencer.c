@@ -19,8 +19,6 @@ void sp_event_list_display(sp_event_list_t* a) {
   };
   printf("\n");
 }
-
-/** reverse list and set $a to the previously last element */
 void sp_event_list_reverse(sp_event_list_t** a) {
   sp_event_list_t* current;
   sp_event_list_t* next;
@@ -40,8 +38,9 @@ void sp_event_list_reverse(sp_event_list_t** a) {
   *a = current;
 }
 
-/** sets $a to the next element */
-void sp_event_list_remove_element(sp_event_list_t** a, sp_event_list_t* element) {
+/** removes the list element and frees the event, without having to search in the list.
+   updates the head of the list if element is the first element */
+void sp_event_list_remove(sp_event_list_t** a, sp_event_list_t* element) {
   if (element->previous) {
     element->previous->next = element->next;
   } else {
@@ -49,6 +48,9 @@ void sp_event_list_remove_element(sp_event_list_t** a, sp_event_list_t* element)
   };
   if (element->next) {
     element->next->previous = element->previous;
+  };
+  if (element->event.free) {
+    (element->event.free)((&(element->event)));
   };
   free(element);
 }
@@ -119,18 +121,15 @@ status_t sp_seq(sp_time_t start, sp_time_t end, sp_block_t out, sp_event_list_t*
   sp_event_t e;
   sp_event_t* ep;
   sp_event_list_t* current;
-  sp_event_list_t* temp;
+  sp_event_list_t* next;
   current = *events;
   while (current) {
     ep = &(current->event);
     e = *ep;
     if (e.end <= start) {
-      if (e.free) {
-        (e.free)(ep);
-      };
-      temp = current->next;
-      sp_event_list_remove_element(events, current);
-      current = temp;
+      next = current->next;
+      sp_event_list_remove(events, current);
+      current = next;
       continue;
     } else if (end <= e.start) {
       break;
@@ -183,6 +182,7 @@ status_t sp_seq_parallel(sp_time_t start, sp_time_t end, sp_block_t out, sp_even
   sp_time_t e_start;
   sp_seq_future_t* sf_array;
   sp_seq_future_t* sf;
+  sp_event_list_t* next;
   sf_array = 0;
   active = 0;
   allocated = 0;
@@ -203,10 +203,9 @@ status_t sp_seq_parallel(sp_time_t start, sp_time_t end, sp_block_t out, sp_even
     ep = &(current->event);
     e = *ep;
     if (e.end <= start) {
-      if (e.free) {
-        (e.free)(ep);
-      };
-      sp_event_list_remove_element(events, current);
+      next = current->next;
+      sp_event_list_remove(events, current);
+      current = next;
       continue;
     } else if (end <= e.start) {
       break;
