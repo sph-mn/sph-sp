@@ -305,7 +305,7 @@ status_t test_sp_noise_event() {
   sp_event_t event;
   sp_time_t i;
   sp_declare_noise_event_config(config);
-  sp_declare_events(events, 1);
+  sp_declare_event_list(events);
   status_require((sp_block_new(2, sp_noise_duration, (&out))));
   for (i = 0; (i < sp_noise_duration); i = (1 + i)) {
     cutl[i] = ((i < (sp_noise_duration / 2)) ? 0.01 : 0.1);
@@ -320,9 +320,8 @@ status_t test_sp_noise_event() {
   config.amp = 1;
   config.channels = 2;
   status_require((sp_noise_event(0, sp_noise_duration, config, (&event))));
-  array4_add(events, event);
+  status_require((sp_event_list_add((&events), event)));
   sp_seq(0, sp_noise_duration, out, (&events));
-  sp_seq_events_free((&events));
   sp_block_free(out);
 exit:
   status_return;
@@ -349,9 +348,9 @@ status_t test_sp_cheap_noise_event() {
   sp_block_t out;
   sp_sample_t cut_mod[sp_noise_duration];
   sp_sample_t amod[sp_noise_duration];
-  sp_event_t event;
   sp_time_t i;
-  sp_declare_events(events, 1);
+  sp_declare_event(event);
+  sp_declare_event_list(events);
   sp_declare_cheap_noise_event_config(config);
   status_require((sp_block_new(2, sp_noise_duration, (&out))));
   for (i = 0; (i < sp_noise_duration); i += 1) {
@@ -367,9 +366,8 @@ status_t test_sp_cheap_noise_event() {
   config.channels = 2;
   config.amp = 1;
   status_require((sp_cheap_noise_event(0, sp_noise_duration, config, (&event))));
-  array4_add(events, event);
-  sp_seq(0, sp_noise_duration, out, (&events));
-  sp_seq_events_free((&events));
+  status_require((sp_event_list_add((&events), event)));
+  sp_event_list_free(events);
   sp_block_free(out);
 exit:
   status_return;
@@ -379,9 +377,9 @@ status_t test_sp_seq() {
   status_declare;
   sp_block_t out;
   sp_time_t i;
-  sp_declare_events(events, sp_seq_event_count);
-  array4_add(events, (test_helper_event(0, 40, 1)));
-  array4_add(events, (test_helper_event(41, 100, 2)));
+  sp_declare_event_list(events);
+  status_require((sp_event_list_add((&events), (test_helper_event(0, 40, 1)))));
+  status_require((sp_event_list_add((&events), (test_helper_event(41, 100, 2)))));
   status_require((sp_block_new(2, 100, (&out))));
   sp_seq_events_prepare((&events));
   sp_seq(0, 50, out, (&events));
@@ -389,7 +387,7 @@ status_t test_sp_seq() {
   test_helper_assert("block contents 1 event 1", ((1 == (out.samples)[0][0]) && (1 == (out.samples)[0][39])));
   test_helper_assert("block contents 1 gap", (0 == (out.samples)[0][40]));
   test_helper_assert("block contents 1 event 2", ((2 == (out.samples)[0][41]) && (2 == (out.samples)[0][99])));
-  sp_seq_events_free((&events));
+  sp_event_list_free(events);
   sp_block_free(out);
 exit:
   status_return;
@@ -403,22 +401,22 @@ status_t test_sp_group() {
   sp_declare_event_3(e1, e2, e3);
   status_require((sp_times_new(100, (&m1))));
   status_require((sp_times_new(100, (&m2))));
-  status_require((sp_group_new(0, 2, (&g))));
-  status_require((sp_group_new(10, 2, (&g1))));
+  sp_group_new(0, (&g));
+  sp_group_new(10, (&g1));
   status_require((sp_block_new(2, 100, (&block))));
   e1 = test_helper_event(0, 20, 1);
   e2 = test_helper_event(20, 40, 2);
   e3 = test_helper_event(50, 100, 3);
-  sp_group_add(g1, e1);
-  sp_group_add(g1, e2);
-  sp_group_add(g, g1);
-  sp_group_add(g, e3);
-  sp_event_memory_init((&g), 2);
+  status_require((sp_group_add((&g1), e1)));
+  status_require((sp_group_add((&g1), e2)));
+  status_require((sp_group_add((&g), g1)));
+  status_require((sp_group_add((&g), e3)));
+  status_require((sp_event_memory_init((&g), 2)));
   sp_event_memory_add1((&g), m1);
   sp_event_memory_add1((&g), m2);
   (g.prepare)((&g));
-  (g.generate)(0, 50, block, (g.state));
-  (g.generate)(50, 100, (sp_block_with_offset(block, 50)), (g.state));
+  (g.generate)(0, 50, block, (&g));
+  (g.generate)(50, 100, (sp_block_with_offset(block, 50)), (&g));
   (g.free)((&g));
   test_helper_assert("block contents event 1", ((1 == (block.samples)[0][10]) && (1 == (block.samples)[0][29])));
   test_helper_assert("block contents event 2", ((2 == (block.samples)[0][30]) && (2 == (block.samples)[0][39])));
@@ -469,7 +467,8 @@ status_t test_render_block() {
   sp_sample_t amod[test_wave_event_duration];
   sp_time_t i;
   sp_render_config_t rc;
-  sp_declare_events(events, 1);
+  sp_declare_event(event);
+  sp_declare_event_list(events);
   rc = sp_render_config(sp_channels, sp_rate, sp_rate);
   rc.block_size = 40;
   for (i = 0; (i < test_wave_event_duration); i += 1) {
@@ -483,7 +482,8 @@ status_t test_render_block() {
   config.amp = 1;
   config.amod = amod;
   config.channels = 1;
-  status_require((sp_wave_event(0, test_wave_event_duration, config, (events.data))));
+  status_require((sp_wave_event(0, test_wave_event_duration, config, (&event))));
+  status_require((sp_event_list_add((&events), event)));
   status_require((sp_block_new(1, test_wave_event_duration, (&out))));
   sp_seq_events_prepare((&events));
   /* (sp-render-file events test-wave-event-duration rc /tmp/test.wav) */
@@ -707,7 +707,7 @@ status_t test_sp_seq_parallel() {
   sp_time_t size;
   sp_block_t block;
   sp_declare_event(event);
-  sp_declare_events(events, 10);
+  sp_declare_event_list(events);
   sp_declare_wave_event_config(config);
   size = 10000;
   status_require((sp_path_samples_2((&amod), size, (sp_path_move(0, (1.0))), (sp_path_constant()))));
@@ -720,7 +720,7 @@ status_t test_sp_seq_parallel() {
   config.channels = 2;
   for (i = 0; (i < 10); i += 1) {
     status_require((sp_wave_event(0, size, config, (&event))));
-    array4_add(events, event);
+    status_require((sp_event_list_add((&events), event)));
   };
   status_require((sp_block_new(2, size, (&block))));
   sp_seq_events_prepare((&events));
@@ -732,7 +732,7 @@ status_t test_sp_seq_parallel() {
   test_helper_assert("last 1", (sp_sample_nearly_equal((-5.956993), ((block.samples)[0][(step_size - 1)]), (0.001)) && sp_sample_nearly_equal((-5.956993), ((block.samples)[1][(step_size - 1)]), (0.001))));
   test_helper_assert("first 2", (sp_sample_nearly_equal((-6.087614), ((block.samples)[0][step_size]), (0.001)) && sp_sample_nearly_equal((-6.087614), ((block.samples)[1][step_size]), (0.001))));
   test_helper_assert("last 2", (sp_sample_nearly_equal((9.615618), ((block.samples)[0][((2 * step_size) - 1)]), (0.001)) && sp_sample_nearly_equal((9.615618), ((block.samples)[1][((2 * step_size) - 1)]), (0.001))));
-  sp_seq_events_free((&events));
+  sp_event_list_free(events);
   free(amod);
   free(fmod);
   sp_block_free(block);
@@ -749,8 +749,7 @@ status_t test_sp_map_event() {
   sp_time_t size;
   sp_block_t block;
   sp_sample_t* amod;
-  sp_declare_event(child);
-  sp_declare_event(parent);
+  sp_declare_event_2(parent, child);
   sp_declare_wave_event_config(config);
   size = (10 * _rate);
   status_require((sp_path_samples_2((&amod), size, (sp_path_move(0, (1.0))), (sp_path_constant()))));
@@ -764,7 +763,7 @@ status_t test_sp_map_event() {
   status_require((sp_wave_event(0, size, config, (&child))));
   status_require((sp_block_new(1, size, (&block))));
   sp_map_event(child, test_sp_map_event_generate, 0, 1, (&parent));
-  status_require(((parent.generate)(0, size, block, (parent.state))));
+  status_require(((parent.generate)(0, size, block, (&parent))));
   (parent.free)((&parent));
   sp_block_free(block);
   free(amod);
@@ -777,13 +776,12 @@ int main() {
   status_declare;
   rs = sp_random_state_new(3);
   sp_initialize(3, 2, _rate);
-  test_helper_test_one(test_sp_group);
-  test_helper_test_one(test_sp_seq_parallel);
-  test_helper_test_one(test_sp_wave_event);
+  test_helper_test_one(test_sp_map_event);
+  test_helper_test_one(test_sp_seq);
   test_helper_test_one(test_sp_noise_event);
   test_helper_test_one(test_sp_cheap_noise_event);
-  test_helper_test_one(test_sp_seq);
-  test_helper_test_one(test_sp_map_event);
+  test_helper_test_one(test_sp_group);
+  test_helper_test_one(test_sp_wave_event);
   test_helper_test_one(test_render_block);
   test_helper_test_one(test_moving_average);
   test_helper_test_one(test_statistics);
@@ -803,6 +801,7 @@ int main() {
   test_helper_test_one(test_compositions);
   test_helper_test_one(test_simple_mappings);
   test_helper_test_one(test_random_discrete);
+  test_helper_test_one(test_sp_seq_parallel);
 exit:
   test_helper_display_summary();
   return ((status.id));

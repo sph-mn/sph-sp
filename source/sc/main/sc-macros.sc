@@ -39,7 +39,9 @@
    * default sp_event_t variables _result, _event and _out
    * adds free-on-error-free/free-on-exit-free if a use of the feature is found"
   (let*
-    ( (types (qq (status-t sp-time-t (unquote-splicing (any->list types)) sp-event-t*)))
+    ( (body (if (null? arguments) (pair types body) body))
+      (types (if (null? arguments) null types))
+      (types (qq (status-t sp-time-t (unquote-splicing (any->list types)) sp-event-t*)))
       (free-on-error-count (sc-contains-expression (q free-on-error-init) body))
       (free-on-exit-count (sc-contains-expression (q free-on-exit-init) body))
       (free-memory

@@ -410,11 +410,7 @@
   (begin (sp-declare-event id1) (sp-declare-event id2) (sp-declare-event id3))
   (sp-declare-event-4 id1 id2 id3 id4)
   (begin (sp-declare-event-2 id1 id2) (sp-declare-event-2 id3 id4))
-  (sp-declare-events id size)
-  (begin
-    (array4-declare id sp-events-t)
-    (declare (pre-concat id _data) (array sp-event-t size))
-    (array4-take id (pre-concat id _data) size 0))
+  (sp-declare-event-list id) (define id sp-event-list-t* 0)
   (sp-declare-noise-event-config name)
   (begin
     "optional helper that sets defaults. the mod arrays must be zero if not used"
@@ -425,15 +421,12 @@
   (sp-event-duration-set a duration) (set a.end (+ a.start duration))
   (sp-event-move a start) (set a.end (+ start (- a.end a.start)) a.start start)
   sp-group-size-t uint16-t
-  (sp-group-events a) (pointer-get (convert-type a.state sp-events-t*))
-  (sp-group-add a event)
-  (begin (array4-add (sp-group-events a) event) (if (< a.end event.end) (set a.end event.end)))
+  (sp-group-events a) (pointer-get (convert-type a.state sp-event-list-t*))
   (sp-event-memory-add1 event address) (sp-event-memory-add event address free)
   (sp-event-memory-add1-2 a data1 data2)
   (begin (sp-event-memory-add1 a data1) (sp-event-memory-add1 a data2))
   (sp-event-memory-add1-3 a data1 data2 data3)
   (begin (sp-event-memory-add1-2 a data1 data2) (sp-event-memory-add1 a data3))
-  sp-events-add array4-add
   sp-sine-config-t sp-wave-event-config-t
   (sp-declare-sine-config name)
   (begin
@@ -455,7 +448,8 @@
   (begin
     (sp-declare-cheap-noise-event-config name)
     (struct-set name channels sp-channels amp 1 type sp-state-variable-filter-lp cut 0.5))
-  sp-memory-add array3-add)
+  sp-memory-add array3-add
+  sp-seq-events-prepare sp-event-list-reverse)
 
 (array3-declare-type sp-memory memreg2-t)
 
@@ -469,11 +463,18 @@
       (start sp-time-t)
       (end sp-time-t)
       (state void*)
-      (generate (function-pointer status-t sp-time-t sp-time-t sp-block-t void*))
+      (generate (function-pointer status-t sp-time-t sp-time-t sp-block-t (struct sp-event-t*)))
       (prepare (function-pointer status-t (struct sp-event-t*)))
       (free (function-pointer void (struct sp-event-t*)))
       (memory sp-memory-t)))
-  sp-event-generate-t (type (function-pointer status-t sp-time-t sp-time-t sp-block-t void*))
+  sp-event-generate-t (type (function-pointer status-t sp-time-t sp-time-t sp-block-t sp-event-t*))
+  sp-event-list-t
+  (type
+    (struct
+      sp-event-list-struct
+      (previous (struct sp-event-list-struct*))
+      (next (struct sp-event-list-struct*))
+      (event sp-event-t)))
   sp-channel-config-t
   (type
     (struct
@@ -540,27 +541,27 @@
   sp-map-event-state-t
   (type (struct (event sp-event-t) (generate sp-map-event-generate-t) (state void*))))
 
-(array4-declare-type sp-events sp-event-t)
-
 (declare
-  (sp-seq-events-free events) (void sp-events-t*)
+  (sp-event-list-reverse a) (void sp-event-list-t**)
+  (sp-event-list-remove-element a element) (void sp-event-list-t** sp-event-list-t*)
+  (sp-event-list-add a event) (status-t sp-event-list-t** sp-event-t)
+  (sp-event-list-free events) (void sp-event-list-t*)
   (sp-event-memory-init a additional-size) (status-t sp-event-t* sp-time-t)
   (sp-event-memory-add event address handler) (void sp-event-t* void* sp-memory-free-t)
   (sp-event-memory-free event) (void sp-event-t*)
-  (sp-seq-events-prepare events) (void sp-events-t*)
-  (sp-seq start end out events) (status-t sp-time-t sp-time-t sp-block-t sp-events-t*)
-  (sp-seq-parallel start end out events) (status-t sp-time-t sp-time-t sp-block-t sp-events-t*)
+  (sp-seq start end out events) (status-t sp-time-t sp-time-t sp-block-t sp-event-list-t**)
+  (sp-seq-parallel start end out events) (status-t sp-time-t sp-time-t sp-block-t sp-event-list-t**)
   (sp-wave-event start end config out)
   (status-t sp-time-t sp-time-t sp-wave-event-config-t sp-event-t*)
   (sp-noise-event start end config out-event)
   (status-t sp-time-t sp-time-t sp-noise-event-config-t sp-event-t*)
-  (sp-events-array-free events size) (void sp-event-t* sp-time-t)
   (sp-wave-event start end config out)
   (status-t sp-time-t sp-time-t sp-wave-event-config-t sp-event-t*)
   (sp-cheap-noise-event start end config out-event)
   (status-t sp-time-t sp-time-t sp-cheap-noise-event-config-t sp-event-t*)
-  (sp-group-new start event-size out) (status-t sp-time-t sp-group-size-t sp-event-t*)
-  (sp-group-append a event) (void sp-event-t* sp-event-t)
+  (sp-group-new start out) (void sp-time-t sp-event-t*)
+  (sp-group-add a event) (status-t sp-event-t* sp-event-t)
+  (sp-group-append a event) (status-t sp-event-t* sp-event-t)
   (sp-group-event-f start end out event) (void sp-time-t sp-time-t sp-block-t sp-event-t*)
   (sp-group-event-parallel-f start end out event) (void sp-time-t sp-time-t sp-block-t sp-event-t*)
   (sp-group-event-free a) (void sp-event-t*)
@@ -680,7 +681,7 @@
   (sp-render-config channels rate block-size)
   (sp-render-config-t sp-channel-count-t sp-time-t sp-time-t)
   (sp-render-file events start end config path)
-  (status-t sp-events-t sp-time-t sp-time-t sp-render-config-t uint8-t*)
+  (status-t sp-event-list-t* sp-time-t sp-time-t sp-render-config-t uint8-t*)
   (sp-render-block events start end config out)
-  (status-t sp-events-t sp-time-t sp-time-t sp-render-config-t sp-block-t*)
-  (sp-render-quick events file-or-plot) (status-t sp-events-t uint8-t))
+  (status-t sp-event-list-t* sp-time-t sp-time-t sp-render-config-t sp-block-t*)
+  (sp-render-quick events file-or-plot) (status-t sp-event-list-t* uint8-t))

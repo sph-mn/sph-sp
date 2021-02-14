@@ -261,7 +261,7 @@
   (return a))
 
 (define (sp-render-file events start end config path)
-  (status-t sp-events-t sp-time-t sp-time-t sp-render-config-t uint8-t*)
+  (status-t sp-event-list-t* sp-time-t sp-time-t sp-render-config-t uint8-t*)
   "render a events with sp_seq to a file. the file is created or overwritten"
   status-declare
   (declare block-end sp-time-t remainder sp-time-t i sp-time-t written sp-time-t)
@@ -283,7 +283,7 @@
   (label exit (sp-block-free block) (sp-file-close file) status-return))
 
 (define (sp-render-block events start end config out)
-  (status-t sp-events-t sp-time-t sp-time-t sp-render-config-t sp-block-t*)
+  (status-t sp-event-list-t* sp-time-t sp-time-t sp-render-config-t sp-block-t*)
   "render a single event with sp_seq to sample arrays in sp_block_t.
    events should have been prepared with sp-seq-events-prepare.
    block will be allocated"
@@ -294,15 +294,15 @@
   (set *out block)
   (label exit status-return))
 
-(define (sp-render-quick events file-or-plot) (status-t sp-events-t uint8-t)
+(define (sp-render-quick events file-or-plot) (status-t sp-event-list-t* uint8-t)
   "render the full duration of events with defaults to /tmp/sp-out.wav or plot the result.
    example: sp_render_quick(event, 2, 48000, 1)"
   status-declare
   (declare block sp-block-t config sp-render-config-t start sp-time-t end sp-time-t)
   (set
     config (sp-render-config sp-channels sp-rate sp-rate)
-    start (struct-get (array4-get events) start)
-    end (struct-get (array4-get-last events) end))
+    start events:event.start
+    end events:event.end)
   (printf "rendering %lu seconds to %s\n" (sp-cheap-round-positive (/ (- end start) config.rate))
     (if* file-or-plot "plot" "file"))
   (if end

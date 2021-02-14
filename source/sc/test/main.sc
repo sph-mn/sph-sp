@@ -281,7 +281,7 @@
     event sp-event-t
     i sp-time-t)
   (sp-declare-noise-event-config config)
-  (sp-declare-events events 1)
+  (sp-declare-event-list events)
   (status-require (sp-block-new 2 sp-noise-duration &out))
   (for ((set i 0) (< i sp-noise-duration) (set i (+ 1 i)))
     (set
@@ -290,16 +290,10 @@
       (array-get trnl i) 0.07
       (array-get trnh i) 0.07
       (array-get amod i) 1.0))
-  (struct-set config
-    cutl-mod cutl
-    cuth-mod cuth
-    amod amod
-    amp 1
-    channels 2)
+  (struct-set config cutl-mod cutl cuth-mod cuth amod amod amp 1 channels 2)
   (status-require (sp-noise-event 0 sp-noise-duration config &event))
-  (array4-add events event)
+  (status-require (sp-event-list-add &events event))
   (sp-seq 0 sp-noise-duration out &events)
-  (sp-seq-events-free &events)
   (sp-block-free out)
   (label exit status-return))
 
@@ -326,9 +320,9 @@
     out sp-block-t
     cut-mod (array sp-sample-t sp-noise-duration)
     amod (array sp-sample-t sp-noise-duration)
-    event sp-event-t
     i sp-time-t)
-  (sp-declare-events events 1)
+  (sp-declare-event event)
+  (sp-declare-event-list events)
   (sp-declare-cheap-noise-event-config config)
   (status-require (sp-block-new 2 sp-noise-duration &out))
   (for ((set i 0) (< i sp-noise-duration) (set+ i 1))
@@ -345,9 +339,8 @@
     channels 2
     amp 1)
   (status-require (sp-cheap-noise-event 0 sp-noise-duration config &event))
-  (array4-add events event)
-  (sp-seq 0 sp-noise-duration out &events)
-  (sp-seq-events-free &events)
+  (status-require (sp-event-list-add &events event))
+  (sp-event-list-free events)
   (sp-block-free out)
   (label exit status-return))
 
@@ -356,9 +349,9 @@
 (define (test-sp-seq) status-t
   status-declare
   (declare out sp-block-t i sp-time-t)
-  (sp-declare-events events sp-seq-event-count)
-  (array4-add events (test-helper-event 0 40 1))
-  (array4-add events (test-helper-event 41 100 2))
+  (sp-declare-event-list events)
+  (status-require (sp-event-list-add &events (test-helper-event 0 40 1)))
+  (status-require (sp-event-list-add &events (test-helper-event 41 100 2)))
   (status-require (sp-block-new 2 100 &out))
   (sp-seq-events-prepare &events)
   (sp-seq 0 50 out &events)
@@ -368,7 +361,7 @@
   (test-helper-assert "block contents 1 gap" (= 0 (array-get out.samples 0 40)))
   (test-helper-assert "block contents 1 event 2"
     (and (= 2 (array-get out.samples 0 41)) (= 2 (array-get out.samples 0 99))))
-  (sp-seq-events-free &events)
+  (sp-event-list-free events)
   (sp-block-free out)
   (label exit status-return))
 
@@ -379,20 +372,20 @@
   (sp-declare-event-3 e1 e2 e3)
   (status-require (sp-times-new 100 &m1))
   (status-require (sp-times-new 100 &m2))
-  (status-require (sp-group-new 0 2 &g))
-  (status-require (sp-group-new 10 2 &g1))
+  (sp-group-new 0 &g)
+  (sp-group-new 10 &g1)
   (status-require (sp-block-new 2 100 &block))
   (set e1 (test-helper-event 0 20 1) e2 (test-helper-event 20 40 2) e3 (test-helper-event 50 100 3))
-  (sp-group-add g1 e1)
-  (sp-group-add g1 e2)
-  (sp-group-add g g1)
-  (sp-group-add g e3)
-  (sp-event-memory-init &g 2)
+  (status-require (sp-group-add &g1 e1))
+  (status-require (sp-group-add &g1 e2))
+  (status-require (sp-group-add &g g1))
+  (status-require (sp-group-add &g e3))
+  (status-require (sp-event-memory-init &g 2))
   (sp-event-memory-add1 &g m1)
   (sp-event-memory-add1 &g m2)
   (g.prepare &g)
-  (g.generate 0 50 block g.state)
-  (g.generate 50 100 (sp-block-with-offset block 50) g.state)
+  (g.generate 0 50 block &g)
+  (g.generate 50 100 (sp-block-with-offset block 50) &g)
   (g.free &g)
   (test-helper-assert "block contents event 1"
     (and (= 1 (array-get block.samples 0 10)) (= 1 (array-get block.samples 0 29))))
@@ -440,13 +433,15 @@
     amod (array sp-sample-t test-wave-event-duration)
     i sp-time-t
     rc sp-render-config-t)
-  (sp-declare-events events 1)
+  (sp-declare-event event)
+  (sp-declare-event-list events)
   (set rc (sp-render-config sp-channels sp-rate sp-rate) rc.block-size 40)
   (for ((set i 0) (< i test-wave-event-duration) (set+ i 1))
     (set (array-get frq i) 1500 (array-get amod i) 1))
   (sp-declare-wave-event-config config)
   (struct-set config wvf sp-sine-table wvf-size sp-rate fmod frq amp 1 amod amod channels 1)
-  (status-require (sp-wave-event 0 test-wave-event-duration config events.data))
+  (status-require (sp-wave-event 0 test-wave-event-duration config &event))
+  (status-require (sp-event-list-add &events event))
   (status-require (sp-block-new 1 test-wave-event-duration &out))
   (sp-seq-events-prepare &events)
   (sc-comment (sp-render-file events test-wave-event-duration rc "/tmp/test.wav"))
@@ -657,7 +652,7 @@
     size sp-time-t
     block sp-block-t)
   (sp-declare-event event)
-  (sp-declare-events events 10)
+  (sp-declare-event-list events)
   (sp-declare-wave-event-config config)
   (set size 10000)
   (status-require (sp-path-samples-2 &amod size (sp-path-move 0 1.0) (sp-path-constant)))
@@ -665,7 +660,7 @@
   (struct-set config wvf sp-sine-table wvf-size sp-rate fmod fmod amp 1 amod amod channels 2)
   (for ((set i 0) (< i 10) (set+ i 1))
     (status-require (sp-wave-event 0 size config &event))
-    (array4-add events event))
+    (status-require (sp-event-list-add &events event)))
   (status-require (sp-block-new 2 size &block))
   (sp-seq-events-prepare &events)
   (set step-size (/ size 10))
@@ -683,7 +678,7 @@
   (test-helper-assert "last 2"
     (and (sp-sample-nearly-equal 9.615618 (array-get block.samples 0 (- (* 2 step-size) 1)) 0.001)
       (sp-sample-nearly-equal 9.615618 (array-get block.samples 1 (- (* 2 step-size) 1)) 0.001)))
-  (sp-seq-events-free &events)
+  (sp-event-list-free events)
   (free amod)
   (free fmod)
   (sp-block-free block)
@@ -698,8 +693,7 @@
 (define (test-sp-map-event) status-t
   status-declare
   (declare size sp-time-t block sp-block-t amod sp-sample-t*)
-  (sp-declare-event child)
-  (sp-declare-event parent)
+  (sp-declare-event-2 parent child)
   (sp-declare-wave-event-config config)
   (set size (* 10 _rate))
   (status-require (sp-path-samples-2 &amod size (sp-path-move 0 1.0) (sp-path-constant)))
@@ -707,7 +701,7 @@
   (status-require (sp-wave-event 0 size config &child))
   (status-require (sp-block-new 1 size &block))
   (sp-map-event child test-sp-map-event-generate 0 #t &parent)
-  (status-require (parent.generate 0 size block parent.state))
+  (status-require (parent.generate 0 size block &parent))
   (parent.free &parent)
   (sp-block-free block)
   (free amod)
@@ -718,13 +712,12 @@
   status-declare
   (set rs (sp-random-state-new 3))
   (sp-initialize 3 2 _rate)
-  (test-helper-test-one test-sp-group)
-  (test-helper-test-one test-sp-seq-parallel)
-  (test-helper-test-one test-sp-wave-event)
+  (test-helper-test-one test-sp-map-event)
+  (test-helper-test-one test-sp-seq)
   (test-helper-test-one test-sp-noise-event)
   (test-helper-test-one test-sp-cheap-noise-event)
-  (test-helper-test-one test-sp-seq)
-  (test-helper-test-one test-sp-map-event)
+  (test-helper-test-one test-sp-group)
+  (test-helper-test-one test-sp-wave-event)
   (test-helper-test-one test-render-block)
   (test-helper-test-one test-moving-average)
   (test-helper-test-one test-statistics)
@@ -744,4 +737,5 @@
   (test-helper-test-one test-compositions)
   (test-helper-test-one test-simple-mappings)
   (test-helper-test-one test-random-discrete)
+  (test-helper-test-one test-sp-seq-parallel)
   (label exit (test-helper-display-summary) (return status.id)))

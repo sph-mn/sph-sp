@@ -340,7 +340,7 @@ sp_render_config_t sp_render_config(sp_channel_count_t channels, sp_time_t rate,
 }
 
 /** render a events with sp_seq to a file. the file is created or overwritten */
-status_t sp_render_file(sp_events_t events, sp_time_t start, sp_time_t end, sp_render_config_t config, uint8_t* path) {
+status_t sp_render_file(sp_event_list_t* events, sp_time_t start, sp_time_t end, sp_render_config_t config, uint8_t* path) {
   status_declare;
   sp_time_t block_end;
   sp_time_t remainder;
@@ -370,7 +370,7 @@ exit:
 /** render a single event with sp_seq to sample arrays in sp_block_t.
    events should have been prepared with sp-seq-events-prepare.
    block will be allocated */
-status_t sp_render_block(sp_events_t events, sp_time_t start, sp_time_t end, sp_render_config_t config, sp_block_t* out) {
+status_t sp_render_block(sp_event_list_t* events, sp_time_t start, sp_time_t end, sp_render_config_t config, sp_block_t* out) {
   status_declare;
   sp_block_t block;
   status_require((sp_block_new((config.channels), (end - start), (&block))));
@@ -382,15 +382,15 @@ exit:
 
 /** render the full duration of events with defaults to /tmp/sp-out.wav or plot the result.
    example: sp_render_quick(event, 2, 48000, 1) */
-status_t sp_render_quick(sp_events_t events, uint8_t file_or_plot) {
+status_t sp_render_quick(sp_event_list_t* events, uint8_t file_or_plot) {
   status_declare;
   sp_block_t block;
   sp_render_config_t config;
   sp_time_t start;
   sp_time_t end;
   config = sp_render_config(sp_channels, sp_rate, sp_rate);
-  start = (array4_get(events)).start;
-  end = (array4_get_last(events)).end;
+  start = events->event.start;
+  end = events->event.end;
   printf("rendering %lu seconds to %s\n", (sp_cheap_round_positive(((end - start) / config.rate))), (file_or_plot ? "plot" : "file"));
   if (end) {
     if (file_or_plot) {
