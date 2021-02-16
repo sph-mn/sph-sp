@@ -302,8 +302,8 @@ status_t test_sp_noise_event() {
   sp_sample_t trnl[sp_noise_duration];
   sp_sample_t trnh[sp_noise_duration];
   sp_sample_t amod[sp_noise_duration];
-  sp_event_t event;
   sp_time_t i;
+  sp_declare_event(event);
   sp_declare_noise_event_config(config);
   sp_declare_event_list(events);
   status_require((sp_block_new(2, sp_noise_duration, (&out))));

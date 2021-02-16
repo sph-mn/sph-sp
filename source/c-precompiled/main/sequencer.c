@@ -1,24 +1,6 @@
 
 /* the sc version of this file defines macros which are only available in sc.
 the macros are used as optional helpers to simplify common tasks where c syntax alone offers no good alternative */
-void sp_event_list_integrity(sp_event_list_t* a) {
-  sp_time_t i = 0;
-  while (a) {
-    if ((a->next == a->previous) && !(0 == a->next)) {
-      printf("circular list entry i%lu %lu %lu\n", i, (a->next), (a->previous));
-      exit(1);
-    };
-    i += 1;
-    a = a->next;
-  };
-}
-void sp_event_list_display(sp_event_list_t* a) {
-  while (a) {
-    printf(("(%lu %lu %lu) "), (a->event.start), (a->event.end), a);
-    a = a->next;
-  };
-  printf("\n");
-}
 void sp_event_list_reverse(sp_event_list_t** a) {
   sp_event_list_t* current;
   sp_event_list_t* next;
@@ -669,6 +651,26 @@ status_t sp_event_memory_init(sp_event_t* a, sp_time_t additional_size) {
   } else {
     if (sp_memory_new(additional_size, (&(a->memory)))) {
       sp_memory_error;
+    };
+  };
+exit:
+  status_return;
+}
+status_t sp_event_memory_merge(sp_event_t* a, sp_event_t* b) {
+  status_declare;
+  if (a->memory.data) {
+    if (b->memory.data) {
+      sp_time_t b_size = array3_size((b->memory));
+      if ((array3_unused_size((a->memory)) < b_size) && sp_memory_resize((&(a->memory)), (array3_max_size((a->memory)) + (b_size - array3_unused_size((a->memory)))))) {
+        sp_memory_error;
+      };
+      for (sp_time_t i = 0; (i < b_size); i += 1) {
+        array3_add((a->memory), (array3_get((b->memory), i)));
+      };
+    };
+  } else {
+    if (b->memory.data) {
+      a->memory = b->memory;
     };
   };
 exit:

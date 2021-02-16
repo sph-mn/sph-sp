@@ -1,17 +1,5 @@
 (sc-include-once "./sc-macros")
 
-(define (sp-event-list-integrity a) (void sp-event-list-t*)
-  (define i sp-time-t 0)
-  (while a
-    (if (and (= a:next a:previous) (not (= 0 a:next)))
-      (begin (printf "circular list entry i%lu %lu %lu\n" i a:next a:previous) (exit 1)))
-    (set+ i 1)
-    (set a a:next)))
-
-(define (sp-event-list-display a) (void sp-event-list-t*)
-  (while a (printf "(%lu %lu %lu) " a:event.start a:event.end a) (set a a:next))
-  (printf "\n"))
-
 (define (sp-event-list-reverse a) (void sp-event-list-t**)
   (declare current sp-event-list-t* next sp-event-list-t*)
   (set current *a)
@@ -554,6 +542,21 @@
           (+ (array3-max-size a:memory) (- additional-size (array3-unused-size a:memory)))))
       sp-memory-error)
     (if (sp-memory-new additional-size &a:memory) sp-memory-error))
+  (label exit status-return))
+
+(define (sp-event-memory-merge a b) (status-t sp-event-t* sp-event-t*)
+  status-declare
+  (if a:memory.data
+    (if b:memory.data
+      (begin
+        (define b-size sp-time-t (array3-size b:memory))
+        (if
+          (and (< (array3-unused-size a:memory) b-size)
+            (sp-memory-resize &a:memory
+              (+ (array3-max-size a:memory) (- b-size (array3-unused-size a:memory)))))
+          sp-memory-error)
+        (for-each-index i b-size (array3-add a:memory (array3-get b:memory i)))))
+    (if b:memory.data (set a:memory b:memory)))
   (label exit status-return))
 
 (define (sp-event-memory-add a address handler) (void sp-event-t* void* sp-memory-free-t)

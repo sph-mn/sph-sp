@@ -278,8 +278,8 @@
     trnl (array sp-sample-t sp-noise-duration)
     trnh (array sp-sample-t sp-noise-duration)
     amod (array sp-sample-t sp-noise-duration)
-    event sp-event-t
     i sp-time-t)
+  (sp-declare-event event)
   (sp-declare-noise-event-config config)
   (sp-declare-event-list events)
   (status-require (sp-block-new 2 sp-noise-duration &out))
