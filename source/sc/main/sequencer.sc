@@ -64,7 +64,7 @@
         (set current next) continue)
       ((<= end e.start) break)
       ( (> e.end start)
-        (if e.prepare (begin (status-require (e.prepare ep)) (set ep:prepare 0 e.state ep:state)))
+        (if e.prepare (begin (status-require (e.prepare ep)) (set ep:prepare 0 e.data ep:data)))
         (status-require
           (e.generate (if* (> start e.start) (- start e.start) 0) (- (sp-min end e.end) e.start)
             (if* (> e.start start) (sp-block-with-offset out (- e.start start)) out) ep))))
@@ -149,22 +149,22 @@
     status-return))
 
 (define (sp-group-free a) (void sp-event-t*)
-  (define sp sp-event-list-t* a:state)
+  (define sp sp-event-list-t* a:data)
   (sp-event-list-free sp)
   (sp-event-memory-free a))
 
 (define (sp-group-prepare a) (status-t sp-event-t*)
   status-declare
-  (sp-seq-events-prepare (convert-type &a:state sp-event-list-t**))
+  (sp-seq-events-prepare (convert-type &a:data sp-event-list-t**))
   status-return)
 
 (define (sp-group-generate start end out event)
   (status-t sp-time-t sp-time-t sp-block-t sp-event-t*)
-  (return (sp-seq start end out (convert-type &event:state sp-event-list-t**))))
+  (return (sp-seq start end out (convert-type &event:data sp-event-list-t**))))
 
 (define (sp-group-new start out) (void sp-time-t sp-event-t*)
   (struct-set *out
-    state 0
+    data 0
     start start
     end start
     prepare sp-group-prepare
@@ -173,7 +173,7 @@
 
 (define (sp-group-add a event) (status-t sp-event-t* sp-event-t)
   status-declare
-  (status-require (sp-event-list-add (convert-type &a:state sp-event-list-t**) event))
+  (status-require (sp-event-list-add (convert-type &a:data sp-event-list-t**) event))
   (if (< a:end event.end) (set a:end event.end))
   (label exit status-return))
 
@@ -187,13 +187,13 @@
   (struct-set a use #t mute mute delay delay phs phs amp amp amod amod)
   (return a))
 
-(define (sp-wave-event-free a) (void sp-event-t*) (free a:state))
+(define (sp-wave-event-free a) (void sp-event-t*) (free a:data))
 
 (define (sp-wave-event-generate start end out event)
   (status-t sp-time-t sp-time-t sp-block-t sp-event-t*)
   status-declare
   (declare i sp-time-t sp sp-wave-event-state-t* s sp-wave-event-state-t)
-  (set sp event:state s *sp)
+  (set sp event:data s *sp)
   (for ((set i start) (< i end) (set+ i 1))
     (set+ (array-get out.samples s.channel (- i start))
       (* s.amp (array-get s.amod i) (array-get s.wvf s.phs)) s.phs (sp-array-or-fixed s.fmod s.frq i))
@@ -204,11 +204,11 @@
 (define (sp-wave-event-channel duration config channel out)
   (status-t sp-time-t sp-wave-event-config-t sp-channel-count-t sp-event-t*)
   status-declare
-  (declare state sp-wave-event-state-t* channel-config sp-channel-config-t)
+  (declare data sp-wave-event-state-t* channel-config sp-channel-config-t)
   (sp-declare-event event)
-  (set state 0 channel-config (array-get config.channel-config channel))
-  (status-require (sp-malloc-type 1 sp-wave-event-state-t &state))
-  (struct-set *state
+  (set data 0 channel-config (array-get config.channel-config channel))
+  (status-require (sp-malloc-type 1 sp-wave-event-state-t &data))
+  (struct-set *data
     wvf config.wvf
     wvf-size config.wvf-size
     phs (if* channel-config.use channel-config.phs config.phs)
@@ -218,14 +218,14 @@
     amod (if* (and channel-config.use channel-config.amod) channel-config.amod config.amod)
     channel channel)
   (struct-set event
-    state state
+    data data
     start (if* channel-config.use channel-config.delay 0)
     end (if* channel-config.use (+ duration channel-config.delay) duration)
     prepare 0
     generate sp-wave-event-generate
     free sp-wave-event-free)
   (set *out event)
-  (label exit (if status-is-failure (if state (free state))) status-return))
+  (label exit (if status-is-failure (if data (free data))) status-return))
 
 (define (sp-wave-event start end config out)
   (status-t sp-time-t sp-time-t sp-wave-event-config-t sp-event-t*)
@@ -249,13 +249,12 @@
   status-declare
   (sp-declare-event event)
   (sp-declare-event group)
-  (set group.memory out:memory)
   (sp-group-new 0 &group)
   (for-each-index ci config.channels
     (if (struct-get (array-get config.channel-config ci) mute) continue)
     (status-require (sp-wave-event-channel (- end start) config ci &event))
     (status-require (sp-group-add &group event)))
-  (set *out group)
+  (set group.memory out:memory *out group)
   (label exit (if status-is-failure (group.free &group)) status-return))
 
 (declare sp-noise-event-state-t
@@ -278,7 +277,7 @@
       (temp sp-sample-t*))))
 
 (define (sp-noise-event-free a) (void sp-event-t*)
-  (define s sp-noise-event-state-t* a:state)
+  (define s sp-noise-event-state-t* a:data)
   (sp-convolution-filter-state-free s:filter-state)
   (free s)
   (sp-event-memory-free a))
@@ -298,7 +297,7 @@
     sp sp-noise-event-state-t*
     t sp-time-t)
   (set
-    sp event:state
+    sp event:data
     s *sp
     duration (- end start)
     block-count (if* (= duration s.resolution) 1 (sp-cheap-floor-positive (/ duration s.resolution)))
@@ -338,17 +337,17 @@
   (status-t sp-time-t sp-noise-event-config-t sp-channel-count-t sp-random-state-t sp-sample-t* sp-sample-t* sp-event-t*)
   status-declare
   (declare
-    state sp-noise-event-state-t*
+    data sp-noise-event-state-t*
     channel-config sp-channel-config-t
     filter-state sp-convolution-filter-state-t*)
   (sp-declare-event event)
-  (set state 0 filter-state 0 channel-config (array-get config.channel-config channel))
+  (set data 0 filter-state 0 channel-config (array-get config.channel-config channel))
   (status-require
     (sp-noise-event-filter-state (sp-array-or-fixed config.cutl-mod config.cutl 0)
       (sp-array-or-fixed config.cuth-mod config.cuth 0) config.trnl config.trnh
       config.is-reject &rs &filter-state))
-  (status-require (sp-malloc-type 1 sp-noise-event-state-t &state))
-  (struct-set *state
+  (status-require (sp-malloc-type 1 sp-noise-event-state-t &data))
+  (struct-set *data
     amp (if* channel-config.use channel-config.amp config.amp)
     amod (if* (and channel-config.use channel-config.amod) channel-config.amod config.amod)
     cutl config.cutl
@@ -365,7 +364,7 @@
     noise state-noise
     temp state-temp)
   (struct-set event
-    state state
+    data data
     start (if* channel-config.use channel-config.delay 0)
     end (if* channel-config.use (+ duration channel-config.delay) duration)
     prepare 0
@@ -375,7 +374,7 @@
   (label exit
     (if status-is-failure
       (begin
-        (if state (free state))
+        (if data (free data))
         (if filter-state (sp-convolution-filter-state-free filter-state))))
     status-return))
 
@@ -426,7 +425,7 @@
       (temp sp-sample-t*))))
 
 (define (sp-cheap-noise-event-free a) (void sp-event-t*)
-  (define s sp-cheap-noise-event-state-t* a:state)
+  (define s sp-cheap-noise-event-state-t* a:data)
   (sp-cheap-filter-state-free &s:filter-state)
   (free s)
   (sp-event-memory-free a))
@@ -446,7 +445,7 @@
     t sp-time-t)
   (sc-comment "update filter arguments only every resolution number of samples")
   (set
-    sp event:state
+    sp event:data
     s *sp
     duration (- end start)
     block-count (if* (= duration s.resolution) 1 (sp-cheap-floor-positive (/ duration s.resolution)))
@@ -469,13 +468,13 @@
 (define (sp-cheap-noise-event-channel duration config channel rs state-noise state-temp out)
   (status-t sp-time-t sp-cheap-noise-event-config-t sp-channel-count-t sp-random-state-t sp-sample-t* sp-sample-t* sp-event-t*)
   status-declare
-  (declare state sp-cheap-noise-event-state-t* channel-config sp-channel-config-t)
+  (declare data sp-cheap-noise-event-state-t* channel-config sp-channel-config-t)
   (sp-declare-event event)
   (sp-declare-cheap-filter-state filter-state)
-  (set state 0 channel-config (array-get config.channel-config channel))
-  (status-require (sp-malloc-type 1 sp-cheap-noise-event-state-t &state))
+  (set data 0 channel-config (array-get config.channel-config channel))
+  (status-require (sp-malloc-type 1 sp-cheap-noise-event-state-t &data))
   (status-require (sp-cheap-filter-state-new config.resolution config.passes &filter-state))
-  (struct-set *state
+  (struct-set *data
     amp (if* channel-config.use channel-config.amp config.amp)
     amod (if* (and channel-config.use channel-config.amod) channel-config.amod config.amod)
     cut config.cut
@@ -490,7 +489,7 @@
     noise state-noise
     temp state-temp)
   (struct-set event
-    state state
+    data data
     start (if* channel-config.use channel-config.delay 0)
     end (if* channel-config.use (+ duration channel-config.delay) duration)
     prepare 0
@@ -498,8 +497,7 @@
     free sp-cheap-noise-event-free)
   (set *out event)
   (label exit
-    (if status-is-failure
-      (begin (if state (free state)) (sp-cheap-filter-state-free &filter-state)))
+    (if status-is-failure (begin (if data (free data)) (sp-cheap-filter-state-free &filter-state)))
     status-return))
 
 (define (sp-cheap-noise-event start end config out)
@@ -572,7 +570,7 @@
 
 (define (sp-map-event-free a) (void sp-event-t*)
   (declare s sp-map-event-state-t*)
-  (set s a:state)
+  (set s a:data)
   (if s:event.free (s:event.free &s:event))
   (free s)
   (sp-event-memory-free a))
@@ -580,7 +578,7 @@
 (define (sp-map-event-generate start end out event)
   (status-t sp-time-t sp-time-t sp-block-t sp-event-t*)
   status-declare
-  (define s sp-map-event-state-t* event:state)
+  (define s sp-map-event-state-t* event:data)
   (status-require-return (s:event.generate start end out &s:event))
   (return (s:generate start end out out s:state)))
 
@@ -590,7 +588,7 @@
   status-declare
   (declare s sp-map-event-state-t* temp-out sp-block-t)
   (status-require-return (sp-block-new out.channels out.size &temp-out))
-  (set s event:state)
+  (set s event:data)
   (status-require (s:event.generate start end temp-out &s:event))
   (status-require (s:generate start end temp-out out s:state))
   (label exit (sp-block-free temp-out) status-return))
@@ -613,7 +611,7 @@
     s:state state
     s:generate f
     e.memory out:memory
-    e.state s
+    e.data s
     e.start event.start
     e.end event.end
     e.generate (if* isolate sp-map-event-isolated-generate sp-map-event-generate)

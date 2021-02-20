@@ -418,9 +418,9 @@
   (array-set config.channel-config 1 (sp-channel-config 0 10 10 1 amod2))
   (status-require (sp-wave-event 0 test-wave-event-duration config &event))
   (status-require (sp-block-new 2 test-wave-event-duration &out))
-  (status-require (event.generate 0 30 out event.state))
+  (status-require (event.generate 0 30 out event.data))
   (status-require
-    (event.generate 30 test-wave-event-duration (sp-block-with-offset out 30) event.state))
+    (event.generate 30 test-wave-event-duration (sp-block-with-offset out 30) event.data))
   (sc-comment (sp-plot-samples (array-get out.samples 0) test-wave-event-duration))
   (sp-block-free out)
   (label exit status-return))

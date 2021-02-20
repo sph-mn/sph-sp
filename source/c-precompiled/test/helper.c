@@ -28,7 +28,7 @@ status_t test_helper_event_generate(sp_time_t start, sp_time_t end, sp_block_t o
   sp_time_t i;
   sp_channel_count_t ci;
   uint64_t value;
-  value = ((sp_time_t)(((uint64_t)(event->state))));
+  value = ((sp_time_t)(((uint64_t)(event->data))));
   for (i = start; (i < end); i += 1) {
     for (ci = 0; (ci < out.channels); ci += 1) {
       (out.samples)[ci][(i - start)] = value;
@@ -42,6 +42,6 @@ sp_event_t test_helper_event(sp_time_t start, sp_time_t end, sp_time_t number) {
   e.end = end;
   e.generate = test_helper_event_generate;
   e.free = 0;
-  e.state = ((void*)(((uint64_t)(number))));
+  e.data = ((void*)(((uint64_t)(number))));
   return (e);
 }

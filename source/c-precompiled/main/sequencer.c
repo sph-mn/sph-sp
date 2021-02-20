@@ -119,7 +119,7 @@ status_t sp_seq(sp_time_t start, sp_time_t end, sp_block_t out, sp_event_list_t*
       if (e.prepare) {
         status_require(((e.prepare)(ep)));
         ep->prepare = 0;
-        e.state = ep->state;
+        e.data = ep->data;
       };
       status_require(((e.generate)(((start > e.start) ? (start - e.start) : 0), (sp_min(end, (e.end)) - e.start), ((e.start > start) ? sp_block_with_offset(out, (e.start - start)) : out), ep)));
     };
@@ -227,18 +227,18 @@ exit:
   status_return;
 }
 void sp_group_free(sp_event_t* a) {
-  sp_event_list_t* sp = a->state;
+  sp_event_list_t* sp = a->data;
   sp_event_list_free(sp);
   sp_event_memory_free(a);
 }
 status_t sp_group_prepare(sp_event_t* a) {
   status_declare;
-  sp_seq_events_prepare(((sp_event_list_t**)(&(a->state))));
+  sp_seq_events_prepare(((sp_event_list_t**)(&(a->data))));
   status_return;
 }
-status_t sp_group_generate(sp_time_t start, sp_time_t end, sp_block_t out, sp_event_t* event) { return ((sp_seq(start, end, out, ((sp_event_list_t**)(&(event->state)))))); }
+status_t sp_group_generate(sp_time_t start, sp_time_t end, sp_block_t out, sp_event_t* event) { return ((sp_seq(start, end, out, ((sp_event_list_t**)(&(event->data)))))); }
 void sp_group_new(sp_time_t start, sp_event_t* out) {
-  (*out).state = 0;
+  (*out).data = 0;
   (*out).start = start;
   (*out).end = start;
   (*out).prepare = sp_group_prepare;
@@ -247,7 +247,7 @@ void sp_group_new(sp_time_t start, sp_event_t* out) {
 }
 status_t sp_group_add(sp_event_t* a, sp_event_t event) {
   status_declare;
-  status_require((sp_event_list_add(((sp_event_list_t**)(&(a->state))), event)));
+  status_require((sp_event_list_add(((sp_event_list_t**)(&(a->data))), event)));
   if (a->end < event.end) {
     a->end = event.end;
   };
@@ -269,13 +269,13 @@ sp_channel_config_t sp_channel_config(boolean mute, sp_time_t delay, sp_time_t p
   a.amod = amod;
   return (a);
 }
-void sp_wave_event_free(sp_event_t* a) { free((a->state)); }
+void sp_wave_event_free(sp_event_t* a) { free((a->data)); }
 status_t sp_wave_event_generate(sp_time_t start, sp_time_t end, sp_block_t out, sp_event_t* event) {
   status_declare;
   sp_time_t i;
   sp_wave_event_state_t* sp;
   sp_wave_event_state_t s;
-  sp = event->state;
+  sp = event->data;
   s = *sp;
   for (i = start; (i < end); i += 1) {
     (out.samples)[s.channel][(i - start)] += (s.amp * (s.amod)[i] * (s.wvf)[s.phs]);
@@ -289,21 +289,21 @@ status_t sp_wave_event_generate(sp_time_t start, sp_time_t end, sp_block_t out, 
 }
 status_t sp_wave_event_channel(sp_time_t duration, sp_wave_event_config_t config, sp_channel_count_t channel, sp_event_t* out) {
   status_declare;
-  sp_wave_event_state_t* state;
+  sp_wave_event_state_t* data;
   sp_channel_config_t channel_config;
   sp_declare_event(event);
-  state = 0;
+  data = 0;
   channel_config = (config.channel_config)[channel];
-  status_require((sp_malloc_type(1, sp_wave_event_state_t, (&state))));
-  (*state).wvf = config.wvf;
-  (*state).wvf_size = config.wvf_size;
-  (*state).phs = (channel_config.use ? channel_config.phs : config.phs);
-  (*state).frq = config.frq;
-  (*state).fmod = config.fmod;
-  (*state).amp = (channel_config.use ? channel_config.amp : config.amp);
-  (*state).amod = ((channel_config.use && channel_config.amod) ? channel_config.amod : config.amod);
-  (*state).channel = channel;
-  event.state = state;
+  status_require((sp_malloc_type(1, sp_wave_event_state_t, (&data))));
+  (*data).wvf = config.wvf;
+  (*data).wvf_size = config.wvf_size;
+  (*data).phs = (channel_config.use ? channel_config.phs : config.phs);
+  (*data).frq = config.frq;
+  (*data).fmod = config.fmod;
+  (*data).amp = (channel_config.use ? channel_config.amp : config.amp);
+  (*data).amod = ((channel_config.use && channel_config.amod) ? channel_config.amod : config.amod);
+  (*data).channel = channel;
+  event.data = data;
   event.start = (channel_config.use ? channel_config.delay : 0);
   event.end = (channel_config.use ? (duration + channel_config.delay) : duration);
   event.prepare = 0;
@@ -312,8 +312,8 @@ status_t sp_wave_event_channel(sp_time_t duration, sp_wave_event_config_t config
   *out = event;
 exit:
   if (status_is_failure) {
-    if (state) {
-      free(state);
+    if (data) {
+      free(data);
     };
   };
   status_return;
@@ -340,7 +340,6 @@ status_t sp_wave_event(sp_time_t start, sp_time_t end, sp_wave_event_config_t co
   status_declare;
   sp_declare_event(event);
   sp_declare_event(group);
-  group.memory = out->memory;
   sp_group_new(0, (&group));
   for (sp_time_t ci = 0; (ci < config.channels); ci += 1) {
     if (((config.channel_config)[ci]).mute) {
@@ -349,6 +348,7 @@ status_t sp_wave_event(sp_time_t start, sp_time_t end, sp_wave_event_config_t co
     status_require((sp_wave_event_channel((end - start), config, ci, (&event))));
     status_require((sp_group_add((&group), event)));
   };
+  group.memory = out->memory;
   *out = group;
 exit:
   if (status_is_failure) {
@@ -374,7 +374,7 @@ typedef struct {
   sp_sample_t* temp;
 } sp_noise_event_state_t;
 void sp_noise_event_free(sp_event_t* a) {
-  sp_noise_event_state_t* s = a->state;
+  sp_noise_event_state_t* s = a->data;
   sp_convolution_filter_state_free((s->filter_state));
   free(s);
   sp_event_memory_free(a);
@@ -392,7 +392,7 @@ status_t sp_noise_event_generate(sp_time_t start, sp_time_t end, sp_block_t out,
   sp_noise_event_state_t s;
   sp_noise_event_state_t* sp;
   sp_time_t t;
-  sp = event->state;
+  sp = event->data;
   s = *sp;
   duration = (end - start);
   block_count = ((duration == s.resolution) ? 1 : sp_cheap_floor_positive((duration / s.resolution)));
@@ -432,31 +432,31 @@ exit:
 }
 status_t sp_noise_event_channel(sp_time_t duration, sp_noise_event_config_t config, sp_channel_count_t channel, sp_random_state_t rs, sp_sample_t* state_noise, sp_sample_t* state_temp, sp_event_t* out) {
   status_declare;
-  sp_noise_event_state_t* state;
+  sp_noise_event_state_t* data;
   sp_channel_config_t channel_config;
   sp_convolution_filter_state_t* filter_state;
   sp_declare_event(event);
-  state = 0;
+  data = 0;
   filter_state = 0;
   channel_config = (config.channel_config)[channel];
   status_require((sp_noise_event_filter_state((sp_array_or_fixed((config.cutl_mod), (config.cutl), 0)), (sp_array_or_fixed((config.cuth_mod), (config.cuth), 0)), (config.trnl), (config.trnh), (config.is_reject), (&rs), (&filter_state))));
-  status_require((sp_malloc_type(1, sp_noise_event_state_t, (&state))));
-  (*state).amp = (channel_config.use ? channel_config.amp : config.amp);
-  (*state).amod = ((channel_config.use && channel_config.amod) ? channel_config.amod : config.amod);
-  (*state).cutl = config.cutl;
-  (*state).cuth = config.cuth;
-  (*state).trnl = config.trnl;
-  (*state).trnh = config.trnh;
-  (*state).cutl_mod = config.cutl_mod;
-  (*state).cuth_mod = config.cuth_mod;
-  (*state).resolution = config.resolution;
-  (*state).is_reject = config.is_reject;
-  (*state).random_state = rs;
-  (*state).channel = channel;
-  (*state).filter_state = filter_state;
-  (*state).noise = state_noise;
-  (*state).temp = state_temp;
-  event.state = state;
+  status_require((sp_malloc_type(1, sp_noise_event_state_t, (&data))));
+  (*data).amp = (channel_config.use ? channel_config.amp : config.amp);
+  (*data).amod = ((channel_config.use && channel_config.amod) ? channel_config.amod : config.amod);
+  (*data).cutl = config.cutl;
+  (*data).cuth = config.cuth;
+  (*data).trnl = config.trnl;
+  (*data).trnh = config.trnh;
+  (*data).cutl_mod = config.cutl_mod;
+  (*data).cuth_mod = config.cuth_mod;
+  (*data).resolution = config.resolution;
+  (*data).is_reject = config.is_reject;
+  (*data).random_state = rs;
+  (*data).channel = channel;
+  (*data).filter_state = filter_state;
+  (*data).noise = state_noise;
+  (*data).temp = state_temp;
+  event.data = data;
   event.start = (channel_config.use ? channel_config.delay : 0);
   event.end = (channel_config.use ? (duration + channel_config.delay) : duration);
   event.prepare = 0;
@@ -465,8 +465,8 @@ status_t sp_noise_event_channel(sp_time_t duration, sp_noise_event_config_t conf
   *out = event;
 exit:
   if (status_is_failure) {
-    if (state) {
-      free(state);
+    if (data) {
+      free(data);
     };
     if (filter_state) {
       sp_convolution_filter_state_free(filter_state);
@@ -528,7 +528,7 @@ typedef struct {
   sp_sample_t* temp;
 } sp_cheap_noise_event_state_t;
 void sp_cheap_noise_event_free(sp_event_t* a) {
-  sp_cheap_noise_event_state_t* s = a->state;
+  sp_cheap_noise_event_state_t* s = a->data;
   sp_cheap_filter_state_free((&(s->filter_state)));
   free(s);
   sp_event_memory_free(a);
@@ -545,7 +545,7 @@ status_t sp_cheap_noise_event_generate(sp_time_t start, sp_time_t end, sp_block_
   sp_cheap_noise_event_state_t* sp;
   sp_time_t t;
   /* update filter arguments only every resolution number of samples */
-  sp = event->state;
+  sp = event->data;
   s = *sp;
   duration = (end - start);
   block_count = ((duration == s.resolution) ? 1 : sp_cheap_floor_positive((duration / s.resolution)));
@@ -566,28 +566,28 @@ status_t sp_cheap_noise_event_generate(sp_time_t start, sp_time_t end, sp_block_
 }
 status_t sp_cheap_noise_event_channel(sp_time_t duration, sp_cheap_noise_event_config_t config, sp_channel_count_t channel, sp_random_state_t rs, sp_sample_t* state_noise, sp_sample_t* state_temp, sp_event_t* out) {
   status_declare;
-  sp_cheap_noise_event_state_t* state;
+  sp_cheap_noise_event_state_t* data;
   sp_channel_config_t channel_config;
   sp_declare_event(event);
   sp_declare_cheap_filter_state(filter_state);
-  state = 0;
+  data = 0;
   channel_config = (config.channel_config)[channel];
-  status_require((sp_malloc_type(1, sp_cheap_noise_event_state_t, (&state))));
+  status_require((sp_malloc_type(1, sp_cheap_noise_event_state_t, (&data))));
   status_require((sp_cheap_filter_state_new((config.resolution), (config.passes), (&filter_state))));
-  (*state).amp = (channel_config.use ? channel_config.amp : config.amp);
-  (*state).amod = ((channel_config.use && channel_config.amod) ? channel_config.amod : config.amod);
-  (*state).cut = config.cut;
-  (*state).cut_mod = config.cut_mod;
-  (*state).type = config.type;
-  (*state).passes = config.passes;
-  (*state).q_factor = config.q_factor;
-  (*state).resolution = config.resolution;
-  (*state).random_state = rs;
-  (*state).channel = channel;
-  (*state).filter_state = filter_state;
-  (*state).noise = state_noise;
-  (*state).temp = state_temp;
-  event.state = state;
+  (*data).amp = (channel_config.use ? channel_config.amp : config.amp);
+  (*data).amod = ((channel_config.use && channel_config.amod) ? channel_config.amod : config.amod);
+  (*data).cut = config.cut;
+  (*data).cut_mod = config.cut_mod;
+  (*data).type = config.type;
+  (*data).passes = config.passes;
+  (*data).q_factor = config.q_factor;
+  (*data).resolution = config.resolution;
+  (*data).random_state = rs;
+  (*data).channel = channel;
+  (*data).filter_state = filter_state;
+  (*data).noise = state_noise;
+  (*data).temp = state_temp;
+  event.data = data;
   event.start = (channel_config.use ? channel_config.delay : 0);
   event.end = (channel_config.use ? (duration + channel_config.delay) : duration);
   event.prepare = 0;
@@ -596,8 +596,8 @@ status_t sp_cheap_noise_event_channel(sp_time_t duration, sp_cheap_noise_event_c
   *out = event;
 exit:
   if (status_is_failure) {
-    if (state) {
-      free(state);
+    if (data) {
+      free(data);
     };
     sp_cheap_filter_state_free((&filter_state));
   };
@@ -694,7 +694,7 @@ void sp_event_memory_free(sp_event_t* a) {
 }
 void sp_map_event_free(sp_event_t* a) {
   sp_map_event_state_t* s;
-  s = a->state;
+  s = a->data;
   if (s->event.free) {
     (s->event.free)((&(s->event)));
   };
@@ -703,7 +703,7 @@ void sp_map_event_free(sp_event_t* a) {
 }
 status_t sp_map_event_generate(sp_time_t start, sp_time_t end, sp_block_t out, sp_event_t* event) {
   status_declare;
-  sp_map_event_state_t* s = event->state;
+  sp_map_event_state_t* s = event->data;
   status_require_return(((s->event.generate)(start, end, out, (&(s->event)))));
   return (((s->generate)(start, end, out, out, (s->state))));
 }
@@ -714,7 +714,7 @@ status_t sp_map_event_isolated_generate(sp_time_t start, sp_time_t end, sp_block
   sp_map_event_state_t* s;
   sp_block_t temp_out;
   status_require_return((sp_block_new((out.channels), (out.size), (&temp_out))));
-  s = event->state;
+  s = event->data;
   status_require(((s->event.generate)(start, end, temp_out, (&(s->event)))));
   status_require(((s->generate)(start, end, temp_out, out, (s->state))));
 exit:
@@ -738,7 +738,7 @@ status_t sp_map_event(sp_event_t event, sp_map_event_generate_t f, void* state, 
   s->state = state;
   s->generate = f;
   e.memory = out->memory;
-  e.state = s;
+  e.data = s;
   e.start = event.start;
   e.end = event.end;
   e.generate = (isolate ? sp_map_event_isolated_generate : sp_map_event_generate);

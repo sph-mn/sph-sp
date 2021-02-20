@@ -13,7 +13,7 @@
   (status-t sp-time-t sp-time-t sp-block-t sp-event-t*)
   status-declare
   (declare i sp-time-t ci sp-channel-count-t value uint64-t)
-  (set value (convert-type (convert-type event:state uint64-t) sp-time-t))
+  (set value (convert-type (convert-type event:data uint64-t) sp-time-t))
   (for ((set i start) (< i end) (set+ i 1))
     (for ((set ci 0) (< ci out.channels) (set+ ci 1))
       (set (array-get out.samples ci (- i start)) value)))
@@ -26,5 +26,5 @@
     e.end end
     e.generate test-helper-event-generate
     e.free 0
-    e.state (convert-type (convert-type number uint64-t) void*))
+    e.data (convert-type (convert-type number uint64-t) void*))
   (return e))

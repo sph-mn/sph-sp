@@ -462,10 +462,10 @@
       sp-event-t
       (start sp-time-t)
       (end sp-time-t)
-      (state void*)
       (generate (function-pointer status-t sp-time-t sp-time-t sp-block-t (struct sp-event-t*)))
       (prepare (function-pointer status-t (struct sp-event-t*)))
       (free (function-pointer void (struct sp-event-t*)))
+      (data void*)
       (memory sp-memory-t)))
   sp-event-generate-t (type (function-pointer status-t sp-time-t sp-time-t sp-block-t sp-event-t*))
   sp-event-list-t

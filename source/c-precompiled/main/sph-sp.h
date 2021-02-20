@@ -447,10 +447,10 @@ struct sp_event_t;
 typedef struct sp_event_t {
   sp_time_t start;
   sp_time_t end;
-  void* state;
   status_t (*generate)(sp_time_t, sp_time_t, sp_block_t, struct sp_event_t*);
   status_t (*prepare)(struct sp_event_t*);
   void (*free)(struct sp_event_t*);
+  void* data;
   sp_memory_t memory;
 } sp_event_t;
 typedef status_t (*sp_event_generate_t)(sp_time_t, sp_time_t, sp_block_t, sp_event_t*);

@@ -453,8 +453,8 @@ status_t test_sp_wave_event() {
   (config.channel_config)[1] = sp_channel_config(0, 10, 10, 1, amod2);
   status_require((sp_wave_event(0, test_wave_event_duration, config, (&event))));
   status_require((sp_block_new(2, test_wave_event_duration, (&out))));
-  status_require(((event.generate)(0, 30, out, (event.state))));
-  status_require(((event.generate)(30, test_wave_event_duration, (sp_block_with_offset(out, 30)), (event.state))));
+  status_require(((event.generate)(0, 30, out, (event.data))));
+  status_require(((event.generate)(30, test_wave_event_duration, (sp_block_with_offset(out, 30)), (event.data))));
   /* (sp-plot-samples (array-get out.samples 0) test-wave-event-duration) */
   sp_block_free(out);
 exit:
