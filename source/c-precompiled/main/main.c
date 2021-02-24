@@ -143,7 +143,7 @@ sp_sample_t sp_sin_lq(sp_float_t a) {
   sp_sample_t c;
   b = (4 / M_PI);
   c = (-4 / (M_PI * M_PI));
-  return ((((b * a) + (c * a * abs(a)))));
+  return ((-((b * a) + (c * a * abs(a)))));
 }
 sp_time_t sp_phase(sp_time_t current, sp_time_t change, sp_time_t cycle) {
   sp_time_t a = (current + change);

@@ -119,7 +119,7 @@ status_t sp_seq(sp_time_t start, sp_time_t end, sp_block_t out, sp_event_list_t*
       if (e.prepare) {
         status_require(((e.prepare)(ep)));
         ep->prepare = 0;
-        e.data = ep->data;
+        e = *ep;
       };
       status_require(((e.generate)(((start > e.start) ? (start - e.start) : 0), (sp_min(end, (e.end)) - e.start), ((e.start > start) ? sp_block_with_offset(out, (e.start - start)) : out), ep)));
     };
@@ -231,19 +231,13 @@ void sp_group_free(sp_event_t* a) {
   sp_event_list_free(sp);
   sp_event_memory_free(a);
 }
+status_t sp_group_generate(sp_time_t start, sp_time_t end, sp_block_t out, sp_event_t* event) { return ((sp_seq(start, end, out, ((sp_event_list_t**)(&(event->data)))))); }
 status_t sp_group_prepare(sp_event_t* a) {
   status_declare;
   sp_seq_events_prepare(((sp_event_list_t**)(&(a->data))));
+  a->generate = sp_group_generate;
+  a->free = sp_group_free;
   status_return;
-}
-status_t sp_group_generate(sp_time_t start, sp_time_t end, sp_block_t out, sp_event_t* event) { return ((sp_seq(start, end, out, ((sp_event_list_t**)(&(event->data)))))); }
-void sp_group_new(sp_time_t start, sp_event_t* out) {
-  (*out).data = 0;
-  (*out).start = start;
-  (*out).end = start;
-  (*out).prepare = sp_group_prepare;
-  (*out).generate = sp_group_generate;
-  (*out).free = sp_group_free;
 }
 status_t sp_group_add(sp_event_t* a, sp_event_t event) {
   status_declare;
@@ -340,7 +334,7 @@ status_t sp_wave_event(sp_time_t start, sp_time_t end, sp_wave_event_config_t co
   status_declare;
   sp_declare_event(event);
   sp_declare_event(group);
-  sp_group_new(0, (&group));
+  group.prepare = sp_group_prepare;
   for (sp_time_t ci = 0; (ci < config.channels); ci += 1) {
     if (((config.channel_config)[ci]).mute) {
       continue;
@@ -492,7 +486,8 @@ status_t sp_noise_event(sp_time_t start, sp_time_t end, sp_noise_event_config_t 
   config.resolution = sp_min((config.resolution), duration);
   rs = sp_random_state_new((sp_time_random((&sp_default_random_state))));
   group.memory = out->memory;
-  sp_group_new(start, (&group));
+  group.prepare = sp_group_prepare;
+  status_require(((group.prepare)((&group))));
   status_require((sp_event_memory_init((&group), 2)));
   status_require((sp_malloc_type((config.resolution), sp_sample_t, (&state_noise))));
   sp_event_memory_add1((&group), state_noise);
@@ -608,36 +603,32 @@ exit:
    lower processing costs even when parameters change with high resolution.
    multiple passes almost multiply performance costs.
    memory for event.state will be allocated and then owned by the caller */
-status_t sp_cheap_noise_event(sp_time_t start, sp_time_t end, sp_cheap_noise_event_config_t config, sp_event_t* out) {
+status_t sp_cheap_noise_event_prepare(sp_event_t* event) {
   status_declare;
   sp_random_state_t rs;
   sp_sample_t* state_noise;
   sp_sample_t* state_temp;
-  sp_declare_event(event);
-  sp_declare_event(group);
+  sp_declare_event(channel);
+  sp_cheap_noise_event_config_t config = *((sp_cheap_noise_event_config_t*)(event->data));
+  event->data = 0;
   config.passes = (config.passes ? config.passes : 1);
   config.resolution = (config.resolution ? config.resolution : 96);
-  config.resolution = sp_min((config.resolution), (end - start));
+  config.resolution = sp_min((config.resolution), (event->end - event->start));
   rs = sp_random_state_new((sp_time_random((&sp_default_random_state))));
-  group.memory = out->memory;
-  sp_group_new(start, (&group));
-  status_require((sp_event_memory_init((&group), 2)));
+  status_require((sp_group_prepare(event)));
+  status_require((sp_event_memory_init(event, 2)));
   status_require((sp_malloc_type((config.resolution), sp_sample_t, (&state_noise))));
-  sp_event_memory_add1((&group), state_noise);
+  sp_event_memory_add1(event, state_noise);
   status_require((sp_malloc_type((config.resolution), sp_sample_t, (&state_temp))));
-  sp_event_memory_add1((&group), state_temp);
+  sp_event_memory_add1(event, state_temp);
   for (sp_time_t ci = 0; (ci < config.channels); ci += 1) {
     if (((config.channel_config)[ci]).mute) {
       continue;
     };
-    status_require((sp_cheap_noise_event_channel((end - start), config, ci, rs, state_noise, state_temp, (&event))));
-    status_require((sp_group_add((&group), event)));
+    status_require((sp_cheap_noise_event_channel((event->end - event->start), config, ci, rs, state_noise, state_temp, (&channel))));
+    status_require((sp_group_add(event, channel)));
   };
-  *out = group;
 exit:
-  if (status_is_failure) {
-    (group.free)((&group));
-  };
   status_return;
 }
 
@@ -651,26 +642,6 @@ status_t sp_event_memory_init(sp_event_t* a, sp_time_t additional_size) {
   } else {
     if (sp_memory_new(additional_size, (&(a->memory)))) {
       sp_memory_error;
-    };
-  };
-exit:
-  status_return;
-}
-status_t sp_event_memory_merge(sp_event_t* a, sp_event_t* b) {
-  status_declare;
-  if (a->memory.data) {
-    if (b->memory.data) {
-      sp_time_t b_size = array3_size((b->memory));
-      if ((array3_unused_size((a->memory)) < b_size) && sp_memory_resize((&(a->memory)), (array3_max_size((a->memory)) + (b_size - array3_unused_size((a->memory)))))) {
-        sp_memory_error;
-      };
-      for (sp_time_t i = 0; (i < b_size); i += 1) {
-        array3_add((a->memory), (array3_get((b->memory), i)));
-      };
-    };
-  } else {
-    if (b->memory.data) {
-      a->memory = b->memory;
     };
   };
 exit:
@@ -692,58 +663,62 @@ void sp_event_memory_free(sp_event_t* a) {
   };
   array3_free((a->memory));
 }
-void sp_map_event_free(sp_event_t* a) {
+void sp_map_event_free(sp_event_t* event) {
   sp_map_event_state_t* s;
-  s = a->data;
+  s = event->data;
   if (s->event.free) {
     (s->event.free)((&(s->event)));
   };
   free(s);
-  sp_event_memory_free(a);
+  sp_event_memory_free(event);
 }
 status_t sp_map_event_generate(sp_time_t start, sp_time_t end, sp_block_t out, sp_event_t* event) {
   status_declare;
   sp_map_event_state_t* s = event->data;
-  status_require_return(((s->event.generate)(start, end, out, (&(s->event)))));
-  return (((s->generate)(start, end, out, out, (s->state))));
+  status_require(((s->event.generate)(start, end, out, (&(s->event)))));
+  status_require(((s->map_generate)(start, end, out, out, (s->state))));
+exit:
+  status_return;
 }
 
 /** creates temporary output, lets event write to it, and passes the temporary output to a user function */
 status_t sp_map_event_isolated_generate(sp_time_t start, sp_time_t end, sp_block_t out, sp_event_t* event) {
   status_declare;
-  sp_map_event_state_t* s;
   sp_block_t temp_out;
+  sp_map_event_state_t* s = event->data;
   status_require_return((sp_block_new((out.channels), (out.size), (&temp_out))));
-  s = event->data;
   status_require(((s->event.generate)(start, end, temp_out, (&(s->event)))));
-  status_require(((s->generate)(start, end, temp_out, out, (s->state))));
+  status_require(((s->map_generate)(start, end, temp_out, out, (s->state))));
 exit:
   sp_block_free(temp_out);
   status_return;
 }
 
-/** f: map function (start end sp_block_t:in sp_block_t:out void*:state)
-   state: custom state value passed to f.
-   the wrapped event will be freed with the map-event.
-   isolate: use a dedicated output buffer for event
-     events can be wrapped in multiple sp_map_event with an isolated sp_map_event on top that
-     finally writes to main out to mix with other events
-   use cases: filter chains, post processing */
-status_t sp_map_event(sp_event_t event, sp_map_event_generate_t f, void* state, uint8_t isolate, sp_event_t* out) {
+/** the wrapped event will be freed with the map-event.
+   use cases: filter chains, post processing.
+   config:
+     map-generate: map function (start end sp_block_t:in sp_block_t:out void*:state)
+     state: custom state value passed to f.
+     isolate: use a dedicated output buffer for event
+       events can be wrapped in multiple sp_map_event with an isolated sp_map_event on top that
+       finally writes to main out to mix with other events */
+status_t sp_map_event_prepare(sp_event_t* event) {
   status_declare;
-  sp_map_event_state_t* s;
-  sp_declare_event(e);
-  status_require((sp_malloc_type(1, sp_map_event_state_t, (&s))));
-  s->event = event;
-  s->state = state;
-  s->generate = f;
-  e.memory = out->memory;
-  e.data = s;
-  e.start = event.start;
-  e.end = event.end;
-  e.generate = (isolate ? sp_map_event_isolated_generate : sp_map_event_generate);
-  e.free = sp_map_event_free;
-  *out = e;
+  sp_map_event_state_t* state;
+  free_on_error_init(1);
+  sp_map_event_config_t c = *((sp_map_event_config_t*)(event->data));
+  status_require((sp_malloc_type(1, sp_map_event_state_t, (&state))));
+  free_on_error1(state);
+  status_require(((c.event.prepare)((&(c.event)))));
+  state->event = c.event;
+  state->state = c.state;
+  state->map_generate = c.map_generate;
+  event->data = state;
+  event->generate = (c.isolate ? sp_map_event_isolated_generate : sp_map_event_generate);
+  event->free = sp_map_event_free;
 exit:
+  if (status_is_failure) {
+    free_on_error_free;
+  };
   status_return;
 }

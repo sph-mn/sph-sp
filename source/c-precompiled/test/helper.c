@@ -41,7 +41,6 @@ sp_event_t test_helper_event(sp_time_t start, sp_time_t end, sp_time_t number) {
   e.start = start;
   e.end = end;
   e.generate = test_helper_event_generate;
-  e.free = 0;
   e.data = ((void*)(((uint64_t)(number))));
   return (e);
 }

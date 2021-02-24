@@ -64,7 +64,7 @@
         (set current next) continue)
       ((<= end e.start) break)
       ( (> e.end start)
-        (if e.prepare (begin (status-require (e.prepare ep)) (set ep:prepare 0 e.data ep:data)))
+        (if e.prepare (begin (status-require (e.prepare ep)) (set ep:prepare 0 e *ep)))
         (status-require
           (e.generate (if* (> start e.start) (- start e.start) 0) (- (sp-min end e.end) e.start)
             (if* (> e.start start) (sp-block-with-offset out (- e.start start)) out) ep))))
@@ -153,23 +153,15 @@
   (sp-event-list-free sp)
   (sp-event-memory-free a))
 
-(define (sp-group-prepare a) (status-t sp-event-t*)
-  status-declare
-  (sp-seq-events-prepare (convert-type &a:data sp-event-list-t**))
-  status-return)
-
 (define (sp-group-generate start end out event)
   (status-t sp-time-t sp-time-t sp-block-t sp-event-t*)
   (return (sp-seq start end out (convert-type &event:data sp-event-list-t**))))
 
-(define (sp-group-new start out) (void sp-time-t sp-event-t*)
-  (struct-set *out
-    data 0
-    start start
-    end start
-    prepare sp-group-prepare
-    generate sp-group-generate
-    free sp-group-free))
+(define (sp-group-prepare a) (status-t sp-event-t*)
+  status-declare
+  (sp-seq-events-prepare (convert-type &a:data sp-event-list-t**))
+  (set a:generate sp-group-generate a:free sp-group-free)
+  status-return)
 
 (define (sp-group-add a event) (status-t sp-event-t* sp-event-t)
   status-declare
@@ -249,7 +241,7 @@
   status-declare
   (sp-declare-event event)
   (sp-declare-event group)
-  (sp-group-new 0 &group)
+  (struct-set group prepare sp-group-prepare)
   (for-each-index ci config.channels
     (if (struct-get (array-get config.channel-config ci) mute) continue)
     (status-require (sp-wave-event-channel (- end start) config ci &event))
@@ -394,7 +386,8 @@
     config.resolution (sp-min config.resolution duration)
     rs (sp-random-state-new (sp-time-random &sp-default-random-state))
     group.memory out:memory)
-  (sp-group-new start &group)
+  (set group.prepare sp-group-prepare)
+  (status-require (group.prepare &group))
   (status-require (sp-event-memory-init &group 2))
   (status-require (sp-malloc-type config.resolution sp-sample-t &state-noise))
   (sp-event-memory-add1 &group state-noise)
@@ -500,35 +493,35 @@
     (if status-is-failure (begin (if data (free data)) (sp-cheap-filter-state-free &filter-state)))
     status-return))
 
-(define (sp-cheap-noise-event start end config out)
-  (status-t sp-time-t sp-time-t sp-cheap-noise-event-config-t sp-event-t*)
+(define (sp-cheap-noise-event-prepare event) (status-t sp-event-t*)
   "an event for noise filtered by a state-variable filter.
    lower processing costs even when parameters change with high resolution.
    multiple passes almost multiply performance costs.
    memory for event.state will be allocated and then owned by the caller"
   status-declare
   (declare rs sp-random-state-t state-noise sp-sample-t* state-temp sp-sample-t*)
-  (sp-declare-event event)
-  (sp-declare-event group)
+  (sp-declare-event channel)
+  (define config sp-cheap-noise-event-config-t
+    (pointer-get (convert-type event:data sp-cheap-noise-event-config-t*)))
   (set
+    event:data 0
     config.passes (if* config.passes config.passes 1)
     config.resolution (if* config.resolution config.resolution 96)
-    config.resolution (sp-min config.resolution (- end start))
-    rs (sp-random-state-new (sp-time-random &sp-default-random-state))
-    group.memory out:memory)
-  (sp-group-new start &group)
-  (status-require (sp-event-memory-init &group 2))
+    config.resolution (sp-min config.resolution (- event:end event:start))
+    rs (sp-random-state-new (sp-time-random &sp-default-random-state)))
+  (status-require (sp-group-prepare event))
+  (status-require (sp-event-memory-init event 2))
   (status-require (sp-malloc-type config.resolution sp-sample-t &state-noise))
-  (sp-event-memory-add1 &group state-noise)
+  (sp-event-memory-add1 event state-noise)
   (status-require (sp-malloc-type config.resolution sp-sample-t &state-temp))
-  (sp-event-memory-add1 &group state-temp)
+  (sp-event-memory-add1 event state-temp)
   (for-each-index ci config.channels
     (if (struct-get (array-get config.channel-config ci) mute) continue)
     (status-require
-      (sp-cheap-noise-event-channel (- end start) config ci rs state-noise state-temp &event))
-    (status-require (sp-group-add &group event)))
-  (set *out group)
-  (label exit (if status-is-failure (group.free &group)) status-return))
+      (sp-cheap-noise-event-channel (- event:end event:start) config
+        ci rs state-noise state-temp &channel))
+    (status-require (sp-group-add event channel)))
+  (label exit status-return))
 
 (define (sp-event-memory-init a additional-size) (status-t sp-event-t* sp-time-t)
   "ensures that event memory is initialized and can take $additional_size more elements"
@@ -542,21 +535,6 @@
     (if (sp-memory-new additional-size &a:memory) sp-memory-error))
   (label exit status-return))
 
-(define (sp-event-memory-merge a b) (status-t sp-event-t* sp-event-t*)
-  status-declare
-  (if a:memory.data
-    (if b:memory.data
-      (begin
-        (define b-size sp-time-t (array3-size b:memory))
-        (if
-          (and (< (array3-unused-size a:memory) b-size)
-            (sp-memory-resize &a:memory
-              (+ (array3-max-size a:memory) (- b-size (array3-unused-size a:memory)))))
-          sp-memory-error)
-        (for-each-index i b-size (array3-add a:memory (array3-get b:memory i)))))
-    (if b:memory.data (set a:memory b:memory)))
-  (label exit status-return))
-
 (define (sp-event-memory-add a address handler) (void sp-event-t* void* sp-memory-free-t)
   (declare m memreg2-t)
   (struct-set m address address handler handler)
@@ -568,53 +546,53 @@
   (for-each-index i (array3-size a:memory) (set m (array3-get a:memory i)) (m.handler m.address))
   (array3-free a:memory))
 
-(define (sp-map-event-free a) (void sp-event-t*)
+(define (sp-map-event-free event) (void sp-event-t*)
   (declare s sp-map-event-state-t*)
-  (set s a:data)
+  (set s event:data)
   (if s:event.free (s:event.free &s:event))
   (free s)
-  (sp-event-memory-free a))
+  (sp-event-memory-free event))
 
 (define (sp-map-event-generate start end out event)
   (status-t sp-time-t sp-time-t sp-block-t sp-event-t*)
   status-declare
   (define s sp-map-event-state-t* event:data)
-  (status-require-return (s:event.generate start end out &s:event))
-  (return (s:generate start end out out s:state)))
+  (status-require (s:event.generate start end out &s:event))
+  (status-require (s:map-generate start end out out s:state))
+  (label exit status-return))
 
 (define (sp-map-event-isolated-generate start end out event)
   (status-t sp-time-t sp-time-t sp-block-t sp-event-t*)
   "creates temporary output, lets event write to it, and passes the temporary output to a user function"
   status-declare
-  (declare s sp-map-event-state-t* temp-out sp-block-t)
+  (declare temp-out sp-block-t)
+  (define s sp-map-event-state-t* event:data)
   (status-require-return (sp-block-new out.channels out.size &temp-out))
-  (set s event:data)
   (status-require (s:event.generate start end temp-out &s:event))
-  (status-require (s:generate start end temp-out out s:state))
+  (status-require (s:map-generate start end temp-out out s:state))
   (label exit (sp-block-free temp-out) status-return))
 
-(define (sp-map-event event f state isolate out)
-  (status-t sp-event-t sp-map-event-generate-t void* uint8-t sp-event-t*)
-  "f: map function (start end sp_block_t:in sp_block_t:out void*:state)
-   state: custom state value passed to f.
-   the wrapped event will be freed with the map-event.
-   isolate: use a dedicated output buffer for event
-     events can be wrapped in multiple sp_map_event with an isolated sp_map_event on top that
-     finally writes to main out to mix with other events
-   use cases: filter chains, post processing"
+(define (sp-map-event-prepare event) (status-t sp-event-t*)
+  "the wrapped event will be freed with the map-event.
+   use cases: filter chains, post processing.
+   config:
+     map-generate: map function (start end sp_block_t:in sp_block_t:out void*:state)
+     state: custom state value passed to f.
+     isolate: use a dedicated output buffer for event
+       events can be wrapped in multiple sp_map_event with an isolated sp_map_event on top that
+       finally writes to main out to mix with other events"
   status-declare
-  (declare s sp-map-event-state-t*)
-  (sp-declare-event e)
-  (status-require (sp-malloc-type 1 sp-map-event-state-t &s))
+  (declare state sp-map-event-state-t*)
+  (free-on-error-init 1)
+  (define c sp-map-event-config-t (pointer-get (convert-type event:data sp-map-event-config-t*)))
+  (status-require (sp-malloc-type 1 sp-map-event-state-t &state))
+  (free-on-error1 state)
+  (status-require (c.event.prepare &c.event))
   (set
-    s:event event
-    s:state state
-    s:generate f
-    e.memory out:memory
-    e.data s
-    e.start event.start
-    e.end event.end
-    e.generate (if* isolate sp-map-event-isolated-generate sp-map-event-generate)
-    e.free sp-map-event-free)
-  (set *out e)
-  (label exit status-return))
+    state:event c.event
+    state:state c.state
+    state:map-generate c.map-generate
+    event:data state
+    event:generate (if* c.isolate sp-map-event-isolated-generate sp-map-event-generate)
+    event:free sp-map-event-free)
+  (label exit (if status-is-failure free-on-error-free) status-return))

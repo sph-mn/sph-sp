@@ -449,7 +449,8 @@
     (sp-declare-cheap-noise-event-config name)
     (struct-set name channels sp-channels amp 1 type sp-state-variable-filter-lp cut 0.5))
   sp-memory-add array3-add
-  sp-seq-events-prepare sp-event-list-reverse)
+  sp-seq-events-prepare sp-event-list-reverse
+  (sp-declare-map-event-config name) (define name sp-map-event-config-t (struct-literal 0)))
 
 (array3-declare-type sp-memory memreg2-t)
 
@@ -536,10 +537,13 @@
       (resolution sp-time-t)
       (channels sp-channel-count-t)
       (channel-config (array sp-channel-config-t sp-channel-limit))))
-  sp-map-event-generate-t
+  sp-map-generate-t
   (type (function-pointer status-t sp-time-t sp-time-t sp-block-t sp-block-t void*))
   sp-map-event-state-t
-  (type (struct (event sp-event-t) (generate sp-map-event-generate-t) (state void*))))
+  (type (struct (event sp-event-t) (map-generate sp-map-generate-t) (state void*)))
+  sp-map-event-config-t
+  (type
+    (struct (event sp-event-t) (map-generate sp-map-generate-t) (state void*) (isolate boolean))))
 
 (declare
   (sp-event-list-reverse a) (void sp-event-list-t**)
@@ -557,16 +561,14 @@
   (status-t sp-time-t sp-time-t sp-noise-event-config-t sp-event-t*)
   (sp-wave-event start end config out)
   (status-t sp-time-t sp-time-t sp-wave-event-config-t sp-event-t*)
-  (sp-cheap-noise-event start end config out-event)
-  (status-t sp-time-t sp-time-t sp-cheap-noise-event-config-t sp-event-t*)
-  (sp-group-new start out) (void sp-time-t sp-event-t*)
+  (sp-cheap-noise-event-prepare event) (status-t sp-event-t*)
+  (sp-group-prepare event) (status-t sp-event-t*)
   (sp-group-add a event) (status-t sp-event-t* sp-event-t)
   (sp-group-append a event) (status-t sp-event-t* sp-event-t)
   (sp-group-event-f start end out event) (void sp-time-t sp-time-t sp-block-t sp-event-t*)
   (sp-group-event-parallel-f start end out event) (void sp-time-t sp-time-t sp-block-t sp-event-t*)
   (sp-group-event-free a) (void sp-event-t*)
-  (sp-map-event event f state isolate out)
-  (status-t sp-event-t sp-map-event-generate-t void* uint8-t sp-event-t*)
+  (sp-map-event-prepare event) (status-t sp-event-t*)
   (sp-channel-config mute delay phs amp amod)
   (sp-channel-config-t boolean sp-time-t sp-time-t sp-sample-t sp-sample-t*))
 

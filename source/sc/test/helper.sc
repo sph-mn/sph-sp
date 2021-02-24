@@ -25,6 +25,5 @@
     e.start start
     e.end end
     e.generate test-helper-event-generate
-    e.free 0
     e.data (convert-type (convert-type number uint64-t) void*))
   (return e))

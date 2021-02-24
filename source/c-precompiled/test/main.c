@@ -350,7 +350,6 @@ status_t test_sp_cheap_noise_event() {
   sp_sample_t amod[sp_noise_duration];
   sp_time_t i;
   sp_declare_event(event);
-  sp_declare_event_list(events);
   sp_declare_cheap_noise_event_config(config);
   status_require((sp_block_new(2, sp_noise_duration, (&out))));
   for (i = 0; (i < sp_noise_duration); i += 1) {
@@ -365,9 +364,11 @@ status_t test_sp_cheap_noise_event() {
   config.q_factor = 0.1;
   config.channels = 2;
   config.amp = 1;
-  status_require((sp_cheap_noise_event(0, sp_noise_duration, config, (&event))));
-  status_require((sp_event_list_add((&events), event)));
-  sp_event_list_free(events);
+  event.end = sp_noise_duration;
+  event.data = &config;
+  event.prepare = sp_cheap_noise_event_prepare;
+  status_require(((event.prepare)((&event))));
+  status_require(((event.generate)(0, sp_noise_duration, out, (&event))));
   sp_block_free(out);
 exit:
   status_return;
@@ -401,8 +402,9 @@ status_t test_sp_group() {
   sp_declare_event_3(e1, e2, e3);
   status_require((sp_times_new(100, (&m1))));
   status_require((sp_times_new(100, (&m2))));
-  sp_group_new(0, (&g));
-  sp_group_new(10, (&g1));
+  g.prepare = sp_group_prepare;
+  g1.start = 10;
+  g1.prepare = sp_group_prepare;
   status_require((sp_block_new(2, 100, (&block))));
   e1 = test_helper_event(0, 20, 1);
   e2 = test_helper_event(20, 40, 2);
@@ -414,9 +416,9 @@ status_t test_sp_group() {
   status_require((sp_event_memory_init((&g), 2)));
   sp_event_memory_add1((&g), m1);
   sp_event_memory_add1((&g), m2);
-  (g.prepare)((&g));
-  (g.generate)(0, 50, block, (&g));
-  (g.generate)(50, 100, (sp_block_with_offset(block, 50)), (&g));
+  status_require(((g.prepare)((&g))));
+  status_require(((g.generate)(0, 50, block, (&g))));
+  status_require(((g.generate)(50, 100, (sp_block_with_offset(block, 50)), (&g))));
   (g.free)((&g));
   test_helper_assert("block contents event 1", ((1 == (block.samples)[0][10]) && (1 == (block.samples)[0][29])));
   test_helper_assert("block contents event 2", ((2 == (block.samples)[0][30]) && (2 == (block.samples)[0][39])));
@@ -453,6 +455,7 @@ status_t test_sp_wave_event() {
   (config.channel_config)[1] = sp_channel_config(0, 10, 10, 1, amod2);
   status_require((sp_wave_event(0, test_wave_event_duration, config, (&event))));
   status_require((sp_block_new(2, test_wave_event_duration, (&out))));
+  status_require(((event.prepare)((&event))));
   status_require(((event.generate)(0, 30, out, (event.data))));
   status_require(((event.generate)(30, test_wave_event_duration, (sp_block_with_offset(out, 30)), (event.data))));
   /* (sp-plot-samples (array-get out.samples 0) test-wave-event-duration) */
@@ -751,6 +754,7 @@ status_t test_sp_map_event() {
   sp_sample_t* amod;
   sp_declare_event_2(parent, child);
   sp_declare_wave_event_config(config);
+  sp_declare_map_event_config(map_event_config);
   size = (10 * _rate);
   status_require((sp_path_samples_2((&amod), size, (sp_path_move(0, (1.0))), (sp_path_constant()))));
   config.wvf = sp_sine_table;
@@ -762,8 +766,16 @@ status_t test_sp_map_event() {
   config.channels = 1;
   status_require((sp_wave_event(0, size, config, (&child))));
   status_require((sp_block_new(1, size, (&block))));
-  sp_map_event(child, test_sp_map_event_generate, 0, 1, (&parent));
-  status_require(((parent.generate)(0, size, block, (&parent))));
+  map_event_config.event = child;
+  map_event_config.map_generate = test_sp_map_event_generate;
+  map_event_config.isolate = 1;
+  parent.start = child.start;
+  parent.end = child.end;
+  parent.prepare = sp_map_event_prepare;
+  parent.data = &map_event_config;
+  status_require(((parent.prepare)((&parent))));
+  status_require(((parent.generate)(0, (size / 2), block, (&parent))));
+  status_require(((parent.generate)((size / 2), size, block, (&parent))));
   (parent.free)((&parent));
   sp_block_free(block);
   free(amod);
@@ -776,11 +788,11 @@ int main() {
   status_declare;
   rs = sp_random_state_new(3);
   sp_initialize(3, 2, _rate);
+  test_helper_test_one(test_sp_group);
   test_helper_test_one(test_sp_map_event);
   test_helper_test_one(test_sp_seq);
   test_helper_test_one(test_sp_noise_event);
   test_helper_test_one(test_sp_cheap_noise_event);
-  test_helper_test_one(test_sp_group);
   test_helper_test_one(test_sp_wave_event);
   test_helper_test_one(test_render_block);
   test_helper_test_one(test_moving_average);

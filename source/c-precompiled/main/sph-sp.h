@@ -441,6 +441,7 @@ void sp_plot_spectrum(sp_sample_t* a, sp_time_t a_size);
   name.cut = 0.5
 #define sp_memory_add array3_add
 #define sp_seq_events_prepare sp_event_list_reverse
+#define sp_declare_map_event_config(name) sp_map_event_config_t name = { 0 }
 array3_declare_type(sp_memory, memreg2_t);
 typedef void (*sp_memory_free_t)(void*);
 struct sp_event_t;
@@ -515,12 +516,18 @@ typedef struct {
   sp_channel_count_t channels;
   sp_channel_config_t channel_config[sp_channel_limit];
 } sp_cheap_noise_event_config_t;
-typedef status_t (*sp_map_event_generate_t)(sp_time_t, sp_time_t, sp_block_t, sp_block_t, void*);
+typedef status_t (*sp_map_generate_t)(sp_time_t, sp_time_t, sp_block_t, sp_block_t, void*);
 typedef struct {
   sp_event_t event;
-  sp_map_event_generate_t generate;
+  sp_map_generate_t map_generate;
   void* state;
 } sp_map_event_state_t;
+typedef struct {
+  sp_event_t event;
+  sp_map_generate_t map_generate;
+  void* state;
+  boolean isolate;
+} sp_map_event_config_t;
 void sp_event_list_reverse(sp_event_list_t** a);
 void sp_event_list_remove_element(sp_event_list_t** a, sp_event_list_t* element);
 status_t sp_event_list_add(sp_event_list_t** a, sp_event_t event);
@@ -533,14 +540,14 @@ status_t sp_seq_parallel(sp_time_t start, sp_time_t end, sp_block_t out, sp_even
 status_t sp_wave_event(sp_time_t start, sp_time_t end, sp_wave_event_config_t config, sp_event_t* out);
 status_t sp_noise_event(sp_time_t start, sp_time_t end, sp_noise_event_config_t config, sp_event_t* out_event);
 status_t sp_wave_event(sp_time_t start, sp_time_t end, sp_wave_event_config_t config, sp_event_t* out);
-status_t sp_cheap_noise_event(sp_time_t start, sp_time_t end, sp_cheap_noise_event_config_t config, sp_event_t* out_event);
-void sp_group_new(sp_time_t start, sp_event_t* out);
+status_t sp_cheap_noise_event_prepare(sp_event_t* event);
+status_t sp_group_prepare(sp_event_t* event);
 status_t sp_group_add(sp_event_t* a, sp_event_t event);
 status_t sp_group_append(sp_event_t* a, sp_event_t event);
 void sp_group_event_f(sp_time_t start, sp_time_t end, sp_block_t out, sp_event_t* event);
 void sp_group_event_parallel_f(sp_time_t start, sp_time_t end, sp_block_t out, sp_event_t* event);
 void sp_group_event_free(sp_event_t* a);
-status_t sp_map_event(sp_event_t event, sp_map_event_generate_t f, void* state, uint8_t isolate, sp_event_t* out);
+status_t sp_map_event_prepare(sp_event_t* event);
 sp_channel_config_t sp_channel_config(boolean mute, sp_time_t delay, sp_time_t phs, sp_sample_t amp, sp_sample_t* amod);
 /* path */
 
