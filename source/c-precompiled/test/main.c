@@ -1,5 +1,8 @@
 
 #include "./helper.c"
+
+/* the sc version of this file defines macros which are only available in sc.
+the macros are used as optional helpers to simplify common tasks where c syntax alone offers no good alternative */
 #if (sp_sample_format_f64 == sp_sample_format)
 #define sp_sample_nearly_equal f64_nearly_equal
 #define sp_samples_nearly_equal f64_array_nearly_equal
@@ -307,7 +310,7 @@ status_t test_sp_noise_event() {
   sp_declare_noise_event_config(config);
   sp_declare_event_list(events);
   status_require((sp_block_new(2, sp_noise_duration, (&out))));
-  for (i = 0; (i < sp_noise_duration); i = (1 + i)) {
+  for (sp_time_t i = 0; (i < sp_noise_duration); i += 1) {
     cutl[i] = ((i < (sp_noise_duration / 2)) ? 0.01 : 0.1);
     cuth[i] = 0.11;
     trnl[i] = 0.07;
@@ -319,7 +322,10 @@ status_t test_sp_noise_event() {
   config.amod = amod;
   config.amp = 1;
   config.channels = 2;
-  status_require((sp_noise_event(0, sp_noise_duration, config, (&event))));
+  event.start = 0;
+  event.end = sp_noise_duration;
+  event.prepare = sp_noise_event_prepare;
+  event.data = &config;
   status_require((sp_event_list_add((&events), event)));
   sp_seq(0, sp_noise_duration, out, (&events));
   sp_block_free(out);
@@ -800,11 +806,11 @@ int main() {
   status_declare;
   rs = sp_random_state_new(3);
   sp_initialize(3, 2, _rate);
+  test_helper_test_one(test_sp_noise_event);
   test_helper_test_one(test_sp_wave_event);
   test_helper_test_one(test_sp_group);
   test_helper_test_one(test_sp_map_event);
   test_helper_test_one(test_sp_seq);
-  test_helper_test_one(test_sp_noise_event);
   test_helper_test_one(test_sp_cheap_noise_event);
   test_helper_test_one(test_render_block);
   test_helper_test_one(test_moving_average);

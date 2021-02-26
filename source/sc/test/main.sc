@@ -1,4 +1,5 @@
 (pre-include "./helper.c")
+(sc-include "../main/sc-macros")
 
 (pre-cond
   ( (= sp-sample-format-f64 sp-sample-format)
@@ -283,7 +284,7 @@
   (sp-declare-noise-event-config config)
   (sp-declare-event-list events)
   (status-require (sp-block-new 2 sp-noise-duration &out))
-  (for ((set i 0) (< i sp-noise-duration) (set i (+ 1 i)))
+  (for-each-index i sp-noise-duration
     (set
       (array-get cutl i) (if* (< i (/ sp-noise-duration 2)) 0.01 0.1)
       (array-get cuth i) 0.11
@@ -291,7 +292,7 @@
       (array-get trnh i) 0.07
       (array-get amod i) 1.0))
   (struct-set config cutl-mod cutl cuth-mod cuth amod amod amp 1 channels 2)
-  (status-require (sp-noise-event 0 sp-noise-duration config &event))
+  (struct-set event start 0 end sp-noise-duration prepare sp-noise-event-prepare data &config)
   (status-require (sp-event-list-add &events event))
   (sp-seq 0 sp-noise-duration out &events)
   (sp-block-free out)
@@ -719,11 +720,11 @@
   status-declare
   (set rs (sp-random-state-new 3))
   (sp-initialize 3 2 _rate)
+  (test-helper-test-one test-sp-noise-event)
   (test-helper-test-one test-sp-wave-event)
   (test-helper-test-one test-sp-group)
   (test-helper-test-one test-sp-map-event)
   (test-helper-test-one test-sp-seq)
-  (test-helper-test-one test-sp-noise-event)
   (test-helper-test-one test-sp-cheap-noise-event)
   (test-helper-test-one test-render-block)
   (test-helper-test-one test-moving-average)

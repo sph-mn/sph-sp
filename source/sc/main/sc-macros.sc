@@ -62,7 +62,7 @@
         (set *_out _result)
         (unquote (tail body))))))
 
-(sc-define-syntax* (sp-channel-config channel-config-array (channel-index setting ...) ...)
+(sc-define-syntax* (sp-channel-config-x channel-config-array (channel-index setting ...) ...)
   "set one or multiple channel config structs in an array"
   (pair (q begin)
     (map

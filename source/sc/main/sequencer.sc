@@ -247,6 +247,7 @@
     (status-require (sp-wave-event-channel (- event:end event:start) config ci &channel))
     (status-require (sp-group-add event channel)))
   (status-require (sp-group-prepare event))
+
   (label exit (if status-is-failure (event:free event)) status-return))
 
 (declare sp-noise-event-state-t
@@ -370,35 +371,38 @@
         (if filter-state (sp-convolution-filter-state-free filter-state))))
     status-return))
 
-(define (sp-noise-event start end config out)
-  (status-t sp-time-t sp-time-t sp-noise-event-config-t sp-event-t*)
+(define (sp-noise-event-prepare event) (status-t sp-event-t*)
   "an event for noise filtered by a windowed-sinc filter.
    very processing intensive if parameters change with low resolution.
    memory for event.state will be allocated and then owned by the caller.
    all channels use the same initial random-state"
   status-declare
   (declare duration sp-time-t rs sp-random-state-t state-noise sp-sample-t* state-temp sp-sample-t*)
-  (sp-declare-event event)
-  (sp-declare-event group)
+  (sp-declare-event channel)
+  (define config sp-noise-event-config-t
+    (pointer-get (convert-type event:data sp-noise-event-config-t*)))
   (set
-    duration (- end start)
+    event:data 0
+    event:free sp-group-free
+    duration (- event:end event:start)
     config.resolution (if* config.resolution config.resolution 96)
     config.resolution (sp-min config.resolution duration)
-    rs (sp-random-state-new (sp-time-random &sp-default-random-state))
-    group.memory out:memory)
-  (set group.prepare sp-group-prepare)
-  (status-require (group.prepare &group))
-  (status-require (sp-event-memory-init &group 2))
+    rs (sp-random-state-new (sp-time-random &sp-default-random-state)))
+  (printf "prepare 1\n")
+  (status-require (sp-event-memory-init event 2))
   (status-require (sp-malloc-type config.resolution sp-sample-t &state-noise))
-  (sp-event-memory-add1 &group state-noise)
+  (sp-event-memory-add1 event state-noise)
   (status-require (sp-malloc-type config.resolution sp-sample-t &state-temp))
-  (sp-event-memory-add1 &group state-temp)
+  (sp-event-memory-add1 event state-temp)
+  (printf "prepare 2\n")
   (for-each-index ci config.channels
     (if (struct-get (array-get config.channel-config ci) mute) continue)
-    (status-require (sp-noise-event-channel duration config ci rs state-noise state-temp &event))
-    (status-require (sp-group-add &group event)))
-  (set *out group)
-  (label exit (if status-is-failure (group.free &group)) status-return))
+    (status-require (sp-noise-event-channel duration config ci rs state-noise state-temp &channel))
+    (status-require (sp-group-add event channel)))
+  (printf "prepare 3\n")
+  (status-require (sp-group-prepare event))
+  (printf "prepare 4\n")
+  (label exit (if status-is-failure (event:free event)) status-return))
 
 (declare sp-cheap-noise-event-state-t
   (type
@@ -505,11 +509,11 @@
     (pointer-get (convert-type event:data sp-cheap-noise-event-config-t*)))
   (set
     event:data 0
+    event:free sp-group-free
     config.passes (if* config.passes config.passes 1)
     config.resolution (if* config.resolution config.resolution 96)
     config.resolution (sp-min config.resolution (- event:end event:start))
     rs (sp-random-state-new (sp-time-random &sp-default-random-state)))
-  (status-require (sp-group-prepare event))
   (status-require (sp-event-memory-init event 2))
   (status-require (sp-malloc-type config.resolution sp-sample-t &state-noise))
   (sp-event-memory-add1 event state-noise)
@@ -521,6 +525,7 @@
       (sp-cheap-noise-event-channel (- event:end event:start) config
         ci rs state-noise state-temp &channel))
     (status-require (sp-group-add event channel)))
+  (status-require (sp-group-prepare event))
   (label exit status-return))
 
 (define (sp-event-memory-init a additional-size) (status-t sp-event-t* sp-time-t)
