@@ -247,7 +247,6 @@
     (status-require (sp-wave-event-channel (- event:end event:start) config ci &channel))
     (status-require (sp-group-add event channel)))
   (status-require (sp-group-prepare event))
-
   (label exit (if status-is-failure (event:free event)) status-return))
 
 (declare sp-noise-event-state-t
@@ -388,20 +387,16 @@
     config.resolution (if* config.resolution config.resolution 96)
     config.resolution (sp-min config.resolution duration)
     rs (sp-random-state-new (sp-time-random &sp-default-random-state)))
-  (printf "prepare 1\n")
   (status-require (sp-event-memory-init event 2))
   (status-require (sp-malloc-type config.resolution sp-sample-t &state-noise))
   (sp-event-memory-add1 event state-noise)
   (status-require (sp-malloc-type config.resolution sp-sample-t &state-temp))
   (sp-event-memory-add1 event state-temp)
-  (printf "prepare 2\n")
   (for-each-index ci config.channels
     (if (struct-get (array-get config.channel-config ci) mute) continue)
     (status-require (sp-noise-event-channel duration config ci rs state-noise state-temp &channel))
     (status-require (sp-group-add event channel)))
-  (printf "prepare 3\n")
   (status-require (sp-group-prepare event))
-  (printf "prepare 4\n")
   (label exit (if status-is-failure (event:free event)) status-return))
 
 (declare sp-cheap-noise-event-state-t

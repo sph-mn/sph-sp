@@ -487,13 +487,11 @@ status_t sp_noise_event_prepare(sp_event_t* event) {
   config.resolution = (config.resolution ? config.resolution : 96);
   config.resolution = sp_min((config.resolution), duration);
   rs = sp_random_state_new((sp_time_random((&sp_default_random_state))));
-  printf("prepare 1\n");
   status_require((sp_event_memory_init(event, 2)));
   status_require((sp_malloc_type((config.resolution), sp_sample_t, (&state_noise))));
   sp_event_memory_add1(event, state_noise);
   status_require((sp_malloc_type((config.resolution), sp_sample_t, (&state_temp))));
   sp_event_memory_add1(event, state_temp);
-  printf("prepare 2\n");
   for (sp_time_t ci = 0; (ci < config.channels); ci += 1) {
     if (((config.channel_config)[ci]).mute) {
       continue;
@@ -501,9 +499,7 @@ status_t sp_noise_event_prepare(sp_event_t* event) {
     status_require((sp_noise_event_channel(duration, config, ci, rs, state_noise, state_temp, (&channel))));
     status_require((sp_group_add(event, channel)));
   };
-  printf("prepare 3\n");
   status_require((sp_group_prepare(event)));
-  printf("prepare 4\n");
 exit:
   if (status_is_failure) {
     (event->free)(event);
