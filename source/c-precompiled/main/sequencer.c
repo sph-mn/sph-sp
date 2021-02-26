@@ -313,8 +313,8 @@ exit:
   status_return;
 }
 
-/** create an event playing waveforms from an array.
-   config should have been declared with defaults using sp-declare-wave-event-config.
+/** prepare an event playing waveforms from an array.
+   config should have been declared with defaults using sp_declare_wave_event_config.
    event end will be longer if channel config delay is used.
    config:
    * frq (frequency): fixed frequency, only used if fmod is null
@@ -330,23 +330,23 @@ exit:
    * delay: integer number of samples
    * amod: uses main amod if zero
    * amp: multiplied with amod */
-status_t sp_wave_event(sp_time_t start, sp_time_t end, sp_wave_event_config_t config, sp_event_t* out) {
+status_t sp_wave_event_prepare(sp_event_t* event) {
   status_declare;
-  sp_declare_event(event);
-  sp_declare_event(group);
-  group.prepare = sp_group_prepare;
+  sp_declare_event(channel);
+  sp_wave_event_config_t config = *((sp_wave_event_config_t*)(event->data));
+  event->data = 0;
+  event->free = sp_group_free;
   for (sp_time_t ci = 0; (ci < config.channels); ci += 1) {
     if (((config.channel_config)[ci]).mute) {
       continue;
     };
-    status_require((sp_wave_event_channel((end - start), config, ci, (&event))));
-    status_require((sp_group_add((&group), event)));
+    status_require((sp_wave_event_channel((event->end - event->start), config, ci, (&channel))));
+    status_require((sp_group_add(event, channel)));
   };
-  group.memory = out->memory;
-  *out = group;
+  status_require((sp_group_prepare(event)));
 exit:
   if (status_is_failure) {
-    (group.free)((&group));
+    (event->free)(event);
   };
   status_return;
 }
@@ -686,7 +686,7 @@ status_t sp_map_event_isolated_generate(sp_time_t start, sp_time_t end, sp_block
   status_declare;
   sp_block_t temp_out;
   sp_map_event_state_t* s = event->data;
-  status_require_return((sp_block_new((out.channels), (out.size), (&temp_out))));
+  status_require((sp_block_new((out.channels), (out.size), (&temp_out))));
   status_require(((s->event.generate)(start, end, temp_out, (&(s->event)))));
   status_require(((s->map_generate)(start, end, temp_out, out, (s->state))));
 exit:
@@ -706,15 +706,15 @@ status_t sp_map_event_prepare(sp_event_t* event) {
   status_declare;
   sp_map_event_state_t* state;
   free_on_error_init(1);
-  sp_map_event_config_t c = *((sp_map_event_config_t*)(event->data));
+  sp_map_event_config_t config = *((sp_map_event_config_t*)(event->data));
   status_require((sp_malloc_type(1, sp_map_event_state_t, (&state))));
   free_on_error1(state);
-  status_require(((c.event.prepare)((&(c.event)))));
-  state->event = c.event;
-  state->state = c.state;
-  state->map_generate = c.map_generate;
+  status_require(((config.event.prepare)((&(config.event)))));
+  state->event = config.event;
+  state->state = config.state;
+  state->map_generate = config.map_generate;
   event->data = state;
-  event->generate = (c.isolate ? sp_map_event_isolated_generate : sp_map_event_generate);
+  event->generate = (config.isolate ? sp_map_event_isolated_generate : sp_map_event_generate);
   event->free = sp_map_event_free;
 exit:
   if (status_is_failure) {

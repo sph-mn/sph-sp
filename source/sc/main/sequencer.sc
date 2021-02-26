@@ -219,10 +219,9 @@
   (set *out event)
   (label exit (if status-is-failure (if data (free data))) status-return))
 
-(define (sp-wave-event start end config out)
-  (status-t sp-time-t sp-time-t sp-wave-event-config-t sp-event-t*)
-  "create an event playing waveforms from an array.
-   config should have been declared with defaults using sp-declare-wave-event-config.
+(define (sp-wave-event-prepare event) (status-t sp-event-t*)
+  "prepare an event playing waveforms from an array.
+   config should have been declared with defaults using sp_declare_wave_event_config.
    event end will be longer if channel config delay is used.
    config:
    * frq (frequency): fixed frequency, only used if fmod is null
@@ -239,15 +238,16 @@
    * amod: uses main amod if zero
    * amp: multiplied with amod"
   status-declare
-  (sp-declare-event event)
-  (sp-declare-event group)
-  (struct-set group prepare sp-group-prepare)
+  (sp-declare-event channel)
+  (define config sp-wave-event-config-t
+    (pointer-get (convert-type event:data sp-wave-event-config-t*)))
+  (set event:data 0 event:free sp-group-free)
   (for-each-index ci config.channels
     (if (struct-get (array-get config.channel-config ci) mute) continue)
-    (status-require (sp-wave-event-channel (- end start) config ci &event))
-    (status-require (sp-group-add &group event)))
-  (set group.memory out:memory *out group)
-  (label exit (if status-is-failure (group.free &group)) status-return))
+    (status-require (sp-wave-event-channel (- event:end event:start) config ci &channel))
+    (status-require (sp-group-add event channel)))
+  (status-require (sp-group-prepare event))
+  (label exit (if status-is-failure (event:free event)) status-return))
 
 (declare sp-noise-event-state-t
   (type
@@ -567,7 +567,7 @@
   status-declare
   (declare temp-out sp-block-t)
   (define s sp-map-event-state-t* event:data)
-  (status-require-return (sp-block-new out.channels out.size &temp-out))
+  (status-require (sp-block-new out.channels out.size &temp-out))
   (status-require (s:event.generate start end temp-out &s:event))
   (status-require (s:map-generate start end temp-out out s:state))
   (label exit (sp-block-free temp-out) status-return))
@@ -584,15 +584,16 @@
   status-declare
   (declare state sp-map-event-state-t*)
   (free-on-error-init 1)
-  (define c sp-map-event-config-t (pointer-get (convert-type event:data sp-map-event-config-t*)))
+  (define config sp-map-event-config-t
+    (pointer-get (convert-type event:data sp-map-event-config-t*)))
   (status-require (sp-malloc-type 1 sp-map-event-state-t &state))
   (free-on-error1 state)
-  (status-require (c.event.prepare &c.event))
+  (status-require (config.event.prepare &config.event))
   (set
-    state:event c.event
-    state:state c.state
-    state:map-generate c.map-generate
+    state:event config.event
+    state:state config.state
+    state:map-generate config.map-generate
     event:data state
-    event:generate (if* c.isolate sp-map-event-isolated-generate sp-map-event-generate)
+    event:generate (if* config.isolate sp-map-event-isolated-generate sp-map-event-generate)
     event:free sp-map-event-free)
   (label exit (if status-is-failure free-on-error-free) status-return))

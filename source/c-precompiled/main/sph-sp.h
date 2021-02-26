@@ -537,9 +537,8 @@ void sp_event_memory_add(sp_event_t* event, void* address, sp_memory_free_t hand
 void sp_event_memory_free(sp_event_t* event);
 status_t sp_seq(sp_time_t start, sp_time_t end, sp_block_t out, sp_event_list_t** events);
 status_t sp_seq_parallel(sp_time_t start, sp_time_t end, sp_block_t out, sp_event_list_t** events);
-status_t sp_wave_event(sp_time_t start, sp_time_t end, sp_wave_event_config_t config, sp_event_t* out);
+status_t sp_wave_event_prepare(sp_event_t* event);
 status_t sp_noise_event(sp_time_t start, sp_time_t end, sp_noise_event_config_t config, sp_event_t* out_event);
-status_t sp_wave_event(sp_time_t start, sp_time_t end, sp_wave_event_config_t config, sp_event_t* out);
 status_t sp_cheap_noise_event_prepare(sp_event_t* event);
 status_t sp_group_prepare(sp_event_t* event);
 status_t sp_group_add(sp_event_t* a, sp_event_t event);

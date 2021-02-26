@@ -453,7 +453,10 @@ status_t test_sp_wave_event() {
   config.amod = amod1;
   config.channels = 2;
   (config.channel_config)[1] = sp_channel_config(0, 10, 10, 1, amod2);
-  status_require((sp_wave_event(0, test_wave_event_duration, config, (&event))));
+  event.start = 0;
+  event.end = test_wave_event_duration;
+  event.data = &config;
+  event.prepare = sp_wave_event_prepare;
   status_require((sp_block_new(2, test_wave_event_duration, (&out))));
   status_require(((event.prepare)((&event))));
   status_require(((event.generate)(0, 30, out, (event.data))));
@@ -485,7 +488,10 @@ status_t test_render_block() {
   config.amp = 1;
   config.amod = amod;
   config.channels = 1;
-  status_require((sp_wave_event(0, test_wave_event_duration, config, (&event))));
+  event.start = 0;
+  event.end = test_wave_event_duration;
+  event.data = &config;
+  event.prepare = sp_wave_event_prepare;
   status_require((sp_event_list_add((&events), event)));
   status_require((sp_block_new(1, test_wave_event_duration, (&out))));
   sp_seq_events_prepare((&events));
@@ -722,7 +728,10 @@ status_t test_sp_seq_parallel() {
   config.amod = amod;
   config.channels = 2;
   for (i = 0; (i < 10); i += 1) {
-    status_require((sp_wave_event(0, size, config, (&event))));
+    event.start = 0;
+    event.end = size;
+    event.data = &config;
+    event.prepare = sp_wave_event_prepare;
     status_require((sp_event_list_add((&events), event)));
   };
   status_require((sp_block_new(2, size, (&block))));
@@ -764,7 +773,10 @@ status_t test_sp_map_event() {
   config.amp = 1;
   config.amod = amod;
   config.channels = 1;
-  status_require((sp_wave_event(0, size, config, (&child))));
+  child.start = 0;
+  child.end = size;
+  child.data = &config;
+  child.prepare = sp_wave_event_prepare;
   status_require((sp_block_new(1, size, (&block))));
   map_event_config.event = child;
   map_event_config.map_generate = test_sp_map_event_generate;
@@ -788,12 +800,12 @@ int main() {
   status_declare;
   rs = sp_random_state_new(3);
   sp_initialize(3, 2, _rate);
+  test_helper_test_one(test_sp_wave_event);
   test_helper_test_one(test_sp_group);
   test_helper_test_one(test_sp_map_event);
   test_helper_test_one(test_sp_seq);
   test_helper_test_one(test_sp_noise_event);
   test_helper_test_one(test_sp_cheap_noise_event);
-  test_helper_test_one(test_sp_wave_event);
   test_helper_test_one(test_render_block);
   test_helper_test_one(test_moving_average);
   test_helper_test_one(test_statistics);
