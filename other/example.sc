@@ -7,7 +7,7 @@
 (sc-include-once "../source/sc/main/sc-macros")
 (pre-include "stdio.h" "sph-sp.h")
 
-(sp-define-trigger* example-event (printf "-- example-event-prepare\n")
+(sp-define-trigger* example-event
   (declare
     amod sp-sample-t*
     duration sp-time-t
@@ -22,11 +22,11 @@
   (set duration (- _event:end _event:start) _event:free sp-group-free)
   (sp-path-samples* &amod duration (line (/ duration 2) 1.0) (line duration 0))
   (sp-event-memory-add1 _event &amod)
-  (sp-wave* s1 0 duration s1-config (amod amod frq 8) (1 use 1 amp 0.1))
+  (sp-wave* s1 0 duration *s1-config (amod amod frq 8 amp 0.5) (1 use 1 amp 0.1))
   (status-require (sp-group-add _event s1))
-  (sp-cheap-noise* n2 0 duration n2-config (amod amod cut 0.5) (1 use 1 amp 0.001))
+  (sp-cheap-noise* n2 0 duration *n2-config (amod amod cut 0.5 amp 0.1) (1 use 1 amp 0.001))
   (status-require (sp-group-add _event n2))
-  (sp-noise* n1 0 duration *n1-config (amod amod cutl 0.2 cuth 0.5) (0 use 1 delay 30000 amp 0.5))
+  (sp-noise* n1 0 duration *n1-config (amod amod cutl 0.2 cuth 0.5) (0 use 1 delay 30000 amp 1))
   (status-require (sp-group-add _event n1)) (status-require (sp-group-prepare _event)))
 
 (define (main) int
