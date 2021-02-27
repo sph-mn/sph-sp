@@ -370,7 +370,7 @@
   (test-helper-assert "block contents 1 gap" (= 0 (array-get out.samples 0 40)))
   (test-helper-assert "block contents 1 event 2"
     (and (= 2 (array-get out.samples 0 41)) (= 2 (array-get out.samples 0 99))))
-  (sp-event-list-free events)
+  (sp-event-list-free &events)
   (sp-block-free &out)
   (label exit status-return))
 
@@ -699,7 +699,7 @@
   (test-helper-assert "last 2"
     (and (sp-sample-nearly-equal 9.615618 (array-get block.samples 0 (- (* 2 step-size) 1)) 0.001)
       (sp-sample-nearly-equal 9.615618 (array-get block.samples 1 (- (* 2 step-size) 1)) 0.001)))
-  (sp-event-list-free events)
+  (sp-event-list-free &events)
   (free amod)
   (free fmod)
   (sp-block-free &block)

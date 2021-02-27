@@ -85,17 +85,19 @@ exit:
   status_return;
 }
 
-/** free all list elements and the associated events. only needed if sp_seq will not further process and free all past events */
-void sp_event_list_free(sp_event_list_t* events) {
+/** free all list elements and the associated events. update the list head so it becomes the empty list.
+   needed if sp_seq will not further process and thereby free further past events */
+void sp_event_list_free(sp_event_list_t** events) {
+  sp_event_list_t* current;
   sp_event_list_t* temp;
-  while (events) {
-    if (events->event.free) {
-      (events->event.free)((&(events->event)));
-    };
-    temp = events;
-    events = events->next;
+  current = *events;
+  while (current) {
+    sp_event_free((current->event));
+    temp = current;
+    current = current->next;
     free(temp);
   };
+  events = 0;
 }
 
 /** event arrays must have been prepared/sorted once with sp_seq_event_prepare for seq to work correctly.
@@ -104,7 +106,8 @@ void sp_event_list_free(sp_event_list_t* events) {
    generate receives event relative start/end times, and output blocks that start at the current block.
    prepare will only be called once and the function pointer will be set to zero afterwards.
    if prepare fails, sp_seq returns immediately.
-   past events including the event list elements are freed when processing the following block */
+   past events including the event list elements are freed when processing the following block.
+   on error, all events and the event list are freed */
 status_t sp_seq(sp_time_t start, sp_time_t end, sp_block_t out, sp_event_list_t** events) {
   status_declare;
   sp_event_t e;
@@ -133,6 +136,9 @@ status_t sp_seq(sp_time_t start, sp_time_t end, sp_block_t out, sp_event_list_t*
     current = current->next;
   };
 exit:
+  if (status_is_failure) {
+    sp_event_list_free(events);
+  };
   status_return;
 }
 typedef struct {
@@ -145,16 +151,21 @@ typedef struct {
   future_t future;
 } sp_seq_future_t;
 void* sp_seq_parallel_future_f(void* data) {
-  sp_seq_future_t* a = data;
-  if (a->event->prepare) {
-    a->status = (a->event->prepare)((a->event));
-    if (status_id_success == a->status.id) {
-      a->event->prepare = 0;
-    } else {
-      return (0);
-    };
+  status_declare;
+  sp_seq_future_t* a;
+  sp_event_t* ep;
+  a = data;
+  ep = a->event;
+  if (ep->prepare) {
+    status_require(((ep->prepare)(ep)));
+    ep->prepare = 0;
   };
-  a->status = (a->event->generate)((a->start), (a->end), (a->out), (a->event));
+  status_require(((ep->generate)((a->start), (a->end), (a->out), ep)));
+exit:
+  a->status = status;
+  if (status_is_failure) {
+    sp_event_pointer_free(ep);
+  };
   return (0);
 }
 
@@ -231,11 +242,14 @@ exit:
     };
     free(sf_array);
   };
+  if (status_is_failure) {
+    sp_event_list_free(events);
+  };
   status_return;
 }
 void sp_group_free(sp_event_t* a) {
-  sp_event_list_t* sp = a->data;
-  sp_event_list_free(sp);
+  a->free = 0;
+  sp_event_list_free((sp_group_event_list(a)));
   sp_event_memory_free(a);
 }
 status_t sp_group_generate(sp_time_t start, sp_time_t end, sp_block_t out, sp_event_t* a) { return ((sp_seq(start, end, out, ((sp_event_list_t**)(&(a->data)))))); }
@@ -305,7 +319,10 @@ status_t sp_map_event_config_new(sp_map_event_config_t** out) {
 exit:
   status_return;
 }
-void sp_wave_event_free(sp_event_t* a) { free((a->data)); }
+void sp_wave_event_free(sp_event_t* a) {
+  a->free = 0;
+  free((a->data));
+}
 status_t sp_wave_event_generate(sp_time_t start, sp_time_t end, sp_block_t out, sp_event_t* event) {
   status_declare;
   sp_time_t i;
@@ -430,6 +447,7 @@ exit:
   status_return;
 }
 void sp_noise_event_free(sp_event_t* a) {
+  a->free = 0;
   sp_noise_event_state_t* s = a->data;
   sp_convolution_filter_state_free((s->filter_state));
   free(s);
@@ -599,6 +617,7 @@ exit:
   status_return;
 }
 void sp_cheap_noise_event_free(sp_event_t* a) {
+  a->free = 0;
   sp_cheap_noise_event_state_t* s = a->data;
   sp_cheap_filter_state_free((&(s->filter_state)));
   free(s);
@@ -721,6 +740,9 @@ status_t sp_event_memory_init(sp_event_t* a, sp_time_t additional_size) {
       sp_memory_error;
     };
   };
+  if (!a->free) {
+    a->free = sp_event_memory_free;
+  };
 exit:
   status_return;
 }
@@ -731,21 +753,25 @@ void sp_event_memory_add(sp_event_t* a, void* address, sp_memory_free_t handler)
   sp_memory_add((a->memory), m);
 }
 
-/** free all registered memory and unitialize the event-memory register */
+/** free all registered memory and unitialize the event-memory register.
+   can be used as an event.free function if only memory should be removed before other fields have been set */
 void sp_event_memory_free(sp_event_t* a) {
+  if (!a->memory.data) {
+    return;
+  };
   memreg2_t m;
   for (sp_time_t i = 0; (i < array3_size((a->memory))); i += 1) {
     m = array3_get((a->memory), i);
     (m.handler)((m.address));
   };
   array3_free((a->memory));
+  a->memory.data = 0;
 }
 void sp_map_event_free(sp_event_t* event) {
   sp_map_event_state_t* s;
+  event->free = 0;
   s = event->data;
-  if (s->event.free) {
-    (s->event.free)((&(s->event)));
-  };
+  sp_event_free((s->event));
   free(s);
   sp_event_memory_free(event);
 }

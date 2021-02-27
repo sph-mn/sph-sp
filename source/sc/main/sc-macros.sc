@@ -63,7 +63,7 @@
       channel-index setting)))
 
 (sc-define-syntax*
-  (sp-channel-config-event* label prepare-event event start end config (setting ...) channel-config ...)
+  (sp-channel-config-event* label prepare-event event config (setting ...) channel-config ...)
   "generic macro for creating similar kinds of events that receive a config struct and channel config"
   (qq
     (begin
@@ -72,19 +72,17 @@
       (sp-channel-config* (struct-get (unquote config) channel-config)
         (unquote-splicing channel-config))
       (struct-set (unquote event)
-        start (unquote start)
-        end (unquote end)
         data (address-of (unquote config))
         prepare (unquote prepare-event)))))
 
-(sc-define-syntax (sp-wave* event start end config config-settings channel-config ...)
+(sc-define-syntax (sp-wave* event config config-settings channel-config ...)
   (sp-channel-config-event* "sp-wave*" sp-wave-event-prepare
-    event start end config config-settings channel-config ...))
+    event config config-settings channel-config ...))
 
-(sc-define-syntax (sp-noise* event start end config config-settings channel-config ...)
+(sc-define-syntax (sp-noise* event config config-settings channel-config ...)
   (sp-channel-config-event* "sp-noise*" sp-noise-event-prepare
-    event start end config config-settings channel-config ...))
+    event config config-settings channel-config ...))
 
-(sc-define-syntax (sp-cheap-noise* event start end config config-settings channel-config ...)
+(sc-define-syntax (sp-cheap-noise* event config config-settings channel-config ...)
   (sp-channel-config-event* "sp-cheap-noise*" sp-cheap-noise-event-prepare
-    event start end config config-settings channel-config ...))
+    event config config-settings channel-config ...))

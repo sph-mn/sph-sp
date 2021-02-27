@@ -403,7 +403,7 @@
 (sc-comment "sequencer")
 
 (pre-define
-  (sp-declare-event id) (define id sp-event-t (struct-literal 0))
+  (sp-declare-event id) (begin (define id sp-event-t (struct-literal 0)) (set id.memory.data 0))
   (sp-declare-event-2 id1 id2) (begin (sp-declare-event id1) (sp-declare-event id2))
   (sp-declare-event-3 id1 id2 id3)
   (begin (sp-declare-event id1) (sp-declare-event id2) (sp-declare-event id3))
@@ -444,7 +444,9 @@
   sp-seq-events-prepare sp-event-list-reverse
   (free-event-on-error event-address) (free-on-error (: event-address free) event-address)
   (free-event-on-exit event-address) (free-on-exit (: event-address free) event-address)
-  (sp-group-event-list event) (convert-type (: event data) sp-event-list-t*))
+  (sp-group-event-list event) (convert-type (address-of (: event data)) sp-event-list-t**)
+  (sp-event-free a) (if a.free (a.free &a))
+  (sp-event-pointer-free a) (if a:free (a:free a)))
 
 (array3-declare-type sp-memory memreg2-t)
 
@@ -544,7 +546,7 @@
   (sp-event-list-reverse a) (void sp-event-list-t**)
   (sp-event-list-remove-element a element) (void sp-event-list-t** sp-event-list-t*)
   (sp-event-list-add a event) (status-t sp-event-list-t** sp-event-t)
-  (sp-event-list-free events) (void sp-event-list-t*)
+  (sp-event-list-free events) (void sp-event-list-t**)
   (sp-event-memory-init a additional-size) (status-t sp-event-t* sp-time-t)
   (sp-event-memory-add event address handler) (void sp-event-t* void* sp-memory-free-t)
   (sp-event-memory-free event) (void sp-event-t*)

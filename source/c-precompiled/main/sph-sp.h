@@ -381,7 +381,9 @@ void sp_plot_spectrum_file(uint8_t* path);
 void sp_plot_spectrum(sp_sample_t* a, sp_time_t a_size);
 /* sequencer */
 
-#define sp_declare_event(id) sp_event_t id = { 0 }
+#define sp_declare_event(id) \
+  sp_event_t id = { 0 }; \
+  id.memory.data = 0
 #define sp_declare_event_2(id1, id2) \
   sp_declare_event(id1); \
   sp_declare_event(id2)
@@ -437,7 +439,15 @@ void sp_plot_spectrum(sp_sample_t* a, sp_time_t a_size);
 #define sp_seq_events_prepare sp_event_list_reverse
 #define free_event_on_error(event_address) free_on_error((event_address->free), event_address)
 #define free_event_on_exit(event_address) free_on_exit((event_address->free), event_address)
-#define sp_group_event_list(event) ((sp_event_list_t*)(event->data))
+#define sp_group_event_list(event) ((sp_event_list_t**)(&(event->data)))
+#define sp_event_free(a) \
+  if (a.free) { \
+    (a.free)((&a)); \
+  }
+#define sp_event_pointer_free(a) \
+  if (a->free) { \
+    (a->free)(a); \
+  }
 array3_declare_type(sp_memory, memreg2_t);
 typedef void (*sp_memory_free_t)(void*);
 struct sp_event_t;
@@ -528,7 +538,7 @@ void sp_event_list_display(sp_event_list_t* a);
 void sp_event_list_reverse(sp_event_list_t** a);
 void sp_event_list_remove_element(sp_event_list_t** a, sp_event_list_t* element);
 status_t sp_event_list_add(sp_event_list_t** a, sp_event_t event);
-void sp_event_list_free(sp_event_list_t* events);
+void sp_event_list_free(sp_event_list_t** events);
 status_t sp_event_memory_init(sp_event_t* a, sp_time_t additional_size);
 void sp_event_memory_add(sp_event_t* event, void* address, sp_memory_free_t handler);
 void sp_event_memory_free(sp_event_t* event);

@@ -42,13 +42,13 @@
       (set new:next 0 new:previous current current:next new)))
   (label exit status-return))
 
-(define (sp-event-list-free events) (void sp-event-list-t*)
-  "free all list elements and the associated events. only needed if sp_seq will not further process and free all past events"
-  (declare temp sp-event-list-t*)
-  (while events
-    (if events:event.free (events:event.free &events:event))
-    (set temp events events events:next)
-    (free temp)))
+(define (sp-event-list-free events) (void sp-event-list-t**)
+  "free all list elements and the associated events. update the list head so it becomes the empty list.
+   needed if sp_seq will not further process and thereby free further past events"
+  (declare current sp-event-list-t* temp sp-event-list-t*)
+  (set current *events)
+  (while current (sp-event-free current:event) (set temp current current current:next) (free temp))
+  (set events 0))
 
 (define (sp-seq start end out events) (status-t sp-time-t sp-time-t sp-block-t sp-event-list-t**)
   "event arrays must have been prepared/sorted once with sp_seq_event_prepare for seq to work correctly.
@@ -57,7 +57,8 @@
    generate receives event relative start/end times, and output blocks that start at the current block.
    prepare will only be called once and the function pointer will be set to zero afterwards.
    if prepare fails, sp_seq returns immediately.
-   past events including the event list elements are freed when processing the following block"
+   past events including the event list elements are freed when processing the following block.
+   on error, all events and the event list are freed"
   status-declare
   (declare e sp-event-t ep sp-event-t* current sp-event-list-t* next sp-event-list-t*)
   (set current *events)
@@ -73,7 +74,7 @@
           (e.generate (if* (> start e.start) (- start e.start) 0) (- (sp-min end e.end) e.start)
             (if* (> e.start start) (sp-block-with-offset out (- e.start start)) out) ep))))
     (set current current:next))
-  (label exit status-return))
+  (label exit (if status-is-failure (sp-event-list-free events)) status-return))
 
 (declare sp-seq-future-t
   (type
@@ -87,13 +88,12 @@
       (future future-t))))
 
 (define (sp-seq-parallel-future-f data) (void* void*)
-  (define a sp-seq-future-t* data)
-  (if a:event:prepare
-    (begin
-      (set a:status (a:event:prepare a:event))
-      (if (= status-id-success a:status.id) (set a:event:prepare 0) (return 0))))
-  (set a:status (a:event:generate a:start a:end a:out a:event))
-  (return 0))
+  status-declare
+  (declare a sp-seq-future-t* ep sp-event-t*)
+  (set a data ep a:event)
+  (if ep:prepare (begin (status-require (ep:prepare ep)) (set ep:prepare 0)))
+  (status-require (ep:generate a:start a:end a:out ep))
+  (label exit (set a:status status) (if status-is-failure (sp-event-pointer-free ep)) (return 0)))
 
 (define (sp-seq-parallel start end out events)
   (status-t sp-time-t sp-time-t sp-block-t sp-event-list-t**)
@@ -151,11 +151,12 @@
         (for-each-index i allocated
           (sp-block-free (address-of (struct-get (array-get sf-array i) out))))
         (free sf-array)))
+    (if status-is-failure (sp-event-list-free events))
     status-return))
 
 (define (sp-group-free a) (void sp-event-t*)
-  (define sp sp-event-list-t* a:data)
-  (sp-event-list-free sp)
+  (set a:free 0)
+  (sp-event-list-free (sp-group-event-list a))
   (sp-event-memory-free a))
 
 (define (sp-group-generate start end out a) (status-t sp-time-t sp-time-t sp-block-t sp-event-t*)
@@ -213,7 +214,7 @@
   (set *out result)
   (label exit status-return))
 
-(define (sp-wave-event-free a) (void sp-event-t*) (free a:data))
+(define (sp-wave-event-free a) (void sp-event-t*) (set a:free 0) (free a:data))
 
 (define (sp-wave-event-generate start end out event)
   (status-t sp-time-t sp-time-t sp-block-t sp-event-t*)
@@ -323,6 +324,7 @@
   (label exit status-return))
 
 (define (sp-noise-event-free a) (void sp-event-t*)
+  (set a:free 0)
   (define s sp-noise-event-state-t* a:data)
   (sp-convolution-filter-state-free s:filter-state)
   (free s)
@@ -486,6 +488,7 @@
   (label exit status-return))
 
 (define (sp-cheap-noise-event-free a) (void sp-event-t*)
+  (set a:free 0)
   (define s sp-cheap-noise-event-state-t* a:data)
   (sp-cheap-filter-state-free &s:filter-state)
   (free s)
@@ -602,6 +605,7 @@
           (+ (array3-max-size a:memory) (- additional-size (array3-unused-size a:memory)))))
       sp-memory-error)
     (if (sp-memory-new additional-size &a:memory) sp-memory-error))
+  (if (not a:free) (set a:free sp-event-memory-free))
   (label exit status-return))
 
 (define (sp-event-memory-add a address handler) (void sp-event-t* void* sp-memory-free-t)
@@ -610,15 +614,18 @@
   (sp-memory-add a:memory m))
 
 (define (sp-event-memory-free a) (void sp-event-t*)
-  "free all registered memory and unitialize the event-memory register"
+  "free all registered memory and unitialize the event-memory register.
+   can be used as an event.free function if only memory should be removed before other fields have been set"
+  (if (not a:memory.data) return)
   (declare m memreg2-t)
   (for-each-index i (array3-size a:memory) (set m (array3-get a:memory i)) (m.handler m.address))
-  (array3-free a:memory))
+  (array3-free a:memory)
+  (set a:memory.data 0))
 
 (define (sp-map-event-free event) (void sp-event-t*)
   (declare s sp-map-event-state-t*)
-  (set s event:data)
-  (if s:event.free (s:event.free &s:event))
+  (set event:free 0 s event:data)
+  (sp-event-free s:event)
   (free s)
   (sp-event-memory-free event))
 

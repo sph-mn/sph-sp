@@ -409,7 +409,7 @@ status_t test_sp_seq() {
   test_helper_assert("block contents 1 event 1", ((1 == (out.samples)[0][0]) && (1 == (out.samples)[0][39])));
   test_helper_assert("block contents 1 gap", (0 == (out.samples)[0][40]));
   test_helper_assert("block contents 1 event 2", ((2 == (out.samples)[0][41]) && (2 == (out.samples)[0][99])));
-  sp_event_list_free(events);
+  sp_event_list_free((&events));
   sp_block_free((&out));
 exit:
   status_return;
@@ -783,7 +783,7 @@ status_t test_sp_seq_parallel() {
   test_helper_assert("last 1", (sp_sample_nearly_equal((-5.956993), ((block.samples)[0][(step_size - 1)]), (0.001)) && sp_sample_nearly_equal((-5.956993), ((block.samples)[1][(step_size - 1)]), (0.001))));
   test_helper_assert("first 2", (sp_sample_nearly_equal((-6.087614), ((block.samples)[0][step_size]), (0.001)) && sp_sample_nearly_equal((-6.087614), ((block.samples)[1][step_size]), (0.001))));
   test_helper_assert("last 2", (sp_sample_nearly_equal((9.615618), ((block.samples)[0][((2 * step_size) - 1)]), (0.001)) && sp_sample_nearly_equal((9.615618), ((block.samples)[1][((2 * step_size) - 1)]), (0.001))));
-  sp_event_list_free(events);
+  sp_event_list_free((&events));
   free(amod);
   free(fmod);
   sp_block_free((&block));
