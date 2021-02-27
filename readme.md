@@ -94,7 +94,7 @@ status.id zero is success.
 ~~~
 sp_block_to_file :: sp_block_t:block uint8_t*:path sp_time_t:rate -> status_t
 sp_block_copy :: sp_block_t:a sp_block_t:b -> void
-sp_block_free :: sp_block_t:a -> void
+sp_block_free :: sp_block_t*:a -> void
 sp_block_new :: sp_channel_count_t:channel_count sp_time_t:sample_count sp_block_t*:out_block -> status_t
 sp_block_with_offset :: sp_block_t:a sp_time_t:offset -> sp_block_t
 sp_block_zero :: sp_block_t:a -> void
@@ -102,7 +102,9 @@ sp_channel_config :: boolean:mute sp_time_t:delay sp_time_t:phs sp_sample_t:amp 
 sp_cheap_filter :: sp_state_variable_filter_t:type sp_sample_t*:in sp_time_t:in_size sp_float_t:cutoff sp_time_t:passes sp_float_t:q_factor sp_cheap_filter_state_t*:state sp_sample_t*:out -> void
 sp_cheap_filter_state_free :: sp_cheap_filter_state_t*:a -> void
 sp_cheap_filter_state_new :: sp_time_t:max_size sp_time_t:max_passes sp_cheap_filter_state_t*:out_state -> status_t
-sp_cheap_noise_event :: sp_time_t:start sp_time_t:end sp_cheap_noise_event_config_t:config sp_event_t*:out_event -> status_t
+sp_cheap_noise_event_config_new :: sp_cheap_noise_event_config_t**:out -> status_t
+sp_cheap_noise_event_free :: -> void
+sp_cheap_noise_event_prepare :: sp_event_t*:event -> status_t
 sp_compositions_max :: sp_time_t:sum -> sp_time_t
 sp_convolution_filter :: sp_sample_t*:in sp_time_t:in_len sp_convolution_filter_ir_f_t:ir_f void*:ir_f_arguments uint8_t:ir_f_arguments_len sp_convolution_filter_state_t**:out_state sp_sample_t*:out_samples -> status_t
 sp_convolution_filter_state_free :: sp_convolution_filter_state_t*:state -> void
@@ -110,6 +112,7 @@ sp_convolution_filter_state_set :: sp_convolution_filter_ir_f_t:ir_f void*:ir_f_
 sp_convolve :: sp_sample_t*:a sp_time_t:a_len sp_sample_t*:b sp_time_t:b_len sp_time_t:result_carryover_len sp_sample_t*:result_carryover sp_sample_t*:result_samples -> void
 sp_convolve_one :: sp_sample_t*:a sp_time_t:a_len sp_sample_t*:b sp_time_t:b_len sp_sample_t*:result_samples -> void
 sp_event_list_add :: sp_event_list_t**:a sp_event_t:event -> status_t
+sp_event_list_display :: sp_event_list_t*:a -> void
 sp_event_list_free :: sp_event_list_t*:events -> void
 sp_event_list_remove_element :: sp_event_list_t**:a sp_event_list_t*:element -> void
 sp_event_list_reverse :: sp_event_list_t**:a -> void
@@ -130,11 +133,16 @@ sp_group_append :: sp_event_t*:a sp_event_t:event -> status_t
 sp_group_event_f :: sp_time_t:start sp_time_t:end sp_block_t:out sp_event_t*:event -> void
 sp_group_event_free :: sp_event_t*:a -> void
 sp_group_event_parallel_f :: sp_time_t:start sp_time_t:end sp_block_t:out sp_event_t*:event -> void
-sp_group_new :: sp_time_t:start sp_event_t*:out -> void
+sp_group_free :: -> void
+sp_group_prepare :: sp_event_t*:event -> status_t
 sp_initialize :: uint16_t:cpu_count sp_channel_count_t:channels sp_time_t:rate -> status_t
-sp_map_event :: sp_event_t:event sp_map_event_generate_t:f void*:state uint8_t:isolate sp_event_t*:out -> status_t
+sp_map_event_config_new :: sp_map_event_config_t**:out -> status_t
+sp_map_event_free :: -> void
+sp_map_event_prepare :: sp_event_t*:event -> status_t
 sp_moving_average :: sp_sample_t*:in sp_time_t:in_size sp_sample_t*:prev sp_sample_t*:next sp_time_t:radius sp_sample_t*:out -> void
-sp_noise_event :: sp_time_t:start sp_time_t:end sp_noise_event_config_t:config sp_event_t*:out_event -> status_t
+sp_noise_event_config_new :: sp_noise_event_config_t**:out -> status_t
+sp_noise_event_free :: -> void
+sp_noise_event_prepare :: sp_event_t*:event -> status_t
 sp_null_ir :: sp_sample_t**:out_ir sp_time_t*:out_len -> status_t
 sp_passthrough_ir :: sp_sample_t**:out_ir sp_time_t*:out_len -> status_t
 sp_path_derivation :: sp_path_t:path sp_sample_t**:x_changes sp_sample_t**:y_changes sp_time_t:index sp_path_t*:out -> status_t
@@ -310,8 +318,9 @@ sp_times_swap :: sp_time_t*:a ssize_t:i1 ssize_t:i2 -> void
 sp_times_xor :: sp_time_t*:a sp_time_t*:b sp_time_t:size sp_time_t:limit sp_time_t*:out -> void
 sp_triangle :: sp_time_t:t sp_time_t:a sp_time_t:b -> sp_sample_t
 sp_u64_from_array :: uint8_t*:a sp_time_t:size -> uint64_t
-sp_wave_event :: sp_time_t:start sp_time_t:end sp_wave_event_config_t:config sp_event_t*:out -> status_t
-sp_wave_event :: sp_time_t:start sp_time_t:end sp_wave_event_config_t:config sp_event_t*:out -> status_t
+sp_wave_event_config_new :: sp_wave_event_config_t**:out -> status_t
+sp_wave_event_free :: -> void
+sp_wave_event_prepare :: sp_event_t*:event -> status_t
 sp_window_blackman :: sp_float_t:a sp_time_t:width -> sp_float_t
 sp_windowed_sinc_bp_br :: sp_sample_t*:in sp_time_t:in_len sp_float_t:cutoff_l sp_float_t:cutoff_h sp_float_t:transition_l sp_float_t:transition_h boolean:is_reject sp_convolution_filter_state_t**:out_state sp_sample_t*:out_samples -> status_t
 sp_windowed_sinc_bp_br_ir :: sp_float_t:cutoff_l sp_float_t:cutoff_h sp_float_t:transition_l sp_float_t:transition_h boolean:is_reject sp_sample_t**:out_ir sp_time_t*:out_len -> status_t
@@ -328,6 +337,8 @@ sp_windowed_sinc_lp_hp_ir_length :: sp_float_t:transition -> sp_time_t
 ~~~
 boolean
 f64
+free_event_on_error(event_address)
+free_event_on_exit(event_address)
 free_on_error(address, handler)
 free_on_error1(address)
 free_on_error_free
@@ -354,17 +365,14 @@ sp_cheap_floor_positive(a)
 sp_cheap_round_positive(a)
 sp_declare_cheap_filter_state(name)
 sp_declare_cheap_noise_config(name)
-sp_declare_cheap_noise_event_config(name)
 sp_declare_event(id)
 sp_declare_event_2(id1, id2)
 sp_declare_event_3(id1, id2, id3)
 sp_declare_event_4(id1, id2, id3, id4)
 sp_declare_event_list(id)
 sp_declare_noise_config(name)
-sp_declare_noise_event_config(name)
 sp_declare_sine_config(name)
 sp_declare_sine_config_lfo(name)
-sp_declare_wave_event_config(name)
 sp_default_random_seed
 sp_event_duration(a)
 sp_event_duration_set(a, duration)
@@ -383,7 +391,7 @@ sp_file_mode_write
 sp_filter_state_free
 sp_filter_state_t
 sp_float_t
-sp_group_events(a)
+sp_group_event_list(event)
 sp_group_size_t
 sp_malloc_type(count, type, pointer_address)
 sp_max(a, b)
@@ -479,7 +487,7 @@ uint32_t sp_cpu_count
 ~~~
 sp_convolution_filter_ir_f_t: void* sp_sample_t** sp_time_t* -> status_t
 sp_event_generate_t: sp_time_t sp_time_t sp_block_t sp_event_t* -> status_t
-sp_map_event_generate_t: sp_time_t sp_time_t sp_block_t sp_block_t void* -> status_t
+sp_map_generate_t: sp_time_t sp_time_t sp_block_t sp_block_t void* -> status_t
 sp_memory_free_t: void* -> void
 sp_stat_samples_f_t: sp_sample_t* sp_time_t sp_sample_t* -> uint8_t
 sp_stat_times_f_t: sp_time_t* sp_time_t sp_sample_t* -> uint8_t
@@ -527,10 +535,10 @@ sp_event_list_t: struct sp_event_list_struct
 sp_event_t: struct sp_event_t
   start: sp_time_t
   end: sp_time_t
-  state: void*
   generate: function_pointer status_t sp_time_t sp_time_t sp_block_t struct sp_event_t*
   prepare: function_pointer status_t struct sp_event_t*
   free: function_pointer void struct sp_event_t*
+  data: void*
   memory: sp_memory_t
 sp_events_t: struct
   data: void*
@@ -542,9 +550,14 @@ sp_file_t: struct
   sample_rate: sp_sample_rate_t
   channel_count: sp_channel_count_t
   data: void*
+sp_map_event_config_t: struct
+  event: sp_event_t
+  map_generate: sp_map_generate_t
+  state: void*
+  isolate: boolean
 sp_map_event_state_t: struct
   event: sp_event_t
-  generate: sp_map_event_generate_t
+  map_generate: sp_map_generate_t
   state: void*
 sp_noise_event_config_t: struct
   amp: sp_sample_t
