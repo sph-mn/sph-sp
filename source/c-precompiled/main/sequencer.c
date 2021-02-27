@@ -1,6 +1,13 @@
 
 /* the sc version of this file defines macros which are only available in sc.
 the macros are used as optional helpers to simplify common tasks where c syntax alone offers no good alternative */
+void sp_event_list_display(sp_event_list_t* a) {
+  while (a) {
+    printf(("(%lu %lu %lu) "), (a->event.start), (a->event.end), (&(a->event)));
+    a = a->next;
+  };
+  printf("\n");
+}
 void sp_event_list_reverse(sp_event_list_t** a) {
   sp_event_list_t* current;
   sp_event_list_t* next;
@@ -220,7 +227,7 @@ status_t sp_seq_parallel(sp_time_t start, sp_time_t end, sp_block_t out, sp_even
 exit:
   if (sf_array) {
     for (sp_time_t i = 0; (i < allocated); i += 1) {
-      sp_block_free(((sf_array[i]).out));
+      sp_block_free((&((sf_array[i]).out)));
     };
     free(sf_array);
   };
@@ -231,7 +238,7 @@ void sp_group_free(sp_event_t* a) {
   sp_event_list_free(sp);
   sp_event_memory_free(a);
 }
-status_t sp_group_generate(sp_time_t start, sp_time_t end, sp_block_t out, sp_event_t* event) { return ((sp_seq(start, end, out, ((sp_event_list_t**)(&(event->data)))))); }
+status_t sp_group_generate(sp_time_t start, sp_time_t end, sp_block_t out, sp_event_t* a) { return ((sp_seq(start, end, out, ((sp_event_list_t**)(&(a->data)))))); }
 status_t sp_group_prepare(sp_event_t* a) {
   status_declare;
   sp_seq_events_prepare(((sp_event_list_t**)(&(a->data))));
@@ -262,6 +269,31 @@ sp_channel_config_t sp_channel_config(boolean mute, sp_time_t delay, sp_time_t p
   a.amp = amp;
   a.amod = amod;
   return (a);
+}
+void sp_channel_config_zero(sp_channel_config_t* a) {
+  sp_channel_config_t channel_config = { 0 };
+  for (sp_time_t i = 0; (i < sp_channel_limit); i += 1) {
+    a[i] = channel_config;
+  };
+}
+
+/** heap allocates a noise_event_config struct and sets some defaults */
+status_t sp_wave_event_config_new(sp_wave_event_config_t** out) {
+  status_declare;
+  sp_wave_event_config_t* result;
+  status_require((sp_malloc_type(1, sp_wave_event_config_t, (&result))));
+  (*result).wvf = sp_sine_table;
+  (*result).wvf_size = sp_rate;
+  (*result).phs = 0;
+  (*result).frq = sp_rate;
+  (*result).fmod = 0;
+  (*result).amp = 1;
+  (*result).amod = 0;
+  (*result).channels = sp_channels;
+  sp_channel_config_zero((result->channel_config));
+  *out = result;
+exit:
+  status_return;
 }
 void sp_wave_event_free(sp_event_t* a) { free((a->data)); }
 status_t sp_wave_event_generate(sp_time_t start, sp_time_t end, sp_block_t out, sp_event_t* event) {
@@ -367,6 +399,27 @@ typedef struct {
   sp_sample_t* noise;
   sp_sample_t* temp;
 } sp_noise_event_state_t;
+/** heap allocates a noise_event_config struct and sets some defaults */
+status_t sp_noise_event_config_new(sp_noise_event_config_t** out) {
+  status_declare;
+  sp_noise_event_config_t* result;
+  status_require((sp_malloc_type(1, sp_noise_event_config_t, (&result))));
+  (*result).amp = 1;
+  (*result).amod = 0;
+  (*result).cutl = 0.0;
+  (*result).cuth = 0.5;
+  (*result).trnl = 0.1;
+  (*result).trnh = 0.1;
+  (*result).cutl_mod = 0;
+  (*result).cuth_mod = 0;
+  (*result).resolution = (sp_rate / 10);
+  (*result).is_reject = 0;
+  (*result).channels = sp_channels;
+  sp_channel_config_zero((result->channel_config));
+  *out = result;
+exit:
+  status_return;
+}
 void sp_noise_event_free(sp_event_t* a) {
   sp_noise_event_state_t* s = a->data;
   sp_convolution_filter_state_free((s->filter_state));
@@ -424,43 +477,40 @@ exit:
   memreg_free;
   status_return;
 }
-status_t sp_noise_event_channel(sp_time_t duration, sp_noise_event_config_t config, sp_channel_count_t channel, sp_random_state_t rs, sp_sample_t* state_noise, sp_sample_t* state_temp, sp_event_t* out) {
+status_t sp_noise_event_channel(sp_time_t duration, sp_noise_event_config_t config, sp_channel_count_t channel, sp_random_state_t rs, sp_sample_t* state_noise, sp_sample_t* state_temp, sp_event_t* event) {
   status_declare;
-  sp_noise_event_state_t* data;
+  sp_noise_event_state_t* state;
   sp_channel_config_t channel_config;
   sp_convolution_filter_state_t* filter_state;
-  sp_declare_event(event);
-  data = 0;
+  state = 0;
   filter_state = 0;
   channel_config = (config.channel_config)[channel];
   status_require((sp_noise_event_filter_state((sp_array_or_fixed((config.cutl_mod), (config.cutl), 0)), (sp_array_or_fixed((config.cuth_mod), (config.cuth), 0)), (config.trnl), (config.trnh), (config.is_reject), (&rs), (&filter_state))));
-  status_require((sp_malloc_type(1, sp_noise_event_state_t, (&data))));
-  (*data).amp = (channel_config.use ? channel_config.amp : config.amp);
-  (*data).amod = ((channel_config.use && channel_config.amod) ? channel_config.amod : config.amod);
-  (*data).cutl = config.cutl;
-  (*data).cuth = config.cuth;
-  (*data).trnl = config.trnl;
-  (*data).trnh = config.trnh;
-  (*data).cutl_mod = config.cutl_mod;
-  (*data).cuth_mod = config.cuth_mod;
-  (*data).resolution = config.resolution;
-  (*data).is_reject = config.is_reject;
-  (*data).random_state = rs;
-  (*data).channel = channel;
-  (*data).filter_state = filter_state;
-  (*data).noise = state_noise;
-  (*data).temp = state_temp;
-  event.data = data;
-  event.start = (channel_config.use ? channel_config.delay : 0);
-  event.end = (channel_config.use ? (duration + channel_config.delay) : duration);
-  event.prepare = 0;
-  event.generate = sp_noise_event_generate;
-  event.free = sp_noise_event_free;
-  *out = event;
+  status_require((sp_malloc_type(1, sp_noise_event_state_t, (&state))));
+  (*state).amp = (channel_config.use ? channel_config.amp : config.amp);
+  (*state).amod = ((channel_config.use && channel_config.amod) ? channel_config.amod : config.amod);
+  (*state).cutl = config.cutl;
+  (*state).cuth = config.cuth;
+  (*state).trnl = config.trnl;
+  (*state).trnh = config.trnh;
+  (*state).cutl_mod = config.cutl_mod;
+  (*state).cuth_mod = config.cuth_mod;
+  (*state).resolution = config.resolution;
+  (*state).is_reject = config.is_reject;
+  (*state).random_state = rs;
+  (*state).channel = channel;
+  (*state).filter_state = filter_state;
+  (*state).noise = state_noise;
+  (*state).temp = state_temp;
+  (*event).data = state;
+  (*event).start = (channel_config.use ? channel_config.delay : 0);
+  (*event).end = (channel_config.use ? (duration + channel_config.delay) : duration);
+  (*event).generate = sp_noise_event_generate;
+  (*event).free = sp_noise_event_free;
 exit:
   if (status_is_failure) {
-    if (data) {
-      free(data);
+    if (state) {
+      free(state);
     };
     if (filter_state) {
       sp_convolution_filter_state_free(filter_state);
@@ -521,6 +571,25 @@ typedef struct {
   sp_sample_t* noise;
   sp_sample_t* temp;
 } sp_cheap_noise_event_state_t;
+/** heap allocates a noise_event_config struct and sets some defaults */
+status_t sp_cheap_noise_event_config_new(sp_cheap_noise_event_config_t** out) {
+  status_declare;
+  sp_cheap_noise_event_config_t* result;
+  status_require((sp_malloc_type(1, sp_cheap_noise_event_config_t, (&result))));
+  (*result).amp = 1;
+  (*result).amod = 0;
+  (*result).cut = 0.5;
+  (*result).cut_mod = 0;
+  (*result).q_factor = 0.01;
+  (*result).passes = 1;
+  (*result).type = sp_state_variable_filter_lp;
+  (*result).resolution = (sp_rate / 10);
+  (*result).channels = sp_channels;
+  sp_channel_config_zero((result->channel_config));
+  *out = result;
+exit:
+  status_return;
+}
 void sp_cheap_noise_event_free(sp_event_t* a) {
   sp_cheap_noise_event_state_t* s = a->data;
   sp_cheap_filter_state_free((&(s->filter_state)));
@@ -690,7 +759,7 @@ status_t sp_map_event_isolated_generate(sp_time_t start, sp_time_t end, sp_block
   status_require(((s->event.generate)(start, end, temp_out, (&(s->event)))));
   status_require(((s->map_generate)(start, end, temp_out, out, (s->state))));
 exit:
-  sp_block_free(temp_out);
+  sp_block_free((&temp_out));
   status_return;
 }
 

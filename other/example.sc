@@ -7,33 +7,34 @@
 (sc-include-once "../source/sc/main/sc-macros")
 (pre-include "stdio.h" "sph-sp.h")
 
-(sp-define-event (example-event duration)
-  sp-sample-t
-  (declare amod sp-sample-t*)
-  (sp-declare-event-4 g s1 n1 n2)
-  (sp-declare-sine-config s1-config)
-  (sp-declare-noise-config n1-config)
-  (sp-declare-cheap-noise-config n2-config)
-  (free-on-error-init 1)
-  (sp-group-new 0 &g)
-  (free-on-error &g g.free)
-  (status-require (sp-event-memory-init &g 1))
-  (sp-path-samples &amod duration (line (/ duration 2) 1.0) (line duration 0))
-  (sp-event-memory-add1 &g &amod)
-  (sp-sine &s1 0 duration s1-config (amod amod frq 3) (1 use 1 amp 0.1))
-  (status-require (sp-group-add &g s1))
-  (sp-noise &n1 0 duration n1-config (amod amod cutl 0.2) (0 use 1 delay 30000 amp 0.2))
-  (status-require (sp-group-add &g n1))
-  (sp-cheap-noise &n2 0 duration n2-config (amod amod cut 0.5) (1 use 1 amp 0.001))
-  (status-require (sp-group-add &g n2))
-  (set _result g))
+(sp-define-trigger* example-event (printf "-- example-event-prepare\n")
+  (declare
+    amod sp-sample-t*
+    duration sp-time-t
+    s1-config sp-wave-event-config-t*
+    n1-config sp-noise-event-config-t*
+    n2-config sp-cheap-noise-event-config-t*)
+  (sp-declare-event-3 s1 n1 n2) (free-on-error-init 4) (free-on-error _event:free _event)
+  (status-require (sp-event-memory-init _event 1))
+  (status-require (sp-wave-event-config-new &s1-config)) (free-on-error1 s1-config)
+  (status-require (sp-noise-event-config-new &n1-config)) (free-on-error1 n1-config)
+  (status-require (sp-cheap-noise-event-config-new &n2-config)) (free-on-error1 n2-config)
+  (set duration (- _event:end _event:start) _event:free sp-group-free)
+  (sp-path-samples* &amod duration (line (/ duration 2) 1.0) (line duration 0))
+  (sp-event-memory-add1 _event &amod)
+  (sp-wave* s1 0 duration s1-config (amod amod frq 8) (1 use 1 amp 0.1))
+  (status-require (sp-group-add _event s1))
+  (sp-cheap-noise* n2 0 duration n2-config (amod amod cut 0.5) (1 use 1 amp 0.001))
+  (status-require (sp-group-add _event n2))
+  (sp-noise* n1 0 duration *n1-config (amod amod cutl 0.2 cuth 0.5) (0 use 1 delay 30000 amp 0.5))
+  (status-require (sp-group-add _event n1)) (status-require (sp-group-prepare _event)))
 
 (define (main) int
   status-declare
   (sp-declare-event event)
   (sp-declare-event-list events)
   (sp-initialize 1 2 48000)
-  (status-require (example-event 0 (* sp-rate 2) &event))
+  (struct-set event start 0 end (* sp-rate 2) prepare example-event)
   (status-require (sp-event-list-add &events event))
   (status-require (sp-render-quick events 1))
   (label exit (return status.id)))

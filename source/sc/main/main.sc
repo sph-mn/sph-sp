@@ -78,9 +78,9 @@
   (set out:size size out:channels channels)
   (label exit (if status-is-failure memreg-free) status-return))
 
-(define (sp-block-free a) (void sp-block-t)
+(define (sp-block-free a) (void sp-block-t*)
   (declare i sp-time-t)
-  (if a.size (for ((set i 0) (< i a.channels) (set+ i 1)) (free (array-get a.samples i)))))
+  (if a:size (for ((set i 0) (< i a:channels) (set+ i 1)) (free (array-get a:samples i)))))
 
 (define (sp-block-with-offset a offset) (sp-block-t sp-block-t sp-time-t)
   "return a new block with offset added to all channel sample arrays"
@@ -280,7 +280,7 @@
     (begin
       (sp-seq i (+ i remainder) block &events)
       (status-require (sp-file-write &file block.samples remainder &written))))
-  (label exit (sp-block-free block) (sp-file-close file) status-return))
+  (label exit (sp-block-free &block) (sp-file-close file) status-return))
 
 (define (sp-render-block events start end config out)
   (status-t sp-event-list-t* sp-time-t sp-time-t sp-render-config-t sp-block-t*)

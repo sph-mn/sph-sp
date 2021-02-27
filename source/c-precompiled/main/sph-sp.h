@@ -193,7 +193,7 @@ int sp_fft(sp_time_t input_len, double* input_or_output_real, double* input_or_o
 int sp_ffti(sp_time_t input_len, double* input_or_output_real, double* input_or_output_imag);
 void sp_convolve_one(sp_sample_t* a, sp_time_t a_len, sp_sample_t* b, sp_time_t b_len, sp_sample_t* result_samples);
 void sp_convolve(sp_sample_t* a, sp_time_t a_len, sp_sample_t* b, sp_time_t b_len, sp_time_t result_carryover_len, sp_sample_t* result_carryover, sp_sample_t* result_samples);
-void sp_block_free(sp_block_t a);
+void sp_block_free(sp_block_t* a);
 sp_block_t sp_block_with_offset(sp_block_t a, sp_time_t offset);
 status_t sp_null_ir(sp_sample_t** out_ir, sp_time_t* out_len);
 status_t sp_passthrough_ir(sp_sample_t** out_ir, sp_time_t* out_len);
@@ -381,7 +381,6 @@ void sp_plot_spectrum_file(uint8_t* path);
 void sp_plot_spectrum(sp_sample_t* a, sp_time_t a_size);
 /* sequencer */
 
-#define sp_declare_wave_event_config(name) sp_wave_event_config_t name = { 0 }
 #define sp_declare_event(id) sp_event_t id = { 0 }
 #define sp_declare_event_2(id1, id2) \
   sp_declare_event(id1); \
@@ -394,17 +393,12 @@ void sp_plot_spectrum(sp_sample_t* a, sp_time_t a_size);
   sp_declare_event_2(id1, id2); \
   sp_declare_event_2(id3, id4)
 #define sp_declare_event_list(id) sp_event_list_t* id = 0
-
-/** optional helper that sets defaults. the mod arrays must be zero if not used */
-#define sp_declare_noise_event_config(name) sp_noise_event_config_t name = { 0 }
-#define sp_declare_cheap_noise_event_config(name) sp_cheap_noise_event_config_t name = { 0 }
 #define sp_event_duration(a) (a.end - a.start)
 #define sp_event_duration_set(a, duration) a.end = (a.start + duration)
 #define sp_event_move(a, start) \
   a.end = (start + (a.end - a.start)); \
   a.start = start
 #define sp_group_size_t uint16_t
-#define sp_group_events(a) *((sp_event_list_t*)(a.state))
 #define sp_event_memory_add1(event, address) sp_event_memory_add(event, address, free)
 #define sp_event_memory_add1_2(a, data1, data2) \
   sp_event_memory_add1(a, data1); \
@@ -442,6 +436,9 @@ void sp_plot_spectrum(sp_sample_t* a, sp_time_t a_size);
 #define sp_memory_add array3_add
 #define sp_seq_events_prepare sp_event_list_reverse
 #define sp_declare_map_event_config(name) sp_map_event_config_t name = { 0 }
+#define free_event_on_error(event_address) free_on_error((event_address->free), event_address)
+#define free_event_on_exit(event_address) free_on_exit((event_address->free), event_address)
+#define sp_group_event_list(event) ((sp_event_list_t*)(event->data))
 array3_declare_type(sp_memory, memreg2_t);
 typedef void (*sp_memory_free_t)(void*);
 struct sp_event_t;
@@ -528,6 +525,7 @@ typedef struct {
   void* state;
   boolean isolate;
 } sp_map_event_config_t;
+void sp_event_list_display(sp_event_list_t* a);
 void sp_event_list_reverse(sp_event_list_t** a);
 void sp_event_list_remove_element(sp_event_list_t** a, sp_event_list_t* element);
 status_t sp_event_list_add(sp_event_list_t** a, sp_event_t event);
@@ -548,6 +546,14 @@ void sp_group_event_parallel_f(sp_time_t start, sp_time_t end, sp_block_t out, s
 void sp_group_event_free(sp_event_t* a);
 status_t sp_map_event_prepare(sp_event_t* event);
 sp_channel_config_t sp_channel_config(boolean mute, sp_time_t delay, sp_time_t phs, sp_sample_t amp, sp_sample_t* amod);
+void sp_group_free();
+void sp_wave_event_free();
+void sp_noise_event_free();
+void sp_cheap_noise_event_free();
+void sp_map_event_free();
+status_t sp_noise_event_config_new(sp_noise_event_config_t** out);
+status_t sp_cheap_noise_event_config_new(sp_cheap_noise_event_config_t** out);
+status_t sp_wave_event_config_new(sp_wave_event_config_t** out);
 /* path */
 
 #define sp_path_t spline_path_t

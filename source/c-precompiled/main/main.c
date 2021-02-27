@@ -119,11 +119,11 @@ exit:
   };
   status_return;
 }
-void sp_block_free(sp_block_t a) {
+void sp_block_free(sp_block_t* a) {
   sp_time_t i;
-  if (a.size) {
-    for (i = 0; (i < a.channels); i += 1) {
-      free(((a.samples)[i]));
+  if (a->size) {
+    for (i = 0; (i < a->channels); i += 1) {
+      free(((a->samples)[i]));
     };
   };
 }
@@ -362,7 +362,7 @@ status_t sp_render_file(sp_event_list_t* events, sp_time_t start, sp_time_t end,
     status_require((sp_file_write((&file), (block.samples), remainder, (&written))));
   };
 exit:
-  sp_block_free(block);
+  sp_block_free((&block));
   sp_file_close(file);
   status_return;
 }

@@ -143,7 +143,7 @@
   (void sp-sample-t* sp-time-t sp-sample-t* sp-time-t sp-sample-t*)
   (sp-convolve a a-len b b-len result-carryover-len result-carryover result-samples)
   (void sp-sample-t* sp-time-t sp-sample-t* sp-time-t sp-time-t sp-sample-t* sp-sample-t*)
-  (sp-block-free a) (void sp-block-t)
+  (sp-block-free a) (void sp-block-t*)
   (sp-block-with-offset a offset) (sp-block-t sp-block-t sp-time-t)
   (sp-null-ir out-ir out-len) (status-t sp-sample-t** sp-time-t*)
   (sp-passthrough-ir out-ir out-len) (status-t sp-sample-t** sp-time-t*)
@@ -403,7 +403,6 @@
 (sc-comment "sequencer")
 
 (pre-define
-  (sp-declare-wave-event-config name) (define name sp-wave-event-config-t (struct-literal 0))
   (sp-declare-event id) (define id sp-event-t (struct-literal 0))
   (sp-declare-event-2 id1 id2) (begin (sp-declare-event id1) (sp-declare-event id2))
   (sp-declare-event-3 id1 id2 id3)
@@ -411,17 +410,10 @@
   (sp-declare-event-4 id1 id2 id3 id4)
   (begin (sp-declare-event-2 id1 id2) (sp-declare-event-2 id3 id4))
   (sp-declare-event-list id) (define id sp-event-list-t* 0)
-  (sp-declare-noise-event-config name)
-  (begin
-    "optional helper that sets defaults. the mod arrays must be zero if not used"
-    (define name sp-noise-event-config-t (struct-literal 0)))
-  (sp-declare-cheap-noise-event-config name)
-  (define name sp-cheap-noise-event-config-t (struct-literal 0))
   (sp-event-duration a) (- a.end a.start)
   (sp-event-duration-set a duration) (set a.end (+ a.start duration))
   (sp-event-move a start) (set a.end (+ start (- a.end a.start)) a.start start)
   sp-group-size-t uint16-t
-  (sp-group-events a) (pointer-get (convert-type a.state sp-event-list-t*))
   (sp-event-memory-add1 event address) (sp-event-memory-add event address free)
   (sp-event-memory-add1-2 a data1 data2)
   (begin (sp-event-memory-add1 a data1) (sp-event-memory-add1 a data2))
@@ -450,7 +442,10 @@
     (struct-set name channels sp-channels amp 1 type sp-state-variable-filter-lp cut 0.5))
   sp-memory-add array3-add
   sp-seq-events-prepare sp-event-list-reverse
-  (sp-declare-map-event-config name) (define name sp-map-event-config-t (struct-literal 0)))
+  (sp-declare-map-event-config name) (define name sp-map-event-config-t (struct-literal 0))
+  (free-event-on-error event-address) (free-on-error (: event-address free) event-address)
+  (free-event-on-exit event-address) (free-on-exit (: event-address free) event-address)
+  (sp-group-event-list event) (convert-type (: event data) sp-event-list-t*))
 
 (array3-declare-type sp-memory memreg2-t)
 
@@ -546,6 +541,7 @@
     (struct (event sp-event-t) (map-generate sp-map-generate-t) (state void*) (isolate boolean))))
 
 (declare
+  (sp-event-list-display a) (void sp-event-list-t*)
   (sp-event-list-reverse a) (void sp-event-list-t**)
   (sp-event-list-remove-element a element) (void sp-event-list-t** sp-event-list-t*)
   (sp-event-list-add a event) (status-t sp-event-list-t** sp-event-t)
@@ -555,10 +551,8 @@
   (sp-event-memory-free event) (void sp-event-t*)
   (sp-seq start end out events) (status-t sp-time-t sp-time-t sp-block-t sp-event-list-t**)
   (sp-seq-parallel start end out events) (status-t sp-time-t sp-time-t sp-block-t sp-event-list-t**)
-  (sp-wave-event-prepare event)
-  (status-t sp-event-t*)
-  (sp-noise-event-prepare event)
-  (status-t sp-event-t*)
+  (sp-wave-event-prepare event) (status-t sp-event-t*)
+  (sp-noise-event-prepare event) (status-t sp-event-t*)
   (sp-cheap-noise-event-prepare event) (status-t sp-event-t*)
   (sp-group-prepare event) (status-t sp-event-t*)
   (sp-group-add a event) (status-t sp-event-t* sp-event-t)
@@ -568,7 +562,15 @@
   (sp-group-event-free a) (void sp-event-t*)
   (sp-map-event-prepare event) (status-t sp-event-t*)
   (sp-channel-config mute delay phs amp amod)
-  (sp-channel-config-t boolean sp-time-t sp-time-t sp-sample-t sp-sample-t*))
+  (sp-channel-config-t boolean sp-time-t sp-time-t sp-sample-t sp-sample-t*)
+  (sp-group-free) (void sp-event-t*)
+  (sp-wave-event-free) (void sp-event-t*)
+  (sp-noise-event-free) (void sp-event-t*)
+  (sp-cheap-noise-event-free) (void sp-event-t*)
+  (sp-map-event-free) (void sp-event-t*)
+  (sp-noise-event-config-new out) (status-t sp-noise-event-config-t**)
+  (sp-cheap-noise-event-config-new out) (status-t sp-cheap-noise-event-config-t**)
+  (sp-wave-event-config-new out) (status-t sp-wave-event-config-t**))
 
 (sc-comment "path")
 

@@ -1,5 +1,9 @@
 (sc-include-once "./sc-macros")
 
+(define (sp-event-list-display a) (void sp-event-list-t*)
+  (while a (printf "(%lu %lu %lu) " a:event.start a:event.end &a:event) (set a a:next))
+  (printf "\n"))
+
 (define (sp-event-list-reverse a) (void sp-event-list-t**)
   (declare current sp-event-list-t* next sp-event-list-t*)
   (set current *a)
@@ -144,7 +148,8 @@
   (label exit
     (if sf-array
       (begin
-        (for-each-index i allocated (sp-block-free (struct-get (array-get sf-array i) out)))
+        (for-each-index i allocated
+          (sp-block-free (address-of (struct-get (array-get sf-array i) out))))
         (free sf-array)))
     status-return))
 
@@ -153,9 +158,8 @@
   (sp-event-list-free sp)
   (sp-event-memory-free a))
 
-(define (sp-group-generate start end out event)
-  (status-t sp-time-t sp-time-t sp-block-t sp-event-t*)
-  (return (sp-seq start end out (convert-type &event:data sp-event-list-t**))))
+(define (sp-group-generate start end out a) (status-t sp-time-t sp-time-t sp-block-t sp-event-t*)
+  (return (sp-seq start end out (convert-type &a:data sp-event-list-t**))))
 
 (define (sp-group-prepare a) (status-t sp-event-t*)
   status-declare
@@ -178,6 +182,28 @@
   (declare a sp-channel-config-t)
   (struct-set a use #t mute mute delay delay phs phs amp amp amod amod)
   (return a))
+
+(define (sp-channel-config-zero a) (void sp-channel-config-t*)
+  (define channel-config sp-channel-config-t (struct-literal 0))
+  (for-each-index i sp-channel-limit (set (array-get a i) channel-config)))
+
+(define (sp-wave-event-config-new out) (status-t sp-wave-event-config-t**)
+  "heap allocates a noise_event_config struct and sets some defaults"
+  status-declare
+  (declare result sp-wave-event-config-t*)
+  (status-require (sp-malloc-type 1 sp-wave-event-config-t &result))
+  (struct-set *result
+    wvf sp-sine-table
+    wvf-size sp-rate
+    phs 0
+    frq sp-rate
+    fmod 0
+    amp 1
+    amod 0
+    channels sp-channels)
+  (sp-channel-config-zero result:channel-config)
+  (set *out result)
+  (label exit status-return))
 
 (define (sp-wave-event-free a) (void sp-event-t*) (free a:data))
 
@@ -268,6 +294,27 @@
       (noise sp-sample-t*)
       (temp sp-sample-t*))))
 
+(define (sp-noise-event-config-new out) (status-t sp-noise-event-config-t**)
+  "heap allocates a noise_event_config struct and sets some defaults"
+  status-declare
+  (declare result sp-noise-event-config-t*)
+  (status-require (sp-malloc-type 1 sp-noise-event-config-t &result))
+  (struct-set *result
+    amp 1
+    amod 0
+    cutl 0.0
+    cuth 0.5
+    trnl 0.1
+    trnh 0.1
+    cutl-mod 0
+    cuth-mod 0
+    resolution (/ sp-rate 10)
+    is-reject 0
+    channels sp-channels)
+  (sp-channel-config-zero result:channel-config)
+  (set *out result)
+  (label exit status-return))
+
 (define (sp-noise-event-free a) (void sp-event-t*)
   (define s sp-noise-event-state-t* a:data)
   (sp-convolution-filter-state-free s:filter-state)
@@ -325,21 +372,20 @@
   (status-require (sp-windowed-sinc-bp-br noise ir-len cutl cuth trnl trnh is-reject out temp))
   (label exit memreg-free status-return))
 
-(define (sp-noise-event-channel duration config channel rs state-noise state-temp out)
+(define (sp-noise-event-channel duration config channel rs state-noise state-temp event)
   (status-t sp-time-t sp-noise-event-config-t sp-channel-count-t sp-random-state-t sp-sample-t* sp-sample-t* sp-event-t*)
   status-declare
   (declare
-    data sp-noise-event-state-t*
+    state sp-noise-event-state-t*
     channel-config sp-channel-config-t
     filter-state sp-convolution-filter-state-t*)
-  (sp-declare-event event)
-  (set data 0 filter-state 0 channel-config (array-get config.channel-config channel))
+  (set state 0 filter-state 0 channel-config (array-get config.channel-config channel))
   (status-require
     (sp-noise-event-filter-state (sp-array-or-fixed config.cutl-mod config.cutl 0)
       (sp-array-or-fixed config.cuth-mod config.cuth 0) config.trnl config.trnh
       config.is-reject &rs &filter-state))
-  (status-require (sp-malloc-type 1 sp-noise-event-state-t &data))
-  (struct-set *data
+  (status-require (sp-malloc-type 1 sp-noise-event-state-t &state))
+  (struct-set *state
     amp (if* channel-config.use channel-config.amp config.amp)
     amod (if* (and channel-config.use channel-config.amod) channel-config.amod config.amod)
     cutl config.cutl
@@ -355,18 +401,16 @@
     filter-state filter-state
     noise state-noise
     temp state-temp)
-  (struct-set event
-    data data
+  (struct-set *event
+    data state
     start (if* channel-config.use channel-config.delay 0)
     end (if* channel-config.use (+ duration channel-config.delay) duration)
-    prepare 0
     generate sp-noise-event-generate
     free sp-noise-event-free)
-  (set *out event)
   (label exit
     (if status-is-failure
       (begin
-        (if data (free data))
+        (if state (free state))
         (if filter-state (sp-convolution-filter-state-free filter-state))))
     status-return))
 
@@ -415,6 +459,25 @@
       (filter-state sp-cheap-filter-state-t)
       (noise sp-sample-t*)
       (temp sp-sample-t*))))
+
+(define (sp-cheap-noise-event-config-new out) (status-t sp-cheap-noise-event-config-t**)
+  "heap allocates a noise_event_config struct and sets some defaults"
+  status-declare
+  (declare result sp-cheap-noise-event-config-t*)
+  (status-require (sp-malloc-type 1 sp-cheap-noise-event-config-t &result))
+  (struct-set *result
+    amp 1
+    amod 0
+    cut 0.5
+    cut-mod 0
+    q-factor 0.01
+    passes 1
+    type sp-state-variable-filter-lp
+    resolution (/ sp-rate 10)
+    channels sp-channels)
+  (sp-channel-config-zero result:channel-config)
+  (set *out result)
+  (label exit status-return))
 
 (define (sp-cheap-noise-event-free a) (void sp-event-t*)
   (define s sp-cheap-noise-event-state-t* a:data)
@@ -570,7 +633,7 @@
   (status-require (sp-block-new out.channels out.size &temp-out))
   (status-require (s:event.generate start end temp-out &s:event))
   (status-require (s:map-generate start end temp-out out s:state))
-  (label exit (sp-block-free temp-out) status-return))
+  (label exit (sp-block-free &temp-out) status-return))
 
 (define (sp-map-event-prepare event) (status-t sp-event-t*)
   "the wrapped event will be freed with the map-event.

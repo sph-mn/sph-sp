@@ -8,19 +8,48 @@ see exe/run-example for how to compile and run with gcc */
 the macros are used as optional helpers to simplify common tasks where c syntax alone offers no good alternative */
 #include <stdio.h>
 #include <sph-sp.h>
-status_t example_event(sp_time_t _start, sp_sample_t duration, sp_event_t* _out) {
+
+/** heap allocates a noise_event_config struct and sets some defaults */
+status_t sp_noise_event_config_new(sp_noise_event_config_t** out) {
   status_declare;
-  sp_declare_event(_result);
-  sp_declare_event(_event);
+  sp_noise_event_config_t* result;
+  sp_channel_config_t channel_config = { 0 };
+  status_require((sp_malloc_type(1, sp_noise_event_config_t, (&result))));
+  (*result).channels = sp_channels;
+  (*result).trnl = 0.1;
+  (*result).trnh = 0.1;
+  (*result).cutl = 0.0;
+  (*result).cuth = 0.5;
+  (*result).amp = 1;
+  (*result).amod = 0;
+  (*result).cutl_mod = 0;
+  (*result).cuth_mod = 0;
+  (*result).resolution = 96;
+  (*result).is_reject = 0;
+  for (sp_time_t i = 0; (i < sp_channel_limit); i += 1) {
+    (result->channel_config)[i] = channel_config;
+  };
+  *out = result;
+exit:
+  status_return;
+}
+status_t example_event(sp_event_t* _event) {
+  status_declare;
+  printf("-- example-event-prepare\n");
   sp_sample_t* amod;
-  sp_declare_event_4(g, s1, n1, n2);
+  sp_time_t duration;
+  sp_noise_event_config_t* n1_config;
+  sp_declare_event_3(s1, n1, n2);
   sp_declare_sine_config(s1_config);
-  sp_declare_noise_config(n1_config);
+  sp_declare_sine_config(s2_config);
   sp_declare_cheap_noise_config(n2_config);
-  free_on_error_init(1);
-  sp_group_new(0, (&g));
-  free_on_error((&g), (g.free));
-  status_require((sp_event_memory_init((&g), 1)));
+  free_on_error_init(2);
+  free_on_error((_event->free), _event);
+  status_require((sp_event_memory_init(_event, 1)));
+  status_require((sp_noise_event_config_new((&n1_config))));
+  free_on_error1(n1_config);
+  duration = (_event->end - _event->start);
+  _event->free = sp_group_free;
   sp_path_t _t1;
   // sp-path
   sp_path_segment_t _t2[2];
@@ -28,31 +57,25 @@ status_t example_event(sp_time_t _start, sp_sample_t duration, sp_event_t* _out)
   _t2[1] = sp_path_line(duration, 0);
   spline_path_set((&_t1), _t2, 2);
   status_require((sp_path_samples_new(_t1, duration, (&amod))));
-  sp_event_memory_add1((&g), (&amod));
-  // sp-sine
-  s1_config.amod = amod;
-  s1_config.frq = 3;
-  ((s1_config.channel_config)[1]).use = 1;
-  ((s1_config.channel_config)[1]).amp = 0.1;
-  status_require((sp_wave_event(0, duration, s1_config, (&s1))));
-  status_require((sp_group_add((&g), s1)));
-  // sp-noise
-  n1_config.amod = amod;
-  n1_config.cutl = 0.2;
-  ((n1_config.channel_config)[0]).use = 1;
-  ((n1_config.channel_config)[0]).delay = 30000;
-  ((n1_config.channel_config)[0]).amp = 0.2;
-  status_require((sp_noise_event(0, duration, n1_config, (&n1))));
-  status_require((sp_group_add((&g), n1)));
-  // sp-cheap-noise
-  n2_config.amod = amod;
-  n2_config.cut = 0.5;
-  ((n2_config.channel_config)[1]).use = 1;
-  ((n2_config.channel_config)[1]).amp = 0.001;
-  status_require((sp_cheap_noise_event(0, duration, n2_config, (&n2))));
-  status_require((sp_group_add((&g), n2)));
-  _result = g;
-  *_out = _result;
+  sp_event_memory_add1(_event, (&amod));
+  /* (sp-cheap-noise* n2 0 duration n2-config (amod amod cut 0.5) (1 use 1 amp 0.001))
+(status-require (sp-group-add _event n2))
+(sp-sine* s1 0 duration s1-config (amod amod frq 8) (1 use 1 amp 0.1))
+(status-require (sp-group-add _event s1)) */
+
+  // sp-noise*
+  (*n1_config).amod = amod;
+  (*n1_config).cutl = 0.2;
+  (*n1_config).cuth = 0.5;
+  (((*n1_config).channel_config)[0]).use = 1;
+  (((*n1_config).channel_config)[0]).delay = 30000;
+  (((*n1_config).channel_config)[0]).amp = 0.5;
+  n1.start = 0;
+  n1.end = duration;
+  n1.data = &(*n1_config);
+  n1.prepare = sp_noise_event_prepare;
+  status_require((sp_group_add(_event, n1)));
+  status_require((sp_group_prepare(_event)));
 exit:
   if (status_is_failure) {
     free_on_error_free;
@@ -64,7 +87,9 @@ int main() {
   sp_declare_event(event);
   sp_declare_event_list(events);
   sp_initialize(1, 2, 48000);
-  status_require((example_event(0, (sp_rate * 2), (&event))));
+  event.start = 0;
+  event.end = (sp_rate * 2);
+  event.prepare = example_event;
   status_require((sp_event_list_add((&events), event)));
   status_require((sp_render_quick(events, 1)));
 exit:

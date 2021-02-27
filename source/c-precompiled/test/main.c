@@ -232,8 +232,8 @@ status_t test_file() {
   status_require((sp_file_close(file)));
   printf("  open\n");
 exit:
-  sp_block_free(block);
-  sp_block_free(block_2);
+  sp_block_free((&block));
+  sp_block_free((&block_2));
   status_return;
 }
 status_t test_fft() {
@@ -296,55 +296,63 @@ exit:
 
 #define max(a, b) ((a > b) ? a : b)
 #define min(a, b) ((a < b) ? a : b)
-#define sp_noise_duration 96
+#define test_noise_duration 96
 status_t test_sp_noise_event() {
   status_declare;
   sp_block_t out;
-  sp_sample_t cutl[sp_noise_duration];
-  sp_sample_t cuth[sp_noise_duration];
-  sp_sample_t trnl[sp_noise_duration];
-  sp_sample_t trnh[sp_noise_duration];
-  sp_sample_t amod[sp_noise_duration];
+  sp_sample_t cutl[test_noise_duration];
+  sp_sample_t cuth[test_noise_duration];
+  sp_sample_t trnl[test_noise_duration];
+  sp_sample_t trnh[test_noise_duration];
+  sp_sample_t amod[test_noise_duration];
   sp_time_t i;
+  sp_noise_event_config_t* config;
   sp_declare_event(event);
-  sp_declare_noise_event_config(config);
   sp_declare_event_list(events);
-  status_require((sp_block_new(2, sp_noise_duration, (&out))));
-  for (sp_time_t i = 0; (i < sp_noise_duration); i += 1) {
-    cutl[i] = ((i < (sp_noise_duration / 2)) ? 0.01 : 0.1);
+  free_on_error_init(2);
+  status_require((sp_noise_event_config_new((&config))));
+  free_on_error1(config);
+  status_require((sp_block_new(2, test_noise_duration, (&out))));
+  free_on_error((&out), sp_block_free);
+  for (sp_time_t i = 0; (i < test_noise_duration); i += 1) {
+    cutl[i] = ((i < (test_noise_duration / 2)) ? 0.01 : 0.1);
     cuth[i] = 0.11;
-    trnl[i] = 0.07;
-    trnh[i] = 0.07;
     amod[i] = 1.0;
   };
-  config.cutl_mod = cutl;
-  config.cuth_mod = cuth;
-  config.amod = amod;
-  config.amp = 1;
-  config.channels = 2;
+  (*config).cutl_mod = cutl;
+  (*config).cuth_mod = cuth;
+  (*config).amod = amod;
+  (*config).amp = 1;
+  (*config).channels = 2;
+  (*config).trnh = 0.07;
+  (*config).trnl = 0.07;
   event.start = 0;
-  event.end = sp_noise_duration;
+  event.end = test_noise_duration;
   event.prepare = sp_noise_event_prepare;
-  event.data = &config;
+  event.data = config;
   status_require((sp_event_list_add((&events), event)));
-  sp_seq(0, sp_noise_duration, out, (&events));
-  sp_block_free(out);
+  status_require((sp_seq(0, test_noise_duration, out, (&events))));
+  test_helper_assert("value", (f64_nearly_equal((0.04768), (((out.samples)[0])[10]), (0.001))));
+  sp_block_free((&out));
 exit:
+  if (status_is_failure) {
+    free_on_error_free;
+  };
   status_return;
 }
 status_t test_sp_cheap_filter() {
   status_declare;
   sp_cheap_filter_state_t state;
-  sp_sample_t out[sp_noise_duration];
-  sp_sample_t in[sp_noise_duration];
+  sp_sample_t out[test_noise_duration];
+  sp_sample_t in[test_noise_duration];
   sp_time_t i;
   sp_random_state_t s;
   s = sp_random_state_new(80);
-  sp_samples_random((&s), sp_noise_duration, in);
-  status_require((sp_cheap_filter_state_new(sp_noise_duration, sp_cheap_filter_passes_limit, (&state))));
-  sp_cheap_filter_lp(in, sp_noise_duration, (0.2), 1, 0, (&state), out);
-  sp_cheap_filter_lp(in, sp_noise_duration, (0.2), sp_cheap_filter_passes_limit, 0, (&state), out);
-  sp_cheap_filter_lp(in, sp_noise_duration, (0.2), sp_cheap_filter_passes_limit, 0, (&state), out);
+  sp_samples_random((&s), test_noise_duration, in);
+  status_require((sp_cheap_filter_state_new(test_noise_duration, sp_cheap_filter_passes_limit, (&state))));
+  sp_cheap_filter_lp(in, test_noise_duration, (0.2), 1, 0, (&state), out);
+  sp_cheap_filter_lp(in, test_noise_duration, (0.2), sp_cheap_filter_passes_limit, 0, (&state), out);
+  sp_cheap_filter_lp(in, test_noise_duration, (0.2), sp_cheap_filter_passes_limit, 0, (&state), out);
   sp_cheap_filter_state_free((&state));
 exit:
   status_return;
@@ -352,31 +360,38 @@ exit:
 status_t test_sp_cheap_noise_event() {
   status_declare;
   sp_block_t out;
-  sp_sample_t cut_mod[sp_noise_duration];
-  sp_sample_t amod[sp_noise_duration];
+  sp_sample_t cut_mod[test_noise_duration];
+  sp_sample_t amod[test_noise_duration];
   sp_time_t i;
+  sp_cheap_noise_event_config_t* config;
   sp_declare_event(event);
-  sp_declare_cheap_noise_event_config(config);
-  status_require((sp_block_new(2, sp_noise_duration, (&out))));
-  for (i = 0; (i < sp_noise_duration); i += 1) {
-    cut_mod[i] = ((i < (sp_noise_duration / 2)) ? 0.01 : 0.1);
+  free_on_error_init(2);
+  status_require((sp_cheap_noise_event_config_new((&config))));
+  free_on_error1(config);
+  status_require((sp_block_new(2, test_noise_duration, (&out))));
+  free_on_error((&out), sp_block_free);
+  for (i = 0; (i < test_noise_duration); i += 1) {
+    cut_mod[i] = ((i < (test_noise_duration / 2)) ? 0.01 : 0.1);
     cut_mod[i] = 0.08;
     amod[i] = 1.0;
   };
-  config.type = sp_state_variable_filter_lp;
-  config.amp = 1;
-  config.amod = amod;
-  config.cut_mod = cut_mod;
-  config.q_factor = 0.1;
-  config.channels = 2;
-  config.amp = 1;
-  event.end = sp_noise_duration;
+  (*config).type = sp_state_variable_filter_lp;
+  (*config).amp = 1;
+  (*config).amod = amod;
+  (*config).cut_mod = cut_mod;
+  (*config).q_factor = 0.1;
+  (*config).channels = 2;
+  (*config).amp = 1;
+  event.end = test_noise_duration;
   event.data = &config;
   event.prepare = sp_cheap_noise_event_prepare;
   status_require(((event.prepare)((&event))));
-  status_require(((event.generate)(0, sp_noise_duration, out, (&event))));
-  sp_block_free(out);
+  status_require(((event.generate)(0, test_noise_duration, out, (&event))));
+  sp_block_free((&out));
 exit:
+  if (status_is_failure) {
+    free_on_error_free;
+  };
   status_return;
 }
 #define sp_seq_event_count 2
@@ -395,7 +410,7 @@ status_t test_sp_seq() {
   test_helper_assert("block contents 1 gap", (0 == (out.samples)[0][40]));
   test_helper_assert("block contents 1 event 2", ((2 == (out.samples)[0][41]) && (2 == (out.samples)[0][99])));
   sp_event_list_free(events);
-  sp_block_free(out);
+  sp_block_free((&out));
 exit:
   status_return;
 }
@@ -430,7 +445,7 @@ status_t test_sp_group() {
   test_helper_assert("block contents event 2", ((2 == (block.samples)[0][30]) && (2 == (block.samples)[0][39])));
   test_helper_assert("block contents gap", ((1 > (block.samples)[0][40]) && (1 > (block.samples)[0][49])));
   test_helper_assert("block contents event 3", ((3 == (block.samples)[0][50]) && (3 == (block.samples)[0][99])));
-  sp_block_free(block);
+  sp_block_free((&block));
 exit:
   status_return;
 }
@@ -444,32 +459,38 @@ status_t test_sp_wave_event() {
   sp_time_t fmod[test_wave_event_duration];
   sp_sample_t amod1[test_wave_event_duration];
   sp_sample_t amod2[test_wave_event_duration];
-  sp_time_t i;
+  sp_wave_event_config_t* config;
   sp_declare_event(event);
-  sp_declare_wave_event_config(config);
-  for (i = 0; (i < test_wave_event_duration); i += 1) {
+  free_on_error_init(2);
+  status_require((sp_wave_event_config_new((&config))));
+  free_on_error1(config);
+  status_require((sp_block_new(2, test_wave_event_duration, (&out))));
+  free_on_error((&out), sp_block_free);
+  for (sp_time_t i = 0; (i < test_wave_event_duration); i += 1) {
     fmod[i] = 2000;
     amod1[i] = 1;
     amod2[i] = 0.5;
   };
-  config.wvf = sp_sine_table;
-  config.wvf_size = sp_rate;
-  config.fmod = fmod;
-  config.amp = 1;
-  config.amod = amod1;
-  config.channels = 2;
-  (config.channel_config)[1] = sp_channel_config(0, 10, 10, 1, amod2);
+  (*config).wvf = sp_sine_table;
+  (*config).wvf_size = sp_rate;
+  (*config).fmod = fmod;
+  (*config).amp = 1;
+  (*config).amod = amod1;
+  (*config).channels = 2;
+  (config->channel_config)[1] = sp_channel_config(0, 10, 10, 1, amod2);
   event.start = 0;
   event.end = test_wave_event_duration;
-  event.data = &config;
+  event.data = config;
   event.prepare = sp_wave_event_prepare;
-  status_require((sp_block_new(2, test_wave_event_duration, (&out))));
   status_require(((event.prepare)((&event))));
   status_require(((event.generate)(0, 30, out, (event.data))));
   status_require(((event.generate)(30, test_wave_event_duration, (sp_block_with_offset(out, 30)), (event.data))));
   /* (sp-plot-samples (array-get out.samples 0) test-wave-event-duration) */
-  sp_block_free(out);
+  sp_block_free((&out));
 exit:
+  if (status_is_failure) {
+    free_on_error_free;
+  };
   status_return;
 }
 status_t test_render_block() {
@@ -479,33 +500,40 @@ status_t test_render_block() {
   sp_sample_t amod[test_wave_event_duration];
   sp_time_t i;
   sp_render_config_t rc;
+  sp_wave_event_config_t* config;
   sp_declare_event(event);
   sp_declare_event_list(events);
+  free_on_error_init(2);
   rc = sp_render_config(sp_channels, sp_rate, sp_rate);
   rc.block_size = 40;
   for (i = 0; (i < test_wave_event_duration); i += 1) {
     frq[i] = 1500;
     amod[i] = 1;
   };
-  sp_declare_wave_event_config(config);
-  config.wvf = sp_sine_table;
-  config.wvf_size = sp_rate;
-  config.fmod = frq;
-  config.amp = 1;
-  config.amod = amod;
-  config.channels = 1;
+  status_require((sp_wave_event_config_new((&config))));
+  free_on_error1(config);
+  status_require((sp_block_new(1, test_wave_event_duration, (&out))));
+  free_on_error((&out), sp_block_free);
+  (*config).wvf = sp_sine_table;
+  (*config).wvf_size = sp_rate;
+  (*config).fmod = frq;
+  (*config).amp = 1;
+  (*config).amod = amod;
+  (*config).channels = 1;
   event.start = 0;
   event.end = test_wave_event_duration;
-  event.data = &config;
+  event.data = config;
   event.prepare = sp_wave_event_prepare;
   status_require((sp_event_list_add((&events), event)));
-  status_require((sp_block_new(1, test_wave_event_duration, (&out))));
   sp_seq_events_prepare((&events));
   /* (sp-render-file events test-wave-event-duration rc /tmp/test.wav) */
   sp_render_block(events, 0, test_wave_event_duration, rc, (&out));
   /* (sp-block-plot-1 out) */
-  sp_block_free(out);
+  sp_block_free((&out));
 exit:
+  if (status_is_failure) {
+    free_on_error_free;
+  };
   status_return;
 }
 status_t test_path() {
@@ -721,22 +749,27 @@ status_t test_sp_seq_parallel() {
   sp_time_t* fmod;
   sp_time_t size;
   sp_block_t block;
+  sp_wave_event_config_t* config;
   sp_declare_event(event);
   sp_declare_event_list(events);
-  sp_declare_wave_event_config(config);
   size = 10000;
+  free_on_error_init(4);
+  status_require((sp_wave_event_config_new((&config))));
+  free_on_error1(config);
   status_require((sp_path_samples_2((&amod), size, (sp_path_move(0, (1.0))), (sp_path_constant()))));
+  free_on_error1(amod);
   status_require((sp_path_times_2((&fmod), size, (sp_path_move(0, 250)), (sp_path_constant()))));
-  config.wvf = sp_sine_table;
-  config.wvf_size = sp_rate;
-  config.fmod = fmod;
-  config.amp = 1;
-  config.amod = amod;
-  config.channels = 2;
+  free_on_error1(fmod);
+  (*config).wvf = sp_sine_table;
+  (*config).wvf_size = sp_rate;
+  (*config).fmod = fmod;
+  (*config).amp = 1;
+  (*config).amod = amod;
+  (*config).channels = 2;
   for (i = 0; (i < 10); i += 1) {
     event.start = 0;
     event.end = size;
-    event.data = &config;
+    event.data = config;
     event.prepare = sp_wave_event_prepare;
     status_require((sp_event_list_add((&events), event)));
   };
@@ -753,8 +786,11 @@ status_t test_sp_seq_parallel() {
   sp_event_list_free(events);
   free(amod);
   free(fmod);
-  sp_block_free(block);
+  sp_block_free((&block));
 exit:
+  if (status_is_failure) {
+    free_on_error_free;
+  };
   status_return;
 }
 status_t test_sp_map_event_generate(sp_time_t start, sp_time_t end, sp_block_t in, sp_block_t out, void* state) {
@@ -767,21 +803,24 @@ status_t test_sp_map_event() {
   sp_time_t size;
   sp_block_t block;
   sp_sample_t* amod;
+  sp_wave_event_config_t* config;
   sp_declare_event_2(parent, child);
-  sp_declare_wave_event_config(config);
   sp_declare_map_event_config(map_event_config);
+  free_on_error_init(1);
+  status_require((sp_wave_event_config_new((&config))));
+  free_on_error1(config);
   size = (10 * _rate);
   status_require((sp_path_samples_2((&amod), size, (sp_path_move(0, (1.0))), (sp_path_constant()))));
-  config.wvf = sp_sine_table;
-  config.wvf_size = sp_rate;
-  config.frq = 300;
-  config.fmod = 0;
-  config.amp = 1;
-  config.amod = amod;
-  config.channels = 1;
+  (*config).wvf = sp_sine_table;
+  (*config).wvf_size = sp_rate;
+  (*config).frq = 300;
+  (*config).fmod = 0;
+  (*config).amp = 1;
+  (*config).amod = amod;
+  (*config).channels = 1;
   child.start = 0;
   child.end = size;
-  child.data = &config;
+  child.data = config;
   child.prepare = sp_wave_event_prepare;
   status_require((sp_block_new(1, size, (&block))));
   map_event_config.event = child;
@@ -795,9 +834,12 @@ status_t test_sp_map_event() {
   status_require(((parent.generate)(0, (size / 2), block, (&parent))));
   status_require(((parent.generate)((size / 2), size, block, (&parent))));
   (parent.free)((&parent));
-  sp_block_free(block);
+  sp_block_free((&block));
   free(amod);
 exit:
+  if (status_is_failure) {
+    free_on_error_free;
+  };
   status_return;
 }
 
@@ -806,12 +848,12 @@ int main() {
   status_declare;
   rs = sp_random_state_new(3);
   sp_initialize(3, 2, _rate);
-  test_helper_test_one(test_sp_noise_event);
   test_helper_test_one(test_sp_wave_event);
-  test_helper_test_one(test_sp_group);
-  test_helper_test_one(test_sp_map_event);
-  test_helper_test_one(test_sp_seq);
   test_helper_test_one(test_sp_cheap_noise_event);
+  test_helper_test_one(test_sp_noise_event);
+  test_helper_test_one(test_sp_map_event);
+  test_helper_test_one(test_sp_group);
+  test_helper_test_one(test_sp_seq);
   test_helper_test_one(test_render_block);
   test_helper_test_one(test_moving_average);
   test_helper_test_one(test_statistics);
