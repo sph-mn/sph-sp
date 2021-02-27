@@ -738,10 +738,11 @@ status_t sp_event_memory_init(sp_event_t* a, sp_time_t additional_size) {
   } else {
     if (sp_memory_new(additional_size, (&(a->memory)))) {
       sp_memory_error;
+    } else {
+      if (!a->free) {
+        a->free = sp_event_memory_free;
+      };
     };
-  };
-  if (!a->free) {
-    a->free = sp_event_memory_free;
   };
 exit:
   status_return;

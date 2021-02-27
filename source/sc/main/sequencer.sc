@@ -604,8 +604,8 @@
         (sp-memory-resize &a:memory
           (+ (array3-max-size a:memory) (- additional-size (array3-unused-size a:memory)))))
       sp-memory-error)
-    (if (sp-memory-new additional-size &a:memory) sp-memory-error))
-  (if (not a:free) (set a:free sp-event-memory-free))
+    (if (sp-memory-new additional-size &a:memory) sp-memory-error
+      (if (not a:free) (set a:free sp-event-memory-free))))
   (label exit status-return))
 
 (define (sp-event-memory-add a address handler) (void sp-event-t* void* sp-memory-free-t)

@@ -68,12 +68,10 @@
   (qq
     (begin
       (sc-insert (unquote (string-append "// " label "\n")))
-      (struct-set (unquote config) (unquote-splicing setting))
+      (struct-pointer-set (unquote config) (unquote-splicing setting))
       (sp-channel-config* (struct-get (unquote config) channel-config)
         (unquote-splicing channel-config))
-      (struct-set (unquote event)
-        data (address-of (unquote config))
-        prepare (unquote prepare-event)))))
+      (struct-pointer-set (unquote event) data (unquote config) prepare (unquote prepare-event)))))
 
 (sc-define-syntax (sp-wave* event config config-settings channel-config ...)
   (sp-channel-config-event* "sp-wave*" sp-wave-event-prepare
