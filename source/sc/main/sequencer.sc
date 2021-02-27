@@ -188,7 +188,7 @@
   (for-each-index i sp-channel-limit (set (array-get a i) channel-config)))
 
 (define (sp-wave-event-config-new out) (status-t sp-wave-event-config-t**)
-  "heap allocates a noise_event_config struct and sets some defaults"
+  "heap allocates a sp_wave_event_config_t struct and sets some defaults"
   status-declare
   (declare result sp-wave-event-config-t*)
   (status-require (sp-malloc-type 1 sp-wave-event-config-t &result))
@@ -202,6 +202,14 @@
     amod 0
     channels sp-channels)
   (sp-channel-config-zero result:channel-config)
+  (set *out result)
+  (label exit status-return))
+
+(define (sp-map-event-config-new out) (status-t sp-map-event-config-t**)
+  status-declare
+  (declare result sp-map-event-config-t*)
+  (status-require (sp-malloc-type 1 sp-map-event-config-t &result))
+  (struct-set *result state 0 isolate 0)
   (set *out result)
   (label exit status-return))
 
@@ -295,7 +303,6 @@
       (temp sp-sample-t*))))
 
 (define (sp-noise-event-config-new out) (status-t sp-noise-event-config-t**)
-  "heap allocates a noise_event_config struct and sets some defaults"
   status-declare
   (declare result sp-noise-event-config-t*)
   (status-require (sp-malloc-type 1 sp-noise-event-config-t &result))
@@ -461,7 +468,6 @@
       (temp sp-sample-t*))))
 
 (define (sp-cheap-noise-event-config-new out) (status-t sp-cheap-noise-event-config-t**)
-  "heap allocates a noise_event_config struct and sets some defaults"
   status-declare
   (declare result sp-cheap-noise-event-config-t*)
   (status-require (sp-malloc-type 1 sp-cheap-noise-event-config-t &result))

@@ -713,23 +713,29 @@
 
 (define (test-sp-map-event) status-t
   status-declare
-  (declare size sp-time-t block sp-block-t amod sp-sample-t* config sp-wave-event-config-t*)
+  (declare
+    size sp-time-t
+    block sp-block-t
+    amod sp-sample-t*
+    config sp-wave-event-config-t*
+    map-event-config sp-map-event-config-t*)
   (sp-declare-event-2 parent child)
-  (sp-declare-map-event-config map-event-config)
-  (free-on-error-init 1)
+  (free-on-error-init 2)
   (status-require (sp-wave-event-config-new &config))
   (free-on-error1 config)
+  (status-require (sp-map-event-config-new &map-event-config))
+  (free-on-error1 map-event-config)
   (set size (* 10 _rate))
   (status-require (sp-path-samples-2 &amod size (sp-path-move 0 1.0) (sp-path-constant)))
   (struct-set *config wvf sp-sine-table wvf-size sp-rate frq 300 fmod 0 amp 1 amod amod channels 1)
   (struct-set child start 0 end size data config prepare sp-wave-event-prepare)
   (status-require (sp-block-new 1 size &block))
-  (struct-set map-event-config event child map-generate test-sp-map-event-generate isolate #t)
+  (struct-set *map-event-config event child map-generate test-sp-map-event-generate isolate #t)
   (struct-set parent
     start child.start
     end child.end
     prepare sp-map-event-prepare
-    data &map-event-config)
+    data map-event-config)
   (status-require (parent.prepare &parent))
   (status-require (parent.generate 0 (/ size 2) block &parent))
   (status-require (parent.generate (/ size 2) size block &parent))

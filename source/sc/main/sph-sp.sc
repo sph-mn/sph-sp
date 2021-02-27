@@ -442,7 +442,6 @@
     (struct-set name channels sp-channels amp 1 type sp-state-variable-filter-lp cut 0.5))
   sp-memory-add array3-add
   sp-seq-events-prepare sp-event-list-reverse
-  (sp-declare-map-event-config name) (define name sp-map-event-config-t (struct-literal 0))
   (free-event-on-error event-address) (free-on-error (: event-address free) event-address)
   (free-event-on-exit event-address) (free-on-exit (: event-address free) event-address)
   (sp-group-event-list event) (convert-type (: event data) sp-event-list-t*))
@@ -570,7 +569,8 @@
   (sp-map-event-free) (void sp-event-t*)
   (sp-noise-event-config-new out) (status-t sp-noise-event-config-t**)
   (sp-cheap-noise-event-config-new out) (status-t sp-cheap-noise-event-config-t**)
-  (sp-wave-event-config-new out) (status-t sp-wave-event-config-t**))
+  (sp-wave-event-config-new out) (status-t sp-wave-event-config-t**)
+  (sp-map-event-config-new out) (status-t sp-map-event-config-t**))
 
 (sc-comment "path")
 

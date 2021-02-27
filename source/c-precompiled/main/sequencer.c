@@ -277,7 +277,7 @@ void sp_channel_config_zero(sp_channel_config_t* a) {
   };
 }
 
-/** heap allocates a noise_event_config struct and sets some defaults */
+/** heap allocates a sp_wave_event_config_t struct and sets some defaults */
 status_t sp_wave_event_config_new(sp_wave_event_config_t** out) {
   status_declare;
   sp_wave_event_config_t* result;
@@ -291,6 +291,16 @@ status_t sp_wave_event_config_new(sp_wave_event_config_t** out) {
   (*result).amod = 0;
   (*result).channels = sp_channels;
   sp_channel_config_zero((result->channel_config));
+  *out = result;
+exit:
+  status_return;
+}
+status_t sp_map_event_config_new(sp_map_event_config_t** out) {
+  status_declare;
+  sp_map_event_config_t* result;
+  status_require((sp_malloc_type(1, sp_map_event_config_t, (&result))));
+  (*result).state = 0;
+  (*result).isolate = 0;
   *out = result;
 exit:
   status_return;
@@ -399,7 +409,6 @@ typedef struct {
   sp_sample_t* noise;
   sp_sample_t* temp;
 } sp_noise_event_state_t;
-/** heap allocates a noise_event_config struct and sets some defaults */
 status_t sp_noise_event_config_new(sp_noise_event_config_t** out) {
   status_declare;
   sp_noise_event_config_t* result;
@@ -571,7 +580,6 @@ typedef struct {
   sp_sample_t* noise;
   sp_sample_t* temp;
 } sp_cheap_noise_event_state_t;
-/** heap allocates a noise_event_config struct and sets some defaults */
 status_t sp_cheap_noise_event_config_new(sp_cheap_noise_event_config_t** out) {
   status_declare;
   sp_cheap_noise_event_config_t* result;

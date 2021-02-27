@@ -435,7 +435,6 @@ void sp_plot_spectrum(sp_sample_t* a, sp_time_t a_size);
   name.cut = 0.5
 #define sp_memory_add array3_add
 #define sp_seq_events_prepare sp_event_list_reverse
-#define sp_declare_map_event_config(name) sp_map_event_config_t name = { 0 }
 #define free_event_on_error(event_address) free_on_error((event_address->free), event_address)
 #define free_event_on_exit(event_address) free_on_exit((event_address->free), event_address)
 #define sp_group_event_list(event) ((sp_event_list_t*)(event->data))
@@ -554,6 +553,7 @@ void sp_map_event_free();
 status_t sp_noise_event_config_new(sp_noise_event_config_t** out);
 status_t sp_cheap_noise_event_config_new(sp_cheap_noise_event_config_t** out);
 status_t sp_wave_event_config_new(sp_wave_event_config_t** out);
+status_t sp_map_event_config_new(sp_map_event_config_t** out);
 /* path */
 
 #define sp_path_t spline_path_t
