@@ -11,7 +11,7 @@
       sp-sample-nearly-equal f32-nearly-equal
       sp-samples-nearly-equal f32-array-nearly-equal)))
 
-(pre-define _rate 96000)
+(pre-define _rate 960)
 (define error-margin sp-sample-t 0.1)
 (define test-file-path uint8-t* "/tmp/test-sph-sp-file")
 
@@ -126,8 +126,8 @@
 (define (test-windowed-sinc) status-t
   status-declare
   (declare
-    transition sp-float-t
-    cutoff sp-float-t
+    transition sp-sample-t
+    cutoff sp-sample-t
     ir sp-sample-t*
     ir-len sp-time-t
     state sp-convolution-filter-state-t*
@@ -238,13 +238,14 @@
 
 (define (test-sp-triangle-square) status-t
   status-declare
-  (declare i sp-time-t out-t sp-sample-t* out-s sp-sample-t*)
-  (status-require (sph-helper-calloc (* _rate (sizeof sp-sample-t*)) &out-t))
-  (status-require (sph-helper-calloc (* _rate (sizeof sp-sample-t*)) &out-s))
-  (for ((set i 0) (< i _rate) (set i (+ 1 i)))
+  (declare i sp-time-t out-t sp-sample-t* out-s sp-sample-t* size sp-time-t)
+  (set size 96000)
+  (status-require (sph-helper-calloc (* size (sizeof sp-sample-t*)) &out-t))
+  (status-require (sph-helper-calloc (* size (sizeof sp-sample-t*)) &out-s))
+  (for ((set i 0) (< i size) (set+ i 1))
     (set
-      (array-get out-t i) (sp-triangle i (/ _rate 2) (/ _rate 2))
-      (array-get out-s i) (sp-square i _rate)))
+      (array-get out-t i) (sp-triangle i (/ size 2) (/ size 2))
+      (array-get out-s i) (sp-square i size)))
   (test-helper-assert "triangle 0" (= 0 (array-get out-t 0)))
   (test-helper-assert "triangle 1/2" (= 1 (array-get out-t 48000)))
   (test-helper-assert "triangle 1" (f64-nearly-equal 0 (array-get out-t 95999) error-margin))
@@ -264,11 +265,11 @@
   (set s (sp-random-state-new 80))
   (sp-samples-random &s 10 out)
   (sp-samples-random &s 10 (+ 10 out))
-  (test-helper-assert "last value" (f64-nearly-equal 0.2233 (array-get out 19) error-margin))
+  (test-helper-assert "last value" (f64-nearly-equal -0.553401 (array-get out 19) error-margin))
   (label exit status-return))
 
 (pre-define (max a b) (if* (> a b) a b) (min a b) (if* (< a b) a b))
-(pre-define test-noise-duration 96)
+(pre-define test-noise-duration 960)
 
 (define (test-sp-noise-event) status-t
   status-declare
@@ -289,16 +290,16 @@
   (status-require (sp-block-new 2 test-noise-duration &out))
   (free-on-error &out sp-block-free)
   (for-each-index i test-noise-duration
-    (set
-      (array-get cutl i) (if* (< i (/ test-noise-duration 2)) 0.01 0.1)
-      (array-get cuth i) 0.11
-      (array-get amod i) 1.0))
+    (set (array-get cutl i) 0.01 (array-get cuth i) 0.3 (array-get amod i) 1.0))
   (struct-set *config cutl-mod cutl cuth-mod cuth amod amod amp 1 channels 2 trnh 0.07 trnl 0.07)
   (struct-set event start 0 end test-noise-duration prepare sp-noise-event-prepare data config)
   (status-require (sp-event-list-add &events event))
   (status-require (sp-seq 0 test-noise-duration out &events))
+  (declare sum sp-sample-t)
+  (test-helper-assert "in range -1..1"
+    (>= 1.0 (sp-samples-absolute-max (array-get out.samples 0) test-noise-duration)))
   (test-helper-assert "value"
-    (f64-nearly-equal 0.04768 (array-get (array-get out.samples 0) 10) 0.001))
+    (f64-nearly-equal 0.514491 (array-get (array-get out.samples 0) 10) 0.001))
   (sp-block-free &out)
   (label exit (if status-is-failure free-on-error-free) status-return))
 
@@ -691,14 +692,14 @@
     (and (sp-sample-nearly-equal 0 (array-get block.samples 0 0) 0.001)
       (sp-sample-nearly-equal 0 (array-get block.samples 1 0) 0.001)))
   (test-helper-assert "last 1"
-    (and (sp-sample-nearly-equal -5.956993 (array-get block.samples 0 (- step-size 1)) 0.001)
-      (sp-sample-nearly-equal -5.956993 (array-get block.samples 1 (- step-size 1)) 0.001)))
+    (and (sp-sample-nearly-equal 8.314696 (array-get block.samples 0 (- step-size 1)) 0.001)
+      (sp-sample-nearly-equal 8.314696 (array-get block.samples 1 (- step-size 1)) 0.001)))
   (test-helper-assert "first 2"
-    (and (sp-sample-nearly-equal -6.087614 (array-get block.samples 0 step-size) 0.001)
-      (sp-sample-nearly-equal -6.087614 (array-get block.samples 1 step-size) 0.001)))
+    (and (sp-sample-nearly-equal 5.0 (array-get block.samples 0 step-size) 0.001)
+      (sp-sample-nearly-equal 5.0 (array-get block.samples 1 step-size) 0.001)))
   (test-helper-assert "last 2"
-    (and (sp-sample-nearly-equal 9.615618 (array-get block.samples 0 (- (* 2 step-size) 1)) 0.001)
-      (sp-sample-nearly-equal 9.615618 (array-get block.samples 1 (- (* 2 step-size) 1)) 0.001)))
+    (and (sp-sample-nearly-equal -4.422887 (array-get block.samples 0 (- (* 2 step-size) 1)) 0.001)
+      (sp-sample-nearly-equal -4.422887 (array-get block.samples 1 (- (* 2 step-size) 1)) 0.001)))
   (sp-event-list-free &events)
   (free amod)
   (free fmod)
@@ -749,9 +750,9 @@
   status-declare
   (set rs (sp-random-state-new 3))
   (sp-initialize 3 2 _rate)
+  (test-helper-test-one test-sp-noise-event)
   (test-helper-test-one test-sp-wave-event)
   (test-helper-test-one test-sp-cheap-noise-event)
-  (test-helper-test-one test-sp-noise-event)
   (test-helper-test-one test-sp-map-event)
   (test-helper-test-one test-sp-group)
   (test-helper-test-one test-sp-seq)

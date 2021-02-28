@@ -58,7 +58,8 @@ void sp_times_display(sp_time_t* a, sp_time_t size) {
   printf("\n");
 }
 
-/** scale amplitude of $out to match the one of $in */
+/** scale amplitude of out to match the one of in.
+   no change if any array is zero 0 */
 void sp_samples_set_unity_gain(sp_sample_t* in, sp_time_t in_size, sp_sample_t* out) {
   sp_time_t i;
   sp_sample_t in_max;
@@ -72,7 +73,7 @@ void sp_samples_set_unity_gain(sp_sample_t* in, sp_time_t in_size, sp_sample_t* 
   };
   difference = (out_max / in_max);
   correction = (1 + ((1 - difference) / difference));
-  for (i = 0; (i < in_size); i = (1 + i)) {
+  for (i = 0; (i < in_size); i += 1) {
     out[i] *= correction;
   };
 }
@@ -847,12 +848,13 @@ void sp_times_limit(sp_time_t* a, sp_time_t size, sp_time_t n, sp_time_t* out) {
   };
 }
 
-/** set all values greater than n in array to n */
-void sp_samples_limit_abs(sp_sample_t* a, sp_time_t size, sp_sample_t n, sp_sample_t* out) {
+/** set all values greater than absolute n in array to n, keeping sign.
+   in and out can be the same address */
+void sp_samples_limit_abs(sp_sample_t* in, sp_time_t size, sp_sample_t n, sp_sample_t* out) {
   sp_time_t i;
   sp_sample_t v;
   for (i = 0; (i < size); i += 1) {
-    v = a[i];
+    v = in[i];
     if (0 > v) {
       out[i] = (((-1 * n) > v) ? (-1 * n) : v);
     } else {

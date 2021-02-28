@@ -47,7 +47,8 @@
   (printf "\n"))
 
 (define (sp-samples-set-unity-gain in in-size out) (void sp-sample-t* sp-time-t sp-sample-t*)
-  "scale amplitude of $out to match the one of $in"
+  "scale amplitude of out to match the one of in.
+   no change if any array is zero 0"
   (declare
     i sp-time-t
     in-max sp-sample-t
@@ -57,7 +58,7 @@
   (set in-max (sp-samples-absolute-max in in-size) out-max (sp-samples-absolute-max out in-size))
   (if (or (= 0 in-max) (= 0 out-max)) return)
   (set difference (/ out-max in-max) correction (+ 1 (/ (- 1 difference) difference)))
-  (for ((set i 0) (< i in-size) (set i (+ 1 i))) (set* (array-get out i) correction)))
+  (for ((set i 0) (< i in-size) (set+ i 1)) (set* (array-get out i) correction)))
 
 (pre-define
   (define-value-functions prefix value-t)
@@ -658,10 +659,11 @@
   (for ((set i 0) (< i size) (set+ i 1))
     (set (array-get out i) (if* (< n (array-get a i)) n (array-get a i)))))
 
-(define (sp-samples-limit-abs a size n out) (void sp-sample-t* sp-time-t sp-sample-t sp-sample-t*)
-  "set all values greater than n in array to n"
+(define (sp-samples-limit-abs in size n out) (void sp-sample-t* sp-time-t sp-sample-t sp-sample-t*)
+  "set all values greater than absolute n in array to n, keeping sign.
+   in and out can be the same address"
   (declare i sp-time-t v sp-sample-t)
   (for ((set i 0) (< i size) (set+ i 1))
-    (set v (array-get a i))
+    (set v (array-get in i))
     (if (> 0 v) (set (array-get out i) (if* (> (* -1 n) v) (* -1 n) v))
       (set (array-get out i) (if* (< n v) n v)))))

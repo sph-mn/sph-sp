@@ -89,7 +89,7 @@
     (set (array-get a.samples i) (+ offset (array-get a.samples i))))
   (return a))
 
-(define (sp-sin-lq a) (sp-sample-t sp-float-t)
+(define (sp-sin-lq a) (sp-sample-t sp-sample-t)
   "lower precision version of sin() that should be faster"
   (declare b sp-sample-t c sp-sample-t)
   (set b (/ 4 M_PI) c (/ -4 (* M_PI M_PI)))
@@ -124,7 +124,7 @@
   (for ((set i 0) (< i size) (set i (+ 1 i)))
     (set (array-get out i) (sin (* i (/ M_PI (/ size 2)))))))
 
-(define (sp-sinc a) (sp-float-t sp-float-t)
+(define (sp-sinc a) (sp-sample-t sp-sample-t)
   "the normalised sinc function"
   (return (if* (= 0 a) 1 (/ (sin (* M_PI a)) (* M_PI a)))))
 

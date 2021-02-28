@@ -138,7 +138,7 @@ sp_block_t sp_block_with_offset(sp_block_t a, sp_time_t offset) {
 }
 
 /** lower precision version of sin() that should be faster */
-sp_sample_t sp_sin_lq(sp_float_t a) {
+sp_sample_t sp_sin_lq(sp_sample_t a) {
   sp_sample_t b;
   sp_sample_t c;
   b = (4 / M_PI);
@@ -175,7 +175,7 @@ void sp_sine_period(sp_time_t size, sp_sample_t* out) {
 }
 
 /** the normalised sinc function */
-sp_float_t sp_sinc(sp_float_t a) { return (((0 == a) ? 1 : (sin((M_PI * a)) / (M_PI * a)))); }
+sp_sample_t sp_sinc(sp_sample_t a) { return (((0 == a) ? 1 : (sin((M_PI * a)) / (M_PI * a)))); }
 
 /** all arrays should be input-len and are managed by the caller */
 int sp_fft(sp_time_t input_len, double* input_or_output_real, double* input_or_output_imag) { return ((!Fft_transform(input_or_output_real, input_or_output_imag, input_len))); }

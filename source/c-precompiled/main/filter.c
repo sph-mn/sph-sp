@@ -72,7 +72,11 @@ new and extended areas must be set to zero */
       memset(((state->ir_len - 1) + carryover), 0, ((ir_len - state->ir_len) * sizeof(sp_sample_t)));
     };
   } else {
-    status_require((sph_helper_calloc((carryover_alloc_len * sizeof(sp_sample_t)), (&carryover))));
+    if (carryover_alloc_len) {
+      status_require((sph_helper_calloc((carryover_alloc_len * sizeof(sp_sample_t)), (&carryover))));
+    } else {
+      carryover = 0;
+    };
     state->carryover_alloc_len = carryover_alloc_len;
   };
   state->carryover = carryover;
@@ -103,11 +107,11 @@ status_t sp_convolution_filter(sp_sample_t* in, sp_time_t in_len, sp_convolution
 exit:
   status_return;
 }
-sp_float_t sp_window_blackman(sp_float_t a, sp_time_t width) { return (((0.42 - (0.5 * cos(((2 * M_PI * a) / (width - 1))))) + (0.08 * cos(((4 * M_PI * a) / (width - 1)))))); }
+sp_sample_t sp_window_blackman(sp_sample_t a, sp_time_t width) { return (((0.42 - (0.5 * cos(((2 * M_PI * a) / (width - 1))))) + (0.08 * cos(((4 * M_PI * a) / (width - 1)))))); }
 
 /** approximate impulse response length for a transition factor and
    ensure that the length is odd */
-sp_time_t sp_windowed_sinc_lp_hp_ir_length(sp_float_t transition) {
+sp_time_t sp_windowed_sinc_lp_hp_ir_length(sp_sample_t transition) {
   sp_time_t a;
   a = ceil((4 / transition));
   if (!(a % 2)) {
@@ -132,13 +136,13 @@ exit:
    uses a truncated blackman window.
    allocates out-ir, sets out-len.
    cutoff and transition are as fraction 0..0.5 of the sampling rate */
-status_t sp_windowed_sinc_lp_hp_ir(sp_float_t cutoff, sp_float_t transition, boolean is_high_pass, sp_sample_t** out_ir, sp_time_t* out_len) {
+status_t sp_windowed_sinc_lp_hp_ir(sp_sample_t cutoff, sp_sample_t transition, boolean is_high_pass, sp_sample_t** out_ir, sp_time_t* out_len) {
   status_declare;
-  sp_float_t center_index;
+  sp_sample_t center_index;
   sp_time_t i;
   sp_sample_t* ir;
   sp_time_t len;
-  sp_float_t sum;
+  sp_sample_t sum;
   len = sp_windowed_sinc_lp_hp_ir_length(transition);
   center_index = ((len - 1.0) / 2.0);
   status_require((sph_helper_malloc((len * sizeof(sp_sample_t)), (&ir))));
@@ -147,10 +151,10 @@ nan can be set here if the freq and transition values are invalid */
   for (i = 0; (i < len); i = (1 + i)) {
     ir[i] = (sp_window_blackman(i, len) * sp_sinc((2 * cutoff * (i - center_index))));
   };
-  /* scale to get unity gain */
+  /* scale to get unity gain. adjust sum of ir values to be 1.0 */
   sum = sp_samples_sum(ir, len);
-  for (i = 0; (i < len); i = (1 + i)) {
-    ir[i] = (ir[i] / sum);
+  for (i = 0; (i < len); i += 1) {
+    ir[i] /= sum;
   };
   if (is_high_pass) {
     sp_spectral_inversion_ir(ir, len);
@@ -162,8 +166,8 @@ exit:
 }
 
 /** like sp-windowed-sinc-ir-lp but for a band-pass or band-reject filter.
-   optimisation: if one cutoff is at or above maximum then create only either low-pass or high-pass */
-status_t sp_windowed_sinc_bp_br_ir(sp_float_t cutoff_l, sp_float_t cutoff_h, sp_float_t transition_l, sp_float_t transition_h, boolean is_reject, sp_sample_t** out_ir, sp_time_t* out_len) {
+   if one cutoff is at or above maximum then create only either low-pass or high-pass */
+status_t sp_windowed_sinc_bp_br_ir(sp_sample_t cutoff_l, sp_sample_t cutoff_h, sp_sample_t transition_l, sp_sample_t transition_h, boolean is_reject, sp_sample_t** out_ir, sp_time_t* out_len) {
   status_declare;
   sp_sample_t* hp_ir;
   sp_time_t hp_len;
@@ -209,7 +213,7 @@ status_t sp_windowed_sinc_bp_br_ir(sp_float_t cutoff_l, sp_float_t cutoff_h, sp_
     free(over);
     *out_ir = out;
   } else {
-    /* meaning of cutoff high/low is switched. */
+    /* meaning of cutoff low/high is switched. cutoff-l leaves higher frequencies */
     if (0.0 >= cutoff_l) {
       if (0.5 <= cutoff_h) {
         return ((sp_passthrough_ir(out_ir, out_len)));
@@ -233,30 +237,30 @@ exit:
 }
 
 /** maps arguments from the generic ir-f-arguments array.
-   arguments is (sp-float-t:cutoff sp-float-t:transition boolean:is-high-pass) */
+   arguments is (sp-sample-t:cutoff sp-sample-t:transition boolean:is-high-pass) */
 status_t sp_windowed_sinc_lp_hp_ir_f(void* arguments, sp_sample_t** out_ir, sp_time_t* out_len) {
-  sp_float_t cutoff;
-  sp_float_t transition;
+  sp_sample_t cutoff;
+  sp_sample_t transition;
   boolean is_high_pass;
-  cutoff = *((sp_float_t*)(arguments));
-  transition = *(1 + ((sp_float_t*)(arguments)));
-  is_high_pass = *((boolean*)((2 + ((sp_float_t*)(arguments)))));
+  cutoff = *((sp_sample_t*)(arguments));
+  transition = *(1 + ((sp_sample_t*)(arguments)));
+  is_high_pass = *((boolean*)((2 + ((sp_sample_t*)(arguments)))));
   return ((sp_windowed_sinc_lp_hp_ir(cutoff, transition, is_high_pass, out_ir, out_len)));
 }
 
 /** maps arguments from the generic ir-f-arguments array.
-   arguments is (sp-float-t:cutoff-l sp-float-t:cutoff-h sp-float-t:transition boolean:is-reject) */
+   arguments is (sp-sample-t:cutoff-l sp-sample-t:cutoff-h sp-sample-t:transition boolean:is-reject) */
 status_t sp_windowed_sinc_bp_br_ir_f(void* arguments, sp_sample_t** out_ir, sp_time_t* out_len) {
-  sp_float_t cutoff_l;
-  sp_float_t cutoff_h;
-  sp_float_t transition_l;
-  sp_float_t transition_h;
+  sp_sample_t cutoff_l;
+  sp_sample_t cutoff_h;
+  sp_sample_t transition_l;
+  sp_sample_t transition_h;
   boolean is_reject;
-  cutoff_l = *((sp_float_t*)(arguments));
-  cutoff_h = *(1 + ((sp_float_t*)(arguments)));
-  transition_l = *(2 + ((sp_float_t*)(arguments)));
-  transition_h = *(3 + ((sp_float_t*)(arguments)));
-  is_reject = *((boolean*)((4 + ((sp_float_t*)(arguments)))));
+  cutoff_l = *((sp_sample_t*)(arguments));
+  cutoff_h = *(1 + ((sp_sample_t*)(arguments)));
+  transition_l = *(2 + ((sp_sample_t*)(arguments)));
+  transition_h = *(3 + ((sp_sample_t*)(arguments)));
+  is_reject = *((boolean*)((4 + ((sp_sample_t*)(arguments)))));
   return ((sp_windowed_sinc_bp_br_ir(cutoff_l, cutoff_h, transition_l, transition_h, is_reject, out_ir, out_len)));
 }
 
@@ -267,35 +271,37 @@ status_t sp_windowed_sinc_bp_br_ir_f(void* arguments, sp_sample_t** out_ir, sp_t
    * is-high-pass: if true then it will reduce low frequencies
    * out-state: if zero then state will be allocated.
    * out-samples: owned by the caller. length must be at least in-len */
-status_t sp_windowed_sinc_lp_hp(sp_sample_t* in, sp_time_t in_len, sp_float_t cutoff, sp_float_t transition, boolean is_high_pass, sp_convolution_filter_state_t** out_state, sp_sample_t* out_samples) {
+status_t sp_windowed_sinc_lp_hp(sp_sample_t* in, sp_time_t in_len, sp_sample_t cutoff, sp_sample_t transition, boolean is_high_pass, sp_convolution_filter_state_t** out_state, sp_sample_t* out_samples) {
   status_declare;
-  uint8_t a[(sizeof(boolean) + (2 * sizeof(sp_float_t)))];
+  uint8_t a[(sizeof(boolean) + (2 * sizeof(sp_sample_t)))];
   uint8_t a_len;
   /* set arguments array for ir-f */
-  a_len = (sizeof(boolean) + (2 * sizeof(sp_float_t)));
-  *((sp_float_t*)(a)) = cutoff;
-  *(1 + ((sp_float_t*)(a))) = transition;
-  *((boolean*)((2 + ((sp_float_t*)(a))))) = is_high_pass;
+  a_len = (sizeof(boolean) + (2 * sizeof(sp_sample_t)));
+  *((sp_sample_t*)(a)) = cutoff;
+  *(1 + ((sp_sample_t*)(a))) = transition;
+  *((boolean*)((2 + ((sp_sample_t*)(a))))) = is_high_pass;
   /* apply filter */
   status_require((sp_convolution_filter(in, in_len, sp_windowed_sinc_lp_hp_ir_f, a, a_len, out_state, out_samples)));
+  sp_samples_set_unity_gain(in, in_len, out_samples);
 exit:
   status_return;
 }
 
 /** like sp-windowed-sinc-lp-hp but for a band-pass or band-reject filter */
-status_t sp_windowed_sinc_bp_br(sp_sample_t* in, sp_time_t in_len, sp_float_t cutoff_l, sp_float_t cutoff_h, sp_float_t transition_l, sp_float_t transition_h, boolean is_reject, sp_convolution_filter_state_t** out_state, sp_sample_t* out_samples) {
+status_t sp_windowed_sinc_bp_br(sp_sample_t* in, sp_time_t in_len, sp_sample_t cutoff_l, sp_sample_t cutoff_h, sp_sample_t transition_l, sp_sample_t transition_h, boolean is_reject, sp_convolution_filter_state_t** out_state, sp_sample_t* out_samples) {
   status_declare;
-  uint8_t a[(sizeof(boolean) + (3 * sizeof(sp_float_t)))];
+  uint8_t a[(sizeof(boolean) + (3 * sizeof(sp_sample_t)))];
   uint8_t a_len;
   /* set arguments array for ir-f */
-  a_len = (sizeof(boolean) + (4 * sizeof(sp_float_t)));
-  *((sp_float_t*)(a)) = cutoff_l;
-  *(1 + ((sp_float_t*)(a))) = cutoff_h;
-  *(2 + ((sp_float_t*)(a))) = transition_l;
-  *(3 + ((sp_float_t*)(a))) = transition_h;
-  *((boolean*)((4 + ((sp_float_t*)(a))))) = is_reject;
+  a_len = (sizeof(boolean) + (4 * sizeof(sp_sample_t)));
+  *((sp_sample_t*)(a)) = cutoff_l;
+  *(1 + ((sp_sample_t*)(a))) = cutoff_h;
+  *(2 + ((sp_sample_t*)(a))) = transition_l;
+  *(3 + ((sp_sample_t*)(a))) = transition_h;
+  *((boolean*)((4 + ((sp_sample_t*)(a))))) = is_reject;
   /* apply filter */
   status_require((sp_convolution_filter(in, in_len, sp_windowed_sinc_bp_br_ir_f, a, a_len, out_state, out_samples)));
+  sp_samples_set_unity_gain(in, in_len, out_samples);
 exit:
   status_return;
 }
@@ -308,7 +314,7 @@ exit:
      * http://www.cytomic.com/technical-papers
      * http://www.earlevel.com/main/2016/02/21/filters-for-synths-starting-out/ */
 #define define_sp_state_variable_filter(suffix, transfer) \
-  void sp_state_variable_filter_##suffix(sp_sample_t* out, sp_sample_t* in, sp_float_t in_count, sp_float_t cutoff, sp_time_t q_factor, sp_sample_t* state) { \
+  void sp_state_variable_filter_##suffix(sp_sample_t* out, sp_sample_t* in, sp_sample_t in_count, sp_sample_t cutoff, sp_time_t q_factor, sp_sample_t* state) { \
     sp_sample_t a1; \
     sp_sample_t a2; \
     sp_sample_t g; \
@@ -345,7 +351,7 @@ define_sp_state_variable_filter(lp, v2)
 
   /** the sph-sp default precise filter. processing intensive if parameters change frequently.
    memory for out-state will be allocated and has to be freed with sp-filter-state-free */
-  status_t sp_filter(sp_sample_t* in, sp_time_t in_size, sp_float_t cutoff_l, sp_float_t cutoff_h, sp_float_t transition_l, sp_float_t transition_h, boolean is_reject, sp_filter_state_t** out_state, sp_sample_t* out_samples) { sp_windowed_sinc_bp_br(in, in_size, cutoff_l, cutoff_h, transition_l, transition_h, is_reject, out_state, out_samples); }
+  status_t sp_filter(sp_sample_t* in, sp_time_t in_size, sp_sample_t cutoff_l, sp_sample_t cutoff_h, sp_sample_t transition_l, sp_sample_t transition_h, boolean is_reject, sp_filter_state_t** out_state, sp_sample_t* out_samples) { sp_windowed_sinc_bp_br(in, in_size, cutoff_l, cutoff_h, transition_l, transition_h, is_reject, out_state, out_samples); }
 
 /** one state object per pass.
    allocates and prepares temporary memory for passes and checks if max-passes doesnt exceed the limit.
@@ -379,7 +385,7 @@ void sp_cheap_filter_state_free(sp_cheap_filter_state_t* a) {
 /** the sph-sp default fast filter. caller has to manage the state object with
    sp-cheap-filter-state-new and sp-cheap-filter-state-free.
    uses separate svf-state values for multiple passes as it is like filters in series */
-void sp_cheap_filter(sp_state_variable_filter_t filter, sp_sample_t* in, sp_time_t in_size, sp_float_t cutoff, sp_time_t passes, sp_float_t q_factor, sp_cheap_filter_state_t* state, sp_sample_t* out) {
+void sp_cheap_filter(sp_state_variable_filter_t filter, sp_sample_t* in, sp_time_t in_size, sp_sample_t cutoff, sp_time_t passes, sp_sample_t q_factor, sp_cheap_filter_state_t* state, sp_sample_t* out) {
   status_declare;
   sp_sample_t* in_swap;
   sp_sample_t* in_temp;

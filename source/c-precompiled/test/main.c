@@ -10,7 +10,7 @@ the macros are used as optional helpers to simplify common tasks where c syntax 
 #define sp_sample_nearly_equal f32_nearly_equal
 #define sp_samples_nearly_equal f32_array_nearly_equal
 #endif
-#define _rate 96000
+#define _rate 960
 sp_sample_t error_margin = 0.1;
 uint8_t* test_file_path = "/tmp/test-sph-sp-file";
 status_t test_base() {
@@ -134,8 +134,8 @@ exit:
 }
 status_t test_windowed_sinc() {
   status_declare;
-  sp_float_t transition;
-  sp_float_t cutoff;
+  sp_sample_t transition;
+  sp_sample_t cutoff;
   sp_sample_t* ir;
   sp_time_t ir_len;
   sp_convolution_filter_state_t* state;
@@ -262,11 +262,13 @@ status_t test_sp_triangle_square() {
   sp_time_t i;
   sp_sample_t* out_t;
   sp_sample_t* out_s;
-  status_require((sph_helper_calloc((_rate * sizeof(sp_sample_t*)), (&out_t))));
-  status_require((sph_helper_calloc((_rate * sizeof(sp_sample_t*)), (&out_s))));
-  for (i = 0; (i < _rate); i = (1 + i)) {
-    out_t[i] = sp_triangle(i, (_rate / 2), (_rate / 2));
-    out_s[i] = sp_square(i, _rate);
+  sp_time_t size;
+  size = 96000;
+  status_require((sph_helper_calloc((size * sizeof(sp_sample_t*)), (&out_t))));
+  status_require((sph_helper_calloc((size * sizeof(sp_sample_t*)), (&out_s))));
+  for (i = 0; (i < size); i += 1) {
+    out_t[i] = sp_triangle(i, (size / 2), (size / 2));
+    out_s[i] = sp_square(i, size);
   };
   test_helper_assert("triangle 0", (0 == out_t[0]));
   test_helper_assert("triangle 1/2", (1 == out_t[48000]));
@@ -289,14 +291,14 @@ status_t test_sp_random() {
   s = sp_random_state_new(80);
   sp_samples_random((&s), 10, out);
   sp_samples_random((&s), 10, (10 + out));
-  test_helper_assert("last value", (f64_nearly_equal((0.2233), (out[19]), error_margin)));
+  test_helper_assert("last value", (f64_nearly_equal((-0.553401), (out[19]), error_margin)));
 exit:
   status_return;
 }
 
 #define max(a, b) ((a > b) ? a : b)
 #define min(a, b) ((a < b) ? a : b)
-#define test_noise_duration 96
+#define test_noise_duration 960
 status_t test_sp_noise_event() {
   status_declare;
   sp_block_t out;
@@ -315,8 +317,8 @@ status_t test_sp_noise_event() {
   status_require((sp_block_new(2, test_noise_duration, (&out))));
   free_on_error((&out), sp_block_free);
   for (sp_time_t i = 0; (i < test_noise_duration); i += 1) {
-    cutl[i] = ((i < (test_noise_duration / 2)) ? 0.01 : 0.1);
-    cuth[i] = 0.11;
+    cutl[i] = 0.01;
+    cuth[i] = 0.3;
     amod[i] = 1.0;
   };
   (*config).cutl_mod = cutl;
@@ -332,7 +334,9 @@ status_t test_sp_noise_event() {
   event.data = config;
   status_require((sp_event_list_add((&events), event)));
   status_require((sp_seq(0, test_noise_duration, out, (&events))));
-  test_helper_assert("value", (f64_nearly_equal((0.04768), (((out.samples)[0])[10]), (0.001))));
+  sp_sample_t sum;
+  test_helper_assert(("in range -1..1"), (1.0 >= sp_samples_absolute_max(((out.samples)[0]), test_noise_duration)));
+  test_helper_assert("value", (f64_nearly_equal((0.514491), (((out.samples)[0])[10]), (0.001))));
   sp_block_free((&out));
 exit:
   if (status_is_failure) {
@@ -780,9 +784,9 @@ status_t test_sp_seq_parallel() {
     sp_seq_parallel(i, (i + step_size), (sp_block_with_offset(block, i)), (&events));
   };
   test_helper_assert("first 1", (sp_sample_nearly_equal(0, ((block.samples)[0][0]), (0.001)) && sp_sample_nearly_equal(0, ((block.samples)[1][0]), (0.001))));
-  test_helper_assert("last 1", (sp_sample_nearly_equal((-5.956993), ((block.samples)[0][(step_size - 1)]), (0.001)) && sp_sample_nearly_equal((-5.956993), ((block.samples)[1][(step_size - 1)]), (0.001))));
-  test_helper_assert("first 2", (sp_sample_nearly_equal((-6.087614), ((block.samples)[0][step_size]), (0.001)) && sp_sample_nearly_equal((-6.087614), ((block.samples)[1][step_size]), (0.001))));
-  test_helper_assert("last 2", (sp_sample_nearly_equal((9.615618), ((block.samples)[0][((2 * step_size) - 1)]), (0.001)) && sp_sample_nearly_equal((9.615618), ((block.samples)[1][((2 * step_size) - 1)]), (0.001))));
+  test_helper_assert("last 1", (sp_sample_nearly_equal((8.314696), ((block.samples)[0][(step_size - 1)]), (0.001)) && sp_sample_nearly_equal((8.314696), ((block.samples)[1][(step_size - 1)]), (0.001))));
+  test_helper_assert("first 2", (sp_sample_nearly_equal((5.0), ((block.samples)[0][step_size]), (0.001)) && sp_sample_nearly_equal((5.0), ((block.samples)[1][step_size]), (0.001))));
+  test_helper_assert("last 2", (sp_sample_nearly_equal((-4.422887), ((block.samples)[0][((2 * step_size) - 1)]), (0.001)) && sp_sample_nearly_equal((-4.422887), ((block.samples)[1][((2 * step_size) - 1)]), (0.001))));
   sp_event_list_free((&events));
   free(amod);
   free(fmod);
@@ -850,9 +854,9 @@ int main() {
   status_declare;
   rs = sp_random_state_new(3);
   sp_initialize(3, 2, _rate);
+  test_helper_test_one(test_sp_noise_event);
   test_helper_test_one(test_sp_wave_event);
   test_helper_test_one(test_sp_cheap_noise_event);
-  test_helper_test_one(test_sp_noise_event);
   test_helper_test_one(test_sp_map_event);
   test_helper_test_one(test_sp_group);
   test_helper_test_one(test_sp_seq);

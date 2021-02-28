@@ -113,7 +113,7 @@ sp_convolve :: sp_sample_t*:a sp_time_t:a_len sp_sample_t*:b sp_time_t:b_len sp_
 sp_convolve_one :: sp_sample_t*:a sp_time_t:a_len sp_sample_t*:b sp_time_t:b_len sp_sample_t*:result_samples -> void
 sp_event_list_add :: sp_event_list_t**:a sp_event_t:event -> status_t
 sp_event_list_display :: sp_event_list_t*:a -> void
-sp_event_list_free :: sp_event_list_t*:events -> void
+sp_event_list_free :: sp_event_list_t**:events -> void
 sp_event_list_remove_element :: sp_event_list_t**:a sp_event_list_t*:element -> void
 sp_event_list_reverse :: sp_event_list_t**:a -> void
 sp_event_memory_add :: sp_event_t*:event void*:address sp_memory_free_t:handler -> void
@@ -376,10 +376,12 @@ sp_declare_sine_config_lfo(name)
 sp_default_random_seed
 sp_event_duration(a)
 sp_event_duration_set(a, duration)
+sp_event_free(a)
 sp_event_memory_add1(event, address)
 sp_event_memory_add1_2(a, data1, data2)
 sp_event_memory_add1_3(a, data1, data2, data3)
 sp_event_move(a, start)
+sp_event_pointer_free(a)
 sp_file_bit_input
 sp_file_bit_output
 sp_file_bit_position

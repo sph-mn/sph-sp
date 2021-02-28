@@ -6,7 +6,7 @@
   sp-channel-limit 2
   sp-channel-count-t uint8-t
   sp-file-format (bit-or SF-FORMAT-WAV SF_FORMAT_FLOAT)
-  sp-float-t double
+  sp-sample-t double
   spline-path-time-t sp-time-t
   spline-path-value-t sp-sample-t
   sp-sample-rate-t uint32-t
@@ -18,7 +18,7 @@
   sp-time-half-t uint16-t
   sp-times-random sph-random-u32-array
   sp-times-random-bounded sph-random-u32-bounded-array
-  sp-samples-random sph-random-f64-array
+  sp-samples-random sph-random-f64-array-1to1
   sp-samples-random-bounded sph-random-f64-bounded-array
   sp-time-random sph-random-u32
   sp-time-random-bounded sph-random-u32-bounded
@@ -132,9 +132,9 @@
   (status-t sp-channel-count-t sp-time-t sp-block-t*)
   (sp-status-description a) (uint8-t* status-t)
   (sp-status-name a) (uint8-t* status-t)
-  (sp-sin-lq a) (sp-sample-t sp-float-t)
-  (sp-sinc a) (sp-float-t sp-float-t)
-  (sp-window-blackman a width) (sp-float-t sp-float-t sp-time-t)
+  (sp-sin-lq a) (sp-sample-t sp-sample-t)
+  (sp-sinc a) (sp-sample-t sp-sample-t)
+  (sp-window-blackman a width) (sp-sample-t sp-sample-t sp-time-t)
   (sp-spectral-inversion-ir a a-len) (void sp-sample-t* sp-time-t)
   (sp-spectral-reversal-ir a a-len) (void sp-sample-t* sp-time-t)
   (sp-fft input-len input/output-real input/output-imag) (int sp-time-t double* double*)
@@ -338,12 +338,12 @@
       (svf-state (array sp-sample-t ((* 2 sp-cheap-filter-passes-limit))))))
   sp-state-variable-filter-t
   (type
-    (function-pointer void sp-sample-t* sp-sample-t* sp-float-t sp-float-t sp-time-t sp-sample-t*))
+    (function-pointer void sp-sample-t* sp-sample-t* sp-sample-t sp-sample-t sp-time-t sp-sample-t*))
   (sp-moving-average in in-size prev next radius out)
   (void sp-sample-t* sp-time-t sp-sample-t* sp-sample-t* sp-time-t sp-sample-t*)
-  (sp-windowed-sinc-lp-hp-ir-length transition) (sp-time-t sp-float-t)
+  (sp-windowed-sinc-lp-hp-ir-length transition) (sp-time-t sp-sample-t)
   (sp-windowed-sinc-ir cutoff transition result-len result-ir)
-  (status-t sp-float-t sp-float-t sp-time-t* sp-sample-t**)
+  (status-t sp-sample-t sp-sample-t sp-time-t* sp-sample-t**)
   (sp-convolution-filter-state-free state) (void sp-convolution-filter-state-t*)
   (sp-convolution-filter-state-set ir-f ir-f-arguments ir-f-arguments-len out-state)
   (status-t sp-convolution-filter-ir-f-t void* uint8-t sp-convolution-filter-state-t**)
@@ -351,41 +351,42 @@
   (status-t sp-sample-t* sp-time-t
     sp-convolution-filter-ir-f-t void* uint8-t sp-convolution-filter-state-t** sp-sample-t*)
   (sp-windowed-sinc-lp-hp-ir cutoff transition is-high-pass out-ir out-len)
-  (status-t sp-float-t sp-float-t boolean sp-sample-t** sp-time-t*)
+  (status-t sp-sample-t sp-sample-t boolean sp-sample-t** sp-time-t*)
   (sp-windowed-sinc-bp-br-ir cutoff-l cutoff-h transition-l transition-h is-reject out-ir out-len)
-  (status-t sp-float-t sp-float-t sp-float-t sp-float-t boolean sp-sample-t** sp-time-t*)
+  (status-t sp-sample-t sp-sample-t sp-sample-t sp-sample-t boolean sp-sample-t** sp-time-t*)
   (sp-windowed-sinc-lp-hp-ir-f arguments out-ir out-len) (status-t void* sp-sample-t** sp-time-t*)
   (sp-windowed-sinc-bp-br-ir-f arguments out-ir out-len) (status-t void* sp-sample-t** sp-time-t*)
   (sp-windowed-sinc-lp-hp in in-len cutoff transition is-high-pass out-state out-samples)
   (status-t sp-sample-t* sp-time-t
-    sp-float-t sp-float-t boolean sp-convolution-filter-state-t** sp-sample-t*)
+    sp-sample-t sp-sample-t boolean sp-convolution-filter-state-t** sp-sample-t*)
   (sp-windowed-sinc-bp-br in in-len
     cutoff-l cutoff-h transition-l transition-h is-reject out-state out-samples)
   (status-t sp-sample-t* sp-time-t
-    sp-float-t sp-float-t sp-float-t sp-float-t boolean sp-convolution-filter-state-t** sp-sample-t*)
+    sp-sample-t sp-sample-t sp-sample-t
+    sp-sample-t boolean sp-convolution-filter-state-t** sp-sample-t*)
   (sp-windowed-sinc-lp-hp-ir cutoff transition is-high-pass out-ir out-len)
-  (status-t sp-float-t sp-float-t boolean sp-sample-t** sp-time-t*)
+  (status-t sp-sample-t sp-sample-t boolean sp-sample-t** sp-time-t*)
   (sp-state-variable-filter-lp out in in-count cutoff q-factor state)
-  (void sp-sample-t* sp-sample-t* sp-float-t sp-float-t sp-time-t sp-sample-t*)
+  (void sp-sample-t* sp-sample-t* sp-sample-t sp-sample-t sp-time-t sp-sample-t*)
   (sp-state-variable-filter-hp out in in-count cutoff q-factor state)
-  (void sp-sample-t* sp-sample-t* sp-float-t sp-float-t sp-time-t sp-sample-t*)
+  (void sp-sample-t* sp-sample-t* sp-sample-t sp-sample-t sp-time-t sp-sample-t*)
   (sp-state-variable-filter-bp out in in-count cutoff q-factor state)
-  (void sp-sample-t* sp-sample-t* sp-float-t sp-float-t sp-time-t sp-sample-t*)
+  (void sp-sample-t* sp-sample-t* sp-sample-t sp-sample-t sp-time-t sp-sample-t*)
   (sp-state-variable-filter-br out in in-count cutoff q-factor state)
-  (void sp-sample-t* sp-sample-t* sp-float-t sp-float-t sp-time-t sp-sample-t*)
+  (void sp-sample-t* sp-sample-t* sp-sample-t sp-sample-t sp-time-t sp-sample-t*)
   (sp-state-variable-filter-peak out in in-count cutoff q-factor state)
-  (void sp-sample-t* sp-sample-t* sp-float-t sp-float-t sp-time-t sp-sample-t*)
+  (void sp-sample-t* sp-sample-t* sp-sample-t sp-sample-t sp-time-t sp-sample-t*)
   (sp-state-variable-filter-all out in in-count cutoff q-factor state)
-  (void sp-sample-t* sp-sample-t* sp-float-t sp-float-t sp-time-t sp-sample-t*)
+  (void sp-sample-t* sp-sample-t* sp-sample-t sp-sample-t sp-time-t sp-sample-t*)
   (sp-cheap-filter type in in-size cutoff passes q-factor state out)
   (void sp-state-variable-filter-t sp-sample-t*
-    sp-time-t sp-float-t sp-time-t sp-float-t sp-cheap-filter-state-t* sp-sample-t*)
+    sp-time-t sp-sample-t sp-time-t sp-sample-t sp-cheap-filter-state-t* sp-sample-t*)
   (sp-cheap-filter-state-free a) (void sp-cheap-filter-state-t*)
   (sp-cheap-filter-state-new max-size max-passes out-state)
   (status-t sp-time-t sp-time-t sp-cheap-filter-state-t*)
   (sp-filter in in-size cutoff-l cutoff-h transition-l transition-h is-reject out-state out-samples)
   (status-t sp-sample-t* sp-time-t
-    sp-float-t sp-float-t sp-float-t sp-float-t boolean sp-filter-state-t** sp-sample-t*))
+    sp-sample-t sp-sample-t sp-sample-t sp-sample-t boolean sp-filter-state-t** sp-sample-t*))
 
 (sc-comment "plot")
 (pre-define (sp-block-plot-1 a) (sp-plot-samples (array-get a.samples 0) a.size))

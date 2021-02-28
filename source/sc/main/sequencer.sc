@@ -312,8 +312,8 @@
     amod 0
     cutl 0.0
     cuth 0.5
-    trnl 0.1
-    trnh 0.1
+    trnl 0.07
+    trnh 0.07
     cutl-mod 0
     cuth-mod 0
     resolution (/ sp-rate 10)
@@ -350,7 +350,7 @@
     duration (- end start)
     block-count (if* (= duration s.resolution) 1 (sp-cheap-floor-positive (/ duration s.resolution)))
     block-rest (modulo duration s.resolution))
-  (for ((set block-i 0) (<= block-i block-count) (set+ block-i 1))
+  (for ((set block-i 0) (< block-i block-count) (set+ block-i 1))
     (set
       block-offset (* s.resolution block-i)
       t (+ start block-offset)
@@ -362,7 +362,7 @@
     (for ((set i 0) (< i duration) (set+ i 1))
       (set+ (array-get out.samples s.channel (+ block-offset i))
         (* s.amp (array-get s.amod (+ t i)) (array-get s.temp i)))))
-  (set sp:random-state s.random-state)
+  (set sp:random-state s.random-state sp:filter-state s.filter-state)
   status-return)
 
 (define (sp-noise-event-filter-state cutl cuth trnl trnh is-reject rs out)
@@ -515,7 +515,7 @@
     block-count (if* (= duration s.resolution) 1 (sp-cheap-floor-positive (/ duration s.resolution)))
     block-rest (modulo duration s.resolution))
   (sc-comment "total block count is block-count plus rest-block")
-  (for ((set block-i 0) (<= block-i block-count) (set+ block-i 1))
+  (for ((set block-i 0) (< block-i block-count) (set+ block-i 1))
     (set
       block-offset (* s.resolution block-i)
       t (+ start block-offset)
@@ -526,7 +526,7 @@
     (for ((set i 0) (< i duration) (set+ i 1))
       (set+ (array-get out.samples s.channel (+ block-offset i))
         (* s.amp (array-get s.amod (+ t i)) (array-get s.temp i)))))
-  (set sp:random-state s.random-state)
+  (set sp:random-state s.random-state sp:filter-state s.filter-state)
   status-return)
 
 (define (sp-cheap-noise-event-channel duration config channel rs state-noise state-temp out)

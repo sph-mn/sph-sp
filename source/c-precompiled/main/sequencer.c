@@ -434,8 +434,8 @@ status_t sp_noise_event_config_new(sp_noise_event_config_t** out) {
   (*result).amod = 0;
   (*result).cutl = 0.0;
   (*result).cuth = 0.5;
-  (*result).trnl = 0.1;
-  (*result).trnh = 0.1;
+  (*result).trnl = 0.07;
+  (*result).trnh = 0.07;
   (*result).cutl_mod = 0;
   (*result).cuth_mod = 0;
   (*result).resolution = (sp_rate / 10);
@@ -471,7 +471,7 @@ status_t sp_noise_event_generate(sp_time_t start, sp_time_t end, sp_block_t out,
   duration = (end - start);
   block_count = ((duration == s.resolution) ? 1 : sp_cheap_floor_positive((duration / s.resolution)));
   block_rest = (duration % s.resolution);
-  for (block_i = 0; (block_i <= block_count); block_i += 1) {
+  for (block_i = 0; (block_i < block_count); block_i += 1) {
     block_offset = (s.resolution * block_i);
     t = (start + block_offset);
     duration = ((block_count == block_i) ? block_rest : s.resolution);
@@ -482,6 +482,7 @@ status_t sp_noise_event_generate(sp_time_t start, sp_time_t end, sp_block_t out,
     };
   };
   sp->random_state = s.random_state;
+  sp->filter_state = s.filter_state;
   status_return;
 }
 
@@ -641,7 +642,7 @@ status_t sp_cheap_noise_event_generate(sp_time_t start, sp_time_t end, sp_block_
   block_count = ((duration == s.resolution) ? 1 : sp_cheap_floor_positive((duration / s.resolution)));
   block_rest = (duration % s.resolution);
   /* total block count is block-count plus rest-block */
-  for (block_i = 0; (block_i <= block_count); block_i += 1) {
+  for (block_i = 0; (block_i < block_count); block_i += 1) {
     block_offset = (s.resolution * block_i);
     t = (start + block_offset);
     duration = ((block_count == block_i) ? block_rest : s.resolution);
@@ -652,6 +653,7 @@ status_t sp_cheap_noise_event_generate(sp_time_t start, sp_time_t end, sp_block_
     };
   };
   sp->random_state = s.random_state;
+  sp->filter_state = s.filter_state;
   status_return;
 }
 status_t sp_cheap_noise_event_channel(sp_time_t duration, sp_cheap_noise_event_config_t config, sp_channel_count_t channel, sp_random_state_t rs, sp_sample_t* state_noise, sp_sample_t* state_temp, sp_event_t* out) {
