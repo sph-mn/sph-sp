@@ -506,7 +506,6 @@ status_t test_render_block() {
   sp_render_config_t rc;
   sp_wave_event_config_t* config;
   sp_declare_event(event);
-  sp_declare_event_list(events);
   free_on_error_init(2);
   rc = sp_render_config(sp_channels, sp_rate, sp_rate);
   rc.block_size = 40;
@@ -528,10 +527,8 @@ status_t test_render_block() {
   event.end = test_wave_event_duration;
   event.data = config;
   event.prepare = sp_wave_event_prepare;
-  status_require((sp_event_list_add((&events), event)));
-  sp_seq_events_prepare((&events));
-  /* (sp-render-file events test-wave-event-duration rc /tmp/test.wav) */
-  sp_render_block(events, 0, test_wave_event_duration, rc, (&out));
+  /* (sp-render-file event test-wave-event-duration rc /tmp/test.wav) */
+  sp_render_block(event, 0, test_wave_event_duration, rc, (&out));
   /* (sp-block-plot-1 out) */
   sp_block_free((&out));
 exit:

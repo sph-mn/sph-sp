@@ -394,6 +394,9 @@ void sp_plot_spectrum(sp_sample_t* a, sp_time_t a_size);
 #define sp_declare_event_4(id1, id2, id3, id4) \
   sp_declare_event_2(id1, id2); \
   sp_declare_event_2(id3, id4)
+#define sp_declare_group(id) \
+  sp_declare_event(id); \
+  id.prepare = sp_group_prepare
 #define sp_declare_event_list(id) sp_event_list_t* id = 0
 #define sp_event_duration(a) (a.end - a.start)
 #define sp_event_duration_set(a, duration) a.end = (a.start + duration)
@@ -650,6 +653,6 @@ typedef struct {
   sp_time_t block_size;
 } sp_render_config_t;
 sp_render_config_t sp_render_config(sp_channel_count_t channels, sp_time_t rate, sp_time_t block_size);
-status_t sp_render_file(sp_event_list_t* events, sp_time_t start, sp_time_t end, sp_render_config_t config, uint8_t* path);
-status_t sp_render_block(sp_event_list_t* events, sp_time_t start, sp_time_t end, sp_render_config_t config, sp_block_t* out);
-status_t sp_render_quick(sp_event_list_t* events, uint8_t file_or_plot);
+status_t sp_render_file(sp_event_t event, sp_time_t start, sp_time_t end, sp_render_config_t config, uint8_t* path);
+status_t sp_render_block(sp_event_t event, sp_time_t start, sp_time_t end, sp_render_config_t config, sp_block_t* out);
+status_t sp_render_quick(sp_event_t event, uint8_t file_or_plot);

@@ -339,8 +339,8 @@ sp_render_config_t sp_render_config(sp_channel_count_t channels, sp_time_t rate,
   return (a);
 }
 
-/** render a events with sp_seq to a file. the file is created or overwritten */
-status_t sp_render_file(sp_event_list_t* events, sp_time_t start, sp_time_t end, sp_render_config_t config, uint8_t* path) {
+/** render an event with sp_seq to a file. the file is created or overwritten */
+status_t sp_render_file(sp_event_t event, sp_time_t start, sp_time_t end, sp_render_config_t config, uint8_t* path) {
   status_declare;
   sp_time_t block_end;
   sp_time_t remainder;
@@ -348,17 +348,19 @@ status_t sp_render_file(sp_event_list_t* events, sp_time_t start, sp_time_t end,
   sp_time_t written;
   sp_block_declare(block);
   sp_file_declare(file);
+  sp_declare_event_list(events);
+  status_require((sp_event_list_add((&events), event)));
   status_require((sp_block_new((config.channels), (config.block_size), (&block))));
   status_require((sp_file_open(path, sp_file_mode_write, (config.channels), (config.rate), (&file))));
   remainder = ((end - start) % config.block_size);
   block_end = (config.block_size * ((end - start) / config.block_size));
   for (i = 0; (i < block_end); i += config.block_size) {
-    sp_seq(i, (i + config.block_size), block, (&events));
+    status_require((sp_seq(i, (i + config.block_size), block, (&events))));
     status_require((sp_file_write((&file), (block.samples), (config.block_size), (&written))));
     sp_block_zero(block);
   };
   if (remainder) {
-    sp_seq(i, (i + remainder), block, (&events));
+    status_require((sp_seq(i, (i + remainder), block, (&events))));
     status_require((sp_file_write((&file), (block.samples), remainder, (&written))));
   };
 exit:
@@ -370,11 +372,13 @@ exit:
 /** render a single event with sp_seq to sample arrays in sp_block_t.
    events should have been prepared with sp-seq-events-prepare.
    block will be allocated */
-status_t sp_render_block(sp_event_list_t* events, sp_time_t start, sp_time_t end, sp_render_config_t config, sp_block_t* out) {
+status_t sp_render_block(sp_event_t event, sp_time_t start, sp_time_t end, sp_render_config_t config, sp_block_t* out) {
   status_declare;
   sp_block_t block;
+  sp_declare_event_list(events);
+  status_require((sp_event_list_add((&events), event)));
   status_require((sp_block_new((config.channels), (end - start), (&block))));
-  sp_seq(start, end, block, (&events));
+  status_require((sp_seq(start, end, block, (&events))));
   *out = block;
 exit:
   status_return;
@@ -382,22 +386,22 @@ exit:
 
 /** render the full duration of events with defaults to /tmp/sp-out.wav or plot the result.
    example: sp_render_quick(event, 2, 48000, 1) */
-status_t sp_render_quick(sp_event_list_t* events, uint8_t file_or_plot) {
+status_t sp_render_quick(sp_event_t event, uint8_t file_or_plot) {
   status_declare;
   sp_block_t block;
   sp_render_config_t config;
   sp_time_t start;
   sp_time_t end;
   config = sp_render_config(sp_channels, sp_rate, sp_rate);
-  start = events->event.start;
-  end = events->event.end;
+  start = event.start;
+  end = event.end;
   printf("rendering %lu seconds to %s\n", (sp_cheap_round_positive(((end - start) / config.rate))), (file_or_plot ? "plot" : "file"));
   if (end) {
     if (file_or_plot) {
-      status_require((sp_render_block(events, 0, end, config, (&block))));
+      status_require((sp_render_block(event, 0, end, config, (&block))));
       sp_plot_samples(((block.samples)[0]), end);
     } else {
-      status_require((sp_render_file(events, 0, end, config, ("/tmp/sp-out.wav"))));
+      status_require((sp_render_file(event, 0, end, config, ("/tmp/sp-out.wav"))));
     };
   };
 exit:

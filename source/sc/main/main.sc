@@ -260,57 +260,58 @@
   (struct-set a channels channels rate rate block-size block-size)
   (return a))
 
-(define (sp-render-file events start end config path)
-  (status-t sp-event-list-t* sp-time-t sp-time-t sp-render-config-t uint8-t*)
-  "render a events with sp_seq to a file. the file is created or overwritten"
+(define (sp-render-file event start end config path)
+  (status-t sp-event-t sp-time-t sp-time-t sp-render-config-t uint8-t*)
+  "render an event with sp_seq to a file. the file is created or overwritten"
   status-declare
   (declare block-end sp-time-t remainder sp-time-t i sp-time-t written sp-time-t)
   (sp-block-declare block)
   (sp-file-declare file)
+  (sp-declare-event-list events)
+  (status-require (sp-event-list-add &events event))
   (status-require (sp-block-new config.channels config.block-size &block))
   (status-require (sp-file-open path sp-file-mode-write config.channels config.rate &file))
   (set
     remainder (modulo (- end start) config.block-size)
     block-end (* config.block-size (/ (- end start) config.block-size)))
   (for ((set i 0) (< i block-end) (set+ i config.block-size))
-    (sp-seq i (+ i config.block-size) block &events)
+    (status-require (sp-seq i (+ i config.block-size) block &events))
     (status-require (sp-file-write &file block.samples config.block-size &written))
     (sp-block-zero block))
   (if remainder
     (begin
-      (sp-seq i (+ i remainder) block &events)
+      (status-require (sp-seq i (+ i remainder) block &events))
       (status-require (sp-file-write &file block.samples remainder &written))))
   (label exit (sp-block-free &block) (sp-file-close file) status-return))
 
-(define (sp-render-block events start end config out)
-  (status-t sp-event-list-t* sp-time-t sp-time-t sp-render-config-t sp-block-t*)
+(define (sp-render-block event start end config out)
+  (status-t sp-event-t sp-time-t sp-time-t sp-render-config-t sp-block-t*)
   "render a single event with sp_seq to sample arrays in sp_block_t.
    events should have been prepared with sp-seq-events-prepare.
    block will be allocated"
   status-declare
   (declare block sp-block-t)
+  (sp-declare-event-list events)
+  (status-require (sp-event-list-add &events event))
   (status-require (sp-block-new config.channels (- end start) &block))
-  (sp-seq start end block &events)
+  (status-require (sp-seq start end block &events))
   (set *out block)
   (label exit status-return))
 
-(define (sp-render-quick events file-or-plot) (status-t sp-event-list-t* uint8-t)
+(define (sp-render-quick event file-or-plot) (status-t sp-event-t uint8-t)
   "render the full duration of events with defaults to /tmp/sp-out.wav or plot the result.
    example: sp_render_quick(event, 2, 48000, 1)"
   status-declare
   (declare block sp-block-t config sp-render-config-t start sp-time-t end sp-time-t)
-  (set
-    config (sp-render-config sp-channels sp-rate sp-rate)
-    start events:event.start
-    end events:event.end)
+  (set config (sp-render-config sp-channels sp-rate sp-rate) start event.start end event.end)
   (printf "rendering %lu seconds to %s\n" (sp-cheap-round-positive (/ (- end start) config.rate))
     (if* file-or-plot "plot" "file"))
   (if end
     (if file-or-plot
       (begin
-        (status-require (sp-render-block events 0 end config &block))
+        (status-require (sp-render-block event 0 end config &block))
         (sp-plot-samples (array-get block.samples 0) end))
-      (status-require (sp-render-file events 0 end config "/tmp/sp-out.wav"))))
+      (status-require (sp-render-file event 0 end config "/tmp/sp-out.wav"))))
   (label exit status-return))
 
 (define (sp-random-state-new seed) (sp-random-state-t sp-time-t)
