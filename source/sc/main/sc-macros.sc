@@ -33,26 +33,6 @@
 (sc-define-syntax (sp-path-times* target-address duration segment ...)
   (sp-path-array* sp-time-t* sp-path-times-new target-address duration segment ...))
 
-(sc-define-syntax* (sp-define-trigger* name body ...)
-  "* arguments and types are implicit
-   * status-declare is implicit
-   * exit label with status-return is optional
-   * call free-on-error-free/free-on-exit-free on exit if feature use is found"
-  (let*
-    ( (free-on-error-used (sc-contains-expression (q free-on-error-init) body))
-      (free-on-exit-used (sc-contains-expression (q free-on-exit-init) body))
-      (free-memory
-        (pairs (q if) (q status-is-failure)
-          (if free-on-error-used (q free-on-error-free) (q (begin)))
-          (if free-on-exit-used (list (q free-on-exit-free)) null)))
-      (body
-        (match body
-          ( (body ... ((quote label) (quote exit) exit-content ...))
-            (append body (qq ((label exit (unquote free-memory) (unquote-splicing exit-content))))))
-          (_ (append body (qq ((label exit (unquote free-memory) status-return))))))))
-    (qq
-      (define ((unquote name) _event) (status-t sp-event-t*) status-declare (unquote-splicing body)))))
-
 (sc-define-syntax* (sp-channel-config* channel-config-array (channel-index setting ...) ...)
   "set one or multiple channel config structs in an array"
   (pair (q begin)
@@ -84,3 +64,37 @@
 (sc-define-syntax (sp-cheap-noise* event config config-settings channel-config ...)
   (sp-channel-config-event* "sp-cheap-noise*" sp-cheap-noise-event-prepare
     event config config-settings channel-config ...))
+
+(sc-define-syntax* (sp-define-trigger* name body ...)
+  "* arguments and types are implicit
+   * status-declare is implicit
+   * exit label with status-return is optional
+   * free-on-error-free/free-on-exit-free is added automatically if feature use found"
+  (let*
+    ( (free-on-error-used (sc-contains-expression (q free-on-error-init) body))
+      (free-on-exit-used (sc-contains-expression (q free-on-exit-init) body))
+      (free-memory
+        (if (or free-on-error-used free-on-exit-used)
+          (pairs (q if) (q status-is-failure)
+            (if free-on-error-used (q free-on-error-free) null)
+            (if free-on-exit-used (list (q free-on-exit-free)) null))
+          (q (begin))))
+      (body
+        (match body
+          ( (body ... ((quote label) (quote exit) exit-content ...))
+            (append body (qq ((label exit (unquote free-memory) (unquote-splicing exit-content))))))
+          (_ (append body (qq ((label exit (unquote free-memory) status-return))))))))
+    (qq
+      (define ((unquote name) _event) (status-t sp-event-t*) status-declare (unquote-splicing body)))))
+
+(sc-define-syntax* (sp-define-event* name-and-options body ...)
+  (let*
+    ( (name-and-options
+        (match name-and-options ((name duration) (pair name duration))
+          ((name) (pair name 0)) (name (pair name 0))))
+      (name (first name-and-options)) (duration (tail name-and-options))
+      (trigger-name (symbol-append name (q -trigger))))
+    (qq
+      (begin
+        (sp-define-trigger* (unquote trigger-name) (unquote-splicing body))
+        (sp-define-trigger-event (unquote name) (unquote trigger-name) (unquote duration))))))

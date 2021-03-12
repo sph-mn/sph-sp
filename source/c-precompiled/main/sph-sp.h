@@ -451,6 +451,7 @@ void sp_plot_spectrum(sp_sample_t* a, sp_time_t a_size);
   if (a->free) { \
     (a->free)(a); \
   }
+#define sp_define_trigger_event(name, trigger, duration) sp_event_t name = { .prepare = trigger, .start = 0, .end = duration, .data = 0, .volume = 1.0, .memory = { 0 } }
 array3_declare_type(sp_memory, memreg2_t);
 typedef void (*sp_memory_free_t)(void*);
 struct sp_event_t;
@@ -462,6 +463,7 @@ typedef struct sp_event_t {
   void (*free)(struct sp_event_t*);
   void* data;
   sp_memory_t memory;
+  sp_sample_t volume;
 } sp_event_t;
 typedef status_t (*sp_event_generate_t)(sp_time_t, sp_time_t, sp_block_t, sp_event_t*);
 typedef struct sp_event_list_struct {

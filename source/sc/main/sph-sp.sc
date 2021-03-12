@@ -448,7 +448,11 @@
   (free-event-on-exit event-address) (free-on-exit (: event-address free) event-address)
   (sp-group-event-list event) (convert-type (address-of (: event data)) sp-event-list-t**)
   (sp-event-free a) (if a.free (a.free &a))
-  (sp-event-pointer-free a) (if a:free (a:free a)))
+  (sp-event-pointer-free a) (if a:free (a:free a))
+  (sp-define-trigger-event name trigger duration)
+  (define name sp-event-t
+    (struct-literal (prepare trigger) (start 0)
+      (end duration) (data 0) (volume 1.0) (memory (struct-literal 0)))))
 
 (array3-declare-type sp-memory memreg2-t)
 
@@ -465,7 +469,8 @@
       (prepare (function-pointer status-t (struct sp-event-t*)))
       (free (function-pointer void (struct sp-event-t*)))
       (data void*)
-      (memory sp-memory-t)))
+      (memory sp-memory-t)
+      (volume sp-sample-t)))
   sp-event-generate-t (type (function-pointer status-t sp-time-t sp-time-t sp-block-t sp-event-t*))
   sp-event-list-t
   (type
