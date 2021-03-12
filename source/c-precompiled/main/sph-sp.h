@@ -451,7 +451,15 @@ void sp_plot_spectrum(sp_sample_t* a, sp_time_t a_size);
   if (a->free) { \
     (a->free)(a); \
   }
+
+/** use case: event variables defined at the top-level */
 #define sp_define_trigger_event(name, trigger, duration) sp_event_t name = { .prepare = trigger, .start = 0, .end = duration, .data = 0, .volume = 1.0, .memory = { 0 } }
+
+/** allocated memory with malloc, save address in pointer at pointer-address,
+     and also immediately add the memory to event memory to be freed with event.free */
+#define sp_event_memory_malloc(event, count, type, pointer_address) \
+  sp_malloc_type(count, type, pointer_address); \
+  sp_event_memory_add1(_event, (*pointer_address))
 array3_declare_type(sp_memory, memreg2_t);
 typedef void (*sp_memory_free_t)(void*);
 struct sp_event_t;
@@ -527,6 +535,7 @@ typedef struct {
   sp_channel_count_t channels;
   sp_channel_config_t channel_config[sp_channel_limit];
 } sp_cheap_noise_event_config_t;
+status_t (*sp_event_prepare_t)(sp_event_t*);
 typedef status_t (*sp_map_generate_t)(sp_time_t, sp_time_t, sp_block_t, sp_block_t, void*);
 typedef struct {
   sp_event_t event;
@@ -555,6 +564,8 @@ status_t sp_cheap_noise_event_prepare(sp_event_t* event);
 status_t sp_group_prepare(sp_event_t* event);
 status_t sp_group_add(sp_event_t* a, sp_event_t event);
 status_t sp_group_append(sp_event_t* a, sp_event_t event);
+status_t sp_group_add_set(sp_event_t* group, sp_time_t start, sp_time_t duration, sp_sample_t volume, void* config, sp_event_t event);
+status_t sp_group_append_set(sp_event_t* group, sp_sample_t volume, void* config, sp_event_t event);
 void sp_group_event_f(sp_time_t start, sp_time_t end, sp_block_t out, sp_event_t* event);
 void sp_group_event_parallel_f(sp_time_t start, sp_time_t end, sp_block_t out, sp_event_t* event);
 void sp_group_event_free(sp_event_t* a);
@@ -649,6 +660,7 @@ sp_time_t sp_stat_repetition_max(sp_time_t size, sp_time_t width);
      (rate / d * n)
      example (rt 1 2) returns half of sp_rate */
 #define rt(n, d) ((sp_time_t)(((sp_rate / d) * n)))
+#define srq status_require
 typedef struct {
   sp_channel_count_t channels;
   sp_time_t rate;

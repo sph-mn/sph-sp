@@ -1,40 +1,37 @@
 (sc-comment
-  "small example that shows how to use the core sound generating events."
+  "small example that shows how to use the core sound generators and sc macros."
   "this example depends on gnuplot to be installed."
-  "when running it, it should display a gnuplot window with a noisy sine wave."
+  "when running it, it should display a gnuplot window with a series of bursts of noise."
   "see exe/run-example for how to compile and run with gcc")
 
 (sc-include-once "../source/sc/main/sc-macros")
-(pre-include "stdio.h" "sph-sp.h")
+(pre-include "sph-sp.h")
+(pre-define _rate 48000)
 
-(sp-define-trigger* example-event
+(sp-define-event* noise
+  (declare amod sp-sample-t* duration sp-time-t config sp-noise-event-config-t*)
+  (set duration (- _event:end _event:start)) (srq (sp-event-memory-init _event 2))
+  (srq (sp-noise-event-config-new &config)) (sp-event-memory-add1 _event config)
+  (sp-path-samples* &amod duration (line duration _event:volume)) (sp-event-memory-add1 _event amod)
+  (sp-noise* _event config (amod amod amp 1 cuth 0.5)) (srq (_event:prepare _event)))
+
+(sp-define-event* (riff (* 2 _rate))
   (declare
-    amod sp-sample-t*
-    duration sp-time-t
-    s1-config sp-wave-event-config-t*
-    n1-config sp-noise-event-config-t*
-    n2-config sp-cheap-noise-event-config-t*)
-  (sp-declare-event-3 s1 n1 n2) (free-on-error-init 4) (free-on-error _event:free _event)
-  (status-require (sp-event-memory-init _event 1))
-  (status-require (sp-wave-event-config-new &s1-config)) (free-on-error1 s1-config)
-  (status-require (sp-noise-event-config-new &n1-config)) (free-on-error1 n1-config)
-  (status-require (sp-cheap-noise-event-config-new &n2-config)) (free-on-error1 n2-config)
-  (set duration (- _event:end _event:start) _event:free sp-group-free)
-  (sp-path-samples* &amod duration (line (/ duration 2) 1.0) (line duration 0))
-  (sp-event-memory-add1 _event &amod)
-  (sp-wave* s1 0 duration *s1-config (amod amod frq 8 amp 0.5) (1 use 1 amp 0.1))
-  (status-require (sp-group-add _event s1))
-  (sp-cheap-noise* n2 0 duration *n2-config (amod amod cut 0.5 amp 0.1) (1 use 1 amp 0.001))
-  (status-require (sp-group-add _event n2))
-  (sp-noise* n1 0 duration *n1-config (amod amod cutl 0.2 cuth 0.5) (0 use 1 delay 30000 amp 1))
-  (status-require (sp-group-add _event n1)) (status-require (sp-group-prepare _event)))
+    times (array sp-time-t 3 0 (* 1 sp-rate) (* 1.5 sp-rate))
+    durations (array sp-time-t 3 (* 0.5 sp-rate) (* 0.15 sp-rate) (* 0.35 sp-rate))
+    volumes (array sp-sample-t 3 1.0 0.5 0.75))
+  (for-each-index i 3
+    (srq
+      (sp-group-add-set _event (array-get times i)
+        (array-get durations i) (array-get volumes i) 0 noise)))
+  (srq (sp-group-prepare _event)))
 
 (define (main) int
   status-declare
-  (sp-declare-event event)
-  (sp-declare-event-list events)
-  (sp-initialize 1 2 48000)
-  (struct-set event start 0 end (* sp-rate 2) prepare example-event)
-  (status-require (sp-event-list-add &events event))
-  (status-require (sp-render-quick events 1))
+  (sp-declare-group song)
+  (srq (sp-initialize 1 2 _rate))
+  (srq (sp-group-append &song riff))
+  (srq (sp-group-append &song riff))
+  (srq (sp-group-append &song riff))
+  (srq (sp-render-quick song 1))
   (label exit (return status.id)))

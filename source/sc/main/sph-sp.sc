@@ -450,9 +450,17 @@
   (sp-event-free a) (if a.free (a.free &a))
   (sp-event-pointer-free a) (if a:free (a:free a))
   (sp-define-trigger-event name trigger duration)
-  (define name sp-event-t
-    (struct-literal (prepare trigger) (start 0)
-      (end duration) (data 0) (volume 1.0) (memory (struct-literal 0)))))
+  (begin
+    "use case: event variables defined at the top-level"
+    (define name sp-event-t
+      (struct-literal (prepare trigger) (start 0)
+        (end duration) (data 0) (volume 1.0) (memory (struct-literal 0)))))
+  (sp-event-memory-malloc event count type pointer-address)
+  (begin
+    "allocated memory with malloc, save address in pointer at pointer-address,
+     and also immediately add the memory to event memory to be freed with event.free"
+    (sp-malloc-type count type pointer-address)
+    (sp-event-memory-add1 _event *pointer-address)))
 
 (array3-declare-type sp-memory memreg2-t)
 
@@ -540,6 +548,7 @@
       (resolution sp-time-t)
       (channels sp-channel-count-t)
       (channel-config (array sp-channel-config-t sp-channel-limit))))
+  sp-event-prepare-t (function-pointer status-t sp-event-t*)
   sp-map-generate-t
   (type (function-pointer status-t sp-time-t sp-time-t sp-block-t sp-block-t void*))
   sp-map-event-state-t
@@ -565,6 +574,9 @@
   (sp-group-prepare event) (status-t sp-event-t*)
   (sp-group-add a event) (status-t sp-event-t* sp-event-t)
   (sp-group-append a event) (status-t sp-event-t* sp-event-t)
+  (sp-group-add-set group start duration volume config event)
+  (status-t sp-event-t* sp-time-t sp-time-t sp-sample-t void* sp-event-t)
+  (sp-group-append-set group volume config event) (status-t sp-event-t* sp-sample-t void* sp-event-t)
   (sp-group-event-f start end out event) (void sp-time-t sp-time-t sp-block-t sp-event-t*)
   (sp-group-event-parallel-f start end out event) (void sp-time-t sp-time-t sp-block-t sp-event-t*)
   (sp-group-event-free a) (void sp-event-t*)
@@ -679,12 +691,14 @@
 
 (sc-comment "main 2")
 
-(pre-define (rt n d)
+(pre-define
+  (rt n d)
   (begin
     "return a sample count relative to the current default sample rate sp_rate.
      (rate / d * n)
      example (rt 1 2) returns half of sp_rate"
-    (convert-type (* (/ sp-rate d) n) sp-time-t)))
+    (convert-type (* (/ sp-rate d) n) sp-time-t))
+  srq status-require)
 
 (declare
   sp-render-config-t

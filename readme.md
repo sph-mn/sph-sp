@@ -129,7 +129,9 @@ sp_file_read :: sp_file_t*:file sp_time_t:sample_count sp_sample_t**:result_bloc
 sp_file_write :: sp_file_t*:file sp_sample_t**:block sp_time_t:sample_count sp_time_t*:result_sample_count -> status_t
 sp_filter :: sp_sample_t*:in sp_time_t:in_size sp_sample_t:cutoff_l sp_sample_t:cutoff_h sp_sample_t:transition_l sp_sample_t:transition_h boolean:is_reject sp_filter_state_t**:out_state sp_sample_t*:out_samples -> status_t
 sp_group_add :: sp_event_t*:a sp_event_t:event -> status_t
+sp_group_add_set :: sp_event_t*:group sp_time_t:start sp_time_t:duration sp_sample_t:volume void*:config sp_event_t:event -> status_t
 sp_group_append :: sp_event_t*:a sp_event_t:event -> status_t
+sp_group_append_set :: sp_event_t*:group sp_sample_t:volume void*:config sp_event_t:event -> status_t
 sp_group_event_f :: sp_time_t:start sp_time_t:end sp_block_t:out sp_event_t*:event -> void
 sp_group_event_free :: sp_event_t*:a -> void
 sp_group_event_parallel_f :: sp_time_t:start sp_time_t:end sp_block_t:out sp_event_t*:event -> void
@@ -382,6 +384,7 @@ sp_event_free(a)
 sp_event_memory_add1(event, address)
 sp_event_memory_add1_2(a, data1, data2)
 sp_event_memory_add1_3(a, data1, data2, data3)
+sp_event_memory_malloc(event, count, type, pointer_address)
 sp_event_move(a, start)
 sp_event_pointer_free(a)
 sp_file_bit_input
@@ -473,6 +476,7 @@ sp_times_random_bounded
 sp_times_zero(a, size)
 spline_path_time_t
 spline_path_value_t
+srq
 ~~~
 
 ## variables
@@ -484,6 +488,7 @@ sp_sample_t* sp_sine_table_lfo
 sp_sequence_set_key_t sp_sequence_set_null
 sp_time_t sp_rate
 sp_time_t sp_sine_lfo_factor
+status_t(*)(sp_event_t*) sp_event_prepare_t
 uint32_t sp_cpu_count
 ~~~
 
