@@ -8,7 +8,7 @@ see exe/run-example for how to compile and run with gcc */
 the macros are used as optional helpers to simplify common tasks where c syntax alone offers no good alternative */
 #include <sph-sp.h>
 #define _rate 48000
-status_t noise_trigger(sp_event_t* _event) {
+status_t noise_prepare(sp_event_t* _event) {
   status_declare;
   sp_sample_t* amod;
   sp_time_t duration;
@@ -34,8 +34,8 @@ status_t noise_trigger(sp_event_t* _event) {
 exit:
   status_return;
 }
-sp_define_trigger_event(noise, noise_trigger, 0);
-status_t riff_trigger(sp_event_t* _event) {
+sp_define_event(noise, noise_prepare, 0);
+status_t riff_prepare(sp_event_t* _event) {
   status_declare;
   sp_time_t times[3] = { 0, (1 * sp_rate), (1.5 * sp_rate) };
   sp_time_t durations[3] = { (0.5 * sp_rate), (0.15 * sp_rate), (0.35 * sp_rate) };
@@ -47,7 +47,7 @@ status_t riff_trigger(sp_event_t* _event) {
 exit:
   status_return;
 }
-sp_define_trigger_event(riff, riff_trigger, (2 * _rate));
+sp_define_event(riff, riff_prepare, (2 * _rate));
 int main() {
   status_declare;
   sp_declare_group(song);

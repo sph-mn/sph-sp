@@ -453,7 +453,7 @@ void sp_plot_spectrum(sp_sample_t* a, sp_time_t a_size);
   }
 
 /** use case: event variables defined at the top-level */
-#define sp_define_trigger_event(name, trigger, duration) sp_event_t name = { .prepare = trigger, .start = 0, .end = duration, .data = 0, .volume = 1.0, .memory = { 0 } }
+#define sp_define_event(name, _prepare, duration) sp_event_t name = { .prepare = _prepare, .start = 0, .end = duration, .data = 0, .volume = 1.0, .memory = { 0 } }
 
 /** allocated memory with malloc, save address in pointer at pointer-address,
      and also immediately add the memory to event memory to be freed with event.free */

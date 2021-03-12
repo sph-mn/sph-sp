@@ -377,7 +377,7 @@ sp_declare_noise_config(name)
 sp_declare_sine_config(name)
 sp_declare_sine_config_lfo(name)
 sp_default_random_seed
-sp_define_trigger_event(name, trigger, duration)
+sp_define_event(name, prepare, duration)
 sp_event_duration(a)
 sp_event_duration_set(a, duration)
 sp_event_free(a)

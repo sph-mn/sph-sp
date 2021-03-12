@@ -449,11 +449,11 @@
   (sp-group-event-list event) (convert-type (address-of (: event data)) sp-event-list-t**)
   (sp-event-free a) (if a.free (a.free &a))
   (sp-event-pointer-free a) (if a:free (a:free a))
-  (sp-define-trigger-event name trigger duration)
+  (sp-define-event name _prepare duration)
   (begin
     "use case: event variables defined at the top-level"
     (define name sp-event-t
-      (struct-literal (prepare trigger) (start 0)
+      (struct-literal (prepare _prepare) (start 0)
         (end duration) (data 0) (volume 1.0) (memory (struct-literal 0)))))
   (sp-event-memory-malloc event count type pointer-address)
   (begin

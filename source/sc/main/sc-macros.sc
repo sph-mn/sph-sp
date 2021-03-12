@@ -65,7 +65,7 @@
   (sp-channel-config-event* "sp-cheap-noise*" sp-cheap-noise-event-prepare
     event config config-settings channel-config ...))
 
-(sc-define-syntax* (sp-define-trigger* name body ...)
+(sc-define-syntax* (sp-define-event-prepare* name body ...)
   "* arguments and types are implicit
    * status-declare is implicit
    * exit label with status-return is optional
@@ -93,8 +93,8 @@
         (match name-and-options ((name duration) (pair name duration))
           ((name) (pair name 0)) (name (pair name 0))))
       (name (first name-and-options)) (duration (tail name-and-options))
-      (trigger-name (symbol-append name (q -trigger))))
+      (prepare-name (symbol-append name (q -prepare))))
     (qq
       (begin
-        (sp-define-trigger* (unquote trigger-name) (unquote-splicing body))
-        (sp-define-trigger-event (unquote name) (unquote trigger-name) (unquote duration))))))
+        (sp-define-event-prepare* (unquote prepare-name) (unquote-splicing body))
+        (sp-define-event (unquote name) (unquote prepare-name) (unquote duration))))))
