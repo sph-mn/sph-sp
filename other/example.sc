@@ -4,7 +4,7 @@
   "when running it, it should display a gnuplot window with a series of bursts of noise."
   "see exe/run-example for how to compile and run with gcc")
 
-(sc-include-once "../source/sc/main/sc-macros")
+(sc-include "/usr/share/sph-sp/sc-macros")
 (pre-include "sph-sp.h")
 (pre-define _rate 48000)
 

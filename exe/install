@@ -3,13 +3,18 @@
 # usage: ./exe/install [path-prefix]
 
 prefix="$1"
+cp_args="$2"
 lib_name="libsph-sp.so"
-lib_source="temp/$lib_name"
-header_source="source/c-precompiled/main/sph-sp.h"
+lib_source="$PWD/temp/$lib_name"
+header_source="$PWD/source/c-precompiled/main/sph-sp.h"
+sc_source="$PWD/source/sc/main/sc-macros.sc"
 lib_target="$prefix/usr/lib"
 header_target="$prefix/usr/include"
+sc_target="$prefix/usr/share/sph-sp"
 
-mkdir -p "$lib_target" "$header_target" &&
-cp -t "$lib_target" "$lib_source" &&
-cp -t "$header_target" "$header_source" &&
-chmod 644 "$lib_target/libsph-sp.so" "$header_target/sph-sp.h"
+mkdir -p "$lib_target" "$header_target" "$sc_target" &&
+chmod 755 "$lib_target" "$header_target" "$sc_target" &&
+cp -t "$lib_target" "$lib_source" $cp_args &&
+cp -t "$header_target" "$header_source" $cp_args &&
+cp -t "$sc_target" "$sc_source" $cp_args &&
+chmod 644 "$lib_target/libsph-sp.so" "$header_target/sph-sp.h" "$sc_target/sc-macros.sc"

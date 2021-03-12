@@ -2,13 +2,4 @@
 
 # usage: ./exe/install [path-prefix]
 
-prefix="$1"
-lib_name="libsph-sp.so"
-lib_source="$PWD/temp/$lib_name"
-lib_target="$prefix/usr/lib"
-header_source="$PWD/source/c-precompiled/main/sph-sp.h"
-header_target="$prefix/usr/include"
-
-ln -sf "$lib_source" "$lib_target"
-ln -sf "$header_source" "$header_target"
-chmod 644 "$lib_source" "$header_source"
+./exe/install "$1" -fs
