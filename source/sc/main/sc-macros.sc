@@ -1,37 +1,5 @@
-(sc-comment
-  "the sc version of this file defines macros which are only available in sc."
-  "the macros are used as optional helpers to simplify common tasks where c syntax alone offers no good alternative")
-
 (sc-define-syntax (for-each-index index limit body ...)
   (for ((define index sp-time-t 0) (< index limit) (set+ index 1)) body ...))
-
-(sc-define-syntax* (sp-path* target-address (type type-arg ...) ...)
-  "type is sp_path_{type}"
-  (let
-    ( (segments
-        (map (l (type type-arg) (pair (symbol-append (q sp-path-) type) type-arg)) type type-arg))
-      (temp (sc-gensym)))
-    (qq
-      (begin
-        (sc-insert "// sp-path\n")
-        (declare (unquote temp) (array sp-path-segment-t (unquote (length segments))))
-        (array-set* (unquote temp) (unquote-splicing segments))
-        (spline-path-set (unquote target-address) (unquote temp) (unquote (length segments)))))))
-
-(sc-define-syntax* (sp-path-array* type path-array-f target-address duration segment ...)
-  (let ((temp (sc-gensym)))
-    (quasiquote
-      (begin
-        (declare (unquote temp) sp-path-t)
-        (sp-path* (address-of (unquote temp)) (unquote-splicing segment))
-        (status-require
-          ((unquote path-array-f) (unquote temp) (unquote duration) (unquote target-address)))))))
-
-(sc-define-syntax (sp-path-samples* target-address duration segment ...)
-  (sp-path-array* sp-sample-t* sp-path-samples-new target-address duration segment ...))
-
-(sc-define-syntax (sp-path-times* target-address duration segment ...)
-  (sp-path-array* sp-time-t* sp-path-times-new target-address duration segment ...))
 
 (sc-define-syntax* (sp-channel-config* channel-config-array (channel-index setting ...) ...)
   "set one or multiple channel config structs in an array"
@@ -79,13 +47,17 @@
             (if free-on-error-used (q free-on-error-free) null)
             (if free-on-exit-used (list (q free-on-exit-free)) null))
           (q (begin))))
+      (body (append body (list (q (if _event:prepare (srq (_event:prepare _event)))))))
       (body
         (match body
           ( (body ... ((quote label) (quote exit) exit-content ...))
             (append body (qq ((label exit (unquote free-memory) (unquote-splicing exit-content))))))
           (_ (append body (qq ((label exit (unquote free-memory) status-return))))))))
     (qq
-      (define ((unquote name) _event) (status-t sp-event-t*) status-declare (unquote-splicing body)))))
+      (define ((unquote name) _event) (status-t sp-event-t*)
+        status-declare
+        (define _duration sp-time-t (- _event:end _event:start))
+        (unquote-splicing body)))))
 
 (sc-define-syntax* (sp-define-event* name-and-options body ...)
   (let*
@@ -98,3 +70,53 @@
       (begin
         (sp-define-event-prepare* (unquote prepare-name) (unquote-splicing body))
         (sp-define-event (unquote name) (unquote prepare-name) (unquote duration))))))
+
+(sc-define-syntax (sp-define-group* name-and-options body ...)
+  (sp-define-event* name-and-options (set _event:prepare sp-group-prepare) body ...))
+
+(sc-define-syntax* (sp-path* name type segment-types points ...)
+  (let*
+    ( (sp-path-new (if (eq? type (q times)) (q sp-path-times-new) (q sp-path-samples-new)))
+      (data-type (if (eq? type (q times)) (q sp-time-t*) (q sp-sample-t*)))
+      (duration (second (reverse (last points))))
+      (segment-types (if (list? segment-types) segment-types (map (l (x) segment-types) points)))
+      (segments
+        (map (l (segment-type points) (pair (symbol-append (q sp-path-) segment-type) points))
+          segment-types points))
+      (name-path (symbol-append name (q -path))) (name-segments (symbol-append name (q -segments))))
+    (qq
+      (begin
+        (sc-insert "// sp-path*\n")
+        (declare
+          (unquote name) (unquote data-type)
+          (unquote name-path) sp-path-t
+          (unquote name-segments) (array sp-path-segment-t (unquote (length segments))))
+        (array-set* (unquote name-segments) (unquote-splicing segments))
+        (spline-path-set (address-of (unquote name-path)) (unquote name-segments)
+          (unquote (length segments)))
+        (status-require
+          ((unquote sp-path-new) (unquote name-path) (unquote duration) (address-of (unquote name))))
+        (sp-event-memory-add1 _event (unquote name))))))
+
+(sc-define-syntax (sp-path-samples* name segment-type points ...)
+  (sp-path* name samples segment-type points ...))
+
+(sc-define-syntax (sp-path-times* name segment-type points ...)
+  (sp-path* name times segment-type points ...))
+
+(sc-define-syntax (sp-noise-config* name)
+  (begin
+    (sc-insert "// sp-noise-config*\n")
+    (declare name sp-noise-event-config-t*)
+    (status-require (sp-noise-event-config-new (address-of name)))
+    (sp-event-memory-add1 _event name)))
+
+(sc-define-syntax (sp-event-memory* size) (srq (sp-event-memory-init _event size)))
+
+(sc-define-syntax* (sp-times* name values ...)
+  (qq
+    (declare (unquote name) (array sp-time-t (unquote (length values)) (unquote-splicing values)))))
+
+(sc-define-syntax* (sp-samples* name values ...)
+  (qq
+    (declare (unquote name) (array sp-sample-t (unquote (length values)) (unquote-splicing values)))))
