@@ -1,7 +1,4 @@
 
-/* the sc version of this file defines macros which are only available in sc.
-the macros are used as optional helpers to simplify common tasks where c syntax alone offers no good alternative */
-
 /** out memory is allocated */
 status_t sp_path_samples_new(sp_path_t path, sp_path_time_t size, sp_sample_t** out) {
   status_declare;

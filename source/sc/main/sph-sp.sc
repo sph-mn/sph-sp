@@ -1,4 +1,5 @@
 (pre-define-if-not-defined __USE_POSIX199309)
+(pre-define-if-not-defined _GNU_SOURCE)
 (pre-include "byteswap.h" "inttypes.h" "string.h")
 (sc-comment "configuration")
 

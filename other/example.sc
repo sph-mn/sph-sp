@@ -16,10 +16,9 @@
   (sp-noise* _event config (amod amod amp 1 cuth 0.5)))
 
 (sp-define-group* (riff (* 2 _rate))
-  (declare
-    times (array sp-time-t 3 0 (* 1 sp-rate) (* 1.5 sp-rate))
-    durations (array sp-time-t 3 (* 0.5 sp-rate) (* 0.15 sp-rate) (* 0.35 sp-rate))
-    volumes (array sp-sample-t 3 1.0 0.5 0.75))
+  (sp-times* times 0 (* 1 sp-rate) (* 1.5 sp-rate))
+  (sp-times* durations (* 0.5 sp-rate) (* 0.15 sp-rate) (* 0.35 sp-rate))
+  (sp-samples* volumes 1.0 0.5 0.75)
   (for-each-index i 3
     (srq
       (sp-group-add-set _event (array-get times i)

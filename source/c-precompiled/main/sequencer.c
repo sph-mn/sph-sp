@@ -1,6 +1,3 @@
-
-/* the sc version of this file defines macros which are only available in sc.
-the macros are used as optional helpers to simplify common tasks where c syntax alone offers no good alternative */
 void sp_event_list_display(sp_event_list_t* a) {
   while (a) {
     printf(("(%lu %lu %lu) "), (a->event.start), (a->event.end), (&(a->event)));

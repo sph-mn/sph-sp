@@ -1,8 +1,5 @@
 
 #include "./helper.c"
-
-/* the sc version of this file defines macros which are only available in sc.
-the macros are used as optional helpers to simplify common tasks where c syntax alone offers no good alternative */
 #if (sp_sample_format_f64 == sp_sample_format)
 #define sp_sample_nearly_equal f64_nearly_equal
 #define sp_samples_nearly_equal f64_array_nearly_equal

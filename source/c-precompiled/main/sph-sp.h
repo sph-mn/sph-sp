@@ -2,6 +2,10 @@
 #ifndef __USE_POSIX199309
 #define __USE_POSIX199309
 #endif
+
+#ifndef _GNU_SOURCE
+#define _GNU_SOURCE
+#endif
 #include <byteswap.h>
 #include <inttypes.h>
 #include <string.h>
