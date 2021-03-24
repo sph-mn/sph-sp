@@ -1,38 +1,6 @@
 (sc-define-syntax (for-each-index index limit body ...)
   (for ((define index sp-time-t 0) (< index limit) (set+ index 1)) body ...))
 
-(sc-define-syntax* (sp-channel-config* channel-config-array (channel-index setting ...) ...)
-  "set one or multiple channel config structs in an array"
-  (pair (q begin)
-    (map
-      (l (i a)
-        (qq
-          (struct-set (array-get (unquote channel-config-array) (unquote i)) (unquote-splicing a))))
-      channel-index setting)))
-
-(sc-define-syntax*
-  (sp-channel-config-event* label prepare-event event config (setting ...) channel-config ...)
-  "generic macro for creating similar kinds of events that receive a config struct and channel config"
-  (qq
-    (begin
-      (sc-insert (unquote (string-append "// " label "\n")))
-      (struct-pointer-set (unquote config) (unquote-splicing setting))
-      (sp-channel-config* (struct-get (unquote config) channel-config)
-        (unquote-splicing channel-config))
-      (struct-pointer-set (unquote event) data (unquote config) prepare (unquote prepare-event)))))
-
-(sc-define-syntax (sp-wave* event config config-settings channel-config ...)
-  (sp-channel-config-event* "sp-wave*" sp-wave-event-prepare
-    event config config-settings channel-config ...))
-
-(sc-define-syntax (sp-noise* event config config-settings channel-config ...)
-  (sp-channel-config-event* "sp-noise*" sp-noise-event-prepare
-    event config config-settings channel-config ...))
-
-(sc-define-syntax (sp-cheap-noise* event config config-settings channel-config ...)
-  (sp-channel-config-event* "sp-cheap-noise*" sp-cheap-noise-event-prepare
-    event config config-settings channel-config ...))
-
 (sc-define-syntax* (sp-define-event-prepare* name body ...)
   "* arguments and types are implicit
    * status-declare is implicit
@@ -103,13 +71,6 @@
 
 (sc-define-syntax (sp-path-times* name segment-type points ...)
   (sp-path* name times segment-type points ...))
-
-(sc-define-syntax (sp-noise-config* name)
-  (begin
-    (sc-insert "// sp-noise-config*\n")
-    (declare name sp-noise-event-config-t*)
-    (status-require (sp-noise-event-config-new (address-of name)))
-    (sp-event-memory-add1 _event name)))
 
 (sc-define-syntax (sp-event-memory* size) (srq (sp-event-memory-init _event size)))
 

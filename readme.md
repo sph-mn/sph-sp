@@ -83,7 +83,7 @@ compilation with gcc
 gcc -lsph-sp main.c
 ```
 
-see other/example.c for an example. other/example.sc uses sc macros to reduce the necessary code.
+see [other/example.c](other/example.c) for an example. [other/example.sc](other/example.sc) uses sc and macros to reduce the necessary code.
 
 ## error handling
 routines return `status_t`, which is a `struct {int id, uint8-t* group}` and included with sph-sp.h.
