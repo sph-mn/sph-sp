@@ -42,15 +42,29 @@
 (sc-define-syntax (sp-define-group* name-and-options body ...)
   (sp-define-event* name-and-options (set _event:prepare sp-group-prepare) body ...))
 
-(sc-define-syntax* (sp-path* name type segment-types points ...)
+(sc-define-syntax* (sp-path* name type segment-type points ...)
+  "automatically takes duration from points list.
+   segment-type is a short symbol instead of the full function name (eg line instead of sp_path_line)
+   segment-type can be omitted, in which case the default is line"
   (let*
-    ( (sp-path-new (if (eq? type (q times)) (q sp-path-times-new) (q sp-path-samples-new)))
+    ( (segment-type?
+        (l (a)
+          (and (symbol? a)
+            (or (eq? (q line) a) (eq? (q bezier) a)
+              (eq? (q move) a) (eq? (q constant) a) (eq? (q path) a)))))
+      (points (if (segment-type? segment-type) points (pair segment-type points)))
+      (segment-type (if (segment-type? segment-type) segment-type (q line)))
+      (sp-path-new (if (eq? type (q times)) (q sp-path-times-new) (q sp-path-samples-new)))
       (data-type (if (eq? type (q times)) (q sp-time-t*) (q sp-sample-t*)))
       (duration (second (reverse (last points))))
-      (segment-types (if (list? segment-types) segment-types (map (l (x) segment-types) points)))
       (segments
-        (map (l (segment-type points) (pair (symbol-append (q sp-path-) segment-type) points))
-          segment-types points))
+        (map
+          (l (points)
+            (pair
+              (symbol-append (q sp-path-)
+                (if (segment-type? (first points)) (first points) segment-type))
+              (if (segment-type? (first points)) (tail points) points)))
+          points))
       (name-path (symbol-append name (q -path))) (name-segments (symbol-append name (q -segments))))
     (qq
       (begin
@@ -73,11 +87,3 @@
   (sp-path* name times segment-type points ...))
 
 (sc-define-syntax (sp-event-memory* size) (srq (sp-event-memory-init _event size)))
-
-(sc-define-syntax* (sp-times* name values ...)
-  (qq
-    (declare (unquote name) (array sp-time-t (unquote (length values)) (unquote-splicing values)))))
-
-(sc-define-syntax* (sp-samples* name values ...)
-  (qq
-    (declare (unquote name) (array sp-sample-t (unquote (length values)) (unquote-splicing values)))))
