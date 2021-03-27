@@ -130,6 +130,14 @@
   (for ((set i 0) (< i size) (set+ i 1)) (if (not (= n (array-get a i))) (return 0)))
   (return 1))
 
+(define (sp-times-copy a size out) (void sp-time-t* sp-time-t sp-time-t*)
+  (declare i sp-time-t)
+  (for ((set i 0) (< i size) (set+ i 1)) (set (array-get out i) (array-get a i))))
+
+(define (sp-samples-copy a size out) (void sp-sample-t* sp-time-t sp-sample-t*)
+  (declare i sp-time-t)
+  (for ((set i 0) (< i size) (set+ i 1)) (set (array-get out i) (array-get a i))))
+
 (define-value-functions sp-times sp-time-t)
 (define-value-functions sp-samples sp-sample-t)
 (define-array-functions sp-times sp-time-t)
@@ -612,7 +620,7 @@
 
 (define (sp-times-insert-space in size index count out)
   (void sp-time-t* sp-time-t sp-time-t sp-time-t sp-time-t*)
-  "insert an new area of unset elements before index"
+  "insert an new area of unset elements before index while copying from in to out"
   (if (= 0 index) (memcpy (+ out count) in (* size (sizeof sp-time-t)))
     (begin
       (memcpy out in (* index (sizeof sp-time-t)))

@@ -70,7 +70,7 @@
 #define sp_time_random_bounded sph_random_u32_bounded
 #endif
 #ifndef sp_sample_random
-#define sp_sample_random sph_random_f64
+#define sp_sample_random sph_random_f64_1to1
 #endif
 #ifndef sp_sample_nearly_equal
 #define sp_sample_nearly_equal f64_nearly_equal
@@ -229,6 +229,7 @@ hashtable_declare_type(sp_sequence_hashtable, sp_sequence_set_key_t, sp_time_t, 
 sp_sample_t sp_samples_absolute_max(sp_sample_t* in, sp_time_t in_size);
 void sp_samples_add_1(sp_sample_t* a, sp_time_t size, sp_sample_t n, sp_sample_t* out);
 void sp_samples_add(sp_sample_t* a, sp_time_t size, sp_sample_t* b, sp_sample_t* out);
+void sp_samples_copy(sp_sample_t* a, sp_time_t size, sp_sample_t* out);
 void sp_samples_and(sp_sample_t* a, sp_sample_t* b, sp_time_t size, sp_sample_t limit, sp_sample_t* out);
 void sp_samples_display(sp_sample_t* a, sp_time_t size);
 void sp_samples_divide_1(sp_sample_t* a, sp_time_t size, sp_sample_t n, sp_sample_t* out);
@@ -256,6 +257,7 @@ void sp_samples_scale_y(sp_sample_t* a, sp_time_t size, sp_sample_t n, sp_sample
 void sp_samples_scale_sum(sp_sample_t* a, sp_time_t size, sp_sample_t n, sp_sample_t* out);
 void sp_times_add_1(sp_time_t* a, sp_time_t size, sp_time_t n, sp_time_t* out);
 void sp_times_add(sp_time_t* a, sp_time_t size, sp_time_t* b, sp_time_t* out);
+void sp_times_copy(sp_time_t* a, sp_time_t size, sp_time_t* out);
 void sp_times_and(sp_time_t* a, sp_time_t* b, sp_time_t size, sp_time_t limit, sp_time_t* out);
 void sp_times_display(sp_time_t* a, sp_time_t size);
 void sp_times_divide_1(sp_time_t* a, sp_time_t size, sp_time_t n, sp_time_t* out);

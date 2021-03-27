@@ -183,6 +183,18 @@ uint8_t sp_samples_every_equal(sp_sample_t* a, sp_time_t size, sp_sample_t n) {
   };
   return (1);
 }
+void sp_times_copy(sp_time_t* a, sp_time_t size, sp_time_t* out) {
+  sp_time_t i;
+  for (i = 0; (i < size); i += 1) {
+    out[i] = a[i];
+  };
+}
+void sp_samples_copy(sp_sample_t* a, sp_time_t size, sp_sample_t* out) {
+  sp_time_t i;
+  for (i = 0; (i < size); i += 1) {
+    out[i] = a[i];
+  };
+}
 define_value_functions(sp_times, sp_time_t)
   define_value_functions(sp_samples, sp_sample_t)
     define_array_functions(sp_times, sp_time_t)
@@ -789,7 +801,7 @@ void sp_times_remove(sp_time_t* in, sp_time_t size, sp_time_t index, sp_time_t c
   };
 }
 
-/** insert an new area of unset elements before index */
+/** insert an new area of unset elements before index while copying from in to out */
 void sp_times_insert_space(sp_time_t* in, sp_time_t size, sp_time_t index, sp_time_t count, sp_time_t* out) {
   if (0 == index) {
     memcpy((out + count), in, (size * sizeof(sp_time_t)));

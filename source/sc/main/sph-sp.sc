@@ -23,7 +23,7 @@
   sp-samples-random-bounded sph-random-f64-bounded-array
   sp-time-random sph-random-u32
   sp-time-random-bounded sph-random-u32-bounded
-  sp-sample-random sph-random-f64
+  sp-sample-random sph-random-f64-1to1
   sp-sample-nearly-equal f64-nearly-equal
   sp-sample-array-nearly-equal f64-array-nearly-equal
   sp-default-random-seed 1557083953)
@@ -192,6 +192,7 @@
   (sp-samples-absolute-max in in-size) (sp-sample-t sp-sample-t* sp-time-t)
   (sp-samples-add-1 a size n out) (void sp-sample-t* sp-time-t sp-sample-t sp-sample-t*)
   (sp-samples-add a size b out) (void sp-sample-t* sp-time-t sp-sample-t* sp-sample-t*)
+  (sp-samples-copy a size out) (void sp-sample-t* sp-time-t sp-sample-t*)
   (sp-samples-and a b size limit out)
   (void sp-sample-t* sp-sample-t* sp-time-t sp-sample-t sp-sample-t*)
   (sp-samples-display a size) (void sp-sample-t* sp-time-t)
@@ -223,6 +224,7 @@
   (sp-samples-scale-sum a size n out) (void sp-sample-t* sp-time-t sp-sample-t sp-sample-t*)
   (sp-times-add-1 a size n out) (void sp-time-t* sp-time-t sp-time-t sp-time-t*)
   (sp-times-add a size b out) (void sp-time-t* sp-time-t sp-time-t* sp-time-t*)
+  (sp-times-copy a size out) (void sp-time-t* sp-time-t sp-time-t*)
   (sp-times-and a b size limit out) (void sp-time-t* sp-time-t* sp-time-t sp-time-t sp-time-t*)
   (sp-times-display a size) (void sp-time-t* sp-time-t)
   (sp-times-divide-1 a size n out) (void sp-time-t* sp-time-t sp-time-t sp-time-t*)
