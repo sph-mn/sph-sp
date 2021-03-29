@@ -1,17 +1,36 @@
 (sc-include-once "./sc-macros")
 
+(define (sp-event-list-display-element a) (void sp-event-list-t*)
+  (printf "%lu %lu %lu\n" a:previous a a:next))
+
 (define (sp-event-list-display a) (void sp-event-list-t*)
-  (while a (printf "(%lu %lu %lu) " a:event.start a:event.end &a:event) (set a a:next))
-  (printf "\n"))
+  (while a (sp-event-list-display-element a) (set a a:next)))
 
 (define (sp-event-list-reverse a) (void sp-event-list-t**)
   (declare current sp-event-list-t* next sp-event-list-t*)
-  (set current *a)
-  (if (not current) return)
-  (set next current:next current:next current:previous current:previous next)
-  (while next
-    (set current next next current:next current:next current:previous current:previous next))
+  (set next *a)
+  (while next (set current next next next:next current:next current:previous current:previous next))
   (set *a current))
+
+(define (sp-event-list-find-duplicate a b) (uint8-t sp-event-list-t* sp-event-list-t*)
+  (define i sp-time-t 0 count sp-time-t 0)
+  (while a
+    (if (= a b)
+      (if (= 1 count) (begin (printf "duplicate list entry i%lu %lu\n" i a) (exit 1))
+        (set+ count 1)))
+    (set+ i 1)
+    (set a a:next)))
+
+(define (sp-event-list-validate a) (void sp-event-list-t*)
+  (define i sp-time-t 0 b sp-event-list-t* a c sp-event-list-t* 0)
+  (while b
+    (if (not (= c b:previous))
+      (begin (printf "link to previous is invalid at index %lu, element %lu\n" i b) (exit 1)))
+    (if (and (= b:next b:previous) (not (= 0 b:next)))
+      (begin (printf "circular list entry at index %lu, element %lu\n" i b) (exit 1)))
+    (sp-event-list-find-duplicate a b)
+    (set+ i 1)
+    (set c b b b:next)))
 
 (define (sp-event-list-remove a element) (void sp-event-list-t** sp-event-list-t*)
   "removes the list element and frees the event, without having to search in the list.
@@ -36,7 +55,11 @@
         (if (<= current:event.start event.start)
           (begin
             (sc-comment "-- middle")
-            (set new:next current new:previous current:previous current:previous new)
+            (set
+              new:previous current:previous
+              new:next current
+              current:previous:next new
+              current:previous new)
             (goto exit))))
       (sc-comment "-- last")
       (set new:next 0 new:previous current current:next new)))
@@ -140,7 +163,9 @@
     (set current current:next))
   (sc-comment "merge")
   (for-each-index sf-i active
-    (set sf (+ sf-array sf-i)) (touch &sf:future) (status-require sf:status)
+    (set sf (+ sf-array sf-i))
+    (touch &sf:future)
+    (status-require sf:status)
     (for-each-index ci out.channels
       (for-each-index i sf:out.size
         (set+ (array-get (array-get out.samples ci) (+ sf:out-start i))

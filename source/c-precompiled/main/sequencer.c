@@ -1,27 +1,60 @@
+void sp_event_list_display_element(sp_event_list_t* a) {
+  /* (printf %lu %lu ev %lu %lu - %lu - %lu a:event.start a:event.end &a:event a:previous a a:next) */
+  printf("%lu %lu %lu", (a->previous), a, (a->next));
+  printf("\n");
+}
 void sp_event_list_display(sp_event_list_t* a) {
   while (a) {
-    printf(("(%lu %lu %lu) "), (a->event.start), (a->event.end), (&(a->event)));
+    sp_event_list_display_element(a);
     a = a->next;
   };
-  printf("\n");
 }
 void sp_event_list_reverse(sp_event_list_t** a) {
   sp_event_list_t* current;
   sp_event_list_t* next;
-  current = *a;
-  if (!current) {
-    return;
-  };
-  next = current->next;
-  current->next = current->previous;
-  current->previous = next;
+  next = *a;
   while (next) {
     current = next;
-    next = current->next;
+    next = next->next;
     current->next = current->previous;
     current->previous = next;
   };
   *a = current;
+}
+uint8_t sp_event_list_find_duplicate(sp_event_list_t* a, sp_event_list_t* b) {
+  sp_time_t i = 0;
+  sp_time_t count = 0;
+  while (a) {
+    if (a == b) {
+      if (1 == count) {
+        printf("duplicate list entry i%lu %lu\n", i, a);
+        exit(1);
+      } else {
+        count += 1;
+      };
+    };
+    i += 1;
+    a = a->next;
+  };
+}
+void sp_event_list_validate(sp_event_list_t* a) {
+  sp_time_t i = 0;
+  sp_event_list_t* b = a;
+  sp_event_list_t* c = 0;
+  while (b) {
+    if (!(c == b->previous)) {
+      printf("link to previous is invalid at index %lu, element %lu\n", i, b);
+      exit(1);
+    };
+    if ((b->next == b->previous) && !(0 == b->next)) {
+      printf("circular list entry at index %lu, element %lu\n", i, b);
+      exit(1);
+    };
+    sp_event_list_find_duplicate(a, b);
+    i += 1;
+    c = b;
+    b = b->next;
+  };
 }
 
 /** removes the list element and frees the event, without having to search in the list.
@@ -67,8 +100,9 @@ status_t sp_event_list_add(sp_event_list_t** a, sp_event_t event) {
       current = current->next;
       if (current->event.start <= event.start) {
         /* -- middle */
-        new->next = current;
         new->previous = current->previous;
+        new->next = current;
+        current->previous->next = new;
         current->previous = new;
         goto exit;
       };

@@ -556,6 +556,7 @@ typedef struct {
 } sp_map_event_config_t;
 void sp_event_list_display(sp_event_list_t* a);
 void sp_event_list_reverse(sp_event_list_t** a);
+void sp_event_list_validate(sp_event_list_t* a);
 void sp_event_list_remove_element(sp_event_list_t** a, sp_event_list_t* element);
 status_t sp_event_list_add(sp_event_list_t** a, sp_event_t event);
 void sp_event_list_free(sp_event_list_t** events);

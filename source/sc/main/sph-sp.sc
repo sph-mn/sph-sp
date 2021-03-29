@@ -563,6 +563,7 @@
 (declare
   (sp-event-list-display a) (void sp-event-list-t*)
   (sp-event-list-reverse a) (void sp-event-list-t**)
+  (sp-event-list-validate a) (void sp-event-list-t*)
   (sp-event-list-remove-element a element) (void sp-event-list-t** sp-event-list-t*)
   (sp-event-list-add a event) (status-t sp-event-list-t** sp-event-t)
   (sp-event-list-free events) (void sp-event-list-t**)
