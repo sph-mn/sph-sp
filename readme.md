@@ -25,6 +25,12 @@ c code and shared library for sound synthesis and sequencing. the sound processo
 * array processing
   * utilities like array arithmetic, shuffle, permutations, compositions, statistics such as median, deviation, skewness and more
 
+# code example
+sph-sp is written in sc, which maps directly to c, and c is fully supported. except for the fact that sc supports scheme style macros and when using sc these can be used to greatly simplify the usage.
+
+* see [other/example.sc](other/example.sc) for how it currently looks using sc
+* see [other/example.c](other/example.c) for the c version. there are several things c can not express succinctly, mostly related to literals and variable number of arguments
+
 # dependencies
 * run-time
   * libc
@@ -45,7 +51,7 @@ c code and shared library for sound synthesis and sequencing. the sound processo
 ./exe/install
 ```
 
-first argument to `exe/install` can be the destination path prefix, for example `./exe/install /tmp`
+first argument to `exe/install` can be the destination path prefix, for example `./exe/install /tmp`.
 
 installed files
 * /usr/include/sph-sp.h
@@ -82,8 +88,6 @@ compilation with gcc
 ```
 gcc -lsph-sp main.c
 ```
-
-see [other/example.c](other/example.c) for an example. [other/example.sc](other/example.sc) uses sc and macros to reduce the necessary code.
 
 ## error handling
 routines return `status_t`, which is a `struct {int id, uint8-t* group}` and included with sph-sp.h.
