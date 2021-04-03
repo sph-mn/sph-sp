@@ -2,7 +2,7 @@
 /* small example that shows how to use the core sound generators with sc macros.
 this example depends on gnuplot to be installed.
 when running it, it should display a gnuplot window with a series of bursts of noise.
-see exe/run-example for how to compile and run with gcc */
+see exe/run-example or exe/run-example-sc for how to compile and run with gcc */
 
 #include <sph-sp.h>
 #define _sp_rate 48000
