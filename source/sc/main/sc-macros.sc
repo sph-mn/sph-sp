@@ -15,7 +15,7 @@
             (if free-on-error-used (q free-on-error-free) null)
             (if free-on-exit-used (list (q free-on-exit-free)) null))
           (q (begin))))
-      (body (append body (list (q (if _event:prepare (srq (_event:prepare _event)))))))
+      (body (append body (list (q (if _event:prepare (status-require (_event:prepare _event)))))))
       (body
         (match body
           ( (body ... ((quote label) (quote exit) exit-content ...))
@@ -86,7 +86,7 @@
 (sc-define-syntax (sp-path-times* name segment-type points ...)
   (sp-path* name times segment-type points ...))
 
-(sc-define-syntax (sp-event-memory* size) (srq (sp-event-memory-init _event size)))
+(sc-define-syntax (sp-event-memory* size) (status-require (sp-event-memory-init _event size)))
 
 (sc-define-syntax* (sp-channel-config* channel-config-array (channel-index setting ...) ...)
   "set one or multiple channel config structs in an array"
