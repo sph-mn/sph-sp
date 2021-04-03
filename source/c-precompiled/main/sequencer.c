@@ -1,8 +1,4 @@
-void sp_event_list_display_element(sp_event_list_t* a) {
-  /* (printf %lu %lu ev %lu %lu - %lu - %lu a:event.start a:event.end &a:event a:previous a a:next) */
-  printf("%lu %lu %lu", (a->previous), a, (a->next));
-  printf("\n");
-}
+void sp_event_list_display_element(sp_event_list_t* a) { printf("%lu %lu %lu\n", (a->previous), a, (a->next)); }
 void sp_event_list_display(sp_event_list_t* a) {
   while (a) {
     sp_event_list_display_element(a);

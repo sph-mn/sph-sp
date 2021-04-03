@@ -87,3 +87,120 @@
   (sp-path* name times segment-type points ...))
 
 (sc-define-syntax (sp-event-memory* size) (srq (sp-event-memory-init _event size)))
+
+(sc-define-syntax* (sp-channel-config* channel-config-array (channel-index setting ...) ...)
+  "set one or multiple channel config structs in an array"
+  (pair (q begin)
+    (map
+      (l (i a)
+        (qq
+          (struct-set (array-get (unquote channel-config-array) (unquote i)) (unquote-splicing a))))
+      channel-index setting)))
+
+(sc-define-syntax* (sp-core-event-config* label type type-new name options ...)
+  (qq
+    (begin
+      (sc-insert (unquote (string-append "// " label "\n")))
+      (declare (unquote name) (unquote type))
+      (status-require ((unquote type-new) (address-of (unquote name))))
+      (unquote-splicing
+        (match options
+          ( ( (config ...) channel-config ...)
+            (append
+              (if (null? config) null
+                (qq ((struct-pointer-set (unquote name) (unquote-splicing config)))))
+              (if (null? channel-config) null
+                (qq
+                  ( (sp-channel-config* (struct-pointer-get (unquote name) channel-config)
+                      (unquote-splicing channel-config)))))))
+          (_ null)))
+      (sp-event-memory-add1 _event (unquote name)))))
+
+(sc-define-syntax (sp-noise-config* name options ...)
+  (sp-core-event-config* "sp-noise-config*" sp-noise-event-config-t*
+    sp-noise-event-config-new name options ...))
+
+(sc-define-syntax (sp-wave-config* name options ...)
+  (sp-core-event-config* "sp-wave-config*" sp-wave-event-config-t*
+    sp-wave-event-config-new name options ...))
+
+(sc-define-syntax (sp-cheap-noise-config* name options ...)
+  (sp-core-event-config* "sp-cheap-noise-config*" sp-cheap-noise-event-config-t*
+    sp-cheap-noise-event-config-new name options ...))
+
+(sc-define-syntax (sp-noise* config)
+  (begin
+    (sc-insert "// sp-noise*\n")
+    (struct-pointer-set _event data config prepare sp-noise-event-prepare)))
+
+(sc-define-syntax (sp-wave* config)
+  (begin
+    (sc-insert "// sp-wave*\n")
+    (struct-pointer-set _event data config prepare sp-wave-event-prepare)))
+
+(sc-define-syntax (sp-cheap-noise* config)
+  (begin
+    (sc-insert "// sp-cheap-noise*\n")
+    (struct-pointer-set _event data config prepare sp-cheap-noise-event-prepare)))
+
+(sc-define-syntax (sp-array* type type-new name size values ...)
+  (begin
+    (declare name type)
+    (status-require (type-new size (address-of name)))
+    (sp-event-memory-add1 _event name)
+    (array-set* name values ...)))
+
+(sc-define-syntax* (sp-times* name size-and-values ...)
+  (match size-and-values (() (qq (declare (unquote name) sp-time-t*)))
+    ( (size values ...)
+      (qq
+        (sp-array* sp-time-t* sp-times-new (unquote name) (unquote size) (unquote-splicing values))))))
+
+(sc-define-syntax* (sp-samples* name size-and-values ...)
+  (match size-and-values (() (qq (declare (unquote name) sp-sample-t*)))
+    ( (size values ...)
+      (qq
+        (sp-array* sp-sample-t* sp-samples-new
+          (unquote name) (unquote size) (unquote-splicing values))))))
+
+(sc-define-syntax* (sp-time* name/value ...)
+  (pair (q begin)
+    (map-slice 2 (l (name value) (qq (define (unquote name) sp-time-t (unquote value)))) name/value)))
+
+(sc-define-syntax* (sp-sample* name/value ...)
+  (pair (q begin)
+    (map-slice 2 (l (name value) (qq (define (unquote name) sp-sample-t (unquote value))))
+      name/value)))
+
+(sc-define-syntax (sp-group-add* start duration volume data event)
+  (status-require (sp-group-add-set _event start duration volume (convert-type data void*) event)))
+
+(sc-define-syntax* (define-array* name type values ...)
+  (qq
+    (declare (unquote name)
+      (array (unquote type) (unquote (length values)) (unquote-splicing values)))))
+
+(sc-define-syntax (sp-define-times* name values ...) (define-array* name sp-time-t values ...))
+(sc-define-syntax (sp-define-samples* name values ...) (define-array* name sp-sample-t values ...))
+(sc-define-syntax (sp-render-file*) (status-require (sp-render-quick *_event 0)))
+(sc-define-syntax (sp-render-plot*) (status-require (sp-render-quick *_event 1)))
+(sc-define-syntax (sp-init* rate) (begin (pre-include "sph-sp.h") (pre-define _sp-rate rate)))
+
+(sc-define-syntax (sp-define-song* parallelization channels body ...)
+  (define (main) status-t
+    status-declare
+    (sp-declare-group _song)
+    (define _event sp-event-t* &_song)
+    (sp-initialize parallelization channels _sp-rate)
+    body
+    ...
+    (label exit status-return)))
+
+(sc-define-syntax* (sp-intervals* name tempo start values ...)
+  (let ((count (length values)) (count-name (symbol-append name (q -length))))
+    (qq
+      (begin
+        (define (unquote count-name) sp-time-t (unquote count))
+        (sp-times* (unquote name) (unquote count-name) (unquote-splicing values))
+        (sp-times-multiply-1 (unquote name) (unquote count-name) (unquote tempo) (unquote name))
+        (sp-times-cusum (unquote name) (unquote count-name) (unquote name))))))
