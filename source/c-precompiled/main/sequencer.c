@@ -280,10 +280,18 @@ void sp_group_free(sp_event_t* a) {
   sp_event_memory_free(a);
 }
 status_t sp_group_generate(sp_time_t start, sp_time_t end, sp_block_t out, sp_event_t* a) { return ((sp_seq(start, end, out, ((sp_event_list_t**)(&(a->data)))))); }
+status_t sp_group_generate_parallel(sp_time_t start, sp_time_t end, sp_block_t out, sp_event_t* a) { return ((sp_seq_parallel(start, end, out, ((sp_event_list_t**)(&(a->data)))))); }
 status_t sp_group_prepare(sp_event_t* a) {
   status_declare;
   sp_seq_events_prepare(((sp_event_list_t**)(&(a->data))));
   a->generate = sp_group_generate;
+  a->free = sp_group_free;
+  status_return;
+}
+status_t sp_group_prepare_parallel(sp_event_t* a) {
+  status_declare;
+  sp_seq_events_prepare(((sp_event_list_t**)(&(a->data))));
+  a->generate = sp_group_generate_parallel;
   a->free = sp_group_free;
   status_return;
 }
@@ -301,7 +309,7 @@ status_t sp_group_append(sp_event_t* a, sp_event_t event) {
   event.end += a->end;
   return ((sp_group_add(a, event)));
 }
-sp_channel_config_t sp_channel_config(boolean mute, sp_time_t delay, sp_time_t phs, sp_sample_t amp, sp_sample_t* amod) {
+sp_channel_config_t sp_channel_config(sp_bool_t mute, sp_time_t delay, sp_time_t phs, sp_sample_t amp, sp_sample_t* amod) {
   sp_channel_config_t a;
   a.use = 1;
   a.mute = mute;
@@ -515,7 +523,7 @@ status_t sp_noise_event_generate(sp_time_t start, sp_time_t end, sp_block_t out,
 
 /** the result shows a small delay, for example, circa 40 samples for transition 0.07. the size seems to be related to ir-len.
    the filter state is initialised with one unused call to skip the delay. */
-status_t sp_noise_event_filter_state(sp_sample_t cutl, sp_sample_t cuth, sp_sample_t trnl, sp_sample_t trnh, boolean is_reject, sp_random_state_t* rs, sp_convolution_filter_state_t** out) {
+status_t sp_noise_event_filter_state(sp_sample_t cutl, sp_sample_t cuth, sp_sample_t trnl, sp_sample_t trnh, sp_bool_t is_reject, sp_random_state_t* rs, sp_convolution_filter_state_t** out) {
   status_declare;
   sp_time_t ir_len;
   sp_sample_t* temp;
@@ -857,7 +865,7 @@ exit:
 }
 status_t sp_group_add_set(sp_event_t* group, sp_time_t start, sp_time_t duration, sp_sample_t volume, void* config, sp_event_t event) {
   event.start = start;
-  event.end = (start + duration);
+  event.end = (start + ((0 == duration) ? event.end : duration));
   event.volume = volume;
   event.data = config;
   return ((sp_group_add(group, event)));

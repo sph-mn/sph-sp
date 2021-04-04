@@ -42,6 +42,9 @@
 (sc-define-syntax (sp-define-group* name-and-options body ...)
   (sp-define-event* name-and-options (set _event:prepare sp-group-prepare) body ...))
 
+(sc-define-syntax (sp-define-group-parallel* name-and-options body ...)
+  (sp-define-event* name-and-options (set _event:prepare sp-group-prepare-parallel) body ...))
+
 (sc-define-syntax* (sp-path* name type segment-type points ...)
   "automatically takes duration from points list.
    segment-type is a short symbol instead of the full function name (eg line instead of sp_path_line)
@@ -175,6 +178,9 @@
 (sc-define-syntax (sp-group-add* start duration volume data event)
   (status-require (sp-group-add-set _event start duration volume (convert-type data void*) event)))
 
+(sc-define-syntax (sp-group-append* volume data event)
+  (status-require (sp-group-append-set _event volume (convert-type data void*) event)))
+
 (sc-define-syntax* (define-array* name type values ...)
   (qq
     (declare (unquote name)
@@ -196,7 +202,7 @@
     ...
     (label exit status-return)))
 
-(sc-define-syntax* (sp-intervals* name tempo start values ...)
+(sc-define-syntax* (sp-intervals* name tempo values ...)
   (let ((count (length values)) (count-name (symbol-append name (q -length))))
     (qq
       (begin

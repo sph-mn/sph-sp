@@ -166,7 +166,7 @@
     position sp-time-t
     result-sample-count sp-time-t
     sample-count sp-time-t
-    sample-rate sp-sample-rate-t
+    sample-rate sp-time-t
     unequal int8-t)
   (if (file-exists test-file-path) (unlink test-file-path))
   (set channel-count 2 sample-rate 8000 sample-count 5 position 0 channel channel-count)

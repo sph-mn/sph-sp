@@ -126,7 +126,7 @@
   (label exit status-return))
 
 (define (sp-windowed-sinc-lp-hp-ir cutoff transition is-high-pass out-ir out-len)
-  (status-t sp-sample-t sp-sample-t boolean sp-sample-t** sp-time-t*)
+  (status-t sp-sample-t sp-sample-t sp-bool-t sp-sample-t** sp-time-t*)
   "create an impulse response kernel for a windowed sinc low-pass or high-pass filter.
    uses a truncated blackman window.
    allocates out-ir, sets out-len.
@@ -149,7 +149,7 @@
 
 (define
   (sp-windowed-sinc-bp-br-ir cutoff-l cutoff-h transition-l transition-h is-reject out-ir out-len)
-  (status-t sp-sample-t sp-sample-t sp-sample-t sp-sample-t boolean sp-sample-t** sp-time-t*)
+  (status-t sp-sample-t sp-sample-t sp-sample-t sp-sample-t sp-bool-t sp-sample-t** sp-time-t*)
   "like sp-windowed-sinc-ir-lp but for a band-pass or band-reject filter.
    if one cutoff is at or above maximum then create only either low-pass or high-pass"
   status-declare
@@ -209,35 +209,35 @@
 (define (sp-windowed-sinc-lp-hp-ir-f arguments out-ir out-len)
   (status-t void* sp-sample-t** sp-time-t*)
   "maps arguments from the generic ir-f-arguments array.
-   arguments is (sp-sample-t:cutoff sp-sample-t:transition boolean:is-high-pass)"
-  (declare cutoff sp-sample-t transition sp-sample-t is-high-pass boolean)
+   arguments is (sp-sample-t:cutoff sp-sample-t:transition sp-bool-t:is-high-pass)"
+  (declare cutoff sp-sample-t transition sp-sample-t is-high-pass sp-bool-t)
   (set
     cutoff (pointer-get (convert-type arguments sp-sample-t*))
     transition (pointer-get (+ 1 (convert-type arguments sp-sample-t*)))
-    is-high-pass (pointer-get (convert-type (+ 2 (convert-type arguments sp-sample-t*)) boolean*)))
+    is-high-pass (pointer-get (convert-type (+ 2 (convert-type arguments sp-sample-t*)) sp-bool-t*)))
   (return (sp-windowed-sinc-lp-hp-ir cutoff transition is-high-pass out-ir out-len)))
 
 (define (sp-windowed-sinc-bp-br-ir-f arguments out-ir out-len)
   (status-t void* sp-sample-t** sp-time-t*)
   "maps arguments from the generic ir-f-arguments array.
-   arguments is (sp-sample-t:cutoff-l sp-sample-t:cutoff-h sp-sample-t:transition boolean:is-reject)"
+   arguments is (sp-sample-t:cutoff-l sp-sample-t:cutoff-h sp-sample-t:transition sp-bool-t:is-reject)"
   (declare
     cutoff-l sp-sample-t
     cutoff-h sp-sample-t
     transition-l sp-sample-t
     transition-h sp-sample-t
-    is-reject boolean)
+    is-reject sp-bool-t)
   (set
     cutoff-l (pointer-get (convert-type arguments sp-sample-t*))
     cutoff-h (pointer-get (+ 1 (convert-type arguments sp-sample-t*)))
     transition-l (pointer-get (+ 2 (convert-type arguments sp-sample-t*)))
     transition-h (pointer-get (+ 3 (convert-type arguments sp-sample-t*)))
-    is-reject (pointer-get (convert-type (+ 4 (convert-type arguments sp-sample-t*)) boolean*)))
+    is-reject (pointer-get (convert-type (+ 4 (convert-type arguments sp-sample-t*)) sp-bool-t*)))
   (return
     (sp-windowed-sinc-bp-br-ir cutoff-l cutoff-h transition-l transition-h is-reject out-ir out-len)))
 
 (define (sp-windowed-sinc-lp-hp in in-len cutoff transition is-high-pass out-state out-samples)
-  (status-t sp-sample-t* sp-time-t sp-sample-t sp-sample-t boolean sp-convolution-filter-state-t** sp-sample-t*)
+  (status-t sp-sample-t* sp-time-t sp-sample-t sp-sample-t sp-bool-t sp-convolution-filter-state-t** sp-sample-t*)
   "a windowed sinc low-pass or high-pass filter for segments of continuous streams with
    variable sample-rate, frequency, transition and impulse response type per call.
    * cutoff: as a fraction of the sample rate, 0..0.5
@@ -246,13 +246,13 @@
    * out-state: if zero then state will be allocated.
    * out-samples: owned by the caller. length must be at least in-len"
   status-declare
-  (declare a (array uint8-t ((+ (sizeof boolean) (* 2 (sizeof sp-sample-t))))) a-len uint8-t)
+  (declare a (array uint8-t ((+ (sizeof sp-bool-t) (* 2 (sizeof sp-sample-t))))) a-len uint8-t)
   (sc-comment "set arguments array for ir-f")
   (set
-    a-len (+ (sizeof boolean) (* 2 (sizeof sp-sample-t)))
+    a-len (+ (sizeof sp-bool-t) (* 2 (sizeof sp-sample-t)))
     (pointer-get (convert-type a sp-sample-t*)) cutoff
     (pointer-get (+ 1 (convert-type a sp-sample-t*))) transition
-    (pointer-get (convert-type (+ 2 (convert-type a sp-sample-t*)) boolean*)) is-high-pass)
+    (pointer-get (convert-type (+ 2 (convert-type a sp-sample-t*)) sp-bool-t*)) is-high-pass)
   (sc-comment "apply filter")
   (status-require
     (sp-convolution-filter in in-len sp-windowed-sinc-lp-hp-ir-f a a-len out-state out-samples))
@@ -261,18 +261,18 @@
 
 (define
   (sp-windowed-sinc-bp-br in in-len cutoff-l cutoff-h transition-l transition-h is-reject out-state out-samples)
-  (status-t sp-sample-t* sp-time-t sp-sample-t sp-sample-t sp-sample-t sp-sample-t boolean sp-convolution-filter-state-t** sp-sample-t*)
+  (status-t sp-sample-t* sp-time-t sp-sample-t sp-sample-t sp-sample-t sp-sample-t sp-bool-t sp-convolution-filter-state-t** sp-sample-t*)
   "like sp-windowed-sinc-lp-hp but for a band-pass or band-reject filter"
   status-declare
-  (declare a (array uint8-t ((+ (sizeof boolean) (* 3 (sizeof sp-sample-t))))) a-len uint8-t)
+  (declare a (array uint8-t ((+ (sizeof sp-bool-t) (* 3 (sizeof sp-sample-t))))) a-len uint8-t)
   (sc-comment "set arguments array for ir-f")
   (set
-    a-len (+ (sizeof boolean) (* 4 (sizeof sp-sample-t)))
+    a-len (+ (sizeof sp-bool-t) (* 4 (sizeof sp-sample-t)))
     (pointer-get (convert-type a sp-sample-t*)) cutoff-l
     (pointer-get (+ 1 (convert-type a sp-sample-t*))) cutoff-h
     (pointer-get (+ 2 (convert-type a sp-sample-t*))) transition-l
     (pointer-get (+ 3 (convert-type a sp-sample-t*))) transition-h
-    (pointer-get (convert-type (+ 4 (convert-type a sp-sample-t*)) boolean*)) is-reject)
+    (pointer-get (convert-type (+ 4 (convert-type a sp-sample-t*)) sp-bool-t*)) is-reject)
   (sc-comment "apply filter")
   (status-require
     (sp-convolution-filter in in-len sp-windowed-sinc-bp-br-ir-f a a-len out-state out-samples))
@@ -327,26 +327,23 @@
 
 (define
   (sp-filter in in-size cutoff-l cutoff-h transition-l transition-h is-reject out-state out-samples)
-  (status-t sp-sample-t* sp-time-t sp-sample-t sp-sample-t sp-sample-t sp-sample-t boolean sp-filter-state-t** sp-sample-t*)
+  (status-t sp-sample-t* sp-time-t sp-sample-t sp-sample-t sp-sample-t sp-sample-t sp-bool-t sp-filter-state-t** sp-sample-t*)
   "the sph-sp default precise filter. processing intensive if parameters change frequently.
    memory for out-state will be allocated and has to be freed with sp-filter-state-free"
   (sp-windowed-sinc-bp-br in in-size
     cutoff-l cutoff-h transition-l transition-h is-reject out-state out-samples))
 
-(define (sp-cheap-filter-state-new max-size max-passes out-state)
-  (status-t sp-time-t sp-time-t sp-cheap-filter-state-t*)
+(define (sp-cheap-filter-state-new max-size is-multipass out-state)
+  (status-t sp-time-t sp-bool-t sp-cheap-filter-state-t*)
   "one state object per pass.
-   allocates and prepares temporary memory for passes and checks if max-passes doesnt exceed the limit.
-   heap memory is to be freed with sp-cheap-filter-state-free but only allocated if max-passes is greater than one"
+   heap memory is to be freed with sp-cheap-filter-state-free but only allocated if is_multipass is true"
   status-declare
   (define in-temp sp-sample-t* 0)
   (define out-temp sp-sample-t* 0)
-  (if (< 1 max-passes)
-    (if (< sp-cheap-filter-passes-limit max-passes)
-      (status-set-goto sp-s-group-sp sp-s-id-not-implemented)
-      (begin
-        (status-require (sp-samples-new max-size &in-temp))
-        (status-require (sp-samples-new max-size &out-temp)))))
+  (if (< 1 is-multipass)
+    (begin
+      (status-require (sp-samples-new max-size &in-temp))
+      (status-require (sp-samples-new max-size &out-temp))))
   (set out-state:in-temp in-temp out-state:out-temp out-temp)
   (memset out-state:svf-state 0 (* 2 sp-cheap-filter-passes-limit (sizeof sp-sample-t)))
   (label exit (if status-is-failure (free in-temp)) status-return))

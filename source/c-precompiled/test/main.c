@@ -173,7 +173,7 @@ status_t test_file() {
   sp_time_t position;
   sp_time_t result_sample_count;
   sp_time_t sample_count;
-  sp_sample_rate_t sample_rate;
+  sp_time_t sample_rate;
   int8_t unequal;
   if (file_exists(test_file_path)) {
     unlink(test_file_path);

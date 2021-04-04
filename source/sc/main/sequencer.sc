@@ -187,10 +187,20 @@
 (define (sp-group-generate start end out a) (status-t sp-time-t sp-time-t sp-block-t sp-event-t*)
   (return (sp-seq start end out (convert-type &a:data sp-event-list-t**))))
 
+(define (sp-group-generate-parallel start end out a)
+  (status-t sp-time-t sp-time-t sp-block-t sp-event-t*)
+  (return (sp-seq-parallel start end out (convert-type &a:data sp-event-list-t**))))
+
 (define (sp-group-prepare a) (status-t sp-event-t*)
   status-declare
   (sp-seq-events-prepare (convert-type &a:data sp-event-list-t**))
   (set a:generate sp-group-generate a:free sp-group-free)
+  status-return)
+
+(define (sp-group-prepare-parallel a) (status-t sp-event-t*)
+  status-declare
+  (sp-seq-events-prepare (convert-type &a:data sp-event-list-t**))
+  (set a:generate sp-group-generate-parallel a:free sp-group-free)
   status-return)
 
 (define (sp-group-add a event) (status-t sp-event-t* sp-event-t)
@@ -204,7 +214,7 @@
   (return (sp-group-add a event)))
 
 (define (sp-channel-config mute delay phs amp amod)
-  (sp-channel-config-t boolean sp-time-t sp-time-t sp-sample-t sp-sample-t*)
+  (sp-channel-config-t sp-bool-t sp-time-t sp-time-t sp-sample-t sp-sample-t*)
   (declare a sp-channel-config-t)
   (struct-set a use #t mute mute delay delay phs phs amp amp amod amod)
   (return a))
@@ -391,7 +401,7 @@
   status-return)
 
 (define (sp-noise-event-filter-state cutl cuth trnl trnh is-reject rs out)
-  (status-t sp-sample-t sp-sample-t sp-sample-t sp-sample-t boolean sp-random-state-t* sp-convolution-filter-state-t**)
+  (status-t sp-sample-t sp-sample-t sp-sample-t sp-sample-t sp-bool-t sp-random-state-t* sp-convolution-filter-state-t**)
   "the result shows a small delay, for example, circa 40 samples for transition 0.07. the size seems to be related to ir-len.
    the filter state is initialised with one unused call to skip the delay."
   status-declare
@@ -701,7 +711,11 @@
 
 (define (sp-group-add-set group start duration volume config event)
   (status-t sp-event-t* sp-time-t sp-time-t sp-sample-t void* sp-event-t)
-  (struct-set event start start end (+ start duration) volume volume data config)
+  (struct-set event
+    start start
+    end (+ start (if* (= 0 duration) event.end duration))
+    volume volume
+    data config)
   (return (sp-group-add group event)))
 
 (define (sp-group-append-set group volume config event)

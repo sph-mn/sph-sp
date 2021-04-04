@@ -10,7 +10,6 @@
   sp-sample-t double
   spline-path-time-t sp-time-t
   spline-path-value-t sp-sample-t
-  sp-sample-rate-t uint32-t
   sp-samples-sum f64-sum
   sp-sample-t double
   sp-sf-read sf-readf-double
@@ -26,7 +25,8 @@
   sp-sample-random sph-random-f64-1to1
   sp-sample-nearly-equal f64-nearly-equal
   sp-sample-array-nearly-equal f64-array-nearly-equal
-  sp-default-random-seed 1557083953)
+  sp-default-random-seed 1557083953
+  sp-cheap-filter-passes-limit 8)
 
 (pre-include "sph/status.c" "sph/spline-path.h"
   "sph/random.c" "sph/array3.c" "sph/array4.c"
@@ -35,7 +35,7 @@
 (sc-comment "main")
 
 (pre-define
-  boolean uint8-t
+  sp-bool-t uint8-t
   f64 double
   sp-s-group-libc "libc"
   sp-s-group-sndfile "sndfile"
@@ -62,6 +62,7 @@
   sp-file-mode-write 2
   sp-file-mode-read-write 3
   sp-random-state-t sph-random-state-t
+  sp-noise sp-samples-random
   (sp-file-declare a) (begin (declare a sp-file-t) (set a.flags 0))
   (sp-block-declare a) (begin (declare a sp-block-t) (set a.size 0))
   (sp-cheap-round-positive a) (convert-type (+ 0.5 a) sp-time-t)
@@ -104,11 +105,7 @@
       (samples (array sp-sample-t* sp-channel-limit))))
   sp-file-t
   (type
-    (struct
-      (flags uint8-t)
-      (sample-rate sp-sample-rate-t)
-      (channel-count sp-channel-count-t)
-      (data void*)))
+    (struct (flags uint8-t) (sample-rate sp-time-t) (channel-count sp-channel-count-t) (data void*)))
   sp-cpu-count uint32-t
   sp-default-random-state sp-random-state-t
   sp-rate sp-time-t
@@ -126,7 +123,7 @@
   (sp-file-position file result-position) (status-t sp-file-t* sp-time-t*)
   (sp-file-position-set file sample-offset) (status-t sp-file-t* sp-time-t)
   (sp-file-open path mode channel-count sample-rate result-file)
-  (status-t uint8-t* int sp-channel-count-t sp-sample-rate-t sp-file-t*)
+  (status-t uint8-t* int sp-channel-count-t sp-time-t sp-file-t*)
   (sp-file-close a) (status-t sp-file-t)
   (sp-block->file block path rate) (status-t sp-block-t uint8-t* sp-time-t)
   (sp-block-new channel-count sample-count out-block)
@@ -313,7 +310,6 @@
 (pre-define
   sp-filter-state-t sp-convolution-filter-state-t
   sp-filter-state-free sp-convolution-filter-state-free
-  sp-cheap-filter-passes-limit 8
   (sp-cheap-filter-lp ...) (sp-cheap-filter sp-state-variable-filter-lp __VA_ARGS__)
   (sp-cheap-filter-hp ...) (sp-cheap-filter sp-state-variable-filter-hp __VA_ARGS__)
   (sp-cheap-filter-bp ...) (sp-cheap-filter sp-state-variable-filter-bp __VA_ARGS__)
@@ -354,21 +350,21 @@
   (status-t sp-sample-t* sp-time-t
     sp-convolution-filter-ir-f-t void* uint8-t sp-convolution-filter-state-t** sp-sample-t*)
   (sp-windowed-sinc-lp-hp-ir cutoff transition is-high-pass out-ir out-len)
-  (status-t sp-sample-t sp-sample-t boolean sp-sample-t** sp-time-t*)
+  (status-t sp-sample-t sp-sample-t sp-bool-t sp-sample-t** sp-time-t*)
   (sp-windowed-sinc-bp-br-ir cutoff-l cutoff-h transition-l transition-h is-reject out-ir out-len)
-  (status-t sp-sample-t sp-sample-t sp-sample-t sp-sample-t boolean sp-sample-t** sp-time-t*)
+  (status-t sp-sample-t sp-sample-t sp-sample-t sp-sample-t sp-bool-t sp-sample-t** sp-time-t*)
   (sp-windowed-sinc-lp-hp-ir-f arguments out-ir out-len) (status-t void* sp-sample-t** sp-time-t*)
   (sp-windowed-sinc-bp-br-ir-f arguments out-ir out-len) (status-t void* sp-sample-t** sp-time-t*)
   (sp-windowed-sinc-lp-hp in in-len cutoff transition is-high-pass out-state out-samples)
   (status-t sp-sample-t* sp-time-t
-    sp-sample-t sp-sample-t boolean sp-convolution-filter-state-t** sp-sample-t*)
+    sp-sample-t sp-sample-t sp-bool-t sp-convolution-filter-state-t** sp-sample-t*)
   (sp-windowed-sinc-bp-br in in-len
     cutoff-l cutoff-h transition-l transition-h is-reject out-state out-samples)
   (status-t sp-sample-t* sp-time-t
     sp-sample-t sp-sample-t sp-sample-t
-    sp-sample-t boolean sp-convolution-filter-state-t** sp-sample-t*)
+    sp-sample-t sp-bool-t sp-convolution-filter-state-t** sp-sample-t*)
   (sp-windowed-sinc-lp-hp-ir cutoff transition is-high-pass out-ir out-len)
-  (status-t sp-sample-t sp-sample-t boolean sp-sample-t** sp-time-t*)
+  (status-t sp-sample-t sp-sample-t sp-bool-t sp-sample-t** sp-time-t*)
   (sp-state-variable-filter-lp out in in-count cutoff q-factor state)
   (void sp-sample-t* sp-sample-t* sp-sample-t sp-sample-t sp-time-t sp-sample-t*)
   (sp-state-variable-filter-hp out in in-count cutoff q-factor state)
@@ -385,11 +381,11 @@
   (void sp-state-variable-filter-t sp-sample-t*
     sp-time-t sp-sample-t sp-time-t sp-sample-t sp-cheap-filter-state-t* sp-sample-t*)
   (sp-cheap-filter-state-free a) (void sp-cheap-filter-state-t*)
-  (sp-cheap-filter-state-new max-size max-passes out-state)
-  (status-t sp-time-t sp-time-t sp-cheap-filter-state-t*)
+  (sp-cheap-filter-state-new max-size is-multipass out-state)
+  (status-t sp-time-t sp-bool-t sp-cheap-filter-state-t*)
   (sp-filter in in-size cutoff-l cutoff-h transition-l transition-h is-reject out-state out-samples)
   (status-t sp-sample-t* sp-time-t
-    sp-sample-t sp-sample-t sp-sample-t sp-sample-t boolean sp-filter-state-t** sp-sample-t*))
+    sp-sample-t sp-sample-t sp-sample-t sp-sample-t sp-bool-t sp-filter-state-t** sp-sample-t*))
 
 (sc-comment "plot")
 (pre-define (sp-block-plot-1 a) (sp-plot-samples (array-get a.samples 0) a.size))
@@ -493,8 +489,8 @@
   sp-channel-config-t
   (type
     (struct
-      (use boolean)
-      (mute boolean)
+      (use sp-bool-t)
+      (mute sp-bool-t)
       (delay sp-time-t)
       (phs sp-time-t)
       (amp sp-sample-t)
@@ -558,7 +554,7 @@
   (type (struct (event sp-event-t) (map-generate sp-map-generate-t) (state void*)))
   sp-map-event-config-t
   (type
-    (struct (event sp-event-t) (map-generate sp-map-generate-t) (state void*) (isolate boolean))))
+    (struct (event sp-event-t) (map-generate sp-map-generate-t) (state void*) (isolate sp-bool-t))))
 
 (declare
   (sp-event-list-display a) (void sp-event-list-t*)
@@ -576,6 +572,7 @@
   (sp-noise-event-prepare event) (status-t sp-event-t*)
   (sp-cheap-noise-event-prepare event) (status-t sp-event-t*)
   (sp-group-prepare event) (status-t sp-event-t*)
+  (sp-group-prepare-parallel a) (status-t sp-event-t*)
   (sp-group-add a event) (status-t sp-event-t* sp-event-t)
   (sp-group-append a event) (status-t sp-event-t* sp-event-t)
   (sp-group-add-set group start duration volume config event)
@@ -586,7 +583,7 @@
   (sp-group-event-free a) (void sp-event-t*)
   (sp-map-event-prepare event) (status-t sp-event-t*)
   (sp-channel-config mute delay phs amp amod)
-  (sp-channel-config-t boolean sp-time-t sp-time-t sp-sample-t sp-sample-t*)
+  (sp-channel-config-t sp-bool-t sp-time-t sp-time-t sp-sample-t sp-sample-t*)
   (sp-group-free) (void sp-event-t*)
   (sp-wave-event-free) (void sp-event-t*)
   (sp-noise-event-free) (void sp-event-t*)
@@ -702,6 +699,10 @@
      (rate / d * n)
      example (rt 1 2) returns half of sp_rate"
     (convert-type (* (/ sp-rate d) n) sp-time-t))
+  (rts n d)
+  (begin
+    "like rt but works before sp_initialize has been called"
+    (convert-type (* (/ _sp-rate d) n) sp-time-t))
   srq status-require)
 
 (declare

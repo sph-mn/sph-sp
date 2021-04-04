@@ -26,7 +26,7 @@ c code and shared library for sound synthesis and sequencing. the sound processo
   * utilities like array arithmetic, shuffle, permutations, compositions, statistics such as median, deviation, skewness and more
 
 # code example
-sph-sp is written in sc, which maps directly to c, and c is fully supported. except for the fact that sc supports [scheme](https://www.gnu.org/software/guile/) style macros and when using sc these can be used to greatly simplify the usage.
+sph-sp is written in [sc](https://github.com/sph-mn/sph-sc), which maps directly to c, and c is fully supported. except for the fact that sc supports scheme style macros, and when using sc these can be used to greatly simplify the usage.
 
 * see [other/example.sc](other/example.sc) for how it currently looks using sc
 * see [other/example.c](other/example.c) for the c version. there are several things c can not express succinctly, mostly related to literals and variable number of arguments
@@ -58,22 +58,17 @@ installed files
 * /usr/lib/libsph-sp.so
 
 # compile-time configuration options
-the `ifndef`s at the top of `source/c-precompiled/main/sph-sp.h` can be customised before compilation. the values must be defined before including the header when embedding the full code, or the customised header must be used when using a shared library that has been compiled with the same header.
+the `ifndef`s at the top of `source/c-precompiled/main/sph-sp.h` can be customised before compilation. custom preprocessor variables can be set before including the header when embedding the full code, or a customized header must be used when using a shared library which has to be compiled with the same configuration.
 
-non-exhaustive list of options:
+some options that can be configured:
 
 | name | default | description |
 | --- | --- | --- |
 |sp_channel_limit|2|maximum number of channels|
 |sp_channels_t|uint8_t|data type for numbers of channels|
-|sp_file_format|(SF_FORMAT_WAV \| SF_FORMAT_DOUBLE)|soundfile file format. a combination of file and sample format soundfile constants, for example (SF_FORMAT_AU \| SF_FORMAT_DOUBLE). output conversion is done automatically as necessary|
-|sp_float_t|double|data type for floating point values other than samples|
-|sp_sample_rate_t|uint32_t|data type for sample rates|
-|sp_samples_sum|f64_sum|function (sp_sample_t* size_t -> sp_sample_t) that sums samples, by default with kahan error compensation|
-|sp_sample_t|double|float data type for samples (quasi continuous). for example 64 bit or 32 bit|
-|sp_sf_read|sf_readf_double|libsndfile file reader function to use, corresponding to sp_sample_t|
-|sp_sf_write|sf_writef_double|libsndfile file writer function to use|
-|sp_time_t|uint64_t|integer data type for sample counts (discrete)|
+|sp_file_format|(SF_FORMAT_WAV \| SF_FORMAT_DOUBLE)|file format to use for output. a combination of soundfile constants for file format and sample format, for example (SF_FORMAT_AU \| SF_FORMAT_DOUBLE). output format conversion is done automatically as necessary|
+|sp_sample_t|double|float data type for samples (quasi continuous)|
+|sp_time_t|uint32_t|integer data type for sample counts (discrete)|
 
 # documentation
 see the [sph-sp manual](other/documentation/manual.md), the api listing below and comments above function definitions in the code
@@ -120,6 +115,7 @@ sp_event_list_display :: sp_event_list_t*:a -> void
 sp_event_list_free :: sp_event_list_t**:events -> void
 sp_event_list_remove_element :: sp_event_list_t**:a sp_event_list_t*:element -> void
 sp_event_list_reverse :: sp_event_list_t**:a -> void
+sp_event_list_validate :: sp_event_list_t*:a -> void
 sp_event_memory_add :: sp_event_t*:event void*:address sp_memory_free_t:handler -> void
 sp_event_memory_free :: sp_event_t*:event -> void
 sp_event_memory_init :: sp_event_t*:a sp_time_t:additional_size -> status_t
@@ -192,6 +188,7 @@ sp_samples_additions :: sp_sample_t:start sp_sample_t:summand sp_time_t:count sp
 sp_samples_and :: sp_sample_t*:a sp_sample_t*:b sp_time_t:size sp_sample_t:limit sp_sample_t*:out -> void
 sp_samples_array_free :: sp_sample_t**:a sp_time_t:size -> void
 sp_samples_blend :: sp_sample_t*:a sp_sample_t*:b sp_sample_t:fraction sp_time_t:size sp_sample_t*:out -> void
+sp_samples_copy :: sp_sample_t*:a sp_time_t:size sp_sample_t*:out -> void
 sp_samples_differences :: sp_sample_t*:a sp_time_t:size sp_sample_t*:out -> void
 sp_samples_display :: sp_sample_t*:a sp_time_t:size -> void
 sp_samples_divide :: sp_sample_t*:a sp_time_t:size sp_sample_t*:b sp_sample_t*:out -> void
@@ -277,6 +274,7 @@ sp_times_blend :: sp_time_t*:a sp_time_t*:b sp_sample_t:fraction sp_time_t:size 
 sp_times_compositions :: sp_time_t:sum sp_time_t***:out sp_time_t*:out_size sp_time_t**:out_sizes -> status_t
 sp_times_constant :: sp_time_t:a sp_time_t:size sp_time_t:value sp_time_t**:out -> status_t
 sp_times_contains :: sp_time_t*:a sp_time_t:size sp_time_t:b -> uint8_t
+sp_times_copy :: sp_time_t*:a sp_time_t:size sp_time_t*:out -> void
 sp_times_counted_sequences :: sp_sequence_hashtable_t:known sp_time_t:limit sp_times_counted_sequences_t*:out sp_time_t*:out_size -> void
 sp_times_counted_sequences_hash :: sp_time_t*:a sp_time_t:size sp_time_t:width sp_sequence_hashtable_t:out -> void
 sp_times_counted_sequences_sort_greater :: void*:a ssize_t:b ssize_t:c -> uint8_t
@@ -381,7 +379,7 @@ sp_declare_noise_config(name)
 sp_declare_sine_config(name)
 sp_declare_sine_config_lfo(name)
 sp_default_random_seed
-sp_define_event(name, prepare, duration)
+sp_define_event(name, _prepare, duration)
 sp_event_duration(a)
 sp_event_duration_set(a, duration)
 sp_event_free(a)

@@ -1,23 +1,185 @@
 # sph-sp manual
 *draft*
 
-# general
-* sph-sp compiles to a shared object library and includes a header file with declarations for programming with c
+# sc api
+example
+~~~
+(sc-include-once "/usr/share/sph-sp/sc-macros")
+(sp-init* 48000)
+
+(sp-define-event* d7-hh
+  (sp-event-memory* 10)
+  (sp-path-samples* amod ((rt 1 20) _event:volume) (_duration 0))
+  (sp-noise-config* n1c (amod amod))
+  (sp-noise* n1c))
+
+(sp-define-group* d7-hh-r1
+  (sp-event-memory* 10)
+  (sp-time* tempo (rt 1 3))
+  (sp-intervals* times tempo 0 1 1 4 4 4 1)
+  (for-each-index i times-length (sp-group-add* (array-get times i) (rt 1 6) _event:volume 0 d7-hh)))
+
+(sp-define-song* 1 2 (sp-group-add* 0 (rt 4 1) 0.5 0 d7-hh-r1) (sp-render-plot*))
+~~~
+
+## general
+* many macros expect to be used inside sp-define-event* or sp-define-group*
+* sc-macro names end with * to avoid name conflicts with plain c functions
+
+## sp-time*, sp-sample*
+define sp_time_t or sp_sample_t variables
+
+example
+~~~
+(sp-time* a)
+(sp-time* a 1)
+(sp-time* a 1 b 2 c 3)
+(sp-sample* a)
+(sp-sample* a 1.1)
+(sp-sample* a 1.1 b 2.2 c 3.3)
+~~~
+
+## sp-times*, sp-samples*
+* define sp_time_t or sp_sample_t arrays
+* heap allocated and automatically freed with the event
+
+## sp-define-event*
+* define a single event as a global variable
+* can be used as (sp-define-event name body ...) or (sp-define-event (name default-duration) body ...)
+* implicit variables
+  * _event: pointer to the result event, usually with start, end and volume set
+  * _duration: difference between _event:end and _event:start
+* finally calls _event:prepare if not null
+* arguments and types are implicit
+* status-declare is implicit
+* exit label with status-return is optional
+* free-on-error-free/free-on-exit-free is added automatically if free-on-error feature use found
+
+## sp-define-group*, sp-define-group-parallel*
+like sp-define-event* but automatically sets the group prepare function.
+
+sp-define-group-parallel* distributes the events of the group over multiple cpu cores, which can drastically speed up processing if there are multiple events (or event trees) that need a lot of processing.
+it might be possible to use it nested but there should only be a single parallel group to keep overhead low.
+
+## sp-wave-config* , sp-noise-config*, sp-cheap-noise-config*
+* create configuration for (sine-) waves or filtered noise
+* sp-wave-config* configures a sine wave by default
+* config-key/value sets fields of sp_wave_event_config_t or similar corresponding structs
+* channel-config-key/value sets fields of sp_channel_config_t
+
+forms
+... means zero or multiple.
+
+~~~
+(sp-wave-config* name)
+(sp-wave-config* name (config-key/value ...) channel-config ...)
+(sp-noise-config* name)
+(sp-noise-config* name (config-key/value ...) channel-config ...)
+(sp-cheap-noise-config* name)
+(sp-cheap-noise-config* name (config-key/value ...) channel-config ...)
+~~~
+
+~~~
+(channel-index channel-config-key/value ...)
+~~~
+
+example
+~~~
+(sp-wave-config* s1 (amod amod frq 300) (1 mute #t))
+~~~
+
+* second channel disabled
+* amod is an array of samples for amplitude over time, possibly created with sp-path-samples*
+
+## sp-group-add*, sp-group-append*
+forms
+~~~
+(sp-group-add* start duration volume data event)
+(sp-group-append* volume data event)
+~~~
+
+## sp-init*
+includes sph-sp.h and defines the _sp_rate preprocessor variable
+
+forms
+~~~
+(sp-init* rate)
+~~~
+
+## sp-define-song*
+defines a main function, calls sp_initialize and allows for events to be added to a main song event that can be rendered with sp-render-file* or sp-render-plot*
+
+forms
+~~~
+(sp-define-song* parallelization channels body ...)
+~~~
+
+## sp-intervals*
+like sp-samples* but values are multiplied by tempo and cumulative, so that they become event start times relative to zero
+
+forms
+~~~
+(sp-intervals* name tempo values ...)
+~~~
+
+(sp-intervals* name 20 1 2 3 3 2)
+
+becomes
+
+(20 60 120 180 220)
+
+
+# c api
+
+## general
+* sph-sp compiles to a shared object library and comes with a header file of declarations for usage in c
 * usage with other programming languages is possible by creating bindings, either by writing a c wrapper extension for the other language or using a foreign function interface
 * some identifiers have prefixes that define a topic or namespace they belong to. for example, function names prefixed with sp_time_ work on data of type sp_time_t
 
-# error handling
-* uses [sph-sc-lib status](https://github.com/sph-mn/sph-sc-lib#status), which is included with sph-sp.h. many functions return status_t objects
-* prefix: sp_s
+## units
+* times are in number of samples
+  * the macros (rt nominator denominator) and (rts nominator denominator) calculate sample rate invariant times based on the sp_rate variable or _sp_rate preprocessor variable respectively
+  * rt(3, 1): 3 seconds
+  * rt(1, 4): 1/4 second
+* sample rate factor
+  * the filter implementations take cutoff and transition value as a decimal
+  * 0.5 is the highest possible frequency
+  * 0.0 is the lowest possible frequency
+  * the macros (rtfs x) calculates sample rate invariant factors based on a standard sample rate of 48000
+* wave frequencies are in hertz
+  * 1 hertz is one full period (zero, up, down, zero) in one second
+
+## error handling
+* function local goto with an exit label
+* integer error number and library name in a struct status_t
+* uses [sph-sc-lib status](https://github.com/sph-mn/sph-sc-lib#status), which is included with sph-sp
+* useful bindings:
+  * status_declare: declares a variable with name `status` of type `status_t`
+  * status_is_failure: true if status.id is zero
+  * status_require(expression): evaluates `status = expression` and jumps to exit on error
+  * srq(expression): alias of status_require
+  * status_return: same as `return status`
+
+example function layout:
+
+~~~
+status_t example() {
+  status_declare;
+  srq(custom_example());
+  exit:
+    if (status_is_failure) custom_cleanup;
+    status_return;
+}
+~~~
 
 # fundamental data types
 ## sp_sample_t
 * quasi continuous values in floating point format
 * the c data type is configurable and for example double or float
-* about floating point values in general
+* about floating point values in general:
   * not necessarily equal with =, they can be approximately equal in a small range
   * can store integers without rounding errors (perhaps up to 2**52), but decimal values are subject to errors from rounding necessitated by the limited available size
-  * summation, especially of values with large differences, introduces accumulating rounding errors. large types like 64 bit float and greater, reduce the error range
+  * summation, especially of values with large differences, introduces accumulating rounding errors. large types like 64 bit float and greater reduce the error amount
 * prefix: sp_sample
 
 ## sp_time_t
@@ -32,33 +194,97 @@
 ## sp_block_t
 * sample arrays for multiple channels in one object
 * prefix: sp_block
+* useful bindings:
+  * `status_t sp_block_new(sp_channel_count_t channel_count, sp_time_t sample_count, sp_block_t* out_block)`
+  * `status_t sp_block_to_file(sp_block_t block, uint8_t* path, sp_time_t rate)`
+  * `void sp_block_zero(sp_block_t a)`: sets all values to zero
+  * `void sp_block_free(sp_block_t a)`: frees sample arrays for all channels
 
-important functions:
+example
 ~~~
-sp_block_new(sp_channel_count_t channel_count, sp_time_t sample_count, sp_block_t* out_block);
-status_t sp_block_to_file(sp_block_t block, uint8_t* path, sp_time_t rate);
-void sp_block_zero(sp_block_t a);
-void sp_block_free(sp_block_t a);
+sp_block_t block;
+// 2 channels, 48000 samples long
+status_require(sp_block_new(2), 48000, &block);
+~~~
+
+# interpolated paths
+* specify points and interpolation methods and get arrays for points on the path
+* use cases: envelopes and other modulation paths
+* inspired by svg paths
+* functionality provided by [sph-sc-lib spline-path](https://github.com/sph-mn/sph-sc-lib#spline-path)
+* prefix: sp_path
+* each segment specifies an end point. the start point of each segment is zero or the end of the previous segment
+* useful bindings:
+  * sp_path_samples_new: returns an array for a path
+  * sp_path_line(x, y): return a line segment
+  * sp_path_move(x, y): draw to next segment from this point. can be used at the beginning to start at a specific y value, in the middle to jump up or down or to create gaps
+  * sp_path_bezier(x1, y1, x2, y2, x3, y3)
+
+example
+~~~
+sp_sample_t* amod;
+sp_path_t amod_path;
+sp_path_segment_t amod_segments[2];
+amod_segments[0] = sp_path_line(20000, 1.0);
+amod_segments[1] = sp_path_line(80000, 0);
+spline_path_set(&amod_path, amod_segments, 2);
+status_require(sp_path_samples_new(amod_path, 80000, &amod));
 ~~~
 
 # sample processors
-* filtering
-* sp_noise
-* sp_cheap_noise
-* sp_convolution
-* sp_moving_average
-* custom blockwise seamless convolution processors
+## filtering
+* filter state is allocated if null
+* useful bindings:
+  * sp_windowed_sinc_lp_hp: low-pass or high-pass filter
+  * sp_windowed_sinc_bp_br: band-pass or band-reject filter
+  * sp_convolution_filter: convolution with a custom impulse response
+  * sp_cheap_filter: low/high/band/reject
+  * sp_moving_average
 
-# interpolated paths
-* specify two dimensional points with interpolation methods and get arrays for points on the path
-* use cases: envelopes and other modulation paths
-* inspired by svg paths
-* prefix: sp_path
+example
+~~~
+sp_convolution_filter_state_t* state = 0;
+// 0.1 cutoff, 0.08 transition band
+status_require(sp_windowed_sinc_lp_hp(input, duration, 0.1, 0.08, 0, &state, output));
+sp_convolution_filter_state_free(state);
+~~~
+
+~~~
+sp_cheap_filter_state_t state;
+// 0 is_multipass
+status_require(sp_cheap_filter_state_new(duration, 0, &state));
+// 0.2 cutoff, 1 pass, 0 q_factor
+sp_cheap_filter_lp(input, duration, 0.2, 1, 0, &state, output);
+sp_cheap_filter_state_free(&state);
+~~~
+
+~~~
+// null previous input, null next input, 3 radius
+sp_moving_average(input, duration, 0, 0, 3, output);
+~~~
+
+## other
+* useful bindings
+  * sp_noise: generate white noise
+  * sp_convolve: discrete linear convolution
+  * sp_fft: fast fourier transform (converts from sounds to loudness values for frequencies)
+  * sp_ffti: inverse fast fourier transform (converts from loudness values for frequencies to sounds)
+
+~~~
+sp_noise(&sp_default_random_state, duration, output);
+// carryover is a sample array and its length must be at least b_len - 1
+// 48000 duration, 10 impulse response length, 9 carryover length
+sp_convolve(input, 48000, impulse_response, 10, 9, carryover, output);
+// fft and the inverse. calculated in place, imaginary_part can be all zeros
+status_i_require(sp_fft(len, input_outupt, imaginary_part));
+status_i_require(sp_ffti(len, input_output, imaginary_part));
+~~~
+
 
 # sequencing with sp_seq
-* sequencing with sp_seq is based on the concept of events that occur to affect output in a certain period
+* based on the concept of events that occur to affect output in a certain period
 * sp_seq receives an output block, one or more events, and a start and end time to generate for
-* events and event subtrees can be processed in parallel on an unlimited number of system cpu cores
+* events and event subtrees can be processed in parallel on an unlimited number of system cpu cores. this is a feature of sp_seq_parallel, which has the exact same function type signature
 * sp_seq can be called nested in events and events can be combined in various ways
 * sp_seq manages the list of active events and calls event functions to prepare, generate blocks and eventually free events
 * the interface is roughly like this: sp_seq(start, end, output_block, events) calls active event.f(valid_start, valid_end, output_block_at_offset)
@@ -97,12 +323,8 @@ sp_group_append(sp_event_t* group, sp_event_t event)
 
 ## wave-event
 * generate sines or other waves
-
-~~~
-sp_wave_state
-sp_sine_state
-sp_sine_state_lfo
-~~~
+* sp_sine_table is used as the default waveform
+* for low frequency sines there is the wave table sp_sine_table_lfo of length sp_rate * sp_sine_lfo_factor
 
 ## noise-event
 * generate noise optionally filtered by a single windowed-sinc low/high/band-pass filter
@@ -119,7 +341,18 @@ sp_sine_state_lfo
 
 ## rendering events to files or arrays
 * to file, to plot, to array
-* parallel rendering
+
+example
+~~~
+sp_block_t block;
+sp_render_config_t rc = sp_render_config(sp_channels, sp_rate, sp_rate);
+// 0 start, 48000 duration. block memory is allocated
+status_require(sp_render_block(event, 0, 48000, rc, &block));
+~~~
+
+## parallelization
+* is done by setting the generate function of a group to sp_group_prepare_parallel
+* events are distributed over cores. cpu core threads take individual events from a queue when they need new tasks
 
 # utility features
 * array helpers
@@ -137,17 +370,7 @@ sp_sine_state_lfo
 * random number generation
   * custom probability functions
 * statistics
-* the rt macro for sample rate invariant times
-* measuring a frequency spectrum
-
-# composing
-bar like configuration and sequencing is currently being implemented and tested.
-
-~~~
-sp_sequence_new(start_times, trigger, result_group)
-~~~
-
-it will set up events so that they are only created when needed.
+* plotting a frequency spectrum
 
 # how to
 ## how to do phase modulation
@@ -157,6 +380,34 @@ slight changes of frequency over a short period of time by using the fmod freque
 for example with a long running event that on generate reads user input.
 user input might have to be read in a separate thread and buffered for the time between one block and the next.
 
+## how to customise the sample format
+set the following preprocessor variables before including sph-sp.h
+
+~~~
+sp_sample_t double
+sp_samples_sum f64_sum
+sp_sf_read sf_readf_double
+sp_sf_write sf_writef_double
+sp_samples_random sph_random_f64_array_1to1
+sp_samples_random_bounded sph_random_f64_bounded_array
+sp_sample_random sph_random_f64_1to1
+sp_sample_nearly_equal f64_nearly_equal
+sp_sample_array_nearly_equal f64_array_nearly_equal
+~~~
+
+alternatives for all assigned functions to use 32 bit floats (f32, float) should be available.
+integer formats are not really supported at this point - it would be possible to a large extent but some functions like sp_sine_period are currently only defined for floating point.
+
 # troubleshooting
-## Floating point exception (core dumped)
-has sp_initialize() been called once to initialize sph-sp? it must be called once for some features to work.
+issues, possible causes and solutions.
+
+## floating point exception
+* has sp_initialize() been called once to initialize sph-sp? it must be called once for some features to work
+
+## double free or corruption
+* event memory not initialized large enough. call sp_event_memory_init(&event, 10); with a large enough number. some sc macros use one sp_event_memory_add internally
+
+## segmentation fault
+* event takes config from event.data and data is not set or the wrong data
+* event called beyond its supported duration
+* amod or fmod arrays shorter than event duration

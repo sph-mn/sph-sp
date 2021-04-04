@@ -5,7 +5,7 @@
   status-return)
 
 (define (sp-file-open path mode channel-count sample-rate result-file)
-  (status-t uint8-t* int sp-channel-count-t sp-sample-rate-t sp-file-t*)
+  (status-t uint8-t* int sp-channel-count-t sp-time-t sp-file-t*)
   status-declare
   (declare info SF_INFO file SNDFILE* sf-mode int flags uint8-t)
   (case = mode
@@ -96,10 +96,10 @@
   (set *result-position count)
   (label exit status-return))
 
-(define (sp-file-input? a) (boolean sp-file-t*) (return (bit-and sp-file-bit-input a:flags)))
-(define (sp-file-output? a) (boolean sp-file-t*) (return (bit-and sp-file-bit-output a:flags)))
+(define (sp-file-input? a) (sp-bool-t sp-file-t*) (return (bit-and sp-file-bit-input a:flags)))
+(define (sp-file-output? a) (sp-bool-t sp-file-t*) (return (bit-and sp-file-bit-output a:flags)))
 
-(define (sp-file-input-output? a) (boolean sp-file-t*)
+(define (sp-file-input-output? a) (sp-bool-t sp-file-t*)
   (return (and (bit-and sp-file-bit-input a:flags) (bit-and sp-file-bit-output a:flags))))
 
 (define (sp-block->file block path rate) (status-t sp-block-t uint8-t* sp-time-t)

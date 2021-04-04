@@ -6,7 +6,7 @@ status_t sp_file_close(sp_file_t file) {
   };
   status_return;
 }
-status_t sp_file_open(uint8_t* path, int mode, sp_channel_count_t channel_count, sp_sample_rate_t sample_rate, sp_file_t* result_file) {
+status_t sp_file_open(uint8_t* path, int mode, sp_channel_count_t channel_count, sp_time_t sample_rate, sp_file_t* result_file) {
   status_declare;
   SF_INFO info;
   SNDFILE* file;
@@ -121,9 +121,9 @@ status_t sp_file_position(sp_file_t* file, sp_time_t* result_position) {
 exit:
   status_return;
 }
-boolean sp_file_input_p(sp_file_t* a) { return ((sp_file_bit_input & a->flags)); }
-boolean sp_file_output_p(sp_file_t* a) { return ((sp_file_bit_output & a->flags)); }
-boolean sp_file_input_output_p(sp_file_t* a) { return (((sp_file_bit_input & a->flags) && (sp_file_bit_output & a->flags))); }
+sp_bool_t sp_file_input_p(sp_file_t* a) { return ((sp_file_bit_input & a->flags)); }
+sp_bool_t sp_file_output_p(sp_file_t* a) { return ((sp_file_bit_output & a->flags)); }
+sp_bool_t sp_file_input_output_p(sp_file_t* a) { return (((sp_file_bit_input & a->flags) && (sp_file_bit_output & a->flags))); }
 status_t sp_block_to_file(sp_block_t block, uint8_t* path, sp_time_t rate) {
   status_declare;
   sp_file_t file;
