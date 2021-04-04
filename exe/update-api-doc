@@ -1,0 +1,3 @@
+#!/bin/sh
+
+./exe/display-api > other/documentation/api.md
