@@ -26,13 +26,14 @@ c code and shared library for sound synthesis and sequencing. the sound processo
   * utilities like array arithmetic, shuffle, permutations, compositions, statistics such as median, deviation, skewness and more
 
 # code example
-sph-sp is written in [sc](https://github.com/sph-mn/sph-sc), which maps directly to c, and c is fully supported. except for the fact that sc supports scheme style macros, and when using sc these can be used to greatly simplify the usage.
+sph-sp is written in [sc](https://github.com/sph-mn/sph-sc), which maps directly to c, and c is fully supported. except for the fact that sc supports scheme style macros and when using sc these can be used to greatly simplify the usage.
 
 * see [other/example.sc](other/example.sc) for how it currently looks using sc
 * see [other/example.c](other/example.c) for the c version. there are several things c can not express succinctly, mostly related to literals and variable number of arguments
 
 # documentation
-* [manual](other/documentation/manual.md)
+* [c manual](other/documentation/c-manual.md)
+* [sc manual](other/documentation/sc-manual.md)
 * [api listing](other/documentation/api.md)
 
 otherwise see the comments above function definitions in the code.

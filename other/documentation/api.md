@@ -1,4 +1,4 @@
-## functions
+# functions
 ~~~
 sp_block_to_file :: sp_block_t:block uint8_t*:path sp_time_t:rate -> status_t
 sp_block_copy :: sp_block_t:a sp_block_t:b -> void
@@ -247,7 +247,7 @@ sp_windowed_sinc_lp_hp_ir_f :: void*:arguments sp_sample_t**:out_ir sp_time_t*:o
 sp_windowed_sinc_lp_hp_ir_length :: sp_sample_t:transition -> sp_time_t
 ~~~
 
-## macros
+# macros
 ~~~
 f64
 free_event_on_error(event_address)
@@ -392,7 +392,7 @@ spline_path_value_t
 srq
 ~~~
 
-## variables
+# variables
 ~~~
 sp_channel_count_t sp_channels
 sp_random_state_t sp_default_random_state
@@ -405,7 +405,7 @@ status_t(*)(sp_event_t*) sp_event_prepare_t
 uint32_t sp_cpu_count
 ~~~
 
-## types
+# types
 ~~~
 sp_convolution_filter_ir_f_t: void* sp_sample_t** sp_time_t* -> status_t
 sp_event_generate_t: sp_time_t sp_time_t sp_block_t sp_event_t* -> status_t
