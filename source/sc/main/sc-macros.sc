@@ -206,6 +206,7 @@
   (let ((count (length values)) (count-name (symbol-append name (q -length))))
     (qq
       (begin
+        (sc-insert "// sp-intervals*\n")
         (define (unquote count-name) sp-time-t (unquote count))
         (sp-times* (unquote name) (unquote count-name) (unquote-splicing values))
         (sp-times-multiply-1 (unquote name) (unquote count-name) (unquote tempo) (unquote name))

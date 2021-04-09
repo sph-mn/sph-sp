@@ -9,7 +9,7 @@ see exe/run-example or exe/run-example-sc for how to compile and run with gcc */
 status_t d7_hh_prepare(sp_event_t* _event) {
   status_declare;
   sp_time_t _duration = (_event->end - _event->start);
-  srq((sp_event_memory_init(_event, 10)));
+  status_require((sp_event_memory_init(_event, 10)));
   // sp-path*
   sp_sample_t* amod;
   sp_path_t amod_path;
@@ -28,7 +28,7 @@ status_t d7_hh_prepare(sp_event_t* _event) {
   _event->data = n1c;
   _event->prepare = sp_noise_event_prepare;
   if (_event->prepare) {
-    srq(((_event->prepare)(_event)));
+    status_require(((_event->prepare)(_event)));
   };
 exit:
   status_return;
@@ -38,25 +38,27 @@ status_t d7_hh_r1_prepare(sp_event_t* _event) {
   status_declare;
   sp_time_t _duration = (_event->end - _event->start);
   _event->prepare = sp_group_prepare;
-  srq((sp_event_memory_init(_event, 10)));
+  status_require((sp_event_memory_init(_event, 10)));
   sp_time_t tempo = rt(1, 3);
-  sp_time_t times_length = 6;
+  // sp-intervals*
+  sp_time_t times_length = 7;
   sp_time_t* times;
   status_require((sp_times_new(times_length, (&times))));
   sp_event_memory_add1(_event, times);
-  times[0] = 1;
+  times[0] = 0;
   times[1] = 1;
-  times[2] = 4;
+  times[2] = 1;
   times[3] = 4;
   times[4] = 4;
-  times[5] = 1;
+  times[5] = 4;
+  times[6] = 1;
   sp_times_multiply_1(times, times_length, tempo, times);
   sp_times_cusum(times, times_length, times);
   for (sp_time_t i = 0; (i < times_length); i += 1) {
     status_require((sp_group_add_set(_event, (times[i]), (rt(1, 6)), (_event->volume), ((void*)(0)), d7_hh)));
   };
   if (_event->prepare) {
-    srq(((_event->prepare)(_event)));
+    status_require(((_event->prepare)(_event)));
   };
 exit:
   status_return;

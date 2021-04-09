@@ -32,6 +32,13 @@
     (if (> a result) (set result a)))
   (return result))
 
+(define (sp-times-absolute-max in size) (sp-time-t sp-time-t* sp-time-t)
+  "get the maximum value in samples array, disregarding sign"
+  (declare a sp-time-t)
+  (define max sp-time-t 0)
+  (for-each-index i size (set a (sp-abs (array-get in i))) (if (> a max) (set max a)))
+  (return max))
+
 (define (sp-samples-display a size) (void sp-sample-t* sp-time-t)
   "display a sample array in one line"
   (declare i sp-time-t)
@@ -374,11 +381,28 @@
   (define max sp-sample-t (sp-samples-absolute-max a size))
   (sp-samples-multiply-1 a size (/ n max) a))
 
+(define (sp-times-scale-y a size n out) (void sp-time-t* sp-time-t sp-time-t sp-time-t*)
+  "adjust all values, keeping relative sizes, so that the maximum value is n.
+   a/out can be the same pointer"
+  (define max sp-time-t (sp-times-absolute-max a size))
+  (sp-times-multiply-1 a size (/ n max) a))
+
 (define (sp-samples-scale-sum a size n out) (void sp-sample-t* sp-time-t sp-sample-t sp-sample-t*)
   "adjust all values, keeping relative sizes, so that the sum is n.
    a/out can be the same pointer"
   (define sum sp-sample-t (sp-samples-sum a size))
   (sp-samples-multiply-1 a size (/ n sum) a))
+
+(define (sp-times-sum a size) (sp-time-t sp-time-t* sp-time-t)
+  (define sum sp-time-t 0)
+  (for-each-index i size (set+ sum (array-get a i)))
+  (return sum))
+
+(define (sp-times-scale-sum a size n out) (void sp-time-t* sp-time-t sp-time-t sp-time-t*)
+  "adjust all values, keeping relative sizes, so that the sum is n.
+   a/out can be the same pointer"
+  (define sum sp-time-t (sp-times-sum a size))
+  (sp-times-multiply-1 a size (/ n sum) a))
 
 (define (sp-times-multiplications start factor count out)
   (void sp-time-t sp-time-t sp-time-t sp-time-t*)
@@ -472,7 +496,7 @@
   (label exit status-return))
 
 (define (sp-times-scale a a-size factor out) (status-t sp-time-t* sp-time-t sp-time-t sp-time-t*)
-  "expand by factor. y is scaled by (y * factor), x is scaled by linear interpolation between elements of a.
+  "y is scaled by (y * factor), x is scaled by linear interpolation between elements of a.
    out size will be (a-size - 1) * factor"
   status-declare
   (declare i sp-time-t i2 sp-time-t aa sp-time-t*)

@@ -1,5 +1,5 @@
 # sc manual
-sc extends the [c api](other/documentation/c-manual.md) with new syntax that can save a lot of boilerplate code.
+sc extends the [c api](c-manual.md) with new syntax that can save a lot of boilerplate code.
 
 using the sc api requires the use of [sc](https://github.com/sph-mn/sph-sc) to compile your sc code.
 compiling sc to c can be as simple as calling `sc input.sc output.c`. to compile a directory structure with .sc files to a directory structure with .c files, this can be used `find -type f -name "*.sc" -exec sc --parents '{}' "target_dir" \;`.
@@ -44,6 +44,17 @@ example
 ## sp-times*, sp-samples*
 * define sp_time_t or sp_sample_t arrays
 * heap allocated and automatically freed with the event
+
+forms
+~~~
+(sp-samples* name value ...)
+~~~
+
+examples
+~~~
+(sp-samples* a)
+(sp-samples* a 1 1 1)
+~~~
 
 ## sp-define-event*
 * define a single event as a global variable

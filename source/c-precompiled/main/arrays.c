@@ -35,6 +35,19 @@ sp_sample_t sp_samples_absolute_max(sp_sample_t* in, sp_time_t in_size) {
   return (result);
 }
 
+/** get the maximum value in samples array, disregarding sign */
+sp_time_t sp_times_absolute_max(sp_time_t* in, sp_time_t size) {
+  sp_time_t a;
+  sp_time_t max = 0;
+  for (sp_time_t i = 0; (i < size); i += 1) {
+    a = sp_abs((in[i]));
+    if (a > max) {
+      max = a;
+    };
+  };
+  return (max);
+}
+
 /** display a sample array in one line */
 void sp_samples_display(sp_sample_t* a, sp_time_t size) {
   sp_time_t i;
@@ -494,11 +507,32 @@ void sp_samples_scale_y(sp_sample_t* a, sp_time_t size, sp_sample_t n, sp_sample
   sp_samples_multiply_1(a, size, (n / max), a);
 }
 
+/** adjust all values, keeping relative sizes, so that the maximum value is n.
+   a/out can be the same pointer */
+void sp_times_scale_y(sp_time_t* a, sp_time_t size, sp_time_t n, sp_time_t* out) {
+  sp_time_t max = sp_times_absolute_max(a, size);
+  sp_times_multiply_1(a, size, (n / max), a);
+}
+
 /** adjust all values, keeping relative sizes, so that the sum is n.
    a/out can be the same pointer */
 void sp_samples_scale_sum(sp_sample_t* a, sp_time_t size, sp_sample_t n, sp_sample_t* out) {
   sp_sample_t sum = sp_samples_sum(a, size);
   sp_samples_multiply_1(a, size, (n / sum), a);
+}
+sp_time_t sp_times_sum(sp_time_t* a, sp_time_t size) {
+  sp_time_t sum = 0;
+  for (sp_time_t i = 0; (i < size); i += 1) {
+    sum += a[i];
+  };
+  return (sum);
+}
+
+/** adjust all values, keeping relative sizes, so that the sum is n.
+   a/out can be the same pointer */
+void sp_times_scale_sum(sp_time_t* a, sp_time_t size, sp_time_t n, sp_time_t* out) {
+  sp_time_t sum = sp_times_sum(a, size);
+  sp_times_multiply_1(a, size, (n / sum), a);
 }
 
 /** write count cumulative multiplications with factor from start to out */
@@ -623,7 +657,7 @@ exit:
   status_return;
 }
 
-/** expand by factor. y is scaled by (y * factor), x is scaled by linear interpolation between elements of a.
+/** y is scaled by (y * factor), x is scaled by linear interpolation between elements of a.
    out size will be (a-size - 1) * factor */
 status_t sp_times_scale(sp_time_t* a, sp_time_t a_size, sp_time_t factor, sp_time_t* out) {
   status_declare;
