@@ -25,7 +25,7 @@
   sp-sample-random sph-random-f64-1to1
   sp-sample-nearly-equal f64-nearly-equal
   sp-sample-array-nearly-equal f64-array-nearly-equal
-  sp-default-random-seed 1557083953
+  sp-random-seed 1557083953
   sp-cheap-filter-passes-limit 8)
 
 (pre-include "sph/status.c" "sph/spline-path.h"
@@ -107,7 +107,7 @@
   (type
     (struct (flags uint8-t) (sample-rate sp-time-t) (channel-count sp-channel-count-t) (data void*)))
   sp-cpu-count uint32-t
-  sp-default-random-state sp-random-state-t
+  sp-random-state sp-random-state-t
   sp-rate sp-time-t
   sp-channels sp-channel-count-t
   sp-sine-table sp-sample-t*

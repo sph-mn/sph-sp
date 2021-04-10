@@ -25,6 +25,7 @@
       (define ((unquote name) _event) (status-t sp-event-t*)
         status-declare
         (define _duration sp-time-t (- _event:end _event:start))
+        (define _volume sp-sample-t _event:volume)
         (unquote-splicing body)))))
 
 (sc-define-syntax* (sp-define-event* name-and-options body ...)

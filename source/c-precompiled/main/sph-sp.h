@@ -75,8 +75,8 @@
 #ifndef sp_sample_array_nearly_equal
 #define sp_sample_array_nearly_equal f64_array_nearly_equal
 #endif
-#ifndef sp_default_random_seed
-#define sp_default_random_seed 1557083953
+#ifndef sp_random_seed
+#define sp_random_seed 1557083953
 #endif
 #ifndef sp_cheap_filter_passes_limit
 #define sp_cheap_filter_passes_limit 8
@@ -170,7 +170,7 @@ typedef struct {
   void* data;
 } sp_file_t;
 uint32_t sp_cpu_count;
-sp_random_state_t sp_default_random_state;
+sp_random_state_t sp_random_state;
 sp_time_t sp_rate;
 sp_channel_count_t sp_channels;
 sp_sample_t* sp_sine_table;

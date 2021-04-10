@@ -599,7 +599,7 @@ status_t sp_noise_event_prepare(sp_event_t* event) {
   duration = (event->end - event->start);
   config.resolution = (config.resolution ? config.resolution : 96);
   config.resolution = sp_min((config.resolution), duration);
-  rs = sp_random_state_new((sp_time_random((&sp_default_random_state))));
+  rs = sp_random_state_new((sp_time_random((&sp_random_state))));
   status_require((sp_event_memory_init(event, 2)));
   status_require((sp_malloc_type((config.resolution), sp_sample_t, (&state_noise))));
   sp_event_memory_add1(event, state_noise);
@@ -747,7 +747,7 @@ status_t sp_cheap_noise_event_prepare(sp_event_t* event) {
   config.passes = (config.passes ? config.passes : 1);
   config.resolution = (config.resolution ? config.resolution : 96);
   config.resolution = sp_min((config.resolution), (event->end - event->start));
-  rs = sp_random_state_new((sp_time_random((&sp_default_random_state))));
+  rs = sp_random_state_new((sp_time_random((&sp_random_state))));
   status_require((sp_event_memory_init(event, 2)));
   status_require((sp_malloc_type((config.resolution), sp_sample_t, (&state_noise))));
   sp_event_memory_add1(event, state_noise);

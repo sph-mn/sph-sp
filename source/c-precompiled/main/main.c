@@ -429,7 +429,7 @@ status_t sp_initialize(uint16_t cpu_count, sp_channel_count_t channels, sp_time_
   sp_cpu_count = cpu_count;
   sp_rate = rate;
   sp_channels = channels;
-  sp_default_random_state = sp_random_state_new(sp_default_random_seed);
+  sp_random_state = sp_random_state_new(sp_random_seed);
   sp_sine_lfo_factor = 10;
   status_require((sp_samples_new(sp_rate, (&sp_sine_table))));
   status_require((sp_samples_new((sp_rate * sp_sine_lfo_factor), (&sp_sine_table_lfo))));

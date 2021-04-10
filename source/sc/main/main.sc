@@ -331,7 +331,7 @@
     sp-cpu-count cpu-count
     sp-rate rate
     sp-channels channels
-    sp-default-random-state (sp-random-state-new sp-default-random-seed)
+    sp-random-state (sp-random-state-new sp-random-seed)
     sp-sine-lfo-factor 10)
   (status-require (sp-samples-new sp-rate &sp-sine-table))
   (status-require (sp-samples-new (* sp-rate sp-sine-lfo-factor) &sp-sine-table-lfo))
