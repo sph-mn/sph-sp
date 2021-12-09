@@ -414,16 +414,18 @@
   (sp-declare-event-4 id1 id2 id3 id4)
   (begin (sp-declare-event-2 id1 id2) (sp-declare-event-2 id3 id4))
   (sp-declare-group id) (begin (sp-declare-event id) (set id.prepare sp-group-prepare))
+  (sp-declare-group-parallel id)
+  (begin (sp-declare-event id) (set id.prepare sp-group-prepare-parallel))
   (sp-declare-event-list id) (define id sp-event-list-t* 0)
   (sp-event-duration a) (- a.end a.start)
   (sp-event-duration-set a duration) (set a.end (+ a.start duration))
   (sp-event-move a start) (set a.end (+ start (- a.end a.start)) a.start start)
   sp-group-size-t uint16-t
-  (sp-event-memory-add1 event address) (sp-event-memory-add event address free)
-  (sp-event-memory-add1-2 a data1 data2)
-  (begin (sp-event-memory-add1 a data1) (sp-event-memory-add1 a data2))
-  (sp-event-memory-add1-3 a data1 data2 data3)
-  (begin (sp-event-memory-add1-2 a data1 data2) (sp-event-memory-add1 a data3))
+  (sp-event-memory-add event address) (sp-event-memory-add2 event address free)
+  (sp-event-memory-add-2 a data1 data2)
+  (begin (sp-event-memory-add a data1) (sp-event-memory-add a data2))
+  (sp-event-memory-add-3 a data1 data2 data3)
+  (begin (sp-event-memory-add-2 a data1 data2) (sp-event-memory-add a data3))
   sp-sine-config-t sp-wave-event-config-t
   (sp-declare-sine-config name)
   (begin
@@ -463,7 +465,7 @@
     "allocated memory with malloc, save address in pointer at pointer-address,
      and also immediately add the memory to event memory to be freed with event.free"
     (sp-malloc-type count type pointer-address)
-    (sp-event-memory-add1 _event *pointer-address)))
+    (sp-event-memory-add _event *pointer-address)))
 
 (array3-declare-type sp-memory memreg2-t)
 
@@ -568,7 +570,7 @@
   (sp-event-list-add a event) (status-t sp-event-list-t** sp-event-t)
   (sp-event-list-free events) (void sp-event-list-t**)
   (sp-event-memory-init a additional-size) (status-t sp-event-t* sp-time-t)
-  (sp-event-memory-add event address handler) (void sp-event-t* void* sp-memory-free-t)
+  (sp-event-memory-add2 event address handler) (void sp-event-t* void* sp-memory-free-t)
   (sp-event-memory-free event) (void sp-event-t*)
   (sp-seq start end out events) (status-t sp-time-t sp-time-t sp-block-t sp-event-list-t**)
   (sp-seq-parallel start end out events) (status-t sp-time-t sp-time-t sp-block-t sp-event-list-t**)
@@ -596,7 +598,8 @@
   (sp-noise-event-config-new out) (status-t sp-noise-event-config-t**)
   (sp-cheap-noise-event-config-new out) (status-t sp-cheap-noise-event-config-t**)
   (sp-wave-event-config-new out) (status-t sp-wave-event-config-t**)
-  (sp-map-event-config-new out) (status-t sp-map-event-config-t**))
+  (sp-map-event-config-new out) (status-t sp-map-event-config-t**)
+  (sp-wave-event-config-defaults config) (void sp-wave-event-config-t*))
 
 (sc-comment "path")
 

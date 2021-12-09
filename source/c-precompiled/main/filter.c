@@ -57,9 +57,9 @@ status_t sp_convolution_filter_state_set(sp_convolution_filter_ir_f_t ir_f, void
   memcpy((state->ir_f_arguments), ir_f_arguments, ir_f_arguments_len);
   status_require((ir_f(ir_f_arguments, (&ir), (&ir_len))));
   /* eventually extend carryover array. the array is never shrunk.
-carryover-len is at least ir-len - 1.
-carryover-alloc-len is the length of the whole array.
-new and extended areas must be set to zero */
+  carryover-len is at least ir-len - 1.
+  carryover-alloc-len is the length of the whole array.
+  new and extended areas must be set to zero */
   carryover_alloc_len = (ir_len - 1);
   if (state->carryover) {
     carryover = state->carryover;
@@ -147,7 +147,7 @@ status_t sp_windowed_sinc_lp_hp_ir(sp_sample_t cutoff, sp_sample_t transition, s
   center_index = ((len - 1.0) / 2.0);
   status_require((sph_helper_malloc((len * sizeof(sp_sample_t)), (&ir))));
   /* set the windowed sinc
-nan can be set here if the freq and transition values are invalid */
+  nan can be set here if the freq and transition values are invalid */
   for (i = 0; (i < len); i = (1 + i)) {
     ir[i] = (sp_window_blackman(i, len) * sp_sinc((2 * cutoff * (i - center_index))));
   };
@@ -350,7 +350,7 @@ define_sp_state_variable_filter(lp, v2)
           define_sp_state_variable_filter(all, (v0 - (2 * k * v1)))
 
   /** the sph-sp default precise filter. processing intensive if parameters change frequently.
-   memory for out-state will be allocated and has to be freed with sp-filter-state-free */
+     memory for out-state will be allocated and has to be freed with sp-filter-state-free */
   status_t sp_filter(sp_sample_t* in, sp_time_t in_size, sp_sample_t cutoff_l, sp_sample_t cutoff_h, sp_sample_t transition_l, sp_sample_t transition_h, sp_bool_t is_reject, sp_filter_state_t** out_state, sp_sample_t* out_samples) { sp_windowed_sinc_bp_br(in, in_size, cutoff_l, cutoff_h, transition_l, transition_h, is_reject, out_state, out_samples); }
 
 /** one state object per pass.
@@ -415,10 +415,10 @@ void sp_cheap_filter(sp_state_variable_filter_t filter, sp_sample_t* in, sp_time
    use case: smoothing time domain data arrays, for example amplitude envelopes or input control data */
 void sp_moving_average(sp_sample_t* in, sp_time_t in_size, sp_sample_t* prev, sp_sample_t* next, sp_time_t radius, sp_sample_t* out) {
   /* offsets to calculate outside values include an increment to account for the first or last index,
-     across which values are reflected.
-     the for loops correspond to: initial sum, with preceeding outside values, middle values, with succeeding outside values.
-     the subtracted value is the first value of the previous window and is therefore
-     at an index one less than the first value of the current window */
+       across which values are reflected.
+       the for loops correspond to: initial sum, with preceeding outside values, middle values, with succeeding outside values.
+       the subtracted value is the first value of the previous window and is therefore
+       at an index one less than the first value of the current window */
   sp_time_t i;
   sp_sample_t sum;
   sp_time_t width;

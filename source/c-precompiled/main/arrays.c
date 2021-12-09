@@ -234,7 +234,7 @@ define_value_functions(sp_times, sp_time_t)
                                               define_array_combinator_1(sp_samples_divide_1, sp_sample_t, (a[i] / n))
 
   /** lower value parts of large types are preferred if
-   the system byte order is as expected little-endian */
+     the system byte order is as expected little-endian */
   uint64_t sp_u64_from_array(uint8_t* a, sp_time_t size) {
   if (1 == size) {
     return ((*a));
@@ -531,8 +531,11 @@ sp_time_t sp_times_sum(sp_time_t* a, sp_time_t size) {
 /** adjust all values, keeping relative sizes, so that the sum is n.
    a/out can be the same pointer */
 void sp_times_scale_sum(sp_time_t* a, sp_time_t size, sp_time_t n, sp_time_t* out) {
-  sp_time_t sum = sp_times_sum(a, size);
-  sp_times_multiply_1(a, size, (n / sum), a);
+  sp_sample_t factor;
+  factor = (((sp_sample_t)(n)) / sp_times_sum(a, size));
+  for (sp_time_t i = 0; (i < size); i += 1) {
+    out[i] = sp_cheap_round_positive((out[i] * factor));
+  };
 }
 
 /** write count cumulative multiplications with factor from start to out */

@@ -1,4 +1,4 @@
-void sp_event_list_display_element(sp_event_list_t* a) { printf("%lu %lu %lu\n", (a->previous), a, (a->next)); }
+void sp_event_list_display_element(sp_event_list_t* a) { printf("%lu %lu %lu %lu %lu\n", (a->previous), a, (a->next), (a->event.start), (a->event.end)); }
 void sp_event_list_display(sp_event_list_t* a) {
   while (a) {
     sp_event_list_display_element(a);
@@ -325,22 +325,23 @@ void sp_channel_config_zero(sp_channel_config_t* a) {
     a[i] = channel_config;
   };
 }
+void sp_wave_event_config_defaults(sp_wave_event_config_t* config) {
+  config->wvf = sp_sine_table;
+  config->wvf_size = sp_rate;
+  config->phs = 0;
+  config->frq = sp_rate;
+  config->fmod = 0;
+  config->amp = 1;
+  config->amod = 0;
+  config->channels = sp_channels;
+  sp_channel_config_zero((config->channel_config));
+}
 
 /** heap allocates a sp_wave_event_config_t struct and sets some defaults */
 status_t sp_wave_event_config_new(sp_wave_event_config_t** out) {
   status_declare;
-  sp_wave_event_config_t* result;
-  status_require((sp_malloc_type(1, sp_wave_event_config_t, (&result))));
-  (*result).wvf = sp_sine_table;
-  (*result).wvf_size = sp_rate;
-  (*result).phs = 0;
-  (*result).frq = sp_rate;
-  (*result).fmod = 0;
-  (*result).amp = 1;
-  (*result).amod = 0;
-  (*result).channels = sp_channels;
-  sp_channel_config_zero((result->channel_config));
-  *out = result;
+  status_require((sp_malloc_type(1, sp_wave_event_config_t, out)));
+  sp_wave_event_config_defaults((*out));
 exit:
   status_return;
 }
@@ -602,9 +603,9 @@ status_t sp_noise_event_prepare(sp_event_t* event) {
   rs = sp_random_state_new((sp_time_random((&sp_random_state))));
   status_require((sp_event_memory_init(event, 2)));
   status_require((sp_malloc_type((config.resolution), sp_sample_t, (&state_noise))));
-  sp_event_memory_add1(event, state_noise);
+  sp_event_memory_add(event, state_noise);
   status_require((sp_malloc_type((config.resolution), sp_sample_t, (&state_temp))));
-  sp_event_memory_add1(event, state_temp);
+  sp_event_memory_add(event, state_temp);
   for (sp_time_t ci = 0; (ci < config.channels); ci += 1) {
     if (((config.channel_config)[ci]).mute) {
       continue;
@@ -750,9 +751,9 @@ status_t sp_cheap_noise_event_prepare(sp_event_t* event) {
   rs = sp_random_state_new((sp_time_random((&sp_random_state))));
   status_require((sp_event_memory_init(event, 2)));
   status_require((sp_malloc_type((config.resolution), sp_sample_t, (&state_noise))));
-  sp_event_memory_add1(event, state_noise);
+  sp_event_memory_add(event, state_noise);
   status_require((sp_malloc_type((config.resolution), sp_sample_t, (&state_temp))));
-  sp_event_memory_add1(event, state_temp);
+  sp_event_memory_add(event, state_temp);
   for (sp_time_t ci = 0; (ci < config.channels); ci += 1) {
     if (((config.channel_config)[ci]).mute) {
       continue;
@@ -784,7 +785,7 @@ status_t sp_event_memory_init(sp_event_t* a, sp_time_t additional_size) {
 exit:
   status_return;
 }
-void sp_event_memory_add(sp_event_t* a, void* address, sp_memory_free_t handler) {
+void sp_event_memory_add2(sp_event_t* a, void* address, sp_memory_free_t handler) {
   memreg2_t m;
   m.address = address;
   m.handler = handler;

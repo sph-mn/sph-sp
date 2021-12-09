@@ -1,7 +1,7 @@
 (sc-include-once "./sc-macros")
 
 (define (sp-event-list-display-element a) (void sp-event-list-t*)
-  (printf "%lu %lu %lu\n" a:previous a a:next))
+  (printf "%lu %lu %lu %lu %lu\n" a:previous a a:next a:event.start a:event.end))
 
 (define (sp-event-list-display a) (void sp-event-list-t*)
   (while a (sp-event-list-display-element a) (set a a:next)))
@@ -223,12 +223,8 @@
   (define channel-config sp-channel-config-t (struct-literal 0))
   (for-each-index i sp-channel-limit (set (array-get a i) channel-config)))
 
-(define (sp-wave-event-config-new out) (status-t sp-wave-event-config-t**)
-  "heap allocates a sp_wave_event_config_t struct and sets some defaults"
-  status-declare
-  (declare result sp-wave-event-config-t*)
-  (status-require (sp-malloc-type 1 sp-wave-event-config-t &result))
-  (struct-set *result
+(define (sp-wave-event-config-defaults config) (void sp-wave-event-config-t*)
+  (struct-pointer-set config
     wvf sp-sine-table
     wvf-size sp-rate
     phs 0
@@ -237,8 +233,13 @@
     amp 1
     amod 0
     channels sp-channels)
-  (sp-channel-config-zero result:channel-config)
-  (set *out result)
+  (sp-channel-config-zero config:channel-config))
+
+(define (sp-wave-event-config-new out) (status-t sp-wave-event-config-t**)
+  "heap allocates a sp_wave_event_config_t struct and sets some defaults"
+  status-declare
+  (status-require (sp-malloc-type 1 sp-wave-event-config-t out))
+  (sp-wave-event-config-defaults *out)
   (label exit status-return))
 
 (define (sp-map-event-config-new out) (status-t sp-map-event-config-t**)
@@ -477,9 +478,9 @@
     rs (sp-random-state-new (sp-time-random &sp-random-state)))
   (status-require (sp-event-memory-init event 2))
   (status-require (sp-malloc-type config.resolution sp-sample-t &state-noise))
-  (sp-event-memory-add1 event state-noise)
+  (sp-event-memory-add event state-noise)
   (status-require (sp-malloc-type config.resolution sp-sample-t &state-temp))
-  (sp-event-memory-add1 event state-temp)
+  (sp-event-memory-add event state-temp)
   (for-each-index ci config.channels
     (if (struct-get (array-get config.channel-config ci) mute) continue)
     (status-require (sp-noise-event-channel duration config ci rs state-noise state-temp &channel))
@@ -618,9 +619,9 @@
     rs (sp-random-state-new (sp-time-random &sp-random-state)))
   (status-require (sp-event-memory-init event 2))
   (status-require (sp-malloc-type config.resolution sp-sample-t &state-noise))
-  (sp-event-memory-add1 event state-noise)
+  (sp-event-memory-add event state-noise)
   (status-require (sp-malloc-type config.resolution sp-sample-t &state-temp))
-  (sp-event-memory-add1 event state-temp)
+  (sp-event-memory-add event state-temp)
   (for-each-index ci config.channels
     (if (struct-get (array-get config.channel-config ci) mute) continue)
     (status-require
@@ -643,7 +644,7 @@
       (if (not a:free) (set a:free sp-event-memory-free))))
   (label exit status-return))
 
-(define (sp-event-memory-add a address handler) (void sp-event-t* void* sp-memory-free-t)
+(define (sp-event-memory-add2 a address handler) (void sp-event-t* void* sp-memory-free-t)
   (declare m memreg2-t)
   (struct-set m address address handler handler)
   (sp-memory-add a:memory m))

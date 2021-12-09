@@ -1,5 +1,5 @@
 (sc-comment
-  "small example that shows how to use the core sound generators with sc macros."
+  "small example that shows how to use the core sound generators."
   "this example depends on gnuplot to be installed."
   "when running it, it should display a gnuplot window with a series of bursts of noise."
   "see exe/run-example or exe/run-example-sc for how to compile and run with gcc")

@@ -407,6 +407,9 @@ void sp_plot_spectrum(sp_sample_t* a, sp_time_t a_size);
 #define sp_declare_group(id) \
   sp_declare_event(id); \
   id.prepare = sp_group_prepare
+#define sp_declare_group_parallel(id) \
+  sp_declare_event(id); \
+  id.prepare = sp_group_prepare_parallel
 #define sp_declare_event_list(id) sp_event_list_t* id = 0
 #define sp_event_duration(a) (a.end - a.start)
 #define sp_event_duration_set(a, duration) a.end = (a.start + duration)
@@ -414,13 +417,13 @@ void sp_plot_spectrum(sp_sample_t* a, sp_time_t a_size);
   a.end = (start + (a.end - a.start)); \
   a.start = start
 #define sp_group_size_t uint16_t
-#define sp_event_memory_add1(event, address) sp_event_memory_add(event, address, free)
-#define sp_event_memory_add1_2(a, data1, data2) \
-  sp_event_memory_add1(a, data1); \
-  sp_event_memory_add1(a, data2)
-#define sp_event_memory_add1_3(a, data1, data2, data3) \
-  sp_event_memory_add1_2(a, data1, data2); \
-  sp_event_memory_add1(a, data3)
+#define sp_event_memory_add(event, address) sp_event_memory_add2(event, address, free)
+#define sp_event_memory_add_2(a, data1, data2) \
+  sp_event_memory_add(a, data1); \
+  sp_event_memory_add(a, data2)
+#define sp_event_memory_add_3(a, data1, data2, data3) \
+  sp_event_memory_add_2(a, data1, data2); \
+  sp_event_memory_add(a, data3)
 #define sp_sine_config_t sp_wave_event_config_t
 #define sp_declare_sine_config(name) \
   sp_declare_wave_event_config(name); \
@@ -469,7 +472,7 @@ void sp_plot_spectrum(sp_sample_t* a, sp_time_t a_size);
      and also immediately add the memory to event memory to be freed with event.free */
 #define sp_event_memory_malloc(event, count, type, pointer_address) \
   sp_malloc_type(count, type, pointer_address); \
-  sp_event_memory_add1(_event, (*pointer_address))
+  sp_event_memory_add(_event, (*pointer_address))
 array3_declare_type(sp_memory, memreg2_t);
 typedef void (*sp_memory_free_t)(void*);
 struct sp_event_t;
@@ -565,7 +568,7 @@ void sp_event_list_remove_element(sp_event_list_t** a, sp_event_list_t* element)
 status_t sp_event_list_add(sp_event_list_t** a, sp_event_t event);
 void sp_event_list_free(sp_event_list_t** events);
 status_t sp_event_memory_init(sp_event_t* a, sp_time_t additional_size);
-void sp_event_memory_add(sp_event_t* event, void* address, sp_memory_free_t handler);
+void sp_event_memory_add2(sp_event_t* event, void* address, sp_memory_free_t handler);
 void sp_event_memory_free(sp_event_t* event);
 status_t sp_seq(sp_time_t start, sp_time_t end, sp_block_t out, sp_event_list_t** events);
 status_t sp_seq_parallel(sp_time_t start, sp_time_t end, sp_block_t out, sp_event_list_t** events);
@@ -592,6 +595,7 @@ status_t sp_noise_event_config_new(sp_noise_event_config_t** out);
 status_t sp_cheap_noise_event_config_new(sp_cheap_noise_event_config_t** out);
 status_t sp_wave_event_config_new(sp_wave_event_config_t** out);
 status_t sp_map_event_config_new(sp_map_event_config_t** out);
+void sp_wave_event_config_defaults(sp_wave_event_config_t* config);
 /* path */
 
 #define sp_path_t spline_path_t

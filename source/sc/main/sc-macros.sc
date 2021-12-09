@@ -31,9 +31,13 @@
 (sc-define-syntax* (sp-define-event* name-and-options body ...)
   (let*
     ( (name-and-options
-        (match name-and-options ((name duration) (pair name duration))
-          ((name) (pair name 0)) (name (pair name 0))))
-      (name (first name-and-options)) (duration (tail name-and-options))
+        (match
+          name-and-options
+          ((name duration) (pair name duration))
+          ((name) (pair name 0))
+          (name (pair name 0))))
+      (name (first name-and-options))
+      (duration (tail name-and-options))
       (prepare-name (symbol-append name (q -prepare))))
     (qq
       (begin
@@ -82,7 +86,7 @@
           (unquote (length segments)))
         (status-require
           ((unquote sp-path-new) (unquote name-path) (unquote duration) (address-of (unquote name))))
-        (sp-event-memory-add1 _event (unquote name))))))
+        (sp-event-memory-add _event (unquote name))))))
 
 (sc-define-syntax (sp-path-samples* name segment-type points ...)
   (sp-path* name samples segment-type points ...))
@@ -100,25 +104,6 @@
         (qq
           (struct-set (array-get (unquote channel-config-array) (unquote i)) (unquote-splicing a))))
       channel-index setting)))
-
-(sc-define-syntax* (sp-core-event-config* label type type-new name options ...)
-  (qq
-    (begin
-      (sc-insert (unquote (string-append "// " label "\n")))
-      (declare (unquote name) (unquote type))
-      (status-require ((unquote type-new) (address-of (unquote name))))
-      (unquote-splicing
-        (match options
-          ( ( (config ...) channel-config ...)
-            (append
-              (if (null? config) null
-                (qq ((struct-pointer-set (unquote name) (unquote-splicing config)))))
-              (if (null? channel-config) null
-                (qq
-                  ( (sp-channel-config* (struct-pointer-get (unquote name) channel-config)
-                      (unquote-splicing channel-config)))))))
-          (_ null)))
-      (sp-event-memory-add1 _event (unquote name)))))
 
 (sc-define-syntax (sp-noise-config* name options ...)
   (sp-core-event-config* "sp-noise-config*" sp-noise-event-config-t*
@@ -151,7 +136,7 @@
   (begin
     (declare name type)
     (status-require (type-new size (address-of name)))
-    (sp-event-memory-add1 _event name)
+    (sp-event-memory-add _event name)
     (array-set* name values ...)))
 
 (sc-define-syntax* (sp-times* name size-and-values ...)

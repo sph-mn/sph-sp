@@ -401,8 +401,10 @@
 (define (sp-times-scale-sum a size n out) (void sp-time-t* sp-time-t sp-time-t sp-time-t*)
   "adjust all values, keeping relative sizes, so that the sum is n.
    a/out can be the same pointer"
-  (define sum sp-time-t (sp-times-sum a size))
-  (sp-times-multiply-1 a size (/ n sum) a))
+  (declare factor sp-sample-t)
+  (set factor (/ (convert-type n sp-sample-t) (sp-times-sum a size)))
+  (for-each-index i size
+    (set (array-get out i) (sp-cheap-round-positive (* (array-get out i) factor)))))
 
 (define (sp-times-multiplications start factor count out)
   (void sp-time-t sp-time-t sp-time-t sp-time-t*)

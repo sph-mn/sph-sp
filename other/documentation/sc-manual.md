@@ -2,7 +2,7 @@
 sc extends the [c api](c-manual.md) with new syntax that can save a lot of boilerplate code.
 
 using the sc api requires the use of [sc](https://github.com/sph-mn/sph-sc) to compile your sc code.
-compiling sc to c can be as simple as calling `sc input.sc output.c`. to compile a directory structure with .sc files to a directory structure with .c files, this can be used `find -type f -name "*.sc" -exec sc --parents '{}' "target_dir" \;`.
+compiling sc to c can be as simple as calling `sc input.sc output.c`. to compile a directory structure with .sc files to a directory structure with .c files, the following can be be used: `find -type f -name "*.sc" -exec sc --parents '{}' "target_dir" \;`.
 
 example
 ~~~

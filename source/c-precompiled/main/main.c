@@ -251,7 +251,7 @@ void sp_convolve(sp_sample_t* a, sp_time_t a_len, sp_sample_t* b, sp_time_t b_le
       memset((carryover_len + result_samples), 0, ((a_len - carryover_len) * sizeof(sp_sample_t)));
     } else {
       /* carryover is larger. set result-samples to all carryover entries that fit.
-shift remaining carryover to the left */
+      shift remaining carryover to the left */
       memcpy(result_samples, result_carryover, (a_len * sizeof(sp_sample_t)));
       memmove(result_carryover, (a_len + result_carryover), ((carryover_len - a_len) * sizeof(sp_sample_t)));
       memset(((carryover_len - a_len) + result_carryover), 0, (a_len * sizeof(sp_sample_t)));
@@ -260,7 +260,7 @@ shift remaining carryover to the left */
     memset(result_samples, 0, (a_len * sizeof(sp_sample_t)));
   };
   /* result values.
-first process values that dont lead to carryover */
+  first process values that dont lead to carryover */
   size = ((a_len < b_len) ? 0 : (a_len - (b_len - 1)));
   if (size) {
     sp_convolve_one(a, size, b, b_len, result_samples);

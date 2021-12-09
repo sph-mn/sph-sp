@@ -165,9 +165,9 @@ uint8_t sp_stat_times_center(sp_time_t* a, sp_time_t size, sp_sample_t* out) {
 define_sp_stat_range(sp_stat_times_range, sp_time_t)
 
   /** return in $out the number of repetitions of subsequences of widths 1 to $size.
-   examples
-     high: 11111 121212
-     low: 12345 112212 */
+     examples
+       high: 11111 121212
+       low: 12345 112212 */
   uint8_t sp_stat_times_repetition_all(sp_time_t* a, sp_time_t size, sp_sample_t* out) {
   sp_time_t count;
   sp_time_t i;
@@ -258,9 +258,9 @@ define_sp_stat_range(sp_stat_samples_range, sp_sample_t)
   define_sp_stat_inharmonicity(sp_stat_times_inharmonicity, sp_time_t)
 
   /** map input samples into the time range 0..max.
-   makes all values positive by adding the absolute minimum
-   then scales with multiplication so that the largest value is max
-   then rounds to sp-time-t */
+     makes all values positive by adding the absolute minimum
+     then scales with multiplication so that the largest value is max
+     then rounds to sp-time-t */
   void sp_samples_scale_to_times(sp_sample_t* a, sp_time_t size, sp_time_t max, sp_time_t* out) {
   sp_time_t i;
   sp_sample_t range[3];

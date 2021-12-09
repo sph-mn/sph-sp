@@ -6,21 +6,20 @@
 
 ## units
 * times are in number of samples
-  * the macros (rt nominator denominator) and (rts nominator denominator) calculate sample rate invariant times based on the sp_rate variable or _sp_rate preprocessor variable respectively
+  * the macros (rt nominator denominator) and (rts nominator denominator) calculate sample rate invariant times based on the sp_rate global variable or _sp_rate preprocessor variable respectively
   * rt(3, 1): 3 seconds
   * rt(1, 4): 1/4 second
 * sample rate factor
   * the filter implementations take cutoff and transition value as a decimal
   * 0.5 is the highest possible frequency
   * 0.0 is the lowest possible frequency
-  * the macros (rtfs x) calculates sample rate invariant factors based on a standard sample rate of 48000
 * wave frequencies are in hertz
   * 1 hertz is one full period (zero, up, down, zero) in one second
 
 ## error handling
 * function local goto with an exit label
 * integer error number and library name in a struct status_t
-* uses [sph-sc-lib status](https://github.com/sph-mn/sph-sc-lib#status), which is included with sph-sp
+* uses [sph-sc-lib status](https://github.com/sph-mn/sph-sc-lib#status), which is included with sph-sp.h
 * useful bindings:
   * status_declare: declares a variable with name `status` of type `status_t`
   * status_is_failure: true if status.id is zero
@@ -45,8 +44,8 @@ status_t example() {
 * quasi continuous values in floating point format
 * the c data type is configurable and for example double or float
 * about floating point values in general:
-  * not necessarily equal with =, they can be approximately equal in a small range
-  * can store integers without rounding errors (perhaps up to 2**52), but decimal values are subject to errors from rounding necessitated by the limited available size
+  * not necessarily equal when compared by `=`. values can be approximately equal in a small range
+  * can store integers without rounding errors (perhaps up to 2**52), but decimal values are subject to errors from rounding necessitated by the storage format and the limited available size
   * summation, especially of values with large differences, introduces accumulating rounding errors. large types like 64 bit float and greater reduce the error amount
 * prefix: sp_sample
 
@@ -54,7 +53,7 @@ status_t example() {
 * discrete values as integers
 * the c data type is configurable and for example uint32_t or uint64_t
 * used for counts of samples and other integer values
-* at 96000 samples per second, 32 bit types can count samples for 44739 seconds or about 12 hours. 64 bit types can count samples for 192153584101141 seconds
+* at 96000 samples per second, an unsigned 32 bit type can count samples for 44739 seconds or about 12 hours. an unsigned 64 bit type can count samples for 192153584101141 seconds. the former might be sufficient and save memory
 * can store only positive values
 * subtracting to lower than zero usually subtracts from the largest possible value, addition beyond the maximum value restarts from zero
 * prefix: sp_time
@@ -72,7 +71,7 @@ example
 ~~~
 sp_block_t block;
 // 2 channels, 48000 samples long
-status_require(sp_block_new(2), 48000, &block);
+status_require(sp_block_new(2, 48000, &block));
 ~~~
 
 # interpolated paths
@@ -148,35 +147,34 @@ status_i_require(sp_fft(len, input_outupt, imaginary_part));
 status_i_require(sp_ffti(len, input_output, imaginary_part));
 ~~~
 
-
 # sequencing with sp_seq
 * based on the concept of events that occur to affect output in a certain period
 * sp_seq receives an output block, one or more events, and a start and end time to generate for
 * events and event subtrees can be processed in parallel on an unlimited number of system cpu cores. this is a feature of sp_seq_parallel, which has the exact same function type signature
-* sp_seq can be called nested in events and events can be combined in various ways
+* sp_seq can be called nested in events and therefore events can be composed in various ways
 * sp_seq manages the list of active events and calls event functions to prepare, generate blocks and eventually free events
-* the interface is roughly like this: sp_seq(start, end, output_block, events) calls active event.f(valid_start, valid_end, output_block_at_offset)
+* it works roughly like this: sp_seq(start, end, output_block, events) calls any active event.f(valid_start, valid_end, output_block_at_offset)
 
 ## events
 * sp_event_t variables must be declared with sp_declare_event or initialized with sp_event_set_null unless they are overwritten with other events that have been declared in such a way
-* event.generate, event.free and event.prepare are custom functions
+* event.prepare, event.generate and event.free are custom functions with the expected type signatures
 * event.state is for custom data that will be available to the functions during the duration of the event
-* event.generate by default receives part of the block passed to sp_seq, where they are supposed to sum into, that means, they add to the output block instead of overwriting it
 * event.prepare is called before the event is to be rendered and, with groups, allows to build a nested composition where resources will be allocated on demand
+* event.generate receives part of the block passed to sp_seq, where it is supposed to sum into. that means, events are supposed to add to a given output block instead of overwriting it
 * the core sound events (wave-event, noise-event, etc) accept channel configuration for muting channels, amplitude differences and delays between channels
 
 ## custom events
 * define a struct for use as the event state if needed
-* define the event function (event.f) that will generate samples
+* define the event function event.f that will generate samples
 * define an event.free function to free the custom state when the event has finished
 * set .start and .end times as needed
 
 ## registering memory with events
 * events can track pointers with handler functions that will be called with the pointer on event.free
-* the use case for this is to free memory, or deinitialize other resource handles, from when the event was prepared. this could be done manually by using a custom event state, but this feature makes it generic
+* the use case for this is to free memory, or deinitialize other resource handles, that were introduced when the event was prepared. this could be done manually with a custom event state but this feature makes it generic
 
 ### usage
-* custom free functions need to call sp_event_memory_free(event) if memory is registered
+* custom free functions need to call sp_event_memory_free(event) unless no memory has been registered
 
 ## group-event
 * events can be bundled into a single event. this, for example, could represent one sound of an instrument with many sub-events, or a whole portion of a song, a riff, bar or similar
@@ -192,11 +190,11 @@ sp_group_append(sp_event_t* group, sp_event_t event)
 ## wave-event
 * generate sines or other waves
 * sp_sine_table is used as the default waveform
-* for low frequency sines there is the wave table sp_sine_table_lfo of length sp_rate * sp_sine_lfo_factor
+* for low frequency sines there is the wave table sp_sine_table_lfo of length sp_rate times sp_sine_lfo_factor
 
 ## noise-event
-* generate noise optionally filtered by a single windowed-sinc low/high/band-pass filter
-* the modulation interval, the smallest interval in which filter parameter changes over time are applied, is configurable. this has substantial performance implications, as updating a windowed sinc filter for every sample for example would be extremely processing intensive
+* generate white noise, optionally filtered by a single windowed-sinc low/high/band-pass filter
+* the modulation interval, the smallest interval in which filter parameter changes over time are applied, is configurable. this has substantial performance implications, as updating a windowed sinc filter for every sample would be extremely processing intensive
 
 ## cheap-noise-event
 * like noise-event but filters less processing intensive using a state-variable filter
@@ -238,17 +236,9 @@ status_require(sp_render_block(event, 0, 48000, rc, &block));
 * random number generation
   * custom probability functions
 * statistics
-* plotting a frequency spectrum
 
 # how to
-## how to do phase modulation
-slight changes of frequency over a short period of time by using the fmod frequency modulation feature of sp-wave-event.
-
-## how could live input data be incorporated
-for example with a long running event that on generate reads user input.
-user input might have to be read in a separate thread and buffered for the time between one block and the next.
-
-## how to customise the sample format
+## how to customize the sample format
 set the following preprocessor variables before including sph-sp.h
 
 ~~~
@@ -264,7 +254,14 @@ sp_sample_array_nearly_equal f64_array_nearly_equal
 ~~~
 
 alternatives for all assigned functions to use 32 bit floats (f32, float) should be available.
-integer formats are not really supported at this point - it would be possible to a large extent but some functions like sp_sine_period are currently only defined for floating point.
+integer formats are not really supported at this point - it would be possible to a large extent but some functions like sp_sine_period are currently defined only for floating point.
+
+## how could live input data be incorporated
+for example with a long running event that on generate reads user input.
+user input might have to be read in a separate thread and buffered for the time between one block and the next.
+
+## how to do phase modulation
+slight changes of frequency over a short period of time by using the fmod frequency modulation feature of sp-wave-event.
 
 # troubleshooting
 issues, possible causes and solutions.
@@ -273,9 +270,9 @@ issues, possible causes and solutions.
 * has sp_initialize() been called once to initialize sph-sp? it must be called once for some features to work
 
 ## double free or corruption
-* event memory not initialized large enough. call sp_event_memory_init(&event, 10); with a large enough number. some sc macros use one sp_event_memory_add internally
+* the event memory was not initialized large enough. call sp_event_memory_init(&event, 10); with a large enough number. some sc macros use sp_event_memory_add internally
 
 ## segmentation fault
-* event takes config from event.data and data is not set or the wrong data
+* event takes config from event.data, which is not set or the wrong data
 * event called beyond its supported duration
 * amod or fmod arrays shorter than event duration
