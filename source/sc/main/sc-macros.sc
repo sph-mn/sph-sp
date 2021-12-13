@@ -141,12 +141,14 @@
       (sp-event-config-options* (unquote name) (unquote-splicing options))
       (sp-event-memory-add (unquote event) (unquote name)))))
 
-(sc-define-syntax (sp-wave-config* name ...) (begin (declare name sp-wave-event-config-t*) ...))
+(sc-define-syntax (sp-wave-config* name ...) "declare config variables"
+  (begin (declare name sp-wave-event-config-t*) ...))
 
 (sc-define-syntax (sp-wave-config-new* name event options ...)
+  "allocate config object and set options. (name event (config ...) channel-config ...)"
   (sp-event-config* sp-wave-event-config-new name event options ...))
 
-(sc-define-syntax (sp-wave* event config)
+(sc-define-syntax (sp-wave* event config) "setup the event to be a wave event"
   (struct-pointer-set event data config prepare sp-wave-event-prepare))
 
 (sc-define-syntax (sp-noise-config* name ...) (begin (declare name sp-noise-event-config-t*) ...))
@@ -178,6 +180,7 @@
       name/value)))
 
 (sc-define-syntax (sp-array* type type-new name size values ...)
+  "declare array variable and length variable, allocate array,\n   register memory with current event and set given values in order"
   (begin
     (declare name type)
     (status-require (type-new size (address-of name)))
@@ -198,6 +201,7 @@
           (unquote name) (unquote size) (unquote-splicing values))))))
 
 (sc-define-syntax* (sp-array-values* type-new name values ...)
+  "like sp-array* but uses the count of values as size"
   (let ((name-length (symbol-append name (q -length))))
     (qq
       (begin
