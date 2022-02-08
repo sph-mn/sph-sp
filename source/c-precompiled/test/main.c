@@ -39,7 +39,7 @@ status_t test_spectral_reversal_ir() {
 exit:
   status_return;
 }
-status_t test_convolve() {
+status_t test_convolve_smaller() {
   status_declare;
   sp_sample_t* a;
   sp_time_t a_len;
@@ -103,6 +103,59 @@ exit:
   memreg_free;
   status_return;
 }
+
+/** test with a kernel larger than input. test with processing more blocks */
+status_t test_convolve_larger() {
+  status_declare;
+  sp_sample_t* in_a;
+  sp_sample_t* in_b;
+  sp_sample_t* out;
+  sp_sample_t* out_control;
+  sp_sample_t* carryover;
+  sp_time_t carryover_length;
+  sp_time_t in_a_length;
+  sp_time_t in_b_length;
+  sp_time_t block_size;
+  sp_time_t block_count;
+  memreg_init(4);
+  in_a = 0;
+  in_b = 0;
+  out = 0;
+  carryover = 0;
+  out_control = 0;
+  block_size = 10;
+  block_count = 10;
+  in_a_length = 100;
+  in_b_length = 15;
+  carryover_length = in_b_length;
+  status_require((sp_samples_new(in_a_length, (&in_a))));
+  memreg_add(in_a);
+  status_require((sp_samples_new(in_b_length, (&in_b))));
+  memreg_add(in_b);
+  status_require((sp_samples_new(in_a_length, (&out))));
+  memreg_add(out);
+  status_require((sp_samples_new(in_a_length, (&out_control))));
+  memreg_add(out_control);
+  status_require((sp_samples_new(in_b_length, (&carryover))));
+  memreg_add(carryover);
+  for (sp_time_t i = 0; (i < in_a_length); i += 1) {
+    in_a[i] = i;
+  };
+  for (sp_time_t i = 0; (i < in_b_length); i += 1) {
+    in_b[i] = (1 + i);
+  };
+  sp_convolve(in_a, in_a_length, in_b, in_b_length, carryover_length, carryover, out_control);
+  sp_samples_zero(carryover, in_b_length);
+  carryover_length = 0;
+  for (sp_time_t i = 0; (i < block_count); i += 1) {
+    sp_convolve(((i * block_size) + in_a), block_size, in_b, in_b_length, carryover_length, carryover, ((i * block_size) + out));
+    carryover_length = in_b_length;
+  };
+  test_helper_assert("equal to block processing result", (sp_sample_array_nearly_equal(out, in_a_length, out_control, in_a_length, (0.01))));
+exit:
+  memreg_free;
+  status_return;
+}
 status_t test_moving_average() {
   status_declare;
   sp_sample_t* in;
@@ -127,6 +180,51 @@ status_t test_moving_average() {
   test_helper_assert("with prev/next", (sp_sample_nearly_equal((2.11), (out[1]), error_margin) && sp_sample_nearly_equal((5.5), (out[5]), error_margin) && sp_sample_nearly_equal((2.11), (out[9]), error_margin)));
 exit:
   memreg_free;
+  status_return;
+}
+status_t test_windowed_sinc_continuity() {
+  status_declare;
+  sp_sample_t* in;
+  sp_sample_t* out;
+  sp_sample_t* out_test;
+  sp_convolution_filter_state_t* state;
+  sp_random_state_t random_state;
+  sp_time_t size;
+  sp_time_t block_size;
+  sp_time_t block_count;
+  sp_sample_t cutl;
+  sp_sample_t cuth;
+  sp_sample_t trnl;
+  sp_sample_t trnh;
+  in = 0;
+  out = 0;
+  out_test = 0;
+  size = 100;
+  block_size = 10;
+  block_count = 10;
+  state = 0;
+  cutl = 0.001;
+  cuth = 0.03;
+  trnl = 0.07;
+  trnh = 0.07;
+  random_state = sp_random_state_new((sp_time_random((&sp_random_state))));
+  status_require((sp_samples_new(size, (&in))));
+  status_require((sp_samples_new(size, (&out))));
+  status_require((sp_samples_new(size, (&out_test))));
+  sp_samples_random((&random_state), size, in);
+  status_require((sp_windowed_sinc_bp_br(in, size, cutl, cuth, trnl, trnh, 0, (&state), out_test)));
+  for (sp_time_t i = 0; (i < block_count); i += 1) {
+    status_require((sp_windowed_sinc_bp_br(((i * block_size) + in), block_size, cutl, cuth, trnl, trnh, 0, (&state), ((i * block_size) + out))));
+  };
+  /* (for-each-index i size (printf %f
+   (array-get out i))) */
+  sp_plot_samples(out, size);
+  test_helper_assert("equal to block processing result", (sp_sample_array_nearly_equal(out, size, out_test, size, (0.01))));
+exit:
+  sp_convolution_filter_state_free(state);
+  free(in);
+  free(out);
+  free(out_test);
   status_return;
 }
 status_t test_windowed_sinc() {
@@ -848,6 +946,8 @@ int main() {
   status_declare;
   rs = sp_random_state_new(3);
   sp_initialize(3, 2, _rate);
+  test_helper_test_one(test_convolve_smaller);
+  test_helper_test_one(test_convolve_larger);
   test_helper_test_one(test_sp_noise_event);
   test_helper_test_one(test_sp_wave_event);
   test_helper_test_one(test_sp_cheap_noise_event);
@@ -866,7 +966,6 @@ int main() {
   test_helper_test_one(test_spectral_inversion_ir);
   test_helper_test_one(test_base);
   test_helper_test_one(test_spectral_reversal_ir);
-  test_helper_test_one(test_convolve);
   test_helper_test_one(test_windowed_sinc);
   test_helper_test_one(test_times);
   test_helper_test_one(test_permutations);

@@ -112,7 +112,7 @@
    ensure that the length is odd"
   (declare a sp-time-t)
   (set a (ceil (/ 4 transition)))
-  (if (not (modulo a 2)) (set a (+ 1 a)))
+  (if (= 0 (modulo a 2)) (set+ a 1))
   (return a))
 
 (define (sp-null-ir out-ir out-len) (status-t sp-sample-t** sp-time-t*)
@@ -202,7 +202,7 @@
       (status-require (sp-windowed-sinc-lp-hp-ir cutoff-h transition-h #f &lp-ir &lp-len))
       (sc-comment "convolve lp and hp ir samples")
       (set *out-len (- (+ lp-len hp-len) 1))
-      (status-require (sph-helper-calloc (* *out-len (sizeof sp-sample-t)) out-ir))
+      (status-require (sp-samples-new *out-len out-ir))
       (sp-convolve-one lp-ir lp-len hp-ir hp-len *out-ir)))
   (label exit status-return))
 
@@ -264,8 +264,8 @@
   (status-t sp-sample-t* sp-time-t sp-sample-t sp-sample-t sp-sample-t sp-sample-t sp-bool-t sp-convolution-filter-state-t** sp-sample-t*)
   "like sp-windowed-sinc-lp-hp but for a band-pass or band-reject filter"
   status-declare
+  (sc-comment "setup arguments array for ir-f")
   (declare a (array uint8-t ((+ (sizeof sp-bool-t) (* 3 (sizeof sp-sample-t))))) a-len uint8-t)
-  (sc-comment "set arguments array for ir-f")
   (set
     a-len (+ (sizeof sp-bool-t) (* 4 (sizeof sp-sample-t)))
     (pointer-get (convert-type a sp-sample-t*)) cutoff-l

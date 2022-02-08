@@ -368,7 +368,8 @@
 
 (define (sp-noise-event-generate start end out event)
   (status-t sp-time-t sp-time-t sp-block-t sp-event-t*)
-  "updates filter arguments only every resolution number of samples"
+  "updates filter arguments only every resolution number of samples,
+   but at least once for each call of generate"
   status-declare
   (declare
     block-count sp-time-t
@@ -376,6 +377,7 @@
     block-offset sp-time-t
     block-rest sp-time-t
     duration sp-time-t
+    resolution sp-time-t
     i sp-time-t
     s sp-noise-event-state-t
     sp sp-noise-event-state-t*
@@ -384,20 +386,30 @@
     sp event:data
     s *sp
     duration (- end start)
-    block-count (if* (= duration s.resolution) 1 (sp-cheap-floor-positive (/ duration s.resolution)))
-    block-rest (modulo duration s.resolution))
+    resolution (sp-min s.resolution duration)
+    block-count (if* (= duration resolution) 1 (sp-cheap-floor-positive (/ duration resolution)))
+    block-rest (modulo duration resolution))
   (for ((set block-i 0) (< block-i block-count) (set+ block-i 1))
-    (set
-      block-offset (* s.resolution block-i)
-      t (+ start block-offset)
-      duration (if* (= block-count block-i) block-rest s.resolution))
-    (sp-samples-random &s.random-state duration s.noise)
-    (sp-windowed-sinc-bp-br s.noise duration
+    (set block-offset (* resolution block-i) t (+ start block-offset))
+      (printf "main %lu, offset %lu\n" t block-offset)
+    (sp-samples-random &s.random-state resolution s.noise)
+    (sp-windowed-sinc-bp-br s.noise resolution
       (sp-array-or-fixed s.cutl-mod s.cutl t) (sp-array-or-fixed s.cuth-mod s.cuth t) s.trnl
       s.trnh s.is-reject &s.filter-state s.temp)
-    (for ((set i 0) (< i duration) (set+ i 1))
+    (for ((set i 0) (< i resolution) (set+ i 1))
       (set+ (array-get out.samples s.channel (+ block-offset i))
         (* s.amp (array-get s.amod (+ t i)) (array-get s.temp i)))))
+  (if block-rest
+    (begin
+      (set block-offset (+ block-rest (* resolution (- block-i 1))) t (+ start block-offset))
+      (printf "rest %lu, offset %lu\n" t block-offset)
+      (sp-samples-random &s.random-state resolution s.noise)
+      (sp-windowed-sinc-bp-br s.noise block-rest
+        (sp-array-or-fixed s.cutl-mod s.cutl t) (sp-array-or-fixed s.cuth-mod s.cuth t) s.trnl
+        s.trnh s.is-reject &s.filter-state s.temp)
+      (for ((set i 0) (< i block-rest) (set+ i 1))
+        (set+ (array-get out.samples s.channel (+ block-offset i))
+          (* s.amp (array-get s.amod (+ t i)) (array-get s.temp i))))))
   (set sp:random-state s.random-state sp:filter-state s.filter-state)
   status-return)
 

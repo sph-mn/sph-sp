@@ -153,66 +153,61 @@
    flips the frequency response left to right"
   (while (> a-len 1) (set a-len (- a-len 2) (array-get a a-len) (* -1 (array-get a a-len)))))
 
-(define (sp-convolve-one a a-len b b-len result-samples)
+(define (sp-convolve-one a a-len b b-len out)
   (void sp-sample-t* sp-time-t sp-sample-t* sp-time-t sp-sample-t*)
   "discrete linear convolution.
-   result-samples must be all zeros, its length must be at least a-len + b-len - 1.
-   result-samples is owned and allocated by the caller"
+   out must be all zeros, its length must be at least a-len + b-len - 1.
+   out is owned and allocated by the caller"
   (declare a-index sp-time-t b-index sp-time-t)
   (set a-index 0 b-index 0)
   (while (< a-index a-len)
     (while (< b-index b-len)
-      (set
-        (array-get result-samples (+ a-index b-index))
-        (+ (array-get result-samples (+ a-index b-index))
-          (* (array-get a a-index) (array-get b b-index)))
-        b-index (+ 1 b-index)))
-    (set b-index 0 a-index (+ 1 a-index))))
+      (set+ (array-get out (+ a-index b-index)) (* (array-get a a-index) (array-get b b-index))
+        b-index 1))
+    (set b-index 0)
+    (set+ a-index 1)))
 
-(define (sp-convolve a a-len b b-len carryover-len result-carryover result-samples)
+(define (sp-convolve a a-len b b-len carryover-len carryover out)
   (void sp-sample-t* sp-time-t sp-sample-t* sp-time-t sp-time-t sp-sample-t* sp-sample-t*)
-  "discrete linear convolution for sample arrays, possibly of a continuous stream. maps segments (a, a-len) to result-samples
+  "discrete linear convolution for sample arrays, possibly of a continuous stream. maps segments (a, a-len) to out
    using (b, b-len) as the impulse response. b-len must be greater than zero.
    all heap memory is owned and allocated by the caller.
-   result-samples length is a-len.
-   result-carryover is previous carryover or an empty array.
-   result-carryover length must at least b-len - 1.
+   out length is a-len.
+   carryover is previous carryover or an empty array.
+   carryover length must at least b-len - 1.
    carryover-len should be zero for the first call or its content should be zeros.
-   carryover-len for subsequent calls should be b-len - 1 or if b-len changed b-len - 1  from the previous call.
+   carryover-len for subsequent calls should be b-len - 1 or, if b-len changed, b-len - 1 from the previous call.
    if b-len is one then there is no carryover.
    if a-len is smaller than b-len then, with the current implementation, additional performance costs ensue from shifting the carryover array each call.
-   carryover is the extension of result-samples for generated values that dont fit"
+   carryover is the extension of out for generated values that dont fit into out,
+   as a and b are always fully convolved"
   (declare size sp-time-t a-index sp-time-t b-index sp-time-t c-index sp-time-t)
+  (sc-comment "prepare out and carryover")
   (if carryover-len
     (if (<= carryover-len a-len)
       (begin
-        (sc-comment "copy all entries to result and reset")
-        (memcpy result-samples result-carryover (* carryover-len (sizeof sp-sample-t)))
-        (memset result-carryover 0 (* carryover-len (sizeof sp-sample-t)))
-        (memset (+ carryover-len result-samples) 0 (* (- a-len carryover-len) (sizeof sp-sample-t))))
+        (sc-comment "copy all entries to out and reset")
+        (memcpy out carryover (* carryover-len (sizeof sp-sample-t)))
+        (sp-samples-zero carryover carryover-len)
+        (sp-samples-zero (+ carryover-len out) (- a-len carryover-len)))
       (begin
-        (sc-comment
-          "carryover is larger. set result-samples to all carryover entries that fit."
-          "shift remaining carryover to the left")
-        (memcpy result-samples result-carryover (* a-len (sizeof sp-sample-t)))
-        (memmove result-carryover (+ a-len result-carryover)
-          (* (- carryover-len a-len) (sizeof sp-sample-t)))
-        (memset (+ (- carryover-len a-len) result-carryover) 0 (* a-len (sizeof sp-sample-t)))))
-    (memset result-samples 0 (* a-len (sizeof sp-sample-t))))
-  (sc-comment "result values." "first process values that dont lead to carryover")
+        (sc-comment "carryover is larger. move all carryover entries that fit into out")
+        (memcpy out carryover (* a-len (sizeof sp-sample-t)))
+        (memmove carryover (+ a-len carryover) (* (- carryover-len a-len) (sizeof sp-sample-t)))
+        (sp-samples-zero (+ (- carryover-len a-len) carryover) a-len)))
+    (sp-samples-zero out a-len))
+  (sc-comment "process values that dont lead to carryover")
   (set size (if* (< a-len b-len) 0 (- a-len (- b-len 1))))
-  (if size (sp-convolve-one a size b b-len result-samples))
+  (if size (sp-convolve-one a size b b-len out))
   (sc-comment "process values with carryover")
-  (for ((set a-index size) (< a-index a-len) (set a-index (+ 1 a-index)))
-    (for ((set b-index 0) (< b-index b-len) (set b-index (+ 1 b-index)))
+  (for ((set a-index size) (< a-index a-len) (set+ a-index 1))
+    (for ((set b-index 0) (< b-index b-len) (set+ b-index 1))
       (set c-index (+ a-index b-index))
       (if (< c-index a-len)
-        (set (array-get result-samples c-index)
-          (+ (array-get result-samples c-index) (* (array-get a a-index) (array-get b b-index))))
-        (set
-          c-index (- c-index a-len)
-          (array-get result-carryover c-index)
-          (+ (array-get result-carryover c-index) (* (array-get a a-index) (array-get b b-index))))))))
+        (set+ (array-get out c-index) (* (array-get a a-index) (array-get b b-index)))
+        (begin
+          (set c-index (- c-index a-len))
+          (set+ (array-get carryover c-index) (* (array-get a a-index) (array-get b b-index))))))))
 
 (define (sp-time-expt base exp) (sp-time-t sp-time-t sp-time-t)
   (define a sp-time-t 1)

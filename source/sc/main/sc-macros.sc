@@ -160,7 +160,7 @@
   (struct-pointer-set event data config prepare sp-noise-event-prepare))
 
 (sc-define-syntax (sp-cheap-noise-config* name ...)
-  (begin (declare name sp-noise-event-config-t*) ...))
+  (begin (declare name sp-cheap-noise-event-config-t*) ...))
 
 (sc-define-syntax (sp-cheap-noise-config-new* name event options ...)
   (sp-event-config* sp-cheap-noise-event-config-new name event options ...))

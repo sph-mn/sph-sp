@@ -51,7 +51,7 @@
       (sp-sample-nearly-equal 0.1 (array-get a 4) error-margin)))
   (label exit status-return))
 
-(define (test-convolve) status-t
+(define (test-convolve-smaller) status-t
   status-declare
   (declare
     a sp-sample-t*
@@ -76,9 +76,9 @@
   (status-require (sph-helper-calloc (* carryover-len (sizeof sp-sample-t)) &carryover))
   (memreg-add carryover)
   (sc-comment "prepare input/output data arrays")
-  (array-set a 0 2 1 3 2 4 3 5 4 6)
-  (array-set b 0 1 1 2 2 3)
-  (array-set carryover 0 0 1 0 2 0)
+  (array-set* a 2 3 4 5 6)
+  (array-set* b 1 2 3)
+  (array-set* carryover 0 0 0)
   (sc-comment "test convolve first segment")
   (sp-convolve a a-len b b-len carryover-len carryover result)
   (test-helper-assert "first result"
@@ -86,14 +86,63 @@
   (test-helper-assert "first result carryover"
     (sp-samples-nearly-equal carryover carryover-len expected-carryover carryover-len error-margin))
   (sc-comment "test convolve second segment")
-  (array-set a 0 8 1 9 2 10 3 11 4 12)
-  (array-set expected-result 0 35 1 43 2 52 3 58 4 64)
-  (array-set expected-carryover 0 57 1 36 2 0)
+  (array-set* a 8 9 10 11 12)
+  (array-set* expected-result 35 43 52 58 64)
+  (array-set* expected-carryover 57 36 0)
   (sp-convolve a a-len b b-len carryover-len carryover result)
   (test-helper-assert "second result"
     (sp-samples-nearly-equal result result-len expected-result result-len error-margin))
   (test-helper-assert "second result carryover"
     (sp-samples-nearly-equal carryover carryover-len expected-carryover carryover-len error-margin))
+  (label exit memreg-free status-return))
+
+(define (test-convolve-larger) status-t
+  "test with a kernel larger than input. test with processing more blocks"
+  status-declare
+  (declare
+    in-a sp-sample-t*
+    in-b sp-sample-t*
+    out sp-sample-t*
+    out-control sp-sample-t*
+    carryover sp-sample-t*
+    carryover-length sp-time-t
+    in-a-length sp-time-t
+    in-b-length sp-time-t
+    block-size sp-time-t
+    block-count sp-time-t)
+  (memreg-init 4)
+  (set
+    in-a 0
+    in-b 0
+    out 0
+    carryover 0
+    out-control 0
+    block-size 10
+    block-count 10
+    in-a-length 100
+    in-b-length 15
+    carryover-length in-b-length)
+  (status-require (sp-samples-new in-a-length &in-a))
+  (memreg-add in-a)
+  (status-require (sp-samples-new in-b-length &in-b))
+  (memreg-add in-b)
+  (status-require (sp-samples-new in-a-length &out))
+  (memreg-add out)
+  (status-require (sp-samples-new in-a-length &out-control))
+  (memreg-add out-control)
+  (status-require (sp-samples-new in-b-length &carryover))
+  (memreg-add carryover)
+  (for-each-index i in-a-length (set (array-get in-a i) i))
+  (for-each-index i in-b-length (set (array-get in-b i) (+ 1 i)))
+  (sp-convolve in-a in-a-length in-b in-b-length carryover-length carryover out-control)
+  (sp-samples-zero carryover in-b-length)
+  (set carryover-length 0)
+  (for-each-index i block-count
+    (sp-convolve (+ (* i block-size) in-a) block-size
+      in-b in-b-length carryover-length carryover (+ (* i block-size) out))
+    (set carryover-length in-b-length))
+  (test-helper-assert "equal to block processing result"
+    (sp-sample-array-nearly-equal out in-a-length out-control in-a-length 0.01))
   (label exit memreg-free status-return))
 
 (define (test-moving-average) status-t
@@ -122,6 +171,54 @@
       (sp-sample-nearly-equal 5.5 (array-get out 5) error-margin)
       (sp-sample-nearly-equal 2.11 (array-get out 9) error-margin)))
   (label exit memreg-free status-return))
+
+(define (test-windowed-sinc-continuity) status-t
+  status-declare
+  (declare
+    in sp-sample-t*
+    out sp-sample-t*
+    out-test sp-sample-t*
+    state sp-convolution-filter-state-t*
+    random-state sp-random-state-t
+    size sp-time-t
+    block-size sp-time-t
+    block-count sp-time-t
+    cutl sp-sample-t
+    cuth sp-sample-t
+    trnl sp-sample-t
+    trnh sp-sample-t)
+  (set
+    in 0
+    out 0
+    out-test 0
+    size 100
+    block-size 10
+    block-count 10
+    state 0
+    cutl 0.001
+    cuth 0.03
+    trnl 0.07
+    trnh 0.07
+    random-state (sp-random-state-new (sp-time-random &sp-random-state)))
+  (status-require (sp-samples-new size &in))
+  (status-require (sp-samples-new size &out))
+  (status-require (sp-samples-new size &out-test))
+  (sp-samples-random &random-state size in)
+  (status-require (sp-windowed-sinc-bp-br in size cutl cuth trnl trnh 0 &state out-test))
+  (for-each-index i block-count
+    (status-require
+      (sp-windowed-sinc-bp-br (+ (* i block-size) in) block-size
+        cutl cuth trnl trnh 0 &state (+ (* i block-size) out))))
+  (sc-comment (for-each-index i size (printf "%f\n" (array-get out i))))
+  (sp-plot-samples out size)
+  (test-helper-assert "equal to block processing result"
+    (sp-sample-array-nearly-equal out size out-test size 0.01))
+  (label exit
+    (sp-convolution-filter-state-free state)
+    (free in)
+    (free out)
+    (free out-test)
+    status-return))
 
 (define (test-windowed-sinc) status-t
   status-declare
@@ -747,6 +844,9 @@
   status-declare
   (set rs (sp-random-state-new 3))
   (sp-initialize 3 2 _rate)
+  ;(test-helper-test-one test-windowed-sinc-continuity)
+  (test-helper-test-one test-convolve-smaller)
+  (test-helper-test-one test-convolve-larger)
   (test-helper-test-one test-sp-noise-event)
   (test-helper-test-one test-sp-wave-event)
   (test-helper-test-one test-sp-cheap-noise-event)
@@ -765,7 +865,6 @@
   (test-helper-test-one test-spectral-inversion-ir)
   (test-helper-test-one test-base)
   (test-helper-test-one test-spectral-reversal-ir)
-  (test-helper-test-one test-convolve)
   (test-helper-test-one test-windowed-sinc)
   (test-helper-test-one test-times)
   (test-helper-test-one test-permutations)

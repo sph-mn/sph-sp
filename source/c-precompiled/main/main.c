@@ -210,70 +210,70 @@ void sp_spectral_reversal_ir(sp_sample_t* a, sp_time_t a_len) {
 }
 
 /** discrete linear convolution.
-   result-samples must be all zeros, its length must be at least a-len + b-len - 1.
-   result-samples is owned and allocated by the caller */
-void sp_convolve_one(sp_sample_t* a, sp_time_t a_len, sp_sample_t* b, sp_time_t b_len, sp_sample_t* result_samples) {
+   out must be all zeros, its length must be at least a-len + b-len - 1.
+   out is owned and allocated by the caller */
+void sp_convolve_one(sp_sample_t* a, sp_time_t a_len, sp_sample_t* b, sp_time_t b_len, sp_sample_t* out) {
   sp_time_t a_index;
   sp_time_t b_index;
   a_index = 0;
   b_index = 0;
   while ((a_index < a_len)) {
     while ((b_index < b_len)) {
-      result_samples[(a_index + b_index)] = (result_samples[(a_index + b_index)] + (a[a_index] * b[b_index]));
-      b_index = (1 + b_index);
+      out[(a_index + b_index)] += (a[a_index] * b[b_index]);
+      b_index += 1;
     };
     b_index = 0;
-    a_index = (1 + a_index);
+    a_index += 1;
   };
 }
 
-/** discrete linear convolution for sample arrays, possibly of a continuous stream. maps segments (a, a-len) to result-samples
+/** discrete linear convolution for sample arrays, possibly of a continuous stream. maps segments (a, a-len) to out
    using (b, b-len) as the impulse response. b-len must be greater than zero.
    all heap memory is owned and allocated by the caller.
-   result-samples length is a-len.
-   result-carryover is previous carryover or an empty array.
-   result-carryover length must at least b-len - 1.
+   out length is a-len.
+   carryover is previous carryover or an empty array.
+   carryover length must at least b-len - 1.
    carryover-len should be zero for the first call or its content should be zeros.
-   carryover-len for subsequent calls should be b-len - 1 or if b-len changed b-len - 1  from the previous call.
+   carryover-len for subsequent calls should be b-len - 1 or, if b-len changed, b-len - 1 from the previous call.
    if b-len is one then there is no carryover.
    if a-len is smaller than b-len then, with the current implementation, additional performance costs ensue from shifting the carryover array each call.
-   carryover is the extension of result-samples for generated values that dont fit */
-void sp_convolve(sp_sample_t* a, sp_time_t a_len, sp_sample_t* b, sp_time_t b_len, sp_time_t carryover_len, sp_sample_t* result_carryover, sp_sample_t* result_samples) {
+   carryover is the extension of out for generated values that dont fit into out,
+   as a and b are always fully convolved */
+void sp_convolve(sp_sample_t* a, sp_time_t a_len, sp_sample_t* b, sp_time_t b_len, sp_time_t carryover_len, sp_sample_t* carryover, sp_sample_t* out) {
   sp_time_t size;
   sp_time_t a_index;
   sp_time_t b_index;
   sp_time_t c_index;
+  /* prepare out and carryover */
   if (carryover_len) {
     if (carryover_len <= a_len) {
-      /* copy all entries to result and reset */
-      memcpy(result_samples, result_carryover, (carryover_len * sizeof(sp_sample_t)));
-      memset(result_carryover, 0, (carryover_len * sizeof(sp_sample_t)));
-      memset((carryover_len + result_samples), 0, ((a_len - carryover_len) * sizeof(sp_sample_t)));
+      /* copy all entries to out and reset */
+      memcpy(out, carryover, (carryover_len * sizeof(sp_sample_t)));
+      sp_samples_zero(carryover, carryover_len);
+      sp_samples_zero((carryover_len + out), (a_len - carryover_len));
     } else {
-      /* carryover is larger. set result-samples to all carryover entries that fit.
-      shift remaining carryover to the left */
-      memcpy(result_samples, result_carryover, (a_len * sizeof(sp_sample_t)));
-      memmove(result_carryover, (a_len + result_carryover), ((carryover_len - a_len) * sizeof(sp_sample_t)));
-      memset(((carryover_len - a_len) + result_carryover), 0, (a_len * sizeof(sp_sample_t)));
+      /* carryover is larger. move all carryover entries that fit into out */
+      memcpy(out, carryover, (a_len * sizeof(sp_sample_t)));
+      memmove(carryover, (a_len + carryover), ((carryover_len - a_len) * sizeof(sp_sample_t)));
+      sp_samples_zero(((carryover_len - a_len) + carryover), a_len);
     };
   } else {
-    memset(result_samples, 0, (a_len * sizeof(sp_sample_t)));
+    sp_samples_zero(out, a_len);
   };
-  /* result values.
-  first process values that dont lead to carryover */
+  /* process values that dont lead to carryover */
   size = ((a_len < b_len) ? 0 : (a_len - (b_len - 1)));
   if (size) {
-    sp_convolve_one(a, size, b, b_len, result_samples);
+    sp_convolve_one(a, size, b, b_len, out);
   };
   /* process values with carryover */
-  for (a_index = size; (a_index < a_len); a_index = (1 + a_index)) {
-    for (b_index = 0; (b_index < b_len); b_index = (1 + b_index)) {
+  for (a_index = size; (a_index < a_len); a_index += 1) {
+    for (b_index = 0; (b_index < b_len); b_index += 1) {
       c_index = (a_index + b_index);
       if (c_index < a_len) {
-        result_samples[c_index] = (result_samples[c_index] + (a[a_index] * b[b_index]));
+        out[c_index] += (a[a_index] * b[b_index]);
       } else {
         c_index = (c_index - a_len);
-        result_carryover[c_index] = (result_carryover[c_index] + (a[a_index] * b[b_index]));
+        carryover[c_index] += (a[a_index] * b[b_index]);
       };
     };
   };
