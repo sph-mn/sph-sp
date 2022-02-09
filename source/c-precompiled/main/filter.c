@@ -49,7 +49,6 @@ status_t sp_convolution_filter_state_set(sp_convolution_filter_ir_f_t ir_f, void
     memreg_add(state);
     memreg_add((state->ir_f_arguments));
     state->carryover_alloc_len = 0;
-    state->carryover_len = 0;
     state->carryover = 0;
     state->ir_f = ir_f;
     state->ir_f_arguments_len = ir_f_arguments_len;
@@ -73,13 +72,14 @@ status_t sp_convolution_filter_state_set(sp_convolution_filter_ir_f_t ir_f, void
     };
   } else {
     if (carryover_alloc_len) {
-      status_require((sph_helper_calloc((carryover_alloc_len * sizeof(sp_sample_t)), (&carryover))));
+      status_require((sp_samples_new(carryover_alloc_len, (&carryover))));
     } else {
       carryover = 0;
     };
     state->carryover_alloc_len = carryover_alloc_len;
   };
   state->carryover = carryover;
+  state->carryover_len = (ir_len - 1);
   state->ir = ir;
   state->ir_len = ir_len;
   *out_state = state;
@@ -98,12 +98,10 @@ exit:
    * out-samples: owned by the caller. length must be at least in-len and the number of output samples will be in-len */
 status_t sp_convolution_filter(sp_sample_t* in, sp_time_t in_len, sp_convolution_filter_ir_f_t ir_f, void* ir_f_arguments, uint8_t ir_f_arguments_len, sp_convolution_filter_state_t** out_state, sp_sample_t* out_samples) {
   status_declare;
-  sp_time_t carryover_len;
-  carryover_len = (*out_state ? ((*out_state)->ir_len - 1) : 0);
   /* create/update the impulse response kernel */
   status_require((sp_convolution_filter_state_set(ir_f, ir_f_arguments, ir_f_arguments_len, out_state)));
   /* convolve */
-  sp_convolve(in, in_len, ((*out_state)->ir), ((*out_state)->ir_len), carryover_len, ((*out_state)->carryover), out_samples);
+  sp_convolve(in, in_len, ((*out_state)->ir), ((*out_state)->ir_len), ((*out_state)->carryover_len), ((*out_state)->carryover), out_samples);
 exit:
   status_return;
 }
@@ -121,7 +119,7 @@ sp_time_t sp_windowed_sinc_lp_hp_ir_length(sp_sample_t transition) {
 }
 status_t sp_null_ir(sp_sample_t** out_ir, sp_time_t* out_len) {
   *out_len = 1;
-  return ((sph_helper_calloc((sizeof(sp_sample_t)), out_ir)));
+  return ((sp_samples_new(1, out_ir)));
 }
 status_t sp_passthrough_ir(sp_sample_t** out_ir, sp_time_t* out_len) {
   status_declare;
@@ -266,6 +264,7 @@ status_t sp_windowed_sinc_bp_br_ir_f(void* arguments, sp_sample_t** out_ir, sp_t
 
 /** a windowed sinc low-pass or high-pass filter for segments of continuous streams with
    variable sample-rate, frequency, transition and impulse response type per call.
+   reduces volume, might want to use unity gain after processing.
    * cutoff: as a fraction of the sample rate, 0..0.5
    * transition: like cutoff
    * is-high-pass: if true then it will reduce low frequencies
@@ -282,7 +281,6 @@ status_t sp_windowed_sinc_lp_hp(sp_sample_t* in, sp_time_t in_len, sp_sample_t c
   *((sp_bool_t*)((2 + ((sp_sample_t*)(a))))) = is_high_pass;
   /* apply filter */
   status_require((sp_convolution_filter(in, in_len, sp_windowed_sinc_lp_hp_ir_f, a, a_len, out_state, out_samples)));
-  sp_samples_set_unity_gain(in, in_len, out_samples);
 exit:
   status_return;
 }
@@ -301,7 +299,6 @@ status_t sp_windowed_sinc_bp_br(sp_sample_t* in, sp_time_t in_len, sp_sample_t c
   *((sp_bool_t*)((4 + ((sp_sample_t*)(a))))) = is_reject;
   /* apply filter */
   status_require((sp_convolution_filter(in, in_len, sp_windowed_sinc_bp_br_ir_f, a, a_len, out_state, out_samples)));
-  sp_samples_set_unity_gain(in, in_len, out_samples);
 exit:
   status_return;
 }

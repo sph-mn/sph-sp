@@ -53,19 +53,17 @@
   (for ((set i 1) (< i size) (set i (+ 1 i))) (printf " %lu" (array-get a i)))
   (printf "\n"))
 
-(define (sp-samples-set-unity-gain in in-size out) (void sp-sample-t* sp-time-t sp-sample-t*)
+(define (sp-samples-set-gain a a-len amp) (void sp-sample-t* sp-time-t sp-sample-t)
+  (declare i sp-time-t a-max sp-sample-t difference sp-sample-t correction sp-sample-t)
+  (set a-max (sp-samples-absolute-max a a-len))
+  (if (or (= 0 amp) (= 0 a-max)) return)
+  (set difference (/ a-max amp) correction (+ 1 (/ (- 1 difference) difference)))
+  (for ((set i 0) (< i a-len) (set+ i 1)) (set* (array-get a i) correction)))
+
+(define (sp-samples-set-unity-gain in out size) (void sp-sample-t* sp-sample-t* sp-time-t)
   "scale amplitude of out to match the one of in.
-   no change if any array is zero 0"
-  (declare
-    i sp-time-t
-    in-max sp-sample-t
-    out-max sp-sample-t
-    difference sp-sample-t
-    correction sp-sample-t)
-  (set in-max (sp-samples-absolute-max in in-size) out-max (sp-samples-absolute-max out in-size))
-  (if (or (= 0 in-max) (= 0 out-max)) return)
-  (set difference (/ out-max in-max) correction (+ 1 (/ (- 1 difference) difference)))
-  (for ((set i 0) (< i in-size) (set+ i 1)) (set* (array-get out i) correction)))
+   no change if any array is zero"
+  (sp-samples-set-gain out size (sp-samples-absolute-max in size)))
 
 (pre-define
   (define-value-functions prefix value-t)

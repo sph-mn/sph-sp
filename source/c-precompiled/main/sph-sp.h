@@ -244,7 +244,8 @@ void sp_samples_or(sp_sample_t* a, sp_sample_t* b, sp_time_t size, sp_sample_t l
 uint8_t sp_samples_sort_less(void* a, ssize_t b, ssize_t c);
 void sp_samples_sort_swap(void* a, ssize_t b, ssize_t c);
 void sp_samples_reverse(sp_sample_t* a, sp_time_t size, sp_sample_t* out);
-void sp_samples_set_unity_gain(sp_sample_t* in, sp_time_t in_size, sp_sample_t* out);
+void sp_samples_set_gain(sp_sample_t* a, sp_time_t a_len, sp_sample_t amp);
+void sp_samples_set_unity_gain(sp_sample_t* in, sp_sample_t* out, sp_time_t size);
 void sp_samples_square(sp_sample_t* a, sp_time_t size, sp_sample_t* out);
 void sp_samples_subtract_1(sp_sample_t* a, sp_time_t size, sp_sample_t n, sp_sample_t* out);
 void sp_samples_subtract(sp_sample_t* a, sp_time_t size, sp_sample_t* b, sp_sample_t* out);

@@ -49,7 +49,6 @@
       (memreg-add state:ir-f-arguments)
       (set
         state:carryover-alloc-len 0
-        state:carryover-len 0
         state:carryover 0
         state:ir-f ir-f
         state:ir-f-arguments-len ir-f-arguments-len)))
@@ -75,11 +74,15 @@
           (memset (+ (- state:ir-len 1) carryover) 0
             (* (- ir-len state:ir-len) (sizeof sp-sample-t))))))
     (begin
-      (if carryover-alloc-len
-        (status-require (sph-helper-calloc (* carryover-alloc-len (sizeof sp-sample-t)) &carryover))
+      (if carryover-alloc-len (status-require (sp-samples-new carryover-alloc-len &carryover))
         (set carryover 0))
       (set state:carryover-alloc-len carryover-alloc-len)))
-  (set state:carryover carryover state:ir ir state:ir-len ir-len *out-state state)
+  (set
+    state:carryover carryover
+    state:carryover-len (- ir-len 1)
+    state:ir ir
+    state:ir-len ir-len
+    *out-state state)
   (label exit (if status-is-failure memreg-free) status-return))
 
 (define
@@ -92,14 +95,13 @@
    * out-state: if zero then state will be allocated. owned by caller
    * out-samples: owned by the caller. length must be at least in-len and the number of output samples will be in-len"
   status-declare
-  (declare carryover-len sp-time-t)
-  (set carryover-len (if* *out-state (- (: *out-state ir-len) 1) 0))
   (sc-comment "create/update the impulse response kernel")
   (status-require
     (sp-convolution-filter-state-set ir-f ir-f-arguments ir-f-arguments-len out-state))
   (sc-comment "convolve")
   (sp-convolve in in-len
-    (: *out-state ir) (: *out-state ir-len) carryover-len (: *out-state carryover) out-samples)
+    (: *out-state ir) (: *out-state ir-len) (: *out-state carryover-len)
+    (: *out-state carryover) out-samples)
   (label exit status-return))
 
 (define (sp-window-blackman a width) (sp-sample-t sp-sample-t sp-time-t)
@@ -117,7 +119,7 @@
 
 (define (sp-null-ir out-ir out-len) (status-t sp-sample-t** sp-time-t*)
   (set *out-len 1)
-  (return (sph-helper-calloc (sizeof sp-sample-t) out-ir)))
+  (return (sp-samples-new 1 out-ir)))
 
 (define (sp-passthrough-ir out-ir out-len) (status-t sp-sample-t** sp-time-t*)
   status-declare
@@ -240,6 +242,7 @@
   (status-t sp-sample-t* sp-time-t sp-sample-t sp-sample-t sp-bool-t sp-convolution-filter-state-t** sp-sample-t*)
   "a windowed sinc low-pass or high-pass filter for segments of continuous streams with
    variable sample-rate, frequency, transition and impulse response type per call.
+   reduces volume, might want to use unity gain after processing.
    * cutoff: as a fraction of the sample rate, 0..0.5
    * transition: like cutoff
    * is-high-pass: if true then it will reduce low frequencies
@@ -256,7 +259,6 @@
   (sc-comment "apply filter")
   (status-require
     (sp-convolution-filter in in-len sp-windowed-sinc-lp-hp-ir-f a a-len out-state out-samples))
-  (sp-samples-set-unity-gain in in-len out-samples)
   (label exit status-return))
 
 (define
@@ -276,7 +278,6 @@
   (sc-comment "apply filter")
   (status-require
     (sp-convolution-filter in in-len sp-windowed-sinc-bp-br-ir-f a a-len out-state out-samples))
-  (sp-samples-set-unity-gain in in-len out-samples)
   (label exit status-return))
 
 (pre-define (define-sp-state-variable-filter suffix transfer)

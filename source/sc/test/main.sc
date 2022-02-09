@@ -52,6 +52,7 @@
   (label exit status-return))
 
 (define (test-convolve-smaller) status-t
+  "test sp-convolve with a kernel smaller than input"
   status-declare
   (declare
     a sp-sample-t*
@@ -97,7 +98,7 @@
   (label exit memreg-free status-return))
 
 (define (test-convolve-larger) status-t
-  "test with a kernel larger than input. test with processing more blocks"
+  "test sp-convolve with a kernel larger than input and process more blocks"
   status-declare
   (declare
     in-a sp-sample-t*
@@ -136,7 +137,6 @@
   (for-each-index i in-b-length (set (array-get in-b i) (+ 1 i)))
   (sp-convolve in-a in-a-length in-b in-b-length carryover-length carryover out-control)
   (sp-samples-zero carryover in-b-length)
-  (set carryover-length 0)
   (for-each-index i block-count
     (sp-convolve (+ (* i block-size) in-a) block-size
       in-b in-b-length carryover-length carryover (+ (* i block-size) out))
@@ -177,8 +177,9 @@
   (declare
     in sp-sample-t*
     out sp-sample-t*
-    out-test sp-sample-t*
+    out-control sp-sample-t*
     state sp-convolution-filter-state-t*
+    state-control sp-convolution-filter-state-t*
     random-state sp-random-state-t
     size sp-time-t
     block-size sp-time-t
@@ -187,37 +188,35 @@
     cuth sp-sample-t
     trnl sp-sample-t
     trnh sp-sample-t)
+  (memreg-init 3)
   (set
-    in 0
-    out 0
-    out-test 0
     size 100
     block-size 10
     block-count 10
     state 0
+    state-control 0
     cutl 0.001
     cuth 0.03
     trnl 0.07
-    trnh 0.07
-    random-state (sp-random-state-new (sp-time-random &sp-random-state)))
+    trnh 0.07)
   (status-require (sp-samples-new size &in))
+  (memreg-add in)
   (status-require (sp-samples-new size &out))
-  (status-require (sp-samples-new size &out-test))
-  (sp-samples-random &random-state size in)
-  (status-require (sp-windowed-sinc-bp-br in size cutl cuth trnl trnh 0 &state out-test))
+  (memreg-add out)
+  (status-require (sp-samples-new size &out-control))
+  (memreg-add out-control)
+  (for-each-index i size (set (array-get in i) i))
+  (status-require (sp-windowed-sinc-bp-br in size cutl cuth trnl trnh 0 &state-control out-control))
   (for-each-index i block-count
     (status-require
       (sp-windowed-sinc-bp-br (+ (* i block-size) in) block-size
         cutl cuth trnl trnh 0 &state (+ (* i block-size) out))))
-  (sc-comment (for-each-index i size (printf "%f\n" (array-get out i))))
-  (sp-plot-samples out size)
   (test-helper-assert "equal to block processing result"
-    (sp-sample-array-nearly-equal out size out-test size 0.01))
+    (sp-sample-array-nearly-equal out size out-control size 0.01))
   (label exit
+    memreg-free
     (sp-convolution-filter-state-free state)
-    (free in)
-    (free out)
-    (free out-test)
+    (sp-convolution-filter-state-free state-control)
     status-return))
 
 (define (test-windowed-sinc) status-t
@@ -396,7 +395,7 @@
   (test-helper-assert "in range -1..1"
     (>= 1.0 (sp-samples-absolute-max (array-get out.samples 0) test-noise-duration)))
   (test-helper-assert "value"
-    (f64-nearly-equal 0.514491 (array-get (array-get out.samples 0) 10) 0.001))
+    (f64-nearly-equal 0.457722 (array-get (array-get out.samples 0) 10) 0.001))
   (sp-block-free &out)
   (label exit (if status-is-failure free-on-error-free) status-return))
 
@@ -844,7 +843,7 @@
   status-declare
   (set rs (sp-random-state-new 3))
   (sp-initialize 3 2 _rate)
-  ;(test-helper-test-one test-windowed-sinc-continuity)
+  (test-helper-test-one test-windowed-sinc-continuity)
   (test-helper-test-one test-convolve-smaller)
   (test-helper-test-one test-convolve-larger)
   (test-helper-test-one test-sp-noise-event)

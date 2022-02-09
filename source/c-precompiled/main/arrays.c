@@ -67,26 +67,25 @@ void sp_times_display(sp_time_t* a, sp_time_t size) {
   };
   printf("\n");
 }
-
-/** scale amplitude of out to match the one of in.
-   no change if any array is zero 0 */
-void sp_samples_set_unity_gain(sp_sample_t* in, sp_time_t in_size, sp_sample_t* out) {
+void sp_samples_set_gain(sp_sample_t* a, sp_time_t a_len, sp_sample_t amp) {
   sp_time_t i;
-  sp_sample_t in_max;
-  sp_sample_t out_max;
+  sp_sample_t a_max;
   sp_sample_t difference;
   sp_sample_t correction;
-  in_max = sp_samples_absolute_max(in, in_size);
-  out_max = sp_samples_absolute_max(out, in_size);
-  if ((0 == in_max) || (0 == out_max)) {
+  a_max = sp_samples_absolute_max(a, a_len);
+  if ((0 == amp) || (0 == a_max)) {
     return;
   };
-  difference = (out_max / in_max);
+  difference = (a_max / amp);
   correction = (1 + ((1 - difference) / difference));
-  for (i = 0; (i < in_size); i += 1) {
-    out[i] *= correction;
+  for (i = 0; (i < a_len); i += 1) {
+    a[i] *= correction;
   };
 }
+
+/** scale amplitude of out to match the one of in.
+   no change if any array is zero */
+void sp_samples_set_unity_gain(sp_sample_t* in, sp_sample_t* out, sp_time_t size) { sp_samples_set_gain(out, size, (sp_samples_absolute_max(in, size))); }
 
 /** functions that work on single sp-sample-t and sp-time-t */
 #define define_value_functions(prefix, value_t) \

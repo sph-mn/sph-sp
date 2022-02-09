@@ -391,7 +391,6 @@
     block-rest (modulo duration resolution))
   (for ((set block-i 0) (< block-i block-count) (set+ block-i 1))
     (set block-offset (* resolution block-i) t (+ start block-offset))
-      (printf "main %lu, offset %lu\n" t block-offset)
     (sp-samples-random &s.random-state resolution s.noise)
     (sp-windowed-sinc-bp-br s.noise resolution
       (sp-array-or-fixed s.cutl-mod s.cutl t) (sp-array-or-fixed s.cuth-mod s.cuth t) s.trnl
@@ -402,7 +401,6 @@
   (if block-rest
     (begin
       (set block-offset (+ block-rest (* resolution (- block-i 1))) t (+ start block-offset))
-      (printf "rest %lu, offset %lu\n" t block-offset)
       (sp-samples-random &s.random-state resolution s.noise)
       (sp-windowed-sinc-bp-br s.noise block-rest
         (sp-array-or-fixed s.cutl-mod s.cutl t) (sp-array-or-fixed s.cuth-mod s.cuth t) s.trnl
@@ -410,6 +408,7 @@
       (for ((set i 0) (< i block-rest) (set+ i 1))
         (set+ (array-get out.samples s.channel (+ block-offset i))
           (* s.amp (array-get s.amod (+ t i)) (array-get s.temp i))))))
+  (sp-samples-set-gain (array-get out.samples s.channel) duration (* s.amp (sp-samples-absolute-max s.amod duration)))
   (set sp:random-state s.random-state sp:filter-state s.filter-state)
   status-return)
 

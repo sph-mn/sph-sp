@@ -176,7 +176,8 @@
    carryover is previous carryover or an empty array.
    carryover length must at least b-len - 1.
    carryover-len should be zero for the first call or its content should be zeros.
-   carryover-len for subsequent calls should be b-len - 1 or, if b-len changed, b-len - 1 from the previous call.
+   carryover-len for subsequent calls should be b-len - 1.
+   if b-len changed it should be b-len - 1 from the previous call for the first call with the changed b-len.
    if b-len is one then there is no carryover.
    if a-len is smaller than b-len then, with the current implementation, additional performance costs ensue from shifting the carryover array each call.
    carryover is the extension of out for generated values that dont fit into out,

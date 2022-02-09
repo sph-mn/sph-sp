@@ -513,7 +513,6 @@ status_t sp_noise_event_generate(sp_time_t start, sp_time_t end, sp_block_t out,
   for (block_i = 0; (block_i < block_count); block_i += 1) {
     block_offset = (resolution * block_i);
     t = (start + block_offset);
-    printf("main %lu, offset %lu\n", t, block_offset);
     sp_samples_random((&(s.random_state)), resolution, (s.noise));
     sp_windowed_sinc_bp_br((s.noise), resolution, (sp_array_or_fixed((s.cutl_mod), (s.cutl), t)), (sp_array_or_fixed((s.cuth_mod), (s.cuth), t)), (s.trnl), (s.trnh), (s.is_reject), (&(s.filter_state)), (s.temp));
     for (i = 0; (i < resolution); i += 1) {
@@ -523,13 +522,13 @@ status_t sp_noise_event_generate(sp_time_t start, sp_time_t end, sp_block_t out,
   if (block_rest) {
     block_offset = (block_rest + (resolution * (block_i - 1)));
     t = (start + block_offset);
-    printf("rest %lu, offset %lu\n", t, block_offset);
     sp_samples_random((&(s.random_state)), resolution, (s.noise));
     sp_windowed_sinc_bp_br((s.noise), block_rest, (sp_array_or_fixed((s.cutl_mod), (s.cutl), t)), (sp_array_or_fixed((s.cuth_mod), (s.cuth), t)), (s.trnl), (s.trnh), (s.is_reject), (&(s.filter_state)), (s.temp));
     for (i = 0; (i < block_rest); i += 1) {
       (out.samples)[s.channel][(block_offset + i)] += (s.amp * (s.amod)[(t + i)] * (s.temp)[i]);
     };
   };
+  sp_samples_set_gain(((out.samples)[s.channel]), duration, (s.amp * sp_samples_absolute_max((s.amod), duration)));
   sp->random_state = s.random_state;
   sp->filter_state = s.filter_state;
   status_return;
