@@ -516,7 +516,7 @@ status_t sp_noise_event_generate(sp_time_t start, sp_time_t end, sp_block_t out,
     sp_samples_random((&(s.random_state)), resolution, (s.noise));
     sp_windowed_sinc_bp_br((s.noise), resolution, (sp_array_or_fixed((s.cutl_mod), (s.cutl), t)), (sp_array_or_fixed((s.cuth_mod), (s.cuth), t)), (s.trnl), (s.trnh), (s.is_reject), (&(s.filter_state)), (s.temp));
     for (i = 0; (i < resolution); i += 1) {
-      (out.samples)[s.channel][(block_offset + i)] += (s.amp * (s.amod)[(t + i)] * (s.temp)[i]);
+      (out.samples)[s.channel][(block_offset + i)] += sp_sample_limit((s.amp * (s.amod)[(t + i)] * (s.temp)[i]), -1, 1);
     };
   };
   if (block_rest) {
@@ -525,10 +525,9 @@ status_t sp_noise_event_generate(sp_time_t start, sp_time_t end, sp_block_t out,
     sp_samples_random((&(s.random_state)), resolution, (s.noise));
     sp_windowed_sinc_bp_br((s.noise), block_rest, (sp_array_or_fixed((s.cutl_mod), (s.cutl), t)), (sp_array_or_fixed((s.cuth_mod), (s.cuth), t)), (s.trnl), (s.trnh), (s.is_reject), (&(s.filter_state)), (s.temp));
     for (i = 0; (i < block_rest); i += 1) {
-      (out.samples)[s.channel][(block_offset + i)] += (s.amp * (s.amod)[(t + i)] * (s.temp)[i]);
+      (out.samples)[s.channel][(block_offset + i)] += sp_sample_limit((s.amp * (s.amod)[(t + i)] * (s.temp)[i]), -1, 1);
     };
   };
-  sp_samples_set_gain(((out.samples)[s.channel]), duration, (s.amp * sp_samples_absolute_max((s.amod), duration)));
   sp->random_state = s.random_state;
   sp->filter_state = s.filter_state;
   status_return;

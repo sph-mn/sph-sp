@@ -432,7 +432,6 @@ status_t test_sp_noise_event() {
   status_require((sp_seq(0, test_noise_duration, out, (&events))));
   sp_sample_t sum;
   test_helper_assert(("in range -1..1"), (1.0 >= sp_samples_absolute_max(((out.samples)[0]), test_noise_duration)));
-  test_helper_assert("value", (f64_nearly_equal((0.457722), (((out.samples)[0])[10]), (0.001))));
   sp_block_free((&out));
 exit:
   if (status_is_failure) {
@@ -487,6 +486,7 @@ status_t test_sp_cheap_noise_event() {
   event.prepare = sp_cheap_noise_event_prepare;
   status_require(((event.prepare)((&event))));
   status_require(((event.generate)(0, test_noise_duration, out, (&event))));
+  test_helper_assert(("in range -1..1"), (1.0 >= sp_samples_absolute_max(((out.samples)[0]), test_noise_duration)));
   sp_block_free((&out));
 exit:
   if (status_is_failure) {

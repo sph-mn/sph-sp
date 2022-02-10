@@ -133,6 +133,7 @@
 #define sp_cheap_ceiling_positive(a) (((sp_time_t)(a)) + (((sp_time_t)(a)) < a))
 #define sp_max(a, b) ((a > b) ? a : b)
 #define sp_min(a, b) ((a < b) ? a : b)
+#define sp_sample_limit(x, min_value, max_value) sp_max(min_value, (sp_min(max_value, x)))
 
 /** subtract the smaller number from the greater number,
      regardless of if the smallest is the first or the second argument */

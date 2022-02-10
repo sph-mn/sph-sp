@@ -394,8 +394,6 @@
   (declare sum sp-sample-t)
   (test-helper-assert "in range -1..1"
     (>= 1.0 (sp-samples-absolute-max (array-get out.samples 0) test-noise-duration)))
-  (test-helper-assert "value"
-    (f64-nearly-equal 0.457722 (array-get (array-get out.samples 0) 10) 0.001))
   (sp-block-free &out)
   (label exit (if status-is-failure free-on-error-free) status-return))
 
@@ -447,6 +445,8 @@
   (struct-set event end test-noise-duration data &config prepare sp-cheap-noise-event-prepare)
   (status-require (event.prepare &event))
   (status-require (event.generate 0 test-noise-duration out &event))
+  (test-helper-assert "in range -1..1"
+    (>= 1.0 (sp-samples-absolute-max (array-get out.samples 0) test-noise-duration)))
   (sp-block-free &out)
   (label exit (if status-is-failure free-on-error-free) status-return))
 

@@ -53,6 +53,7 @@
         state:ir-f ir-f
         state:ir-f-arguments-len ir-f-arguments-len)))
   (memcpy state:ir-f-arguments ir-f-arguments ir-f-arguments-len)
+  (sc-comment "assumes that ir-len is always greater zero")
   (status-require (ir-f ir-f-arguments &ir &ir-len))
   (sc-comment
     "eventually extend carryover array. the array is never shrunk."
@@ -70,7 +71,7 @@
               (status-require
                 (sph-helper-realloc (* carryover-alloc-len (sizeof sp-sample-t)) &carryover))
               (set state:carryover-alloc-len carryover-alloc-len)))
-          (sc-comment "in any case reset the extension area")
+          (sc-comment "in any case reset the extended area")
           (memset (+ (- state:ir-len 1) carryover) 0
             (* (- ir-len state:ir-len) (sizeof sp-sample-t))))))
     (begin
@@ -95,13 +96,13 @@
    * out-state: if zero then state will be allocated. owned by caller
    * out-samples: owned by the caller. length must be at least in-len and the number of output samples will be in-len"
   status-declare
+  (define carryover-len sp-time-t (if* *out-state (: *out-state carryover-len) 0))
   (sc-comment "create/update the impulse response kernel")
   (status-require
     (sp-convolution-filter-state-set ir-f ir-f-arguments ir-f-arguments-len out-state))
   (sc-comment "convolve")
   (sp-convolve in in-len
-    (: *out-state ir) (: *out-state ir-len) (: *out-state carryover-len)
-    (: *out-state carryover) out-samples)
+    (: *out-state ir) (: *out-state ir-len) carryover-len (: *out-state carryover) out-samples)
   (label exit status-return))
 
 (define (sp-window-blackman a width) (sp-sample-t sp-sample-t sp-time-t)

@@ -54,6 +54,7 @@ status_t sp_convolution_filter_state_set(sp_convolution_filter_ir_f_t ir_f, void
     state->ir_f_arguments_len = ir_f_arguments_len;
   };
   memcpy((state->ir_f_arguments), ir_f_arguments, ir_f_arguments_len);
+  /* assumes that ir-len is always greater zero */
   status_require((ir_f(ir_f_arguments, (&ir), (&ir_len))));
   /* eventually extend carryover array. the array is never shrunk.
   carryover-len is at least ir-len - 1.
@@ -67,7 +68,7 @@ status_t sp_convolution_filter_state_set(sp_convolution_filter_ir_f_t ir_f, void
         status_require((sph_helper_realloc((carryover_alloc_len * sizeof(sp_sample_t)), (&carryover))));
         state->carryover_alloc_len = carryover_alloc_len;
       };
-      /* in any case reset the extension area */
+      /* in any case reset the extended area */
       memset(((state->ir_len - 1) + carryover), 0, ((ir_len - state->ir_len) * sizeof(sp_sample_t)));
     };
   } else {
@@ -98,10 +99,11 @@ exit:
    * out-samples: owned by the caller. length must be at least in-len and the number of output samples will be in-len */
 status_t sp_convolution_filter(sp_sample_t* in, sp_time_t in_len, sp_convolution_filter_ir_f_t ir_f, void* ir_f_arguments, uint8_t ir_f_arguments_len, sp_convolution_filter_state_t** out_state, sp_sample_t* out_samples) {
   status_declare;
+  sp_time_t carryover_len = (*out_state ? (*out_state)->carryover_len : 0);
   /* create/update the impulse response kernel */
   status_require((sp_convolution_filter_state_set(ir_f, ir_f_arguments, ir_f_arguments_len, out_state)));
   /* convolve */
-  sp_convolve(in, in_len, ((*out_state)->ir), ((*out_state)->ir_len), ((*out_state)->carryover_len), ((*out_state)->carryover), out_samples);
+  sp_convolve(in, in_len, ((*out_state)->ir), ((*out_state)->ir_len), carryover_len, ((*out_state)->carryover), out_samples);
 exit:
   status_return;
 }

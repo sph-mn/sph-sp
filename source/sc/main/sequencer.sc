@@ -397,7 +397,7 @@
       s.trnh s.is-reject &s.filter-state s.temp)
     (for ((set i 0) (< i resolution) (set+ i 1))
       (set+ (array-get out.samples s.channel (+ block-offset i))
-        (* s.amp (array-get s.amod (+ t i)) (array-get s.temp i)))))
+        (sp-sample-limit (* s.amp (array-get s.amod (+ t i)) (array-get s.temp i)) -1 1))))
   (if block-rest
     (begin
       (set block-offset (+ block-rest (* resolution (- block-i 1))) t (+ start block-offset))
@@ -407,8 +407,7 @@
         s.trnh s.is-reject &s.filter-state s.temp)
       (for ((set i 0) (< i block-rest) (set+ i 1))
         (set+ (array-get out.samples s.channel (+ block-offset i))
-          (* s.amp (array-get s.amod (+ t i)) (array-get s.temp i))))))
-  (sp-samples-set-gain (array-get out.samples s.channel) duration (* s.amp (sp-samples-absolute-max s.amod duration)))
+          (sp-sample-limit (* s.amp (array-get s.amod (+ t i)) (array-get s.temp i)) -1 1)))))
   (set sp:random-state s.random-state sp:filter-state s.filter-state)
   status-return)
 
