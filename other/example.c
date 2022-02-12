@@ -55,7 +55,7 @@ status_t d7_hh_r1_prepare(sp_event_t* _event) {
   sp_times_multiply_1(times, times_length, tempo, times);
   sp_times_cusum(times, times_length, times);
   for (sp_time_t i = 0; (i < times_length); i += 1) {
-    status_require((sp_group_add_set(_event, (times[i]), (rt(1, 6)), (_event->volume), ((void*)(0)), d7_hh)));
+    status_require((sp_group_add_set(_event, (times[i]), (rt(1, 6)), (_event->volume), d7_hh)));
   };
   if (_event->prepare) {
     status_require(((_event->prepare)(_event)));
@@ -70,7 +70,7 @@ status_t main() {
   sp_declare_group(_song);
   sp_event_t* _event = &_song;
   sp_initialize(1, 2, _sp_rate);
-  status_require((sp_group_add_set(_event, (rt(1, 16)), (rt(1, 1)), (0.5), ((void*)(0)), d7_hh_r1)));
+  status_require((sp_group_add_set(_event, (rt(1, 16)), (rt(1, 1)), (0.5), d7_hh_r1)));
   status_require((sp_render_quick((*_event), 1)));
 exit:
   status_return;

@@ -214,8 +214,8 @@
 (sc-define-syntax (sp-samples-values* name values ...)
   (sp-array-values* sp-samples* name values ...))
 
-(sc-define-syntax (sp-group-add* group start duration volume data event)
-  (status-require (sp-group-add-set group start duration volume (convert-type data void*) event)))
+(sc-define-syntax (sp-group-add* group start duration volume event)
+  (status-require (sp-group-add-set group start duration volume event)))
 
 (sc-define-syntax (sp-group-append* group volume data event)
   (status-require (sp-group-append-set group volume (convert-type data void*) event)))

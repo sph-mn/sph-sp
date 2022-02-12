@@ -19,9 +19,9 @@
   (sp-time* tempo (rt 1 3))
   (sp-intervals* times tempo 0 1 1 4 4 4 1)
   (for-each-index i times-length
-    (sp-group-add* _event (array-get times i) (rt 1 6) _event:volume 0 d7-hh)))
+    (sp-group-add* _event (array-get times i) (rt 1 6) _event:volume d7-hh)))
 
 (sc-comment
   "use one cpu core and two output channels and add one riff to the song at specified offset, duration and volume")
 
-(sp-define-song* 1 2 (sp-group-add* _event (rt 1 16) (rt 1 1) 0.5 0 d7-hh-r1) (sp-render-plot*))
+(sp-define-song* 1 2 (sp-group-add* _event (rt 1 16) (rt 1 1) 0.5 d7-hh-r1) (sp-render-plot*))

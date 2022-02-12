@@ -877,11 +877,10 @@ exit:
   };
   status_return;
 }
-status_t sp_group_add_set(sp_event_t* group, sp_time_t start, sp_time_t duration, sp_sample_t volume, void* config, sp_event_t event) {
+status_t sp_group_add_set(sp_event_t* group, sp_time_t start, sp_time_t duration, sp_sample_t volume, sp_event_t event) {
   event.start = start;
   event.end = (start + ((0 == duration) ? event.end : duration));
   event.volume = volume;
-  event.data = config;
   return ((sp_group_add(group, event)));
 }
 status_t sp_group_append_set(sp_event_t* group, sp_sample_t volume, void* config, sp_event_t event) {

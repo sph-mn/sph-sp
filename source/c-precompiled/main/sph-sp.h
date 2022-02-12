@@ -581,7 +581,7 @@ status_t sp_group_prepare(sp_event_t* event);
 status_t sp_group_prepare_parallel(sp_event_t* a);
 status_t sp_group_add(sp_event_t* a, sp_event_t event);
 status_t sp_group_append(sp_event_t* a, sp_event_t event);
-status_t sp_group_add_set(sp_event_t* group, sp_time_t start, sp_time_t duration, sp_sample_t volume, void* config, sp_event_t event);
+status_t sp_group_add_set(sp_event_t* group, sp_time_t start, sp_time_t duration, sp_sample_t volume, sp_event_t event);
 status_t sp_group_append_set(sp_event_t* group, sp_sample_t volume, void* config, sp_event_t event);
 void sp_group_event_f(sp_time_t start, sp_time_t end, sp_block_t out, sp_event_t* event);
 void sp_group_event_parallel_f(sp_time_t start, sp_time_t end, sp_block_t out, sp_event_t* event);
