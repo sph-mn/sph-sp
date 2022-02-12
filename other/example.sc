@@ -24,4 +24,4 @@
 (sc-comment
   "use one cpu core and two output channels and add one riff to the song at specified offset, duration and volume")
 
-(sp-define-song* 1 2 (sp-group-add* _event 0 (rt 2 1) 0.5 0 d7-hh-r1) (sp-render-plot*))
+(sp-define-song* 1 2 (sp-group-add* _event (rt 1 16) (rt 1 1) 0.5 0 d7-hh-r1) (sp-render-plot*))

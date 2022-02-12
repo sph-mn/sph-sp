@@ -283,7 +283,9 @@ status_t sp_group_generate(sp_time_t start, sp_time_t end, sp_block_t out, sp_ev
 status_t sp_group_generate_parallel(sp_time_t start, sp_time_t end, sp_block_t out, sp_event_t* a) { return ((sp_seq_parallel(start, end, out, ((sp_event_list_t**)(&(a->data)))))); }
 status_t sp_group_prepare(sp_event_t* a) {
   status_declare;
-  sp_seq_events_prepare(((sp_event_list_t**)(&(a->data))));
+  if (a->data) {
+    sp_seq_events_prepare(((sp_event_list_t**)(&(a->data))));
+  };
   a->generate = sp_group_generate;
   a->free = sp_group_free;
   status_return;

@@ -193,7 +193,7 @@
 
 (define (sp-group-prepare a) (status-t sp-event-t*)
   status-declare
-  (sp-seq-events-prepare (convert-type &a:data sp-event-list-t**))
+  (if a:data (sp-seq-events-prepare (convert-type &a:data sp-event-list-t**)))
   (set a:generate sp-group-generate a:free sp-group-free)
   status-return)
 
