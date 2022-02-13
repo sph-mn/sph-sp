@@ -720,12 +720,17 @@
     event:free sp-map-event-free)
   (label exit (if status-is-failure free-on-error-free) status-return))
 
-(define (sp-group-add-set group start duration volume event)
-  (status-t sp-event-t* sp-time-t sp-time-t sp-sample-t sp-event-t)
-  (struct-set event start start end (+ start (if* (= 0 duration) event.end duration)) volume volume)
+(define (sp-group-add-set group start duration event)
+  (status-t sp-event-t* sp-time-t sp-time-t sp-event-t)
+  (struct-set event start start end (+ start (if* (= 0 duration) event.end duration)))
   (return (sp-group-add group event)))
 
-(define (sp-group-append-set group volume config event)
-  (status-t sp-event-t* sp-sample-t void* sp-event-t)
-  (struct-set event volume volume data config)
-  (return (sp-group-append group event)))
+(define (sp-default-event-config-new amp frq pan out-config)
+  (status-t sp-sample-t sp-time-t sp-sample-t sp-default-event-config-t**)
+  "a configuration struct for passing volume, frequency and panning to event prepare functions"
+  status-declare
+  (declare config sp-default-event-config-t*)
+  (status-require (sp-malloc-type 1 sp-default-event-config-t &config))
+  (struct-pointer-set config amp amp frq frq pan pan)
+  (set *out-config config)
+  (label exit status-return))

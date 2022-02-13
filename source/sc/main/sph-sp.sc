@@ -461,13 +461,15 @@
     "use case: event variables defined at the top-level"
     (define name sp-event-t
       (struct-literal (prepare _prepare) (start 0)
-        (end duration) (data 0) (volume 1.0) (memory (struct-literal 0)))))
+        (end duration) (data 0) (memory (struct-literal 0)))))
   (sp-event-memory-malloc event count type pointer-address)
   (begin
     "allocated memory with malloc, save address in pointer at pointer-address,
      and also immediately add the memory to event memory to be freed with event.free"
     (sp-malloc-type count type pointer-address)
-    (sp-event-memory-add _event *pointer-address)))
+    (sp-event-memory-add _event *pointer-address))
+  (sp-event-config-load variable-name type event)
+  (define variable-name type (pointer-get (convert-type event:config type*))))
 
 (array3-declare-type sp-memory memreg2-t)
 
@@ -484,8 +486,8 @@
       (prepare (function-pointer status-t (struct sp-event-t*)))
       (free (function-pointer void (struct sp-event-t*)))
       (data void*)
-      (memory sp-memory-t)
-      (volume sp-sample-t)))
+      (config void*)
+      (memory sp-memory-t)))
   sp-event-generate-t (type (function-pointer status-t sp-time-t sp-time-t sp-block-t sp-event-t*))
   sp-event-list-t
   (type
@@ -562,7 +564,8 @@
   (type (struct (event sp-event-t) (map-generate sp-map-generate-t) (state void*)))
   sp-map-event-config-t
   (type
-    (struct (event sp-event-t) (map-generate sp-map-generate-t) (state void*) (isolate sp-bool-t))))
+    (struct (event sp-event-t) (map-generate sp-map-generate-t) (state void*) (isolate sp-bool-t)))
+  sp-default-event-config-t (type (struct (amp sp-sample-t) (pan sp-sample-t) (frq sp-time-t))))
 
 (declare
   (sp-event-list-display a) (void sp-event-list-t*)
@@ -583,9 +586,9 @@
   (sp-group-prepare-parallel a) (status-t sp-event-t*)
   (sp-group-add a event) (status-t sp-event-t* sp-event-t)
   (sp-group-append a event) (status-t sp-event-t* sp-event-t)
-  (sp-group-add-set group start duration volume event)
-  (status-t sp-event-t* sp-time-t sp-time-t sp-sample-t sp-event-t)
-  (sp-group-append-set group volume config event) (status-t sp-event-t* sp-sample-t void* sp-event-t)
+  (sp-group-add-set group start duration event) (status-t sp-event-t* sp-time-t sp-time-t sp-event-t)
+  (sp-default-event-config-new amp frq pan out-config)
+  (status-t sp-sample-t sp-time-t sp-sample-t sp-default-event-config-t**)
   (sp-group-event-f start end out event) (void sp-time-t sp-time-t sp-block-t sp-event-t*)
   (sp-group-event-parallel-f start end out event) (void sp-time-t sp-time-t sp-block-t sp-event-t*)
   (sp-group-event-free a) (void sp-event-t*)

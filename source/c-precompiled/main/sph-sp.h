@@ -468,13 +468,14 @@ void sp_plot_spectrum(sp_sample_t* a, sp_time_t a_size);
   }
 
 /** use case: event variables defined at the top-level */
-#define sp_define_event(name, _prepare, duration) sp_event_t name = { .prepare = _prepare, .start = 0, .end = duration, .data = 0, .volume = 1.0, .memory = { 0 } }
+#define sp_define_event(name, _prepare, duration) sp_event_t name = { .prepare = _prepare, .start = 0, .end = duration, .data = 0, .memory = { 0 } }
 
 /** allocated memory with malloc, save address in pointer at pointer-address,
      and also immediately add the memory to event memory to be freed with event.free */
 #define sp_event_memory_malloc(event, count, type, pointer_address) \
   sp_malloc_type(count, type, pointer_address); \
   sp_event_memory_add(_event, (*pointer_address))
+#define sp_event_config_load(variable_name, type, event) type variable_name = *((type*)(event->config))
 array3_declare_type(sp_memory, memreg2_t);
 typedef void (*sp_memory_free_t)(void*);
 struct sp_event_t;
@@ -485,8 +486,8 @@ typedef struct sp_event_t {
   status_t (*prepare)(struct sp_event_t*);
   void (*free)(struct sp_event_t*);
   void* data;
+  void* config;
   sp_memory_t memory;
-  sp_sample_t volume;
 } sp_event_t;
 typedef status_t (*sp_event_generate_t)(sp_time_t, sp_time_t, sp_block_t, sp_event_t*);
 typedef struct sp_event_list_struct {
@@ -563,6 +564,11 @@ typedef struct {
   void* state;
   sp_bool_t isolate;
 } sp_map_event_config_t;
+typedef struct {
+  sp_sample_t amp;
+  sp_sample_t pan;
+  sp_time_t frq;
+} sp_default_event_config_t;
 void sp_event_list_display(sp_event_list_t* a);
 void sp_event_list_reverse(sp_event_list_t** a);
 void sp_event_list_validate(sp_event_list_t* a);
@@ -581,8 +587,8 @@ status_t sp_group_prepare(sp_event_t* event);
 status_t sp_group_prepare_parallel(sp_event_t* a);
 status_t sp_group_add(sp_event_t* a, sp_event_t event);
 status_t sp_group_append(sp_event_t* a, sp_event_t event);
-status_t sp_group_add_set(sp_event_t* group, sp_time_t start, sp_time_t duration, sp_sample_t volume, sp_event_t event);
-status_t sp_group_append_set(sp_event_t* group, sp_sample_t volume, void* config, sp_event_t event);
+status_t sp_group_add_set(sp_event_t* group, sp_time_t start, sp_time_t duration, sp_event_t event);
+status_t sp_default_event_config_new(sp_sample_t amp, sp_time_t frq, sp_sample_t pan, sp_default_event_config_t** out_config);
 void sp_group_event_f(sp_time_t start, sp_time_t end, sp_block_t out, sp_event_t* event);
 void sp_group_event_parallel_f(sp_time_t start, sp_time_t end, sp_block_t out, sp_event_t* event);
 void sp_group_event_free(sp_event_t* a);

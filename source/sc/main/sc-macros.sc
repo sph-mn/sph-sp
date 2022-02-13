@@ -43,7 +43,6 @@
       (define ((unquote name) _event) (status-t sp-event-t*)
         status-declare
         (define _duration sp-time-t (- _event:end _event:start))
-        (define _volume sp-sample-t _event:volume)
         (unquote-splicing body)))))
 
 (sc-define-syntax* (sp-define-event* name-and-options body ...)
@@ -214,11 +213,11 @@
 (sc-define-syntax (sp-samples-values* name values ...)
   (sp-array-values* sp-samples* name values ...))
 
-(sc-define-syntax (sp-group-add* group start duration volume event)
-  (status-require (sp-group-add-set group start duration volume event)))
+(sc-define-syntax (sp-group-add* group start duration event)
+  (status-require (sp-group-add-set group start duration event)))
 
-(sc-define-syntax (sp-group-append* group volume data event)
-  (status-require (sp-group-append-set group volume (convert-type data void*) event)))
+(sc-define-syntax (sp-group-append* group event)
+  (status-require (sp-group-append-set group event)))
 
 (sc-define-syntax* (define-array* name type values ...)
   (qq
