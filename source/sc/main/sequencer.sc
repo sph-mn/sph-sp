@@ -725,12 +725,10 @@
   (struct-set event start start end (+ start (if* (= 0 duration) event.end duration)))
   (return (sp-group-add group event)))
 
-(define (sp-default-event-config-new amp frq pan out-config)
+(define (sp-default-event-config-new amp frq pan config)
   (status-t sp-sample-t sp-time-t sp-sample-t sp-default-event-config-t**)
   "a configuration struct for passing volume, frequency and panning to event prepare functions"
   status-declare
-  (declare config sp-default-event-config-t*)
-  (status-require (sp-malloc-type 1 sp-default-event-config-t &config))
-  (struct-pointer-set config amp amp frq frq pan pan)
-  (set *out-config config)
+  (status-require (sp-malloc-type 1 sp-default-event-config-t config))
+  (struct-pointer-set *config amp amp frq frq pan pan)
   (label exit status-return))

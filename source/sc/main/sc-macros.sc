@@ -3,11 +3,24 @@
 
 (sc-define-syntax (sp-init* rate) (begin (pre-include "sph-sp.h") (pre-define _sp-rate rate)))
 
-(sc-define-syntax* (sp-define-helper* (name parameter ...) types body ...)
+(sc-define-syntax* (sp-define-helper-nostatus* (name parameter ...) types body ...)
   (qq
     (define ((unquote name) (unquote-splicing parameter))
       (unquote (pair (q status-t) (any->list types)))
       (unquote-splicing body))))
+
+(sc-define-syntax* (sp-define-helper* (name parameter ...) types body ...)
+  (let
+    ( (body
+        (match body
+          ( (body ... ((quote label) (quote exit) exit-content ...))
+            (append body (qq ((label exit (unquote-splicing exit-content))))))
+          (_ (append body (qq ((label exit status-return))))))))
+    (qq
+      (define ((unquote name) (unquote-splicing parameter))
+        (unquote (pair (q status-t) (any->list types)))
+        status-declare
+        (unquote-splicing body)))))
 
 (sc-define-syntax (sp-define-song* parallelization channels body ...)
   (define (main) status-t
@@ -216,8 +229,7 @@
 (sc-define-syntax (sp-group-add* group start duration event)
   (status-require (sp-group-add-set group start duration event)))
 
-(sc-define-syntax (sp-group-append* group event)
-  (status-require (sp-group-append-set group event)))
+(sc-define-syntax (sp-group-append* group event) (status-require (sp-group-append-set group event)))
 
 (sc-define-syntax* (define-array* name type values ...)
   (qq
