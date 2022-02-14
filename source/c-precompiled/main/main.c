@@ -416,6 +416,15 @@ sp_random_state_t sp_random_state_new(sp_time_t seed) {
   return (result);
 }
 
+/** convert a pan value between 0..channel_count to a volume factor.
+   values are interpreted as split between even and odd numbers, from channel..(channel + 1),
+   0: second channel muted
+   0.5: no channel muted
+   1: first channel muted
+   0.75: first channel 50%
+   0.25: second channel 50% */
+sp_sample_t pan_to_amp(sp_sample_t value, sp_channel_count_t channel) { return (((1 & channel) ? (sp_limit(value, (channel - 1), (channel - 0.5)) / 0.5) : (1 - ((sp_limit(value, (channel + 0.5), (channel + 1)) - 0.5) / 0.5)))); }
+
 /** fills the sine wave lookup table.
    rate and channels are used to set sp_rate and sp_channels,
    which are used as defaults in a few cases */

@@ -70,7 +70,7 @@
   (sp-cheap-ceiling-positive a) (+ (convert-type a sp-time-t) (< (convert-type a sp-time-t) a))
   (sp-max a b) (if* (> a b) a b)
   (sp-min a b) (if* (< a b) a b)
-  (sp-sample-limit x min-value max-value) (sp-max min-value (sp-min max-value x))
+  (sp-limit x min-value max-value) (sp-max min-value (sp-min max-value x))
   (sp-absolute-difference a b)
   (begin
     "subtract the smaller number from the greater number,
@@ -153,7 +153,8 @@
   (sp-square t size) (sp-sample-t sp-time-t sp-time-t)
   (sp-triangle t a b) (sp-sample-t sp-time-t sp-time-t sp-time-t)
   (sp-time-expt base exp) (sp-time-t sp-time-t sp-time-t)
-  (sp-time-factorial a) (sp-time-t sp-time-t))
+  (sp-time-factorial a) (sp-time-t sp-time-t)
+  (pan->amp value channel) (sp-sample-t sp-sample-t sp-channel-count-t))
 
 (sc-comment "arrays")
 

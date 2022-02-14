@@ -133,7 +133,7 @@
 #define sp_cheap_ceiling_positive(a) (((sp_time_t)(a)) + (((sp_time_t)(a)) < a))
 #define sp_max(a, b) ((a > b) ? a : b)
 #define sp_min(a, b) ((a < b) ? a : b)
-#define sp_sample_limit(x, min_value, max_value) sp_max(min_value, (sp_min(max_value, x)))
+#define sp_limit(x, min_value, max_value) sp_max(min_value, (sp_min(max_value, x)))
 
 /** subtract the smaller number from the greater number,
      regardless of if the smallest is the first or the second argument */
@@ -211,6 +211,7 @@ sp_sample_t sp_square(sp_time_t t, sp_time_t size);
 sp_sample_t sp_triangle(sp_time_t t, sp_time_t a, sp_time_t b);
 sp_time_t sp_time_expt(sp_time_t base, sp_time_t exp);
 sp_time_t sp_time_factorial(sp_time_t a);
+sp_sample_t pan_to_amp(sp_sample_t value, sp_channel_count_t channel);
 /* arrays */
 
 #define sp_samples_zero(a, size) memset(a, 0, (size * sizeof(sp_sample_t)))

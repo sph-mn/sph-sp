@@ -317,6 +317,18 @@
   (sp-time-random &result)
   (return result))
 
+(define (pan->amp value channel) (sp-sample-t sp-sample-t sp-channel-count-t)
+  "convert a pan value between 0..channel_count to a volume factor.
+   values are interpreted as split between even and odd numbers, from channel..(channel + 1),
+   0: second channel muted
+   0.5: no channel muted
+   1: first channel muted
+   0.75: first channel 50%
+   0.25: second channel 50%"
+  (return
+    (if* (bit-and 1 channel) (/ (sp-limit value (- channel 1) (- channel 0.5)) 0.5)
+      (- 1 (/ (- (sp-limit value (+ channel 0.5) (+ channel 1)) 0.5) 0.5)))))
+
 (define (sp-initialize cpu-count channels rate) (status-t uint16-t sp-channel-count-t sp-time-t)
   "fills the sine wave lookup table.
    rate and channels are used to set sp_rate and sp_channels,
