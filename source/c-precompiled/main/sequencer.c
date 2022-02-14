@@ -510,8 +510,13 @@ status_t sp_noise_event_generate(sp_time_t start, sp_time_t end, sp_block_t out,
   s = *sp;
   duration = (end - start);
   resolution = sp_min((s.resolution), duration);
-  block_count = ((duration == resolution) ? 1 : sp_cheap_floor_positive((duration / resolution)));
-  block_rest = (duration % resolution);
+  if ((s.cutl_mod || s.cuth_mod) && !(duration == resolution)) {
+    block_count = sp_cheap_floor_positive((duration / resolution));
+    block_rest = (duration % resolution);
+  } else {
+    block_count = 1;
+    block_rest = 0;
+  };
   for (block_i = 0; (block_i < block_count); block_i += 1) {
     block_offset = (resolution * block_i);
     t = (start + block_offset);
@@ -688,8 +693,13 @@ status_t sp_cheap_noise_event_generate(sp_time_t start, sp_time_t end, sp_block_
   sp = event->data;
   s = *sp;
   duration = (end - start);
-  block_count = ((duration == s.resolution) ? 1 : sp_cheap_floor_positive((duration / s.resolution)));
-  block_rest = (duration % s.resolution);
+  if (s.cut_mod && !(duration == s.resolution)) {
+    block_count = sp_cheap_floor_positive((duration / s.resolution));
+    block_rest = (duration % s.resolution);
+  } else {
+    block_count = 1;
+    block_rest = 0;
+  };
   /* total block count is block-count plus rest-block */
   for (block_i = 0; (block_i < block_count); block_i += 1) {
     block_offset = (s.resolution * block_i);

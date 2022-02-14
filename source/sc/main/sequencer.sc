@@ -382,13 +382,12 @@
     s sp-noise-event-state-t
     sp sp-noise-event-state-t*
     t sp-time-t)
-  (set
-    sp event:data
-    s *sp
-    duration (- end start)
-    resolution (sp-min s.resolution duration)
-    block-count (if* (= duration resolution) 1 (sp-cheap-floor-positive (/ duration resolution)))
-    block-rest (modulo duration resolution))
+  (set sp event:data s *sp duration (- end start) resolution (sp-min s.resolution duration))
+  (if (and (or s.cutl-mod s.cuth-mod) (not (= duration resolution)))
+    (set
+      block-count (sp-cheap-floor-positive (/ duration resolution))
+      block-rest (modulo duration resolution))
+    (set block-count 1 block-rest 0))
   (for ((set block-i 0) (< block-i block-count) (set+ block-i 1))
     (set block-offset (* resolution block-i) t (+ start block-offset))
     (sp-samples-random &s.random-state resolution s.noise)
@@ -554,12 +553,12 @@
     sp sp-cheap-noise-event-state-t*
     t sp-time-t)
   (sc-comment "update filter arguments only every resolution number of samples")
-  (set
-    sp event:data
-    s *sp
-    duration (- end start)
-    block-count (if* (= duration s.resolution) 1 (sp-cheap-floor-positive (/ duration s.resolution)))
-    block-rest (modulo duration s.resolution))
+  (set sp event:data s *sp duration (- end start))
+  (if (and s.cut-mod (not (= duration s.resolution)))
+    (set
+      block-count (sp-cheap-floor-positive (/ duration s.resolution))
+      block-rest (modulo duration s.resolution))
+    (set block-count 1 block-rest 0))
   (sc-comment "total block count is block-count plus rest-block")
   (for ((set block-i 0) (< block-i block-count) (set+ block-i 1))
     (set
