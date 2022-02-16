@@ -565,11 +565,6 @@ typedef struct {
   void* state;
   sp_bool_t isolate;
 } sp_map_event_config_t;
-typedef struct {
-  sp_sample_t amp;
-  sp_sample_t pan;
-  sp_time_t frq;
-} sp_default_event_config_t;
 void sp_event_list_display(sp_event_list_t* a);
 void sp_event_list_reverse(sp_event_list_t** a);
 void sp_event_list_validate(sp_event_list_t* a);
@@ -589,7 +584,6 @@ status_t sp_group_prepare_parallel(sp_event_t* a);
 status_t sp_group_add(sp_event_t* a, sp_event_t event);
 status_t sp_group_append(sp_event_t* a, sp_event_t event);
 status_t sp_group_add_set(sp_event_t* group, sp_time_t start, sp_time_t duration, sp_event_t event);
-status_t sp_default_event_config_new(sp_sample_t amp, sp_time_t frq, sp_sample_t pan, sp_default_event_config_t** out_config);
 void sp_group_event_f(sp_time_t start, sp_time_t end, sp_block_t out, sp_event_t* event);
 void sp_group_event_parallel_f(sp_time_t start, sp_time_t end, sp_block_t out, sp_event_t* event);
 void sp_group_event_free(sp_event_t* a);

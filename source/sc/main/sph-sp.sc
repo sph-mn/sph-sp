@@ -565,8 +565,7 @@
   (type (struct (event sp-event-t) (map-generate sp-map-generate-t) (state void*)))
   sp-map-event-config-t
   (type
-    (struct (event sp-event-t) (map-generate sp-map-generate-t) (state void*) (isolate sp-bool-t)))
-  sp-default-event-config-t (type (struct (amp sp-sample-t) (pan sp-sample-t) (frq sp-time-t))))
+    (struct (event sp-event-t) (map-generate sp-map-generate-t) (state void*) (isolate sp-bool-t))))
 
 (declare
   (sp-event-list-display a) (void sp-event-list-t*)
@@ -588,8 +587,6 @@
   (sp-group-add a event) (status-t sp-event-t* sp-event-t)
   (sp-group-append a event) (status-t sp-event-t* sp-event-t)
   (sp-group-add-set group start duration event) (status-t sp-event-t* sp-time-t sp-time-t sp-event-t)
-  (sp-default-event-config-new amp frq pan out-config)
-  (status-t sp-sample-t sp-time-t sp-sample-t sp-default-event-config-t**)
   (sp-group-event-f start end out event) (void sp-time-t sp-time-t sp-block-t sp-event-t*)
   (sp-group-event-parallel-f start end out event) (void sp-time-t sp-time-t sp-block-t sp-event-t*)
   (sp-group-event-free a) (void sp-event-t*)

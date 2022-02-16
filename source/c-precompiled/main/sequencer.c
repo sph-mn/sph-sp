@@ -892,14 +892,3 @@ status_t sp_group_add_set(sp_event_t* group, sp_time_t start, sp_time_t duration
   event.end = (start + ((0 == duration) ? event.end : duration));
   return ((sp_group_add(group, event)));
 }
-
-/** a configuration struct for passing volume, frequency and panning to event prepare functions */
-status_t sp_default_event_config_new(sp_sample_t amp, sp_time_t frq, sp_sample_t pan, sp_default_event_config_t** config) {
-  status_declare;
-  status_require((sp_malloc_type(1, sp_default_event_config_t, config)));
-  (*config)->amp = amp;
-  (*config)->frq = frq;
-  (*config)->pan = pan;
-exit:
-  status_return;
-}
