@@ -277,7 +277,7 @@
     phs (if* channel-config.use channel-config.phs config.phs)
     frq config.frq
     fmod config.fmod
-    amp (if* channel-config.use channel-config.amp config.amp)
+    amp (if* channel-config.use (* config.amp channel-config.amp) config.amp)
     amod (if* (and channel-config.use channel-config.amod) channel-config.amod config.amod)
     channel channel)
   (struct-set event
@@ -382,12 +382,13 @@
     s sp-noise-event-state-t
     sp sp-noise-event-state-t*
     t sp-time-t)
-  (set sp event:data s *sp duration (- end start) resolution (sp-min s.resolution duration))
-  (if (and (or s.cutl-mod s.cuth-mod) (not (= duration resolution)))
-    (set
-      block-count (sp-cheap-floor-positive (/ duration resolution))
-      block-rest (modulo duration resolution))
-    (set block-count 1 block-rest 0))
+  (set
+    sp event:data
+    s *sp
+    duration (- end start)
+    resolution (sp-min s.resolution duration)
+    block-count (sp-cheap-floor-positive (/ duration resolution))
+    block-rest (modulo duration resolution))
   (for ((set block-i 0) (< block-i block-count) (set+ block-i 1))
     (set block-offset (* resolution block-i) t (+ start block-offset))
     (sp-samples-random &s.random-state resolution s.noise)
@@ -440,7 +441,7 @@
       config.is-reject &rs &filter-state))
   (status-require (sp-malloc-type 1 sp-noise-event-state-t &state))
   (struct-set *state
-    amp (if* channel-config.use channel-config.amp config.amp)
+    amp (if* channel-config.use (* config.amp channel-config.amp) config.amp)
     amod (if* (and channel-config.use channel-config.amod) channel-config.amod config.amod)
     cutl config.cutl
     cuth config.cuth
@@ -482,9 +483,12 @@
     event:data 0
     event:free sp-group-free
     duration (- event:end event:start)
-    config.resolution (if* config.resolution config.resolution 96)
-    config.resolution (sp-min config.resolution duration)
     rs (sp-random-state-new (sp-time-random &sp-random-state)))
+  (if (and (or config.cutl-mod config.cuth-mod) (not (= duration config.resolution)))
+    (set
+      config.resolution (if* config.resolution config.resolution 96)
+      config.resolution (sp-min config.resolution duration))
+    (set config.resolution duration))
   (status-require (sp-event-memory-init event 2))
   (status-require (sp-malloc-type config.resolution sp-sample-t &state-noise))
   (sp-event-memory-add event state-noise)
@@ -553,12 +557,12 @@
     sp sp-cheap-noise-event-state-t*
     t sp-time-t)
   (sc-comment "update filter arguments only every resolution number of samples")
-  (set sp event:data s *sp duration (- end start))
-  (if (and s.cut-mod (not (= duration s.resolution)))
-    (set
-      block-count (sp-cheap-floor-positive (/ duration s.resolution))
-      block-rest (modulo duration s.resolution))
-    (set block-count 1 block-rest 0))
+  (set
+    sp event:data
+    s *sp
+    duration (- end start)
+    block-count (sp-cheap-floor-positive (/ duration s.resolution))
+    block-rest (modulo duration s.resolution))
   (sc-comment "total block count is block-count plus rest-block")
   (for ((set block-i 0) (< block-i block-count) (set+ block-i 1))
     (set
@@ -584,7 +588,7 @@
   (status-require (sp-malloc-type 1 sp-cheap-noise-event-state-t &data))
   (status-require (sp-cheap-filter-state-new config.resolution config.passes &filter-state))
   (struct-set *data
-    amp (if* channel-config.use channel-config.amp config.amp)
+    amp (if* channel-config.use (* config.amp channel-config.amp) config.amp)
     amod (if* (and channel-config.use channel-config.amod) channel-config.amod config.amod)
     cut config.cut
     cut-mod config.cut-mod
@@ -615,17 +619,21 @@
    multiple passes almost multiply performance costs.
    memory for event.state will be allocated and then owned by the caller"
   status-declare
-  (declare rs sp-random-state-t state-noise sp-sample-t* state-temp sp-sample-t*)
+  (declare rs sp-random-state-t state-noise sp-sample-t* state-temp sp-sample-t* duration sp-time-t)
   (sp-declare-event channel)
   (define config sp-cheap-noise-event-config-t
     (pointer-get (convert-type event:data sp-cheap-noise-event-config-t*)))
   (set
     event:data 0
     event:free sp-group-free
+    duration (- event:end event:start)
     config.passes (if* config.passes config.passes 1)
-    config.resolution (if* config.resolution config.resolution 96)
-    config.resolution (sp-min config.resolution (- event:end event:start))
     rs (sp-random-state-new (sp-time-random &sp-random-state)))
+  (if (and config.cut-mod (not (= duration config.resolution)))
+    (set
+      config.resolution (if* config.resolution config.resolution 96)
+      config.resolution (sp-min config.resolution duration))
+    (set config.resolution duration))
   (status-require (sp-event-memory-init event 2))
   (status-require (sp-malloc-type config.resolution sp-sample-t &state-noise))
   (sp-event-memory-add event state-noise)

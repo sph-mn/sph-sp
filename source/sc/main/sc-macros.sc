@@ -64,11 +64,13 @@
         (match name-and-options ((name duration) (pair name duration))
           ((name) (pair name 0)) (name (pair name 0))))
       (name (first name-and-options)) (duration (tail name-and-options))
-      (prepare-name (symbol-append name (q -prepare))))
+      (variable-name (symbol-append name (q -event)))
+      (prepare-name (symbol-append name (q -prepare)))
+      )
     (qq
       (begin
         (sp-define-event-prepare* (unquote prepare-name) (unquote-splicing body))
-        (sp-define-event (unquote name) (unquote prepare-name) (unquote duration))))))
+        (sp-define-event (unquote variable-name) (unquote prepare-name) (unquote duration))))))
 
 (sc-define-syntax (sp-define-group* name-and-options body ...)
   (sp-define-event* name-and-options (set _event:prepare sp-group-prepare) body ...))

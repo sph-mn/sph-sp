@@ -391,7 +391,7 @@ status_t sp_wave_event_channel(sp_time_t duration, sp_wave_event_config_t config
   (*data).phs = (channel_config.use ? channel_config.phs : config.phs);
   (*data).frq = config.frq;
   (*data).fmod = config.fmod;
-  (*data).amp = (channel_config.use ? channel_config.amp : config.amp);
+  (*data).amp = (channel_config.use ? (config.amp * channel_config.amp) : config.amp);
   (*data).amod = ((channel_config.use && channel_config.amod) ? channel_config.amod : config.amod);
   (*data).channel = channel;
   event.data = data;
@@ -510,13 +510,8 @@ status_t sp_noise_event_generate(sp_time_t start, sp_time_t end, sp_block_t out,
   s = *sp;
   duration = (end - start);
   resolution = sp_min((s.resolution), duration);
-  if ((s.cutl_mod || s.cuth_mod) && !(duration == resolution)) {
-    block_count = sp_cheap_floor_positive((duration / resolution));
-    block_rest = (duration % resolution);
-  } else {
-    block_count = 1;
-    block_rest = 0;
-  };
+  block_count = sp_cheap_floor_positive((duration / resolution));
+  block_rest = (duration % resolution);
   for (block_i = 0; (block_i < block_count); block_i += 1) {
     block_offset = (resolution * block_i);
     t = (start + block_offset);
@@ -569,7 +564,7 @@ status_t sp_noise_event_channel(sp_time_t duration, sp_noise_event_config_t conf
   channel_config = (config.channel_config)[channel];
   status_require((sp_noise_event_filter_state((sp_array_or_fixed((config.cutl_mod), (config.cutl), 0)), (sp_array_or_fixed((config.cuth_mod), (config.cuth), 0)), (config.trnl), (config.trnh), (config.is_reject), (&rs), (&filter_state))));
   status_require((sp_malloc_type(1, sp_noise_event_state_t, (&state))));
-  (*state).amp = (channel_config.use ? channel_config.amp : config.amp);
+  (*state).amp = (channel_config.use ? (config.amp * channel_config.amp) : config.amp);
   (*state).amod = ((channel_config.use && channel_config.amod) ? channel_config.amod : config.amod);
   (*state).cutl = config.cutl;
   (*state).cuth = config.cuth;
@@ -616,9 +611,13 @@ status_t sp_noise_event_prepare(sp_event_t* event) {
   event->data = 0;
   event->free = sp_group_free;
   duration = (event->end - event->start);
-  config.resolution = (config.resolution ? config.resolution : 96);
-  config.resolution = sp_min((config.resolution), duration);
   rs = sp_random_state_new((sp_time_random((&sp_random_state))));
+  if ((config.cutl_mod || config.cuth_mod) && !(duration == config.resolution)) {
+    config.resolution = (config.resolution ? config.resolution : 96);
+    config.resolution = sp_min((config.resolution), duration);
+  } else {
+    config.resolution = duration;
+  };
   status_require((sp_event_memory_init(event, 2)));
   status_require((sp_malloc_type((config.resolution), sp_sample_t, (&state_noise))));
   sp_event_memory_add(event, state_noise);
@@ -693,13 +692,8 @@ status_t sp_cheap_noise_event_generate(sp_time_t start, sp_time_t end, sp_block_
   sp = event->data;
   s = *sp;
   duration = (end - start);
-  if (s.cut_mod && !(duration == s.resolution)) {
-    block_count = sp_cheap_floor_positive((duration / s.resolution));
-    block_rest = (duration % s.resolution);
-  } else {
-    block_count = 1;
-    block_rest = 0;
-  };
+  block_count = sp_cheap_floor_positive((duration / s.resolution));
+  block_rest = (duration % s.resolution);
   /* total block count is block-count plus rest-block */
   for (block_i = 0; (block_i < block_count); block_i += 1) {
     block_offset = (s.resolution * block_i);
@@ -725,7 +719,7 @@ status_t sp_cheap_noise_event_channel(sp_time_t duration, sp_cheap_noise_event_c
   channel_config = (config.channel_config)[channel];
   status_require((sp_malloc_type(1, sp_cheap_noise_event_state_t, (&data))));
   status_require((sp_cheap_filter_state_new((config.resolution), (config.passes), (&filter_state))));
-  (*data).amp = (channel_config.use ? channel_config.amp : config.amp);
+  (*data).amp = (channel_config.use ? (config.amp * channel_config.amp) : config.amp);
   (*data).amod = ((channel_config.use && channel_config.amod) ? channel_config.amod : config.amod);
   (*data).cut = config.cut;
   (*data).cut_mod = config.cut_mod;
@@ -764,14 +758,20 @@ status_t sp_cheap_noise_event_prepare(sp_event_t* event) {
   sp_random_state_t rs;
   sp_sample_t* state_noise;
   sp_sample_t* state_temp;
+  sp_time_t duration;
   sp_declare_event(channel);
   sp_cheap_noise_event_config_t config = *((sp_cheap_noise_event_config_t*)(event->data));
   event->data = 0;
   event->free = sp_group_free;
+  duration = (event->end - event->start);
   config.passes = (config.passes ? config.passes : 1);
-  config.resolution = (config.resolution ? config.resolution : 96);
-  config.resolution = sp_min((config.resolution), (event->end - event->start));
   rs = sp_random_state_new((sp_time_random((&sp_random_state))));
+  if (config.cut_mod && !(duration == config.resolution)) {
+    config.resolution = (config.resolution ? config.resolution : 96);
+    config.resolution = sp_min((config.resolution), duration);
+  } else {
+    config.resolution = duration;
+  };
   status_require((sp_event_memory_init(event, 2)));
   status_require((sp_malloc_type((config.resolution), sp_sample_t, (&state_noise))));
   sp_event_memory_add(event, state_noise);
