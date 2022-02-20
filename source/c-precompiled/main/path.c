@@ -7,7 +7,7 @@ status_t sp_path_samples_new(sp_path_t path, sp_path_time_t size, sp_sample_t** 
     size = sp_path_size(path);
   };
   status_require((sp_samples_new(size, (&out_temp))));
-  spline_path_get(path, 0, size, out_temp);
+  spline_path_get((&path), 0, size, out_temp);
   *out = out_temp;
 exit:
   status_return;
@@ -133,7 +133,7 @@ status_t sp_path_samples_derivation(sp_path_t path, sp_sample_t** x_changes, sp_
   status_require((sp_path_derivation(path, x_changes, y_changes, index, (&path))));
   size = sp_path_size(path);
   status_require((sp_samples_new(size, (&out_temp))));
-  spline_path_get(path, 0, size, out_temp);
+  spline_path_get((&path), 0, size, out_temp);
   *out = out_temp;
   *out_size = size;
 exit:
@@ -251,7 +251,7 @@ status_t sp_path_samples_derivations_normalized(sp_path_t path, sp_time_t count,
     size = sp_path_size((paths[i]));
     sizes[i] = size;
     status_require((sp_samples_new(size, (samples + i))));
-    sp_path_get((paths[i]), 0, size, (samples[i]));
+    sp_path_get((paths + i), 0, size, (samples[i]));
   };
   *out = samples;
   *out_sizes = sizes;

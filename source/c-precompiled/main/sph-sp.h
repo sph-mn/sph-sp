@@ -129,6 +129,8 @@
   sp_block_t a; \
   a.size = 0
 #define sp_cheap_round_positive(a) ((sp_time_t)((0.5 + a)))
+
+/** only works for non-negative values */
 #define sp_cheap_floor_positive(a) ((sp_time_t)(a))
 #define sp_cheap_ceiling_positive(a) (((sp_time_t)(a)) + (((sp_time_t)(a)) < a))
 #define sp_max(a, b) ((a > b) ? a : b)
@@ -610,12 +612,14 @@ void sp_wave_event_config_defaults(sp_wave_event_config_t* config);
 #define sp_path_line spline_path_line
 #define sp_path_move spline_path_move
 #define sp_path_bezier spline_path_bezier
+#define sp_path_circular_arc spline_path_circular_arc
 #define sp_path_constant spline_path_constant
 #define sp_path_path spline_path_path
 #define sp_path_prepare_segments spline_path_prepare_segments
 #define sp_path_i_line spline_path_i_line
 #define sp_path_i_move spline_path_i_move
 #define sp_path_i_bezier spline_path_i_bezier
+#define sp_path_i_circular_arc spline_path_i_circular_arc
 #define sp_path_i_constant spline_path_i_constant
 #define sp_path_i_path spline_path_i_path
 #define sp_path_end spline_path_end

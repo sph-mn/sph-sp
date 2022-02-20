@@ -66,7 +66,7 @@
   (sp-file-declare a) (begin (declare a sp-file-t) (set a.flags 0))
   (sp-block-declare a) (begin (declare a sp-block-t) (set a.size 0))
   (sp-cheap-round-positive a) (convert-type (+ 0.5 a) sp-time-t)
-  (sp-cheap-floor-positive a) (convert-type a sp-time-t)
+  (sp-cheap-floor-positive a) (begin "only works for non-negative values" (convert-type a sp-time-t))
   (sp-cheap-ceiling-positive a) (+ (convert-type a sp-time-t) (< (convert-type a sp-time-t) a))
   (sp-max a b) (if* (> a b) a b)
   (sp-min a b) (if* (< a b) a b)
@@ -616,12 +616,14 @@
   sp-path-line spline-path-line
   sp-path-move spline-path-move
   sp-path-bezier spline-path-bezier
+  sp-path-circular-arc spline-path-circular-arc
   sp-path-constant spline-path-constant
   sp-path-path spline-path-path
   sp-path-prepare-segments spline-path-prepare-segments
   sp-path-i-line spline-path-i-line
   sp-path-i-move spline-path-i-move
   sp-path-i-bezier spline-path-i-bezier
+  sp-path-i-circular-arc spline-path-i-circular-arc
   sp-path-i-constant spline-path-i-constant
   sp-path-i-path spline-path-i-path
   sp-path-end spline-path-end

@@ -6,7 +6,7 @@
   (declare out-temp sp-sample-t*)
   (if (= 0 size) (set size (sp-path-size path)))
   (status-require (sp-samples-new size &out-temp))
-  (spline-path-get path 0 size out-temp)
+  (spline-path-get &path 0 size out-temp)
   (set *out out-temp)
   (label exit status-return))
 
@@ -112,7 +112,7 @@
   (status-require (sp-path-derivation path x-changes y-changes index &path))
   (set size (sp-path-size path))
   (status-require (sp-samples-new size &out-temp))
-  (spline-path-get path 0 size out-temp)
+  (spline-path-get &path 0 size out-temp)
   (set *out out-temp *out-size size)
   (label exit status-return))
 
@@ -189,7 +189,7 @@
   (for-each-index i count
     (set size (sp-path-size (array-get paths i)) (array-get sizes i) size)
     (status-require (sp-samples-new size (+ samples i)))
-    (sp-path-get (array-get paths i) 0 size (array-get samples i)))
+    (sp-path-get (+ paths i) 0 size (array-get samples i)))
   (set *out samples *out-sizes sizes)
   (label exit
     (if status-is-failure (begin (for-each-index i count (free (array-get samples i))) memreg-free))
