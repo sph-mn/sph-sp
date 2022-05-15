@@ -95,9 +95,9 @@
   (free-on-exit address handler) (memreg2-add-named exit address handler)
   (free-on-error1 address) (free-on-error address free)
   (free-on-exit1 address) (free-on-exit address free)
-  (sp-hz->samples x) (/ sp-rate (convert-type x sp-sample-t))
+  (sp-hz->samples x) (/ sp-rate x)
   (sp-samples->hz x) (convert-type (/ sp-rate x) sp-time-t)
-  (sp-hz->factor x) (/ (convert-type x sp-sample-t) sp-rate)
+  (sp-hz->factor x) (/ (convert-type x sp-sample-t) (convert-type sp-rate sp-sample-t))
   (sp-factor->hz x) (convert-type (* x sp-rate) sp-time-t))
 
 (declare
@@ -562,6 +562,17 @@
       (resolution sp-time-t)
       (channels sp-channel-count-t)
       (channel-config (array sp-channel-config-t sp-channel-limit))))
+  sp-sound-event-config-t
+  (type
+    (struct
+      (duration sp-time-t)
+      (noise sp-bool-t)
+      (amp sp-sample-t)
+      (amod sp-sample-t*)
+      (frq sp-time-t)
+      (fmod sp-time-t*)
+      (wdt sp-time-t)
+      (wmod sp-time-t*)))
   sp-event-prepare-t (function-pointer status-t sp-event-t*)
   sp-map-generate-t
   (type (function-pointer status-t sp-time-t sp-time-t sp-block-t sp-block-t void*))
@@ -606,7 +617,8 @@
   (sp-cheap-noise-event-config-new out) (status-t sp-cheap-noise-event-config-t**)
   (sp-wave-event-config-new out) (status-t sp-wave-event-config-t**)
   (sp-map-event-config-new out) (status-t sp-map-event-config-t**)
-  (sp-wave-event-config-defaults config) (void sp-wave-event-config-t*))
+  (sp-wave-event-config-defaults config) (void sp-wave-event-config-t*)
+  (sp-sound-event config out) (status-t sp-sound-event-config-t sp-event-t*))
 
 (sc-comment "path")
 

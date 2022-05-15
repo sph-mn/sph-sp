@@ -895,3 +895,109 @@ status_t sp_group_add_set(sp_event_t* group, sp_time_t start, sp_time_t duration
   event.end = (start + ((0 == duration) ? event.end : duration));
   return ((sp_group_add(group, event)));
 }
+status_t sp_sound_event_cheap_noise(sp_sound_event_config_t config, sp_event_t* out) {
+  status_declare;
+  sp_sample_t cut;
+  sp_sample_t q_factor;
+  sp_sample_t* cut_mod;
+  sp_sample_t* q_factor_mod;
+  sp_time_t frq;
+  sp_time_t wdt;
+  sp_cheap_noise_event_config_t* event_config;
+  cut = sp_hz_to_factor((config.frq - (config.wdt / 2)));
+  q_factor = sp_hz_to_factor((config.wdt));
+  cut_mod = 0;
+  q_factor_mod = 0;
+  if (config.fmod || config.wmod) {
+    sp_event_memory_init(out, 3);
+    srq((sp_samples_new((config.duration), (&cut_mod))));
+    sp_event_memory_add(out, cut_mod);
+    srq((sp_samples_new((config.duration), (&q_factor_mod))));
+    sp_event_memory_add(out, q_factor_mod);
+    for (sp_time_t i = 0; (i < config.duration); i += 1) {
+      frq = (config.fmod ? (config.fmod)[i] : config.frq);
+      wdt = (config.wmod ? (config.wmod)[i] : config.wdt);
+      cut_mod[i] = sp_hz_to_factor((frq - (wdt / 2)));
+      q_factor_mod[i] = sp_hz_to_factor(wdt);
+    };
+  } else {
+    sp_event_memory_init(out, 1);
+  };
+  srq((sp_cheap_noise_event_config_new((&event_config))));
+  sp_event_memory_add(out, event_config);
+  event_config->amp = config.amp;
+  event_config->amod = config.amod;
+  event_config->cut = cut;
+  event_config->cut_mod = cut_mod;
+  event_config->q_factor = q_factor;
+  event_config->q_factor_mod = q_factor_mod;
+  event_config->type = sp_state_variable_filter_bp;
+  out->data = event_config;
+  out->prepare = sp_cheap_noise_event_prepare;
+exit:
+  status_return;
+}
+status_t sp_sound_event_noise(sp_sound_event_config_t config, sp_event_t* out) {
+  status_declare;
+  sp_sample_t* cutl_mod;
+  sp_sample_t* cuth_mod;
+  sp_sample_t cutl;
+  sp_sample_t cuth;
+  sp_time_t frq;
+  sp_time_t wdt;
+  sp_noise_event_config_t* event_config;
+  cutl = sp_hz_to_factor((config.frq));
+  cuth = sp_hz_to_factor((config.wdt + config.frq));
+  cutl_mod = 0;
+  cuth_mod = 0;
+  if (config.fmod || config.wmod) {
+    sp_event_memory_init(out, 3);
+    srq((sp_samples_new((config.duration), (&cutl_mod))));
+    sp_event_memory_add(out, cutl_mod);
+    srq((sp_samples_new((config.duration), (&cuth_mod))));
+    sp_event_memory_add(out, cuth_mod);
+    for (sp_time_t i = 0; (i < config.duration); i += 1) {
+      frq = (config.fmod ? (config.fmod)[i] : config.frq);
+      wdt = (config.wmod ? (config.wmod)[i] : config.wdt);
+      cutl_mod[i] = sp_hz_to_factor(frq);
+      cuth_mod[i] = sp_hz_to_factor((frq + wdt));
+    };
+  } else {
+    sp_event_memory_init(out, 1);
+  };
+  srq((sp_noise_event_config_new((&event_config))));
+  sp_event_memory_add(out, event_config);
+  event_config->amp = config.amp;
+  event_config->amod = config.amod;
+  event_config->cutl_mod = cutl_mod;
+  event_config->cuth_mod = cuth_mod;
+  event_config->cutl = cutl;
+  event_config->cuth = cuth;
+  out->data = event_config;
+  out->prepare = sp_noise_event_prepare;
+exit:
+  status_return;
+}
+
+/** generic event for waves and filtered noise. all frequency values (frq, fmod, wdt, wmod) are in hertz, even for noise */
+status_t sp_sound_event(sp_sound_event_config_t config, sp_event_t* out) {
+  status_declare;
+  if (1 == config.noise) {
+    srq((sp_sound_event_noise(config, out)));
+  } else if (2 == config.noise) {
+    srq((sp_sound_event_cheap_noise(config, out)));
+  } else {
+    sp_wave_event_config_t* event_config;
+    sp_event_memory_init(out, 1);
+    srq((sp_wave_event_config_new((&event_config))));
+    sp_event_memory_add(out, event_config);
+    event_config->amp = config.amp;
+    event_config->amod = config.amod;
+    event_config->fmod = config.fmod;
+    event_config->frq = config.frq;
+    out->data = event_config;
+    out->prepare = sp_wave_event_prepare;
+  };
+exit:
+  status_return;
+}

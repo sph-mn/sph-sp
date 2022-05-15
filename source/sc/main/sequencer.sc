@@ -735,3 +735,101 @@
   (status-t sp-event-t* sp-time-t sp-time-t sp-event-t)
   (struct-set event start start end (+ start (if* (= 0 duration) event.end duration)))
   (return (sp-group-add group event)))
+
+(define (sp-sound-event-cheap-noise config out) (status-t sp-sound-event-config-t sp-event-t*)
+  status-declare
+  (declare
+    cut sp-sample-t
+    q-factor sp-sample-t
+    cut-mod sp-sample-t*
+    q-factor-mod sp-sample-t*
+    frq sp-time-t
+    wdt sp-time-t
+    event-config sp-cheap-noise-event-config-t*)
+  (set
+    cut (sp-hz->factor (- config.frq (/ config.wdt 2)))
+    q-factor (sp-hz->factor config.wdt)
+    cut-mod 0
+    q-factor-mod 0)
+  (if (or config.fmod config.wmod)
+    (begin
+      (sp-event-memory-init out 3)
+      (srq (sp-samples-new config.duration &cut-mod))
+      (sp-event-memory-add out cut-mod)
+      (srq (sp-samples-new config.duration &q-factor-mod))
+      (sp-event-memory-add out q-factor-mod)
+      (for-each-index i config.duration
+        (set
+          frq (if* config.fmod (array-get config.fmod i) config.frq)
+          wdt (if* config.wmod (array-get config.wmod i) config.wdt)
+          (array-get cut-mod i) (sp-hz->factor (- frq (/ wdt 2)))
+          (array-get q-factor-mod i) (sp-hz->factor wdt))))
+    (sp-event-memory-init out 1))
+  (srq (sp-cheap-noise-event-config-new &event-config))
+  (sp-event-memory-add out event-config)
+  (struct-pointer-set event-config
+    amp config.amp
+    amod config.amod
+    cut cut
+    cut-mod cut-mod
+    q-factor q-factor
+    q-factor-mod q-factor-mod
+    type sp-state-variable-filter-bp)
+  (set out:data event-config out:prepare sp-cheap-noise-event-prepare)
+  (label exit status-return))
+
+(define (sp-sound-event-noise config out) (status-t sp-sound-event-config-t sp-event-t*)
+  status-declare
+  (declare
+    cutl-mod sp-sample-t*
+    cuth-mod sp-sample-t*
+    cutl sp-sample-t
+    cuth sp-sample-t
+    frq sp-time-t
+    wdt sp-time-t
+    event-config sp-noise-event-config-t*)
+  (set
+    cutl (sp-hz->factor config.frq)
+    cuth (sp-hz->factor (+ config.wdt config.frq))
+    cutl-mod 0
+    cuth-mod 0)
+  (if (or config.fmod config.wmod)
+    (begin
+      (sp-event-memory-init out 3)
+      (srq (sp-samples-new config.duration &cutl-mod))
+      (sp-event-memory-add out cutl-mod)
+      (srq (sp-samples-new config.duration &cuth-mod))
+      (sp-event-memory-add out cuth-mod)
+      (for-each-index i config.duration
+        (set
+          frq (if* config.fmod (array-get config.fmod i) config.frq)
+          wdt (if* config.wmod (array-get config.wmod i) config.wdt)
+          (array-get cutl-mod i) (sp-hz->factor frq)
+          (array-get cuth-mod i) (sp-hz->factor (+ frq wdt)))))
+    (sp-event-memory-init out 1))
+  (srq (sp-noise-event-config-new &event-config))
+  (sp-event-memory-add out event-config)
+  (struct-pointer-set event-config
+    amp config.amp
+    amod config.amod
+    cutl-mod cutl-mod
+    cuth-mod cuth-mod
+    cutl cutl
+    cuth cuth)
+  (set out:data event-config out:prepare sp-noise-event-prepare)
+  (label exit status-return))
+
+(define (sp-sound-event config out) (status-t sp-sound-event-config-t sp-event-t*)
+  "generic event for waves and filtered noise. all frequency values (frq, fmod, wdt, wmod) are in hertz, even for noise"
+  status-declare
+  (cond ((= 1 config.noise) (srq (sp-sound-event-noise config out)))
+    ((= 2 config.noise) (srq (sp-sound-event-cheap-noise config out)))
+    (else (declare event-config sp-wave-event-config-t*) (sp-event-memory-init out 1)
+      (srq (sp-wave-event-config-new &event-config)) (sp-event-memory-add out event-config)
+      (struct-pointer-set event-config
+        amp config.amp
+        amod config.amod
+        fmod config.fmod
+        frq config.frq)
+      (set out:data event-config out:prepare sp-wave-event-prepare)))
+  (label exit status-return))

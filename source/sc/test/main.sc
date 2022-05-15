@@ -450,6 +450,42 @@
   (sp-block-free &out)
   (label exit (if status-is-failure free-on-error-free) status-return))
 
+(define (test-sp-sound-event) status-t
+  status-declare
+  (declare
+    out sp-block-t
+    fmod (array sp-time-t test-noise-duration)
+    wmod (array sp-time-t test-noise-duration)
+    amod (array sp-sample-t test-noise-duration)
+    i sp-time-t
+    config sp-sound-event-config-t)
+  (sp-declare-event event)
+  (status-require (sp-block-new 2 test-noise-duration &out))
+  (for ((set i 0) (< i test-noise-duration) (set+ i 1))
+    (set (array-get fmod i) 30 (array-get wmod i) 200 (array-get amod i) 1.0))
+  (struct-set config
+    amp 1
+    amod amod
+    noise 0
+    duration test-noise-duration
+    frq 200
+    fmod 0
+    wmod 0
+    wdt 200)
+  (struct-set event end test-noise-duration)
+  (status-require (sp-sound-event config &event))
+  (status-require (event.prepare &event))
+  (status-require (event.generate 0 test-noise-duration out &event))
+  (set config.noise 1)
+  (status-require (sp-sound-event config &event))
+  (status-require (event.prepare &event))
+  (status-require (event.generate 0 test-noise-duration out &event))
+  (set config.noise 2)
+  (status-require (sp-sound-event config &event))
+  (status-require (event.prepare &event))
+  (status-require (event.generate 0 test-noise-duration out &event))
+  (label exit status-return))
+
 (pre-define sp-seq-event-count 2)
 
 (define (test-sp-seq) status-t
@@ -859,6 +895,7 @@
   status-declare
   (set rs (sp-random-state-new 3))
   (sp-initialize 3 2 _rate)
+  (test-helper-test-one test-sp-sound-event)
   (test-helper-test-one test-pan->amp)
   (test-helper-test-one test-windowed-sinc-continuity)
   (test-helper-test-one test-convolve-smaller)

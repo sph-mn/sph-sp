@@ -494,6 +494,44 @@ exit:
   };
   status_return;
 }
+status_t test_sp_sound_event() {
+  status_declare;
+  sp_block_t out;
+  sp_time_t fmod[test_noise_duration];
+  sp_time_t wmod[test_noise_duration];
+  sp_sample_t amod[test_noise_duration];
+  sp_time_t i;
+  sp_sound_event_config_t config;
+  sp_declare_event(event);
+  status_require((sp_block_new(2, test_noise_duration, (&out))));
+  for (i = 0; (i < test_noise_duration); i += 1) {
+    fmod[i] = 30;
+    wmod[i] = 200;
+    amod[i] = 1.0;
+  };
+  config.amp = 1;
+  config.amod = amod;
+  config.noise = 0;
+  config.duration = test_noise_duration;
+  config.frq = 200;
+  config.fmod = 0;
+  config.wmod = 0;
+  config.wdt = 200;
+  event.end = test_noise_duration;
+  status_require((sp_sound_event(config, (&event))));
+  status_require(((event.prepare)((&event))));
+  status_require(((event.generate)(0, test_noise_duration, out, (&event))));
+  config.noise = 1;
+  status_require((sp_sound_event(config, (&event))));
+  status_require(((event.prepare)((&event))));
+  status_require(((event.generate)(0, test_noise_duration, out, (&event))));
+  config.noise = 2;
+  status_require((sp_sound_event(config, (&event))));
+  status_require(((event.prepare)((&event))));
+  status_require(((event.generate)(0, test_noise_duration, out, (&event))));
+exit:
+  status_return;
+}
 #define sp_seq_event_count 2
 status_t test_sp_seq() {
   status_declare;
@@ -960,6 +998,7 @@ int main() {
   status_declare;
   rs = sp_random_state_new(3);
   sp_initialize(3, 2, _rate);
+  test_helper_test_one(test_sp_sound_event);
   test_helper_test_one(test_pan_to_amp);
   test_helper_test_one(test_windowed_sinc_continuity);
   test_helper_test_one(test_convolve_smaller);

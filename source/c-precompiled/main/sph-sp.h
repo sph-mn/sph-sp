@@ -158,9 +158,9 @@
 #define free_on_exit(address, handler) memreg2_add_named(exit, address, handler)
 #define free_on_error1(address) free_on_error(address, free)
 #define free_on_exit1(address) free_on_exit(address, free)
-#define sp_hz_to_samples(x) (sp_rate / ((sp_sample_t)(x)))
+#define sp_hz_to_samples(x) (sp_rate / x)
 #define sp_samples_to_hz(x) ((sp_time_t)((sp_rate / x)))
-#define sp_hz_to_factor(x) (((sp_sample_t)(x)) / sp_rate)
+#define sp_hz_to_factor(x) (((sp_sample_t)(x)) / ((sp_sample_t)(sp_rate)))
 #define sp_factor_to_hz(x) ((sp_time_t)((x * sp_rate)))
 typedef struct {
   sp_channel_count_t channels;
@@ -556,6 +556,16 @@ typedef struct {
   sp_channel_count_t channels;
   sp_channel_config_t channel_config[sp_channel_limit];
 } sp_cheap_noise_event_config_t;
+typedef struct {
+  sp_time_t duration;
+  sp_bool_t noise;
+  sp_sample_t amp;
+  sp_sample_t* amod;
+  sp_time_t frq;
+  sp_time_t* fmod;
+  sp_time_t wdt;
+  sp_time_t* wmod;
+} sp_sound_event_config_t;
 status_t (*sp_event_prepare_t)(sp_event_t*);
 typedef status_t (*sp_map_generate_t)(sp_time_t, sp_time_t, sp_block_t, sp_block_t, void*);
 typedef struct {
@@ -603,6 +613,7 @@ status_t sp_cheap_noise_event_config_new(sp_cheap_noise_event_config_t** out);
 status_t sp_wave_event_config_new(sp_wave_event_config_t** out);
 status_t sp_map_event_config_new(sp_map_event_config_t** out);
 void sp_wave_event_config_defaults(sp_wave_event_config_t* config);
+status_t sp_sound_event(sp_sound_event_config_t config, sp_event_t* out);
 /* path */
 
 #define sp_path_t spline_path_t
