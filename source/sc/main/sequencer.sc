@@ -509,6 +509,7 @@
       (cut sp-sample-t)
       (cut-mod sp-sample-t*)
       (q-factor sp-sample-t)
+      (q-factor-mod sp-sample-t*)
       (passes sp-time-t)
       (type sp-state-variable-filter-t)
       (random-state sp-random-state-t)
@@ -528,6 +529,7 @@
     cut 0.5
     cut-mod 0
     q-factor 0.01
+    q-factor-mod 0
     passes 1
     type sp-state-variable-filter-lp
     resolution (/ sp-rate 10)
@@ -571,7 +573,8 @@
       duration (if* (= block-count block-i) block-rest s.resolution))
     (sp-samples-random &s.random-state duration s.noise)
     (sp-cheap-filter s.type s.noise
-      duration (sp-array-or-fixed s.cut-mod s.cut t) s.passes s.q-factor &s.filter-state s.temp)
+      duration (sp-array-or-fixed s.cut-mod s.cut t) s.passes
+      (sp-array-or-fixed s.q-factor-mod s.q-factor t) &s.filter-state s.temp)
     (for ((set i 0) (< i duration) (set+ i 1))
       (set+ (array-get out.samples s.channel (+ block-offset i))
         (* s.amp (array-get s.amod (+ t i)) (array-get s.temp i)))))
@@ -595,6 +598,7 @@
     type config.type
     passes config.passes
     q-factor config.q-factor
+    q-factor-mod config.q-factor-mod
     resolution config.resolution
     random-state rs
     channel channel

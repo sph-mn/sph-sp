@@ -548,6 +548,7 @@ typedef struct {
   sp_sample_t cut;
   sp_sample_t* cut_mod;
   sp_sample_t q_factor;
+  sp_sample_t* q_factor_mod;
   sp_time_t passes;
   sp_state_variable_filter_t type;
   sp_random_state_t* random_state;

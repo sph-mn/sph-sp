@@ -643,6 +643,7 @@ typedef struct {
   sp_sample_t cut;
   sp_sample_t* cut_mod;
   sp_sample_t q_factor;
+  sp_sample_t* q_factor_mod;
   sp_time_t passes;
   sp_state_variable_filter_t type;
   sp_random_state_t random_state;
@@ -661,6 +662,7 @@ status_t sp_cheap_noise_event_config_new(sp_cheap_noise_event_config_t** out) {
   (*result).cut = 0.5;
   (*result).cut_mod = 0;
   (*result).q_factor = 0.01;
+  (*result).q_factor_mod = 0;
   (*result).passes = 1;
   (*result).type = sp_state_variable_filter_lp;
   (*result).resolution = (sp_rate / 10);
@@ -700,7 +702,7 @@ status_t sp_cheap_noise_event_generate(sp_time_t start, sp_time_t end, sp_block_
     t = (start + block_offset);
     duration = ((block_count == block_i) ? block_rest : s.resolution);
     sp_samples_random((&(s.random_state)), duration, (s.noise));
-    sp_cheap_filter((s.type), (s.noise), duration, (sp_array_or_fixed((s.cut_mod), (s.cut), t)), (s.passes), (s.q_factor), (&(s.filter_state)), (s.temp));
+    sp_cheap_filter((s.type), (s.noise), duration, (sp_array_or_fixed((s.cut_mod), (s.cut), t)), (s.passes), (sp_array_or_fixed((s.q_factor_mod), (s.q_factor), t)), (&(s.filter_state)), (s.temp));
     for (i = 0; (i < duration); i += 1) {
       (out.samples)[s.channel][(block_offset + i)] += (s.amp * (s.amod)[(t + i)] * (s.temp)[i]);
     };
@@ -726,6 +728,7 @@ status_t sp_cheap_noise_event_channel(sp_time_t duration, sp_cheap_noise_event_c
   (*data).type = config.type;
   (*data).passes = config.passes;
   (*data).q_factor = config.q_factor;
+  (*data).q_factor_mod = config.q_factor_mod;
   (*data).resolution = config.resolution;
   (*data).random_state = rs;
   (*data).channel = channel;

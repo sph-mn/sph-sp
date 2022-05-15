@@ -555,6 +555,7 @@
       (cut sp-sample-t)
       (cut-mod sp-sample-t*)
       (q-factor sp-sample-t)
+      (q-factor-mod sp-sample-t*)
       (passes sp-time-t)
       (type sp-state-variable-filter-t)
       (random-state sp-random-state-t*)
