@@ -1,6 +1,6 @@
 (sc-include-once "./sc-macros")
 
-(define (sp-path-samples-new path size out) (status-t sp-path-t sp-path-time-t sp-sample-t**)
+(define (sp-path-samples-new path size out) (status-t sp-path-t sp-time-t sp-sample-t**)
   "out memory is allocated"
   status-declare
   (declare out-temp sp-sample-t*)
@@ -10,7 +10,7 @@
   (set *out out-temp)
   (label exit status-return))
 
-(define (sp-path-times-new path size out) (status-t sp-path-t sp-path-time-t sp-time-t**)
+(define (sp-path-times-new path size out) (status-t sp-path-t sp-time-t sp-time-t**)
   "return a sp_time_t array from path.
    memory is allocated and ownership transferred to the caller"
   status-declare
@@ -81,10 +81,10 @@
    * invalid paths are possible if x_changes exceed range between the new previous and next point"
   status-declare
   (declare
-    p-i sp-path-time-t
+    p-i sp-time-t
     p sp-path-point-t*
     s-i sp-path-segment-count-t
-    sp-i sp-path-time-t
+    sp-i sp-time-t
     s sp-path-segment-t*
     ss sp-path-segment-t*)
   (sc-comment "copy segments")
@@ -105,10 +105,10 @@
   (label exit status-return))
 
 (define (sp-path-samples-derivation path x-changes y-changes index out out-size)
-  (status-t sp-path-t sp-sample-t** sp-sample-t** sp-time-t sp-sample-t** sp-path-time-t*)
+  (status-t sp-path-t sp-sample-t** sp-sample-t** sp-time-t sp-sample-t** sp-time-t*)
   "get one derivation as a sp_sample_t array. out memory will be allocated"
   status-declare
-  (declare out-temp sp-sample-t* size sp-path-time-t)
+  (declare out-temp sp-sample-t* size sp-time-t)
   (status-require (sp-path-derivation path x-changes y-changes index &path))
   (set size (sp-path-size path))
   (status-require (sp-samples-new size &out-temp))
@@ -117,7 +117,7 @@
   (label exit status-return))
 
 (define (sp-path-times-derivation path x-changes y-changes index out out-size)
-  (status-t sp-path-t sp-sample-t** sp-sample-t** sp-time-t sp-time-t** sp-path-time-t*)
+  (status-t sp-path-t sp-sample-t** sp-sample-t** sp-time-t sp-time-t** sp-time-t*)
   "get one derivation as a sp_time_t array. out memory will be allocated"
   status-declare
   (declare result sp-time-t* temp sp-sample-t* temp-size sp-time-t)

@@ -3,12 +3,14 @@
 (pre-define
   sp-plot-temp-path "/tmp/sp-plot"
   sp-plot-temp-file-index-maxlength 10
+  sp-plot-command-pattern-points
+  "gnuplot --persist -e 'set key off; set size ratio 0.618; plot \"%s\" with points ls 3 lc rgb \"red\"'"
   sp-plot-command-pattern-lines
-  "gnuplot --persist -e 'set key off; set size ratio 0.5; plot \"%s\" with lines lc rgb \"blue\"'"
+  "gnuplot --persist -e 'set key off; set size ratio 0.618; plot \"%s\" with lines lc rgb \"blue\"'"
   sp-plot-command-pattern-steps
-  "gnuplot --persist -e 'set key off; set size ratio 0.5; plot \"%s\" with histeps lc rgb \"blue\"'"
+  "gnuplot --persist -e 'set key off; set size ratio 0.618; plot \"%s\" with histeps lc rgb \"blue\"'"
   sp-plot-command-pattern-bars
-  "gnuplot --persist -e 'set key off; set size ratio 0.5; set grid; plot \"%s\" with steps lc rgb \"red\"'")
+  "gnuplot --persist -e 'set key off; set size ratio 0.618; set grid; plot \"%s\" with steps lc rgb \"red\"'")
 
 (define (sp-plot-samples->file a a-size path) (void sp-sample-t* sp-time-t uint8-t*)
   (declare file FILE* i sp-time-t)
@@ -25,7 +27,7 @@
 (define (sp-plot-samples-file path use-steps) (void uint8-t* uint8-t)
   (declare command uint8-t* command-pattern uint8-t* command-size size-t)
   (set
-    command-pattern (if* use-steps sp-plot-command-pattern-steps sp-plot-command-pattern-lines)
+    command-pattern (if* use-steps sp-plot-command-pattern-steps sp-plot-command-pattern-points)
     command-size (+ (strlen path) (strlen command-pattern))
     command (malloc command-size))
   (if (not command) return)

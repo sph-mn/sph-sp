@@ -1,9 +1,10 @@
 uint32_t sp_plot_temp_file_index = 0;
 #define sp_plot_temp_path "/tmp/sp-plot"
 #define sp_plot_temp_file_index_maxlength 10
-#define sp_plot_command_pattern_lines "gnuplot --persist -e 'set key off; set size ratio 0.5; plot \"%s\" with lines lc rgb \"blue\"'"
-#define sp_plot_command_pattern_steps "gnuplot --persist -e 'set key off; set size ratio 0.5; plot \"%s\" with histeps lc rgb \"blue\"'"
-#define sp_plot_command_pattern_bars "gnuplot --persist -e 'set key off; set size ratio 0.5; set grid; plot \"%s\" with steps lc rgb \"red\"'"
+#define sp_plot_command_pattern_points "gnuplot --persist -e 'set key off; set size ratio 0.618; plot \"%s\" with points ls 3 lc rgb \"red\"'"
+#define sp_plot_command_pattern_lines "gnuplot --persist -e 'set key off; set size ratio 0.618; plot \"%s\" with lines lc rgb \"blue\"'"
+#define sp_plot_command_pattern_steps "gnuplot --persist -e 'set key off; set size ratio 0.618; plot \"%s\" with histeps lc rgb \"blue\"'"
+#define sp_plot_command_pattern_bars "gnuplot --persist -e 'set key off; set size ratio 0.618; set grid; plot \"%s\" with steps lc rgb \"red\"'"
 void sp_plot_samples_to_file(sp_sample_t* a, sp_time_t a_size, uint8_t* path) {
   FILE* file;
   sp_time_t i;
@@ -26,7 +27,7 @@ void sp_plot_samples_file(uint8_t* path, uint8_t use_steps) {
   uint8_t* command;
   uint8_t* command_pattern;
   size_t command_size;
-  command_pattern = (use_steps ? sp_plot_command_pattern_steps : sp_plot_command_pattern_lines);
+  command_pattern = (use_steps ? sp_plot_command_pattern_steps : sp_plot_command_pattern_points);
   command_size = (strlen(path) + strlen(command_pattern));
   command = malloc(command_size);
   if (!command) {

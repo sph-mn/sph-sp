@@ -3,13 +3,7 @@
 
 (sc-define-syntax (sp-init* rate) (begin (pre-include "sph-sp.h") (pre-define _sp-rate rate)))
 
-(sc-define-syntax* (sp-define-helper-nostatus* (name parameter ...) types body ...)
-  (qq
-    (define ((unquote name) (unquote-splicing parameter))
-      (unquote (pair (q status-t) (any->list types)))
-      (unquote-splicing body))))
-
-(sc-define-syntax* (sp-define-helper* (name parameter ...) types body ...)
+(sc-define-syntax* (define-with-status* (name parameter ...) types body ...)
   (let
     ( (body
         (match body
@@ -65,8 +59,7 @@
           ((name) (pair name 0)) (name (pair name 0))))
       (name (first name-and-options)) (duration (tail name-and-options))
       (variable-name (symbol-append name (q -event)))
-      (prepare-name (symbol-append name (q -prepare)))
-      )
+      (prepare-name (symbol-append name (q -prepare))))
     (qq
       (begin
         (sp-define-event-prepare* (unquote prepare-name) (unquote-splicing body))
@@ -252,3 +245,11 @@
         (sp-times* (unquote name) (unquote count-name) (unquote-splicing values))
         (sp-times-multiply-1 (unquote name) (unquote count-name) (unquote tempo) (unquote name))
         (sp-times-cusum (unquote name) (unquote count-name) (unquote name))))))
+
+(sc-define-syntax* (declare-struct-type name-and-fields ...)
+  "(declare-struct-type name (field type) name/(field type) ...)"
+  (pair (q begin)
+    (map-slice 2
+      (l (name fields)
+        (qq (declare (unquote name) (type (struct (unquote-splicing (map-slice 2 list fields)))))))
+      name-and-fields)))

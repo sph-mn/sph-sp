@@ -1,6 +1,6 @@
 
 /** out memory is allocated */
-status_t sp_path_samples_new(sp_path_t path, sp_path_time_t size, sp_sample_t** out) {
+status_t sp_path_samples_new(sp_path_t path, sp_time_t size, sp_sample_t** out) {
   status_declare;
   sp_sample_t* out_temp;
   if (0 == size) {
@@ -15,7 +15,7 @@ exit:
 
 /** return a sp_time_t array from path.
    memory is allocated and ownership transferred to the caller */
-status_t sp_path_times_new(sp_path_t path, sp_path_time_t size, sp_time_t** out) {
+status_t sp_path_times_new(sp_path_t path, sp_time_t size, sp_time_t** out) {
   status_declare;
   sp_time_t* out_temp;
   sp_sample_t* temp;
@@ -91,10 +91,10 @@ status_t sp_path_samples_4(sp_sample_t** out, sp_time_t size, sp_path_segment_t 
    * invalid paths are possible if x_changes exceed range between the new previous and next point */
 status_t sp_path_derivation(sp_path_t path, sp_sample_t** x_changes, sp_sample_t** y_changes, sp_time_t index, sp_path_t* out) {
   status_declare;
-  sp_path_time_t p_i;
+  sp_time_t p_i;
   sp_path_point_t* p;
   sp_path_segment_count_t s_i;
-  sp_path_time_t sp_i;
+  sp_time_t sp_i;
   sp_path_segment_t* s;
   sp_path_segment_t* ss;
   /* copy segments */
@@ -126,10 +126,10 @@ exit:
 }
 
 /** get one derivation as a sp_sample_t array. out memory will be allocated */
-status_t sp_path_samples_derivation(sp_path_t path, sp_sample_t** x_changes, sp_sample_t** y_changes, sp_time_t index, sp_sample_t** out, sp_path_time_t* out_size) {
+status_t sp_path_samples_derivation(sp_path_t path, sp_sample_t** x_changes, sp_sample_t** y_changes, sp_time_t index, sp_sample_t** out, sp_time_t* out_size) {
   status_declare;
   sp_sample_t* out_temp;
-  sp_path_time_t size;
+  sp_time_t size;
   status_require((sp_path_derivation(path, x_changes, y_changes, index, (&path))));
   size = sp_path_size(path);
   status_require((sp_samples_new(size, (&out_temp))));
@@ -141,7 +141,7 @@ exit:
 }
 
 /** get one derivation as a sp_time_t array. out memory will be allocated */
-status_t sp_path_times_derivation(sp_path_t path, sp_sample_t** x_changes, sp_sample_t** y_changes, sp_time_t index, sp_time_t** out, sp_path_time_t* out_size) {
+status_t sp_path_times_derivation(sp_path_t path, sp_sample_t** x_changes, sp_sample_t** y_changes, sp_time_t index, sp_time_t** out, sp_time_t* out_size) {
   status_declare;
   sp_time_t* result;
   sp_sample_t* temp;

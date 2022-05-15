@@ -268,7 +268,7 @@
   "like sp-windowed-sinc-lp-hp but for a band-pass or band-reject filter"
   status-declare
   (sc-comment "setup arguments array for ir-f")
-  (declare a (array uint8-t ((+ (sizeof sp-bool-t) (* 3 (sizeof sp-sample-t))))) a-len uint8-t)
+  (declare a (array uint8-t ((+ (sizeof sp-bool-t) (* 4 (sizeof sp-sample-t))))) a-len uint8-t)
   (set
     a-len (+ (sizeof sp-bool-t) (* 4 (sizeof sp-sample-t)))
     (pointer-get (convert-type a sp-sample-t*)) cutoff-l

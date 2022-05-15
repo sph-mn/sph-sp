@@ -8,7 +8,6 @@
   sp-channel-count-t uint8-t
   sp-file-format (bit-or SF-FORMAT-WAV SF_FORMAT_FLOAT)
   sp-sample-t double
-  spline-path-time-t sp-time-t
   spline-path-value-t sp-sample-t
   sp-samples-sum f64-sum
   sp-sample-t double
@@ -95,7 +94,11 @@
   (free-on-error address handler) (memreg2-add-named error address handler)
   (free-on-exit address handler) (memreg2-add-named exit address handler)
   (free-on-error1 address) (free-on-error address free)
-  (free-on-exit1 address) (free-on-exit address free))
+  (free-on-exit1 address) (free-on-exit address free)
+  (sp-hz->samples x) (/ sp-rate (convert-type x sp-sample-t))
+  (sp-samples->hz x) (convert-type (/ sp-rate x) sp-time-t)
+  (sp-hz->factor x) (/ (convert-type x sp-sample-t) sp-rate)
+  (sp-factor->hz x) (convert-type (* x sp-rate) sp-time-t))
 
 (declare
   sp-block-t
@@ -608,7 +611,6 @@
 
 (pre-define
   sp-path-t spline-path-t
-  sp-path-time-t spline-path-time-t
   sp-path-value-t spline-path-value-t
   sp-path-point-t spline-path-point-t
   sp-path-segment-t spline-path-segment-t
@@ -637,7 +639,7 @@
   (sp-path-samples-2 out size (sp-path-move 0 value) (sp-path-constant)))
 
 (declare
-  (sp-path-samples-new path size out) (status-t sp-path-t sp-path-time-t sp-sample-t**)
+  (sp-path-samples-new path size out) (status-t sp-path-t sp-time-t sp-sample-t**)
   (sp-path-samples-1 out size s1) (status-t sp-sample-t** sp-time-t sp-path-segment-t)
   (sp-path-samples-2 out size s1 s2)
   (status-t sp-sample-t** sp-time-t sp-path-segment-t sp-path-segment-t)
@@ -646,7 +648,7 @@
   (sp-path-samples-4 out size s1 s2 s3 s4)
   (status-t sp-sample-t** sp-time-t
     sp-path-segment-t sp-path-segment-t sp-path-segment-t sp-path-segment-t)
-  (sp-path-times-new path size out) (status-t sp-path-t sp-path-time-t sp-time-t**)
+  (sp-path-times-new path size out) (status-t sp-path-t sp-time-t sp-time-t**)
   (sp-path-times-1 out size s1) (status-t sp-time-t** sp-time-t sp-path-segment-t)
   (sp-path-times-2 out size s1 s2)
   (status-t sp-time-t** sp-time-t sp-path-segment-t sp-path-segment-t)
@@ -658,9 +660,9 @@
   (sp-path-derivation path x-changes y-changes index out)
   (status-t sp-path-t sp-sample-t** sp-sample-t** sp-time-t sp-path-t*)
   (sp-path-samples-derivation path x-changes y-changes index out out-size)
-  (status-t sp-path-t sp-sample-t** sp-sample-t** sp-time-t sp-sample-t** sp-path-time-t*)
+  (status-t sp-path-t sp-sample-t** sp-sample-t** sp-time-t sp-sample-t** sp-time-t*)
   (sp-path-times-derivation path x-changes y-changes index out out-size)
-  (status-t sp-path-t sp-sample-t** sp-sample-t** sp-time-t sp-time-t** sp-path-time-t*)
+  (status-t sp-path-t sp-sample-t** sp-sample-t** sp-time-t sp-time-t** sp-time-t*)
   (sp-path-multiply path x-factor y-factor) (void sp-path-t sp-sample-t sp-sample-t)
   (sp-path-derivations-normalized base count x-changes y-changes out)
   (status-t sp-path-t sp-time-t sp-sample-t** sp-sample-t** sp-path-t**)

@@ -24,9 +24,6 @@
 #ifndef sp_sample_t
 #define sp_sample_t double
 #endif
-#ifndef spline_path_time_t
-#define spline_path_time_t sp_time_t
-#endif
 #ifndef spline_path_value_t
 #define spline_path_value_t sp_sample_t
 #endif
@@ -161,6 +158,10 @@
 #define free_on_exit(address, handler) memreg2_add_named(exit, address, handler)
 #define free_on_error1(address) free_on_error(address, free)
 #define free_on_exit1(address) free_on_exit(address, free)
+#define sp_hz_to_samples(x) (sp_rate / ((sp_sample_t)(x)))
+#define sp_samples_to_hz(x) ((sp_time_t)((sp_rate / x)))
+#define sp_hz_to_factor(x) (((sp_sample_t)(x)) / sp_rate)
+#define sp_factor_to_hz(x) ((sp_time_t)((x * sp_rate)))
 typedef struct {
   sp_channel_count_t channels;
   sp_time_t size;
@@ -604,7 +605,6 @@ void sp_wave_event_config_defaults(sp_wave_event_config_t* config);
 /* path */
 
 #define sp_path_t spline_path_t
-#define sp_path_time_t spline_path_time_t
 #define sp_path_value_t spline_path_value_t
 #define sp_path_point_t spline_path_point_t
 #define sp_path_segment_t spline_path_segment_t
@@ -629,19 +629,19 @@ void sp_wave_event_config_defaults(sp_wave_event_config_t* config);
 #define sp_path_set spline_path_set
 #define sp_path_times_constant(out, size, value) sp_path_times_2(out, size, (sp_path_move(0, value)), (sp_path_constant()))
 #define sp_path_samples_constant(out, size, value) sp_path_samples_2(out, size, (sp_path_move(0, value)), (sp_path_constant()))
-status_t sp_path_samples_new(sp_path_t path, sp_path_time_t size, sp_sample_t** out);
+status_t sp_path_samples_new(sp_path_t path, sp_time_t size, sp_sample_t** out);
 status_t sp_path_samples_1(sp_sample_t** out, sp_time_t size, sp_path_segment_t s1);
 status_t sp_path_samples_2(sp_sample_t** out, sp_time_t size, sp_path_segment_t s1, sp_path_segment_t s2);
 status_t sp_path_samples_3(sp_sample_t** out, sp_time_t size, sp_path_segment_t s1, sp_path_segment_t s2, sp_path_segment_t s3);
 status_t sp_path_samples_4(sp_sample_t** out, sp_time_t size, sp_path_segment_t s1, sp_path_segment_t s2, sp_path_segment_t s3, sp_path_segment_t s4);
-status_t sp_path_times_new(sp_path_t path, sp_path_time_t size, sp_time_t** out);
+status_t sp_path_times_new(sp_path_t path, sp_time_t size, sp_time_t** out);
 status_t sp_path_times_1(sp_time_t** out, sp_time_t size, sp_path_segment_t s1);
 status_t sp_path_times_2(sp_time_t** out, sp_time_t size, sp_path_segment_t s1, sp_path_segment_t s2);
 status_t sp_path_times_3(sp_time_t** out, sp_time_t size, sp_path_segment_t s1, sp_path_segment_t s2, sp_path_segment_t s3);
 status_t sp_path_times_4(sp_time_t** out, sp_time_t size, sp_path_segment_t s1, sp_path_segment_t s2, sp_path_segment_t s3, sp_path_segment_t s4);
 status_t sp_path_derivation(sp_path_t path, sp_sample_t** x_changes, sp_sample_t** y_changes, sp_time_t index, sp_path_t* out);
-status_t sp_path_samples_derivation(sp_path_t path, sp_sample_t** x_changes, sp_sample_t** y_changes, sp_time_t index, sp_sample_t** out, sp_path_time_t* out_size);
-status_t sp_path_times_derivation(sp_path_t path, sp_sample_t** x_changes, sp_sample_t** y_changes, sp_time_t index, sp_time_t** out, sp_path_time_t* out_size);
+status_t sp_path_samples_derivation(sp_path_t path, sp_sample_t** x_changes, sp_sample_t** y_changes, sp_time_t index, sp_sample_t** out, sp_time_t* out_size);
+status_t sp_path_times_derivation(sp_path_t path, sp_sample_t** x_changes, sp_sample_t** y_changes, sp_time_t index, sp_time_t** out, sp_time_t* out_size);
 void sp_path_multiply(sp_path_t path, sp_sample_t x_factor, sp_sample_t y_factor);
 status_t sp_path_derivations_normalized(sp_path_t base, sp_time_t count, sp_sample_t** x_changes, sp_sample_t** y_changes, sp_path_t** out);
 status_t sp_path_samples_derivations_normalized(sp_path_t path, sp_time_t count, sp_sample_t** x_changes, sp_sample_t** y_changes, sp_sample_t*** out, sp_time_t** out_sizes);

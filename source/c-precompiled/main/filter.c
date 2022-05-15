@@ -291,7 +291,7 @@ exit:
 status_t sp_windowed_sinc_bp_br(sp_sample_t* in, sp_time_t in_len, sp_sample_t cutoff_l, sp_sample_t cutoff_h, sp_sample_t transition_l, sp_sample_t transition_h, sp_bool_t is_reject, sp_convolution_filter_state_t** out_state, sp_sample_t* out_samples) {
   status_declare;
   /* setup arguments array for ir-f */
-  uint8_t a[(sizeof(sp_bool_t) + (3 * sizeof(sp_sample_t)))];
+  uint8_t a[(sizeof(sp_bool_t) + (4 * sizeof(sp_sample_t)))];
   uint8_t a_len;
   a_len = (sizeof(sp_bool_t) + (4 * sizeof(sp_sample_t)));
   *((sp_sample_t*)(a)) = cutoff_l;
