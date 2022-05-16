@@ -214,7 +214,7 @@ sp_sample_t sp_square(sp_time_t t, sp_time_t size);
 sp_sample_t sp_triangle(sp_time_t t, sp_time_t a, sp_time_t b);
 sp_time_t sp_time_expt(sp_time_t base, sp_time_t exp);
 sp_time_t sp_time_factorial(sp_time_t a);
-sp_sample_t pan_to_amp(sp_sample_t value, sp_channel_count_t channel);
+sp_sample_t sp_pan_to_amp(sp_sample_t value, sp_channel_count_t channel);
 /* arrays */
 
 #define sp_samples_zero(a, size) memset(a, 0, (size * sizeof(sp_sample_t)))
@@ -565,6 +565,7 @@ typedef struct {
   sp_time_t* fmod;
   sp_time_t wdt;
   sp_time_t* wmod;
+  sp_channel_config_t channel_config[sp_channel_limit];
 } sp_sound_event_config_t;
 status_t (*sp_event_prepare_t)(sp_event_t*);
 typedef status_t (*sp_map_generate_t)(sp_time_t, sp_time_t, sp_block_t, sp_block_t, void*);
@@ -579,6 +580,7 @@ typedef struct {
   void* state;
   sp_bool_t isolate;
 } sp_map_event_config_t;
+void sp_channel_config_zero(sp_channel_config_t* a);
 void sp_event_list_display(sp_event_list_t* a);
 void sp_event_list_reverse(sp_event_list_t** a);
 void sp_event_list_validate(sp_event_list_t* a);

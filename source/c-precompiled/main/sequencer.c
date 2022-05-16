@@ -988,13 +988,16 @@ status_t sp_sound_event(sp_sound_event_config_t config, sp_event_t* out) {
     srq((sp_sound_event_cheap_noise(config, out)));
   } else {
     sp_wave_event_config_t* event_config;
-    sp_event_memory_init(out, 1);
+    /* (sp-event-memory-init out 1) */
     srq((sp_wave_event_config_new((&event_config))));
-    sp_event_memory_add(out, event_config);
+    /* (sp-event-memory-add out event-config) */
     event_config->amp = config.amp;
     event_config->amod = config.amod;
     event_config->fmod = config.fmod;
     event_config->frq = config.frq;
+    for (sp_time_t i = 0; (i < sp_channel_limit); i += 1) {
+      (event_config->channel_config)[i] = (config.channel_config)[i];
+    };
     out->data = event_config;
     out->prepare = sp_wave_event_prepare;
   };

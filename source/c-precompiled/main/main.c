@@ -423,7 +423,7 @@ sp_random_state_t sp_random_state_new(sp_time_t seed) {
    1: first channel muted
    0.75: first channel 50%
    0.25: second channel 50% */
-sp_sample_t pan_to_amp(sp_sample_t value, sp_channel_count_t channel) { return (((1 & channel) ? (sp_limit(value, (channel - 1), (channel - 0.5)) / 0.5) : (1 - ((sp_limit(value, (channel + 0.5), (channel + 1)) - 0.5) / 0.5)))); }
+sp_sample_t sp_pan_to_amp(sp_sample_t value, sp_channel_count_t channel) { return (((1 & channel) ? (sp_limit(value, (channel - 1), (channel - 0.5)) / 0.5) : (1 - ((sp_limit(value, (channel + 0.5), (channel + 1)) - 0.5) / 0.5)))); }
 
 /** fills the sine wave lookup table.
    rate and channels are used to set sp_rate and sp_channels,

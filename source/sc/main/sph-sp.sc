@@ -157,7 +157,7 @@
   (sp-triangle t a b) (sp-sample-t sp-time-t sp-time-t sp-time-t)
   (sp-time-expt base exp) (sp-time-t sp-time-t sp-time-t)
   (sp-time-factorial a) (sp-time-t sp-time-t)
-  (pan->amp value channel) (sp-sample-t sp-sample-t sp-channel-count-t))
+  (sp-pan->amp value channel) (sp-sample-t sp-sample-t sp-channel-count-t))
 
 (sc-comment "arrays")
 
@@ -572,7 +572,8 @@
       (frq sp-time-t)
       (fmod sp-time-t*)
       (wdt sp-time-t)
-      (wmod sp-time-t*)))
+      (wmod sp-time-t*)
+      (channel-config (array sp-channel-config-t sp-channel-limit))))
   sp-event-prepare-t (function-pointer status-t sp-event-t*)
   sp-map-generate-t
   (type (function-pointer status-t sp-time-t sp-time-t sp-block-t sp-block-t void*))
@@ -580,7 +581,8 @@
   (type (struct (event sp-event-t) (map-generate sp-map-generate-t) (state void*)))
   sp-map-event-config-t
   (type
-    (struct (event sp-event-t) (map-generate sp-map-generate-t) (state void*) (isolate sp-bool-t))))
+    (struct (event sp-event-t) (map-generate sp-map-generate-t) (state void*) (isolate sp-bool-t)))
+  (sp-channel-config-zero a) (void sp-channel-config-t*))
 
 (declare
   (sp-event-list-display a) (void sp-event-list-t*)

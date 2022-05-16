@@ -979,16 +979,16 @@ exit:
   };
   status_return;
 }
-status_t test_pan_to_amp() {
+status_t test_sp_pan_to_amp() {
   status_declare;
-  test_helper_assert("value 0, channel 0", (sp_sample_nearly_equal(1, (pan_to_amp(0, 0)), error_margin)));
-  test_helper_assert("value 0, channel 1", (sp_sample_nearly_equal(0, (pan_to_amp(0, 1)), error_margin)));
-  test_helper_assert("value 1, channel 0", (sp_sample_nearly_equal(0, (pan_to_amp(1, 0)), error_margin)));
-  test_helper_assert("value 1, channel 1", (sp_sample_nearly_equal(1, (pan_to_amp(1, 1)), error_margin)));
-  test_helper_assert(("value 0.5, channel 0"), (sp_sample_nearly_equal(1, (pan_to_amp((0.5), 0)), error_margin)));
-  test_helper_assert(("value 0.5, channel 0"), (sp_sample_nearly_equal(1, (pan_to_amp((0.5), 1)), error_margin)));
-  test_helper_assert(("value 0.25, channel 0"), (sp_sample_nearly_equal(1, (pan_to_amp((0.25), 0)), error_margin)));
-  test_helper_assert(("value 0.25, channel 1"), (sp_sample_nearly_equal((0.5), (pan_to_amp((0.25), 1)), error_margin)));
+  test_helper_assert("value 0, channel 0", (sp_sample_nearly_equal(1, (sp_pan_to_amp(0, 0)), error_margin)));
+  test_helper_assert("value 0, channel 1", (sp_sample_nearly_equal(0, (sp_pan_to_amp(0, 1)), error_margin)));
+  test_helper_assert("value 1, channel 0", (sp_sample_nearly_equal(0, (sp_pan_to_amp(1, 0)), error_margin)));
+  test_helper_assert("value 1, channel 1", (sp_sample_nearly_equal(1, (sp_pan_to_amp(1, 1)), error_margin)));
+  test_helper_assert(("value 0.5, channel 0"), (sp_sample_nearly_equal(1, (sp_pan_to_amp((0.5), 0)), error_margin)));
+  test_helper_assert(("value 0.5, channel 0"), (sp_sample_nearly_equal(1, (sp_pan_to_amp((0.5), 1)), error_margin)));
+  test_helper_assert(("value 0.25, channel 0"), (sp_sample_nearly_equal(1, (sp_pan_to_amp((0.25), 0)), error_margin)));
+  test_helper_assert(("value 0.25, channel 1"), (sp_sample_nearly_equal((0.5), (sp_pan_to_amp((0.25), 1)), error_margin)));
 exit:
   status_return;
 }
@@ -999,7 +999,7 @@ int main() {
   rs = sp_random_state_new(3);
   sp_initialize(3, 2, _rate);
   test_helper_test_one(test_sp_sound_event);
-  test_helper_test_one(test_pan_to_amp);
+  test_helper_test_one(test_sp_pan_to_amp);
   test_helper_test_one(test_windowed_sinc_continuity);
   test_helper_test_one(test_convolve_smaller);
   test_helper_test_one(test_convolve_larger);

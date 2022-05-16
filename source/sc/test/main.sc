@@ -874,20 +874,20 @@
   (free amod)
   (label exit (if status-is-failure free-on-error-free) status-return))
 
-(define (test-pan->amp) status-t
+(define (test-sp-pan->amp) status-t
   status-declare
-  (test-helper-assert "value 0, channel 0" (sp-sample-nearly-equal 1 (pan->amp 0 0) error-margin))
-  (test-helper-assert "value 0, channel 1" (sp-sample-nearly-equal 0 (pan->amp 0 1) error-margin))
-  (test-helper-assert "value 1, channel 0" (sp-sample-nearly-equal 0 (pan->amp 1 0) error-margin))
-  (test-helper-assert "value 1, channel 1" (sp-sample-nearly-equal 1 (pan->amp 1 1) error-margin))
+  (test-helper-assert "value 0, channel 0" (sp-sample-nearly-equal 1 (sp-pan->amp 0 0) error-margin))
+  (test-helper-assert "value 0, channel 1" (sp-sample-nearly-equal 0 (sp-pan->amp 0 1) error-margin))
+  (test-helper-assert "value 1, channel 0" (sp-sample-nearly-equal 0 (sp-pan->amp 1 0) error-margin))
+  (test-helper-assert "value 1, channel 1" (sp-sample-nearly-equal 1 (sp-pan->amp 1 1) error-margin))
   (test-helper-assert "value 0.5, channel 0"
-    (sp-sample-nearly-equal 1 (pan->amp 0.5 0) error-margin))
+    (sp-sample-nearly-equal 1 (sp-pan->amp 0.5 0) error-margin))
   (test-helper-assert "value 0.5, channel 0"
-    (sp-sample-nearly-equal 1 (pan->amp 0.5 1) error-margin))
+    (sp-sample-nearly-equal 1 (sp-pan->amp 0.5 1) error-margin))
   (test-helper-assert "value 0.25, channel 0"
-    (sp-sample-nearly-equal 1 (pan->amp 0.25 0) error-margin))
+    (sp-sample-nearly-equal 1 (sp-pan->amp 0.25 0) error-margin))
   (test-helper-assert "value 0.25, channel 1"
-    (sp-sample-nearly-equal 0.5 (pan->amp 0.25 1) error-margin))
+    (sp-sample-nearly-equal 0.5 (sp-pan->amp 0.25 1) error-margin))
   (label exit status-return))
 
 (define (main) int
@@ -896,7 +896,7 @@
   (set rs (sp-random-state-new 3))
   (sp-initialize 3 2 _rate)
   (test-helper-test-one test-sp-sound-event)
-  (test-helper-test-one test-pan->amp)
+  (test-helper-test-one test-sp-pan->amp)
   (test-helper-test-one test-windowed-sinc-continuity)
   (test-helper-test-one test-convolve-smaller)
   (test-helper-test-one test-convolve-larger)

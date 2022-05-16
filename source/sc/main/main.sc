@@ -317,7 +317,7 @@
   (sp-time-random &result)
   (return result))
 
-(define (pan->amp value channel) (sp-sample-t sp-sample-t sp-channel-count-t)
+(define (sp-pan->amp value channel) (sp-sample-t sp-sample-t sp-channel-count-t)
   "convert a pan value between 0..channel_count to a volume factor.
    values are interpreted as split between even and odd numbers, from channel..(channel + 1),
    0: second channel muted

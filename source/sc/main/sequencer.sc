@@ -824,12 +824,15 @@
   status-declare
   (cond ((= 1 config.noise) (srq (sp-sound-event-noise config out)))
     ((= 2 config.noise) (srq (sp-sound-event-cheap-noise config out)))
-    (else (declare event-config sp-wave-event-config-t*) (sp-event-memory-init out 1)
-      (srq (sp-wave-event-config-new &event-config)) (sp-event-memory-add out event-config)
+    (else (declare event-config sp-wave-event-config-t*) (sc-comment (sp-event-memory-init out 1))
+      (srq (sp-wave-event-config-new &event-config))
+      (sc-comment (sp-event-memory-add out event-config))
       (struct-pointer-set event-config
         amp config.amp
         amod config.amod
         fmod config.fmod
         frq config.frq)
+      (for-each-index i sp-channel-limit
+        (set (array-get event-config:channel-config i) (array-get config.channel-config i)))
       (set out:data event-config out:prepare sp-wave-event-prepare)))
   (label exit status-return))
