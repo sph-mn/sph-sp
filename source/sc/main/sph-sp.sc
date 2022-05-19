@@ -98,7 +98,8 @@
   (sp-hz->samples x) (/ sp-rate x)
   (sp-samples->hz x) (convert-type (/ sp-rate x) sp-time-t)
   (sp-hz->factor x) (/ (convert-type x sp-sample-t) (convert-type sp-rate sp-sample-t))
-  (sp-factor->hz x) (convert-type (* x sp-rate) sp-time-t))
+  (sp-factor->hz x) (convert-type (* x sp-rate) sp-time-t)
+  (sp-event-reset x) (set x sp-event-null))
 
 (declare
   sp-block-t
@@ -117,6 +118,7 @@
   sp-sine-table sp-sample-t*
   sp-sine-table-lfo sp-sample-t*
   sp-sine-lfo-factor sp-time-t
+  (sp-sine size frq phs out) (void sp-time-t sp-time-t sp-time-t sp-sample-t*)
   (sp-random-state-new seed) (sp-random-state-t sp-time-t)
   (sp-block-zero a) (void sp-block-t)
   (sp-block-copy a b) (void sp-block-t sp-block-t)
@@ -157,7 +159,9 @@
   (sp-triangle t a b) (sp-sample-t sp-time-t sp-time-t sp-time-t)
   (sp-time-expt base exp) (sp-time-t sp-time-t sp-time-t)
   (sp-time-factorial a) (sp-time-t sp-time-t)
-  (sp-pan->amp value channel) (sp-sample-t sp-sample-t sp-channel-count-t))
+  (sp-pan->amp value channel) (sp-sample-t sp-sample-t sp-channel-count-t)
+  (sp-sawtooth-amps count amp frq amps) (void sp-time-t sp-sample-t sp-time-t sp-sample-t*)
+  (sp-square-amps count amp amps) (void sp-time-t sp-sample-t sp-sample-t*))
 
 (sc-comment "arrays")
 
@@ -583,6 +587,8 @@
   (type
     (struct (event sp-event-t) (map-generate sp-map-generate-t) (state void*) (isolate sp-bool-t)))
   (sp-channel-config-zero a) (void sp-channel-config-t*))
+
+(define sp-event-null sp-event-t (struct-literal 0))
 
 (declare
   (sp-event-list-display a) (void sp-event-list-t*)

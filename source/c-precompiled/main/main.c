@@ -166,11 +166,32 @@ sp_sample_t sp_triangle(sp_time_t t, sp_time_t a, sp_time_t b) {
 }
 sp_sample_t sp_square(sp_time_t t, sp_time_t size) { return (((((2 * t) % (2 * size)) < size) ? -1 : 1)); }
 
-/** writes one full period of a sine wave into out. can be used to create lookup tables */
+/** writes one full period of a sine wave into out. the sine has the frequency that makes it fit exactly into size.
+   can be used to create lookup tables */
 void sp_sine_period(sp_time_t size, sp_sample_t* out) {
   sp_time_t i;
-  for (i = 0; (i < size); i = (1 + i)) {
+  for (i = 0; (i < size); i += 1) {
     out[i] = sin((i * (M_PI / (size / 2))));
+  };
+}
+void sp_sine(sp_time_t size, sp_time_t frq, sp_time_t phs, sp_sample_t* out) {
+  sp_time_t i;
+  for (i = 0; (i < size); i += 1) {
+    out[i] = sin(((frq * i) + phs));
+  };
+}
+void sp_sawtooth_amps(sp_time_t count, sp_sample_t amp, sp_time_t frq, sp_sample_t* amps) {
+  sp_sample_t sum;
+  for (sp_time_t k = 1; (k <= count); k += 1) {
+    sum += ((pow(-1, k) * sin((2 * M_PI * k * frq))) / k);
+    amps[(k - 1)] = ((amp / 2) - ((amp / M_PI) * sum));
+  };
+}
+void sp_square_amps(sp_time_t count, sp_sample_t amp, sp_sample_t* amps) {
+  sp_time_t i;
+  sp_time_t k;
+  for (i = 0, k = 1; (i < count); i += 1, k += 2) {
+    amps[i] = (amp * (2 / (M_PI * k)));
   };
 }
 

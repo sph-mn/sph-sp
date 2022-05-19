@@ -162,6 +162,7 @@
 #define sp_samples_to_hz(x) ((sp_time_t)((sp_rate / x)))
 #define sp_hz_to_factor(x) (((sp_sample_t)(x)) / ((sp_sample_t)(sp_rate)))
 #define sp_factor_to_hz(x) ((sp_time_t)((x * sp_rate)))
+#define sp_event_reset(x) x = sp_event_null
 typedef struct {
   sp_channel_count_t channels;
   sp_time_t size;
@@ -180,6 +181,7 @@ sp_channel_count_t sp_channels;
 sp_sample_t* sp_sine_table;
 sp_sample_t* sp_sine_table_lfo;
 sp_time_t sp_sine_lfo_factor;
+void sp_sine(sp_time_t size, sp_time_t frq, sp_time_t phs, sp_sample_t* out);
 sp_random_state_t sp_random_state_new(sp_time_t seed);
 void sp_block_zero(sp_block_t a);
 void sp_block_copy(sp_block_t a, sp_block_t b);
@@ -215,6 +217,8 @@ sp_sample_t sp_triangle(sp_time_t t, sp_time_t a, sp_time_t b);
 sp_time_t sp_time_expt(sp_time_t base, sp_time_t exp);
 sp_time_t sp_time_factorial(sp_time_t a);
 sp_sample_t sp_pan_to_amp(sp_sample_t value, sp_channel_count_t channel);
+void sp_sawtooth_amps(sp_time_t count, sp_sample_t amp, sp_time_t frq, sp_sample_t* amps);
+void sp_square_amps(sp_time_t count, sp_sample_t amp, sp_sample_t* amps);
 /* arrays */
 
 #define sp_samples_zero(a, size) memset(a, 0, (size * sizeof(sp_sample_t)))
@@ -581,6 +585,7 @@ typedef struct {
   sp_bool_t isolate;
 } sp_map_event_config_t;
 void sp_channel_config_zero(sp_channel_config_t* a);
+sp_event_t sp_event_null = { 0 };
 void sp_event_list_display(sp_event_list_t* a);
 void sp_event_list_reverse(sp_event_list_t** a);
 void sp_event_list_validate(sp_event_list_t* a);

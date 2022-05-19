@@ -413,6 +413,7 @@
 (define (sp-times-additions start summand count out)
   (void sp-time-t sp-time-t sp-time-t sp-time-t*)
   "write count cumulative additions with summand from start to out.
+   with summand, only the nth additions are written.
    use case: generating harmonic frequency values"
   (declare i sp-time-t)
   (for ((set i 0) (< i count) (set+ i 1)) (set (array-get out i) start) (set+ start summand)))
@@ -699,3 +700,11 @@
     (set v (array-get in i))
     (if (> 0 v) (set (array-get out i) (if* (> (* -1 n) v) (* -1 n) v))
       (set (array-get out i) (if* (< n v) n v)))))
+
+(define (sp-times-extract-in-range a size min max out out-size)
+  (void sp-time-t* sp-time-t sp-time-t sp-time-t sp-time-t* sp-time-t*)
+  "extract values between min/max inclusive and write to out"
+  (set *out-size 0)
+  (for ((define i sp-time-t 0) (< i size) (set+ i 1))
+    (if (or (<= (array-get a i) max) (>= (array-get a i) min))
+      (begin (set (array-get out i) (array-get a i)) (set+ *out-size 1)))))

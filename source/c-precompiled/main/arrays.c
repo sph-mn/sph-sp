@@ -547,6 +547,7 @@ void sp_times_multiplications(sp_time_t start, sp_time_t factor, sp_time_t count
 }
 
 /** write count cumulative additions with summand from start to out.
+   with summand, only the nth additions are written.
    use case: generating harmonic frequency values */
 void sp_times_additions(sp_time_t start, sp_time_t summand, sp_time_t count, sp_time_t* out) {
   sp_time_t i;
@@ -904,6 +905,17 @@ void sp_samples_limit_abs(sp_sample_t* in, sp_time_t size, sp_sample_t n, sp_sam
       out[i] = (((-1 * n) > v) ? (-1 * n) : v);
     } else {
       out[i] = ((n < v) ? n : v);
+    };
+  };
+}
+
+/** extract values between min/max inclusive and write to out */
+void sp_times_extract_in_range(sp_time_t* a, sp_time_t size, sp_time_t min, sp_time_t max, sp_time_t* out, sp_time_t* out_size) {
+  *out_size = 0;
+  for (sp_time_t i = 0; (i < size); i += 1) {
+    if ((a[i] <= max) || (a[i] >= min)) {
+      out[i] = a[i];
+      *out_size += 1;
     };
   };
 }

@@ -119,10 +119,24 @@
   (return (if* (< (modulo (* 2 t) (* 2 size)) size) -1 1)))
 
 (define (sp-sine-period size out) (void sp-time-t sp-sample-t*)
-  "writes one full period of a sine wave into out. can be used to create lookup tables"
+  "writes one full period of a sine wave into out. the sine has the frequency that makes it fit exactly into size.
+   can be used to create lookup tables"
   (declare i sp-time-t)
-  (for ((set i 0) (< i size) (set i (+ 1 i)))
-    (set (array-get out i) (sin (* i (/ M_PI (/ size 2)))))))
+  (for ((set i 0) (< i size) (set+ i 1)) (set (array-get out i) (sin (* i (/ M_PI (/ size 2)))))))
+
+(define (sp-sine size frq phs out) (void sp-time-t sp-time-t sp-time-t sp-sample-t*)
+  (declare i sp-time-t)
+  (for ((set i 0) (< i size) (set+ i 1)) (set (array-get out i) (sin (+ (* frq i) phs)))))
+
+(define (sp-sawtooth-amps count amp frq amps) (void sp-time-t sp-sample-t sp-time-t sp-sample-t*)
+  (declare sum sp-sample-t)
+  (for ((define k sp-time-t 1) (<= k count) (set+ k 1))
+    (set+ sum (/ (* (pow -1 k) (sin (* 2 M_PI k frq))) k))
+    (set (array-get amps (- k 1)) (- (/ amp 2) (* (/ amp M_PI) sum)))))
+
+(define (sp-square-amps count amp amps) (void sp-time-t sp-sample-t sp-sample-t*)
+  (declare i sp-time-t k sp-time-t)
+  (for ((set i 0 k 1) (< i count) (set+ i 1 k 2)) (set (array-get amps i) (* amp (/ 2 (* M_PI k))))))
 
 (define (sp-sinc a) (sp-sample-t sp-sample-t)
   "the normalised sinc function"
