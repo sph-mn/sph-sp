@@ -129,12 +129,14 @@
   (for ((set i 0) (< i size) (set+ i 1)) (set (array-get out i) (sin (+ (* frq i) phs)))))
 
 (define (sp-sawtooth-amps count amp frq amps) (void sp-time-t sp-sample-t sp-time-t sp-sample-t*)
+  "calculate the amplitude values for summing sines to a sawtooth wave"
   (declare sum sp-sample-t)
   (for ((define k sp-time-t 1) (<= k count) (set+ k 1))
     (set+ sum (/ (* (pow -1 k) (sin (* 2 M_PI k frq))) k))
     (set (array-get amps (- k 1)) (- (/ amp 2) (* (/ amp M_PI) sum)))))
 
 (define (sp-square-amps count amp amps) (void sp-time-t sp-sample-t sp-sample-t*)
+  "calculate the amplitude values for summing sines to a square wave"
   (declare i sp-time-t k sp-time-t)
   (for ((set i 0 k 1) (< i count) (set+ i 1 k 2)) (set (array-get amps i) (* amp (/ 2 (* M_PI k))))))
 
@@ -342,6 +344,32 @@
   (return
     (if* (bit-and 1 channel) (/ (sp-limit value (- channel 1) (- channel 0.5)) 0.5)
       (- 1 (/ (- (sp-limit value (+ channel 0.5) (+ channel 1)) 0.5) 0.5)))))
+
+(define (sp-normal-random random-state min max) (sp-time-t sp-random-state-t* sp-time-t sp-time-t)
+  "untested. return normally distributed numbers in range"
+  (declare samples (array sp-time-t 32) result sp-sample-t)
+  (sp-times-random-bounded random-state (- max min) 32 samples)
+  (sp-times-add-1 samples 32 min samples)
+  (sp-stat-times-mean samples 32 &result)
+  (return (convert-type result sp-time-t)))
+
+(define (sp-time-harmonize a base amount) (sp-time-t sp-time-t sp-time-t sp-sample-t)
+  "untested. round value amount distance to nearest multiple of base.
+   for example, amount 1.0 rounds fully, amount 0.0 does not round at all, amount 0.5 rounds half-way"
+  (declare nearest sp-time-t)
+  (set nearest (* (/ (- (+ a base) 1) base) base))
+  (return (if* (> a nearest) (- a (* amount (- a nearest))) (+ a (* amount (- nearest a))))))
+
+(define (sp-time-deharmonize a base amount) (sp-time-t sp-time-t sp-time-t sp-sample-t)
+  "untested. the nearer values are to the multiple, the further move them randomly up to half base away"
+  (declare nearest sp-time-t distance-ratio sp-sample-t)
+  (set
+    nearest (* (/ (- (+ a base) 1) base) base)
+    distance-ratio (/ (- base (sp-absolute-difference a nearest)) (convert-type base sp-sample-t))
+    amount (* amount distance-ratio (+ 1 (sp-time-random-bounded &sp-random-state (/ base 2)))))
+  (if (or (> a nearest) (< a amount)) (return (+ a amount))
+    (if (< a nearest) (return (- a amount))
+      (if (bit-and 1 (sp-time-random &sp-random-state)) (return (- a amount)) (return (+ a amount))))))
 
 (define (sp-initialize cpu-count channels rate) (status-t uint16-t sp-channel-count-t sp-time-t)
   "fills the sine wave lookup table.

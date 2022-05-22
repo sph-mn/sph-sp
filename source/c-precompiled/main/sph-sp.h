@@ -219,6 +219,9 @@ sp_time_t sp_time_factorial(sp_time_t a);
 sp_sample_t sp_pan_to_amp(sp_sample_t value, sp_channel_count_t channel);
 void sp_sawtooth_amps(sp_time_t count, sp_sample_t amp, sp_time_t frq, sp_sample_t* amps);
 void sp_square_amps(sp_time_t count, sp_sample_t amp, sp_sample_t* amps);
+sp_time_t sp_normal_random(sp_random_state_t* random_state, sp_time_t min, sp_time_t max);
+sp_time_t sp_time_harmonize(sp_time_t a, sp_time_t base, sp_sample_t amount);
+sp_time_t sp_time_deharmonize(sp_time_t a, sp_time_t base, sp_sample_t amount);
 /* arrays */
 
 #define sp_samples_zero(a, size) memset(a, 0, (size * sizeof(sp_sample_t)))
@@ -226,6 +229,8 @@ void sp_square_amps(sp_time_t count, sp_sample_t amp, sp_sample_t* amps);
 #define sp_time_interpolate_linear(a, b, t) sp_cheap_round_positive((((1 - ((sp_sample_t)(t))) * ((sp_sample_t)(a))) + (t * ((sp_sample_t)(b)))))
 #define sp_sample_interpolate_linear(a, b, t) (((1 - t) * a) + (t * b))
 #define sp_sequence_set_equal(a, b) ((a.size == b.size) && (((0 == a.size) && (0 == b.size)) || (0 == memcmp((a.data), (b.data), (a.size * sizeof(sp_time_t))))))
+
+/* sp-sequence-set and sp-time-set can be used for deduplication */
 typedef struct {
   sp_time_t size;
   uint8_t* data;
@@ -332,14 +337,18 @@ void sp_times_counted_sequences_sort_swap(void* a, ssize_t b, ssize_t c);
 uint8_t sp_times_counted_sequences_sort_less(void* a, ssize_t b, ssize_t c);
 uint8_t sp_times_counted_sequences_sort_greater(void* a, ssize_t b, ssize_t c);
 status_t sp_times_deduplicate(sp_time_t* a, sp_time_t size, sp_time_t* out, sp_time_t* out_size);
-void sp_times_counted_sequences_hash(sp_time_t* a, sp_time_t size, sp_time_t width, sp_sequence_hashtable_t out);
-void sp_times_counted_sequences(sp_sequence_hashtable_t known, sp_time_t limit, sp_times_counted_sequences_t* out, sp_time_t* out_size);
+void sp_times_counted_sequences_add(sp_time_t* a, sp_time_t size, sp_time_t width, sp_sequence_hashtable_t out);
+void sp_times_counted_sequences_values(sp_sequence_hashtable_t known, sp_time_t min, sp_times_counted_sequences_t* out, sp_time_t* out_size);
+sp_time_t sp_times_counted_sequences_count(sp_time_t* a, sp_time_t width, sp_sequence_hashtable_t b);
 void sp_times_remove(sp_time_t* in, sp_time_t size, sp_time_t index, sp_time_t count, sp_time_t* out);
 void sp_times_insert_space(sp_time_t* in, sp_time_t size, sp_time_t index, sp_time_t count, sp_time_t* out);
-void sp_times_subdivide(sp_time_t* a, sp_time_t size, sp_time_t index, sp_time_t count, sp_time_t* out);
+void sp_times_subdivide_difference(sp_time_t* a, sp_time_t size, sp_time_t index, sp_time_t count, sp_time_t* out);
 void sp_times_blend(sp_time_t* a, sp_time_t* b, sp_sample_t fraction, sp_time_t size, sp_time_t* out);
 void sp_times_mask(sp_time_t* a, sp_time_t* b, sp_sample_t* coefficients, sp_time_t size, sp_time_t* out);
 void sp_samples_blend(sp_sample_t* a, sp_sample_t* b, sp_sample_t fraction, sp_time_t size, sp_sample_t* out);
+void sp_times_make_seamless_right(sp_time_t* a, sp_time_t a_size, sp_time_t* b, sp_time_t b_size, sp_time_t* out);
+void sp_times_make_seamless_left(sp_time_t* a, sp_time_t a_size, sp_time_t* b, sp_time_t b_size, sp_time_t* out);
+void sp_times_extract_in_range(sp_time_t* a, sp_time_t size, sp_time_t min, sp_time_t max, sp_time_t* out, sp_time_t* out_size);
 /* filter */
 
 #define sp_filter_state_t sp_convolution_filter_state_t
@@ -485,6 +494,7 @@ void sp_plot_spectrum(sp_sample_t* a, sp_time_t a_size);
   sp_event_memory_add(_event, (*pointer_address))
 #define sp_event_config_load(variable_name, type, event) type variable_name = *((type*)(event->config))
 array3_declare_type(sp_memory, memreg2_t);
+array3_declare_type(sp_times3, sp_time_t);
 typedef void (*sp_memory_free_t)(void*);
 struct sp_event_t;
 typedef struct sp_event_t {

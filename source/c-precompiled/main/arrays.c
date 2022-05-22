@@ -796,9 +796,9 @@ void sp_times_counted_sequences_sort_swap(void* a, ssize_t b, ssize_t c) {
 uint8_t sp_times_counted_sequences_sort_less(void* a, ssize_t b, ssize_t c) { return (((((sp_times_counted_sequences_t*)(a))[b]).count < (((sp_times_counted_sequences_t*)(a))[c]).count)); }
 uint8_t sp_times_counted_sequences_sort_greater(void* a, ssize_t b, ssize_t c) { return (((((sp_times_counted_sequences_t*)(a))[b]).count > (((sp_times_counted_sequences_t*)(a))[c]).count)); }
 
-/** associate in hash table $out sub-sequences of $width with their count in $a.
+/** associate in hash table $out overlapping sub-sequences of $width with their count in $a.
    memory for $out is lend and should be allocated with sp_sequence_hashtable_new(size - (width - 1), &out) */
-void sp_times_counted_sequences_hash(sp_time_t* a, sp_time_t size, sp_time_t width, sp_sequence_hashtable_t out) {
+void sp_times_counted_sequences_add(sp_time_t* a, sp_time_t size, sp_time_t width, sp_sequence_hashtable_t out) {
   sp_sequence_set_key_t key;
   sp_time_t* value;
   key.size = width;
@@ -814,12 +814,22 @@ void sp_times_counted_sequences_hash(sp_time_t* a, sp_time_t size, sp_time_t wid
   };
 }
 
+/** return the current count of sequence a in hash b */
+sp_time_t sp_times_counted_sequences_count(sp_time_t* a, sp_time_t width, sp_sequence_hashtable_t b) {
+  sp_sequence_set_key_t key;
+  sp_time_t* value;
+  key.size = width;
+  key.data = ((uint8_t*)(a));
+  value = sp_sequence_hashtable_get(b, key);
+  return ((value ? *value : 0));
+}
+
 /** extract counts from a counted-sequences-hash and return as an array of structs */
-void sp_times_counted_sequences(sp_sequence_hashtable_t known, sp_time_t limit, sp_times_counted_sequences_t* out, sp_time_t* out_size) {
+void sp_times_counted_sequences_values(sp_sequence_hashtable_t known, sp_time_t min, sp_times_counted_sequences_t* out, sp_time_t* out_size) {
   sp_time_t count;
   count = 0;
   for (sp_time_t i = 0; (i < known.size); i += 1) {
-    if ((known.flags)[i] && (limit < (known.values)[i])) {
+    if ((known.flags)[i] && (min < (known.values)[i])) {
       (out[count]).count = (known.values)[i];
       (out[count]).sequence = ((sp_time_t*)(((known.keys)[i]).data));
       count += 1;
@@ -827,6 +837,8 @@ void sp_times_counted_sequences(sp_sequence_hashtable_t known, sp_time_t limit, 
   };
   *out_size = count;
 }
+
+/** remove count subsequent elements at index from in and write the result to out */
 void sp_times_remove(sp_time_t* in, sp_time_t size, sp_time_t index, sp_time_t count, sp_time_t* out) {
   if (0 == index) {
     memcpy(out, (in + count), ((size - count) * sizeof(sp_time_t)));
@@ -853,7 +865,7 @@ void sp_times_insert_space(sp_time_t* in, sp_time_t size, sp_time_t index, sp_ti
    the second value must be greater than the first.
    $index must not be the last index.
    $out size must be at least $size + $count */
-void sp_times_subdivide(sp_time_t* a, sp_time_t size, sp_time_t index, sp_time_t count, sp_time_t* out) {
+void sp_times_subdivide_difference(sp_time_t* a, sp_time_t size, sp_time_t index, sp_time_t count, sp_time_t* out) {
   sp_time_t i;
   sp_time_t interval;
   sp_time_t value;
@@ -865,7 +877,7 @@ void sp_times_subdivide(sp_time_t* a, sp_time_t size, sp_time_t index, sp_time_t
   };
 }
 
-/** interpolate values between $a and $b with interpolation distance 0..1 */
+/** interpolate values between $a and $b with interpolation distance fraction 0..1 */
 void sp_times_blend(sp_time_t* a, sp_time_t* b, sp_sample_t fraction, sp_time_t size, sp_time_t* out) {
   for (sp_time_t i = 0; (i < size); i += 1) {
     out[i] = sp_cheap_round_positive((sp_time_interpolate_linear((a[i]), (b[i]), fraction)));
@@ -917,5 +929,36 @@ void sp_times_extract_in_range(sp_time_t* a, sp_time_t size, sp_time_t min, sp_t
       out[i] = a[i];
       *out_size += 1;
     };
+  };
+}
+
+/** untested. interpolate (b-size / 2) elements at the end of $a progressively more and more towards their mirrored correspondents in $b.
+   example: (1 2 3) (4 5 6), interpolates 1 to 6 at 1/6 distance, then 2 to 6 at 2/6 distance, then 3 to 4 at 3/6 istance (3.5) */
+void sp_times_make_seamless_right(sp_time_t* a, sp_time_t a_size, sp_time_t* b, sp_time_t b_size, sp_time_t* out) {
+  sp_time_t start;
+  sp_time_t size;
+  sp_time_t i;
+  size = sp_min(a_size, (b_size / 2));
+  start = (a_size - size);
+  for (i = 0; (i < start); i += 1) {
+    out[i] = a[i];
+  };
+  for (i = 0; (i < size); i += 1) {
+    out[(i + start)] = sp_time_interpolate_linear((a[(i + start)]), (b[(size - (1 + i))]), ((1 + i) / size));
+  };
+}
+
+/** untested. like sp_times_make_seamless_right but changing the first elements of $b to match the end of $a */
+void sp_times_make_seamless_left(sp_time_t* a, sp_time_t a_size, sp_time_t* b, sp_time_t b_size, sp_time_t* out) {
+  sp_time_t start;
+  sp_time_t size;
+  sp_time_t i;
+  size = sp_min(b_size, (a_size / 2));
+  start = (a_size - size);
+  for (i = 0; (i < size); i += 1) {
+    out[i] = sp_time_interpolate_linear((b[i]), (a[(a_size - i)]), ((1 + i) / size));
+  };
+  for (i = (size - 1); (i < b_size); i += 1) {
+    out[i] = b[i];
   };
 }

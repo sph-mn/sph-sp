@@ -610,9 +610,9 @@
     (> (struct-get (array-get (convert-type a sp-times-counted-sequences-t*) b) count)
       (struct-get (array-get (convert-type a sp-times-counted-sequences-t*) c) count))))
 
-(define (sp-times-counted-sequences-hash a size width out)
+(define (sp-times-counted-sequences-add a size width out)
   (void sp-time-t* sp-time-t sp-time-t sp-sequence-hashtable-t)
-  "associate in hash table $out sub-sequences of $width with their count in $a.
+  "associate in hash table $out overlapping sub-sequences of $width with their count in $a.
    memory for $out is lend and should be allocated with sp_sequence_hashtable_new(size - (width - 1), &out)"
   (declare key sp-sequence-set-key-t value sp-time-t*)
   (set key.size width)
@@ -621,13 +621,20 @@
     (sc-comment "full-hashtable-error is ignored")
     (if value (set+ *value 1) (sp-sequence-hashtable-set out key 1))))
 
-(define (sp-times-counted-sequences known limit out out-size)
+(define (sp-times-counted-sequences-count a width b)
+  (sp-time-t sp-time-t* sp-time-t sp-sequence-hashtable-t)
+  "return the current count of sequence a in hash b"
+  (declare key sp-sequence-set-key-t value sp-time-t*)
+  (set key.size width key.data (convert-type a uint8-t*) value (sp-sequence-hashtable-get b key))
+  (return (if* value *value 0)))
+
+(define (sp-times-counted-sequences-values known min out out-size)
   (void sp-sequence-hashtable-t sp-time-t sp-times-counted-sequences-t* sp-time-t*)
   "extract counts from a counted-sequences-hash and return as an array of structs"
   (declare count sp-time-t)
   (set count 0)
   (for-each-index i known.size
-    (if (and (array-get known.flags i) (< limit (array-get known.values i)))
+    (if (and (array-get known.flags i) (< min (array-get known.values i)))
       (begin
         (set
           (struct-get (array-get out count) count) (array-get known.values i)
@@ -638,6 +645,7 @@
 
 (define (sp-times-remove in size index count out)
   (void sp-time-t* sp-time-t sp-time-t sp-time-t sp-time-t*)
+  "remove count subsequent elements at index from in and write the result to out"
   (cond ((= 0 index) (memcpy out (+ in count) (* (- size count) (sizeof sp-time-t))))
     ((= (- size 1) index) (memcpy out in (* (- size count) (sizeof sp-time-t))))
     (else (memcpy out in (* index (sizeof sp-time-t)))
@@ -651,7 +659,7 @@
       (memcpy out in (* index (sizeof sp-time-t)))
       (memcpy (+ out index count) (+ in index) (* (- size index) (sizeof sp-time-t))))))
 
-(define (sp-times-subdivide a size index count out)
+(define (sp-times-subdivide-difference a size index count out)
   (void sp-time-t* sp-time-t sp-time-t sp-time-t sp-time-t*)
   "insert equally spaced values between the two values at $index and $index + 1.
    a:(4 16) index:0 count:3 -> out:(4 7 10 13 16)
@@ -666,7 +674,7 @@
 
 (define (sp-times-blend a b fraction size out)
   (void sp-time-t* sp-time-t* sp-sample-t sp-time-t sp-time-t*)
-  "interpolate values between $a and $b with interpolation distance 0..1"
+  "interpolate values between $a and $b with interpolation distance fraction 0..1"
   (for-each-index i size
     (set (array-get out i)
       (sp-cheap-round-positive
@@ -708,3 +716,25 @@
   (for ((define i sp-time-t 0) (< i size) (set+ i 1))
     (if (or (<= (array-get a i) max) (>= (array-get a i) min))
       (begin (set (array-get out i) (array-get a i)) (set+ *out-size 1)))))
+
+(define (sp-times-make-seamless-right a a-size b b-size out)
+  (void sp-time-t* sp-time-t sp-time-t* sp-time-t sp-time-t*)
+  "untested. interpolate (b-size / 2) elements at the end of $a progressively more and more towards their mirrored correspondents in $b.
+   example: (1 2 3) (4 5 6), interpolates 1 to 6 at 1/6 distance, then 2 to 6 at 2/6 distance, then 3 to 4 at 3/6 istance (3.5)"
+  (declare start sp-time-t size sp-time-t i sp-time-t)
+  (set size (sp-min a-size (/ b-size 2)) start (- a-size size))
+  (for ((set i 0) (< i start) (set+ i 1)) (set (array-get out i) (array-get a i)))
+  (for ((set i 0) (< i size) (set+ i 1))
+    (set (array-get out (+ i start))
+      (sp-time-interpolate-linear (array-get a (+ i start)) (array-get b (- size (+ 1 i)))
+        (/ (+ 1 i) size)))))
+
+(define (sp-times-make-seamless-left a a-size b b-size out)
+  (void sp-time-t* sp-time-t sp-time-t* sp-time-t sp-time-t*)
+  "untested. like sp_times_make_seamless_right but changing the first elements of $b to match the end of $a"
+  (declare start sp-time-t size sp-time-t i sp-time-t)
+  (set size (sp-min b-size (/ a-size 2)) start (- a-size size))
+  (for ((set i 0) (< i size) (set+ i 1))
+    (set (array-get out i)
+      (sp-time-interpolate-linear (array-get b i) (array-get a (- a-size i)) (/ (+ 1 i) size))))
+  (for ((set i (- size 1)) (< i b-size) (set+ i 1)) (set (array-get out i) (array-get b i))))

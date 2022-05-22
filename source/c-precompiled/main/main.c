@@ -180,6 +180,8 @@ void sp_sine(sp_time_t size, sp_time_t frq, sp_time_t phs, sp_sample_t* out) {
     out[i] = sin(((frq * i) + phs));
   };
 }
+
+/** calculate the amplitude values for summing sines to a sawtooth wave */
 void sp_sawtooth_amps(sp_time_t count, sp_sample_t amp, sp_time_t frq, sp_sample_t* amps) {
   sp_sample_t sum;
   for (sp_time_t k = 1; (k <= count); k += 1) {
@@ -187,6 +189,8 @@ void sp_sawtooth_amps(sp_time_t count, sp_sample_t amp, sp_time_t frq, sp_sample
     amps[(k - 1)] = ((amp / 2) - ((amp / M_PI) * sum));
   };
 }
+
+/** calculate the amplitude values for summing sines to a square wave */
 void sp_square_amps(sp_time_t count, sp_sample_t amp, sp_sample_t* amps) {
   sp_time_t i;
   sp_time_t k;
@@ -445,6 +449,46 @@ sp_random_state_t sp_random_state_new(sp_time_t seed) {
    0.75: first channel 50%
    0.25: second channel 50% */
 sp_sample_t sp_pan_to_amp(sp_sample_t value, sp_channel_count_t channel) { return (((1 & channel) ? (sp_limit(value, (channel - 1), (channel - 0.5)) / 0.5) : (1 - ((sp_limit(value, (channel + 0.5), (channel + 1)) - 0.5) / 0.5)))); }
+
+/** untested. return normally distributed numbers in range */
+sp_time_t sp_normal_random(sp_random_state_t* random_state, sp_time_t min, sp_time_t max) {
+  sp_time_t samples[32];
+  sp_sample_t result;
+  sp_times_random_bounded(random_state, (max - min), 32, samples);
+  sp_times_add_1(samples, 32, min, samples);
+  sp_stat_times_mean(samples, 32, (&result));
+  return (((sp_time_t)(result)));
+}
+
+/** untested. round value amount distance to nearest multiple of base.
+   for example, amount 1.0 rounds fully, amount 0.0 does not round at all, amount 0.5 rounds half-way */
+sp_time_t sp_time_harmonize(sp_time_t a, sp_time_t base, sp_sample_t amount) {
+  sp_time_t nearest;
+  nearest = ((((a + base) - 1) / base) * base);
+  return (((a > nearest) ? (a - (amount * (a - nearest))) : (a + (amount * (nearest - a)))));
+}
+
+/** untested. the nearer values are to the multiple, the further move them randomly up to half base away */
+sp_time_t sp_time_deharmonize(sp_time_t a, sp_time_t base, sp_sample_t amount) {
+  sp_time_t nearest;
+  sp_sample_t distance_ratio;
+  nearest = ((((a + base) - 1) / base) * base);
+  distance_ratio = ((base - sp_absolute_difference(a, nearest)) / ((sp_sample_t)(base)));
+  amount = (amount * distance_ratio * (1 + sp_time_random_bounded((&sp_random_state), (base / 2))));
+  if ((a > nearest) || (a < amount)) {
+    return ((a + amount));
+  } else {
+    if (a < nearest) {
+      return ((a - amount));
+    } else {
+      if (1 & sp_time_random((&sp_random_state))) {
+        return ((a - amount));
+      } else {
+        return ((a + amount));
+      };
+    };
+  };
+}
 
 /** fills the sine wave lookup table.
    rate and channels are used to set sp_rate and sp_channels,

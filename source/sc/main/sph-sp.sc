@@ -161,7 +161,10 @@
   (sp-time-factorial a) (sp-time-t sp-time-t)
   (sp-pan->amp value channel) (sp-sample-t sp-sample-t sp-channel-count-t)
   (sp-sawtooth-amps count amp frq amps) (void sp-time-t sp-sample-t sp-time-t sp-sample-t*)
-  (sp-square-amps count amp amps) (void sp-time-t sp-sample-t sp-sample-t*))
+  (sp-square-amps count amp amps) (void sp-time-t sp-sample-t sp-sample-t*)
+  (sp-normal-random random-state min max) (sp-time-t sp-random-state-t* sp-time-t sp-time-t)
+  (sp-time-harmonize a base amount) (sp-time-t sp-time-t sp-time-t sp-sample-t)
+  (sp-time-deharmonize a base amount) (sp-time-t sp-time-t sp-time-t sp-sample-t))
 
 (sc-comment "arrays")
 
@@ -176,6 +179,8 @@
   (sp-sequence-set-equal a b)
   (and (= a.size b.size)
     (or (and (= 0 a.size) (= 0 b.size)) (= 0 (memcmp a.data b.data (* a.size (sizeof sp-time-t)))))))
+
+(sc-comment "sp-sequence-set and sp-time-set can be used for deduplication")
 
 (declare
   sp-sequence-set-key-t (type (struct (size sp-time-t) (data uint8-t*)))
@@ -302,22 +307,30 @@
   (sp-times-counted-sequences-sort-less a b c) (uint8-t void* ssize-t ssize-t)
   (sp-times-counted-sequences-sort-greater a b c) (uint8-t void* ssize-t ssize-t)
   (sp-times-deduplicate a size out out-size) (status-t sp-time-t* sp-time-t sp-time-t* sp-time-t*)
-  (sp-times-counted-sequences-hash a size width out)
+  (sp-times-counted-sequences-add a size width out)
   (void sp-time-t* sp-time-t sp-time-t sp-sequence-hashtable-t)
-  (sp-times-counted-sequences known limit out out-size)
+  (sp-times-counted-sequences-values known min out out-size)
   (void sp-sequence-hashtable-t sp-time-t sp-times-counted-sequences-t* sp-time-t*)
+  (sp-times-counted-sequences-count a width b)
+  (sp-time-t sp-time-t* sp-time-t sp-sequence-hashtable-t)
   (sp-times-remove in size index count out)
   (void sp-time-t* sp-time-t sp-time-t sp-time-t sp-time-t*)
   (sp-times-insert-space in size index count out)
   (void sp-time-t* sp-time-t sp-time-t sp-time-t sp-time-t*)
-  (sp-times-subdivide a size index count out)
+  (sp-times-subdivide-difference a size index count out)
   (void sp-time-t* sp-time-t sp-time-t sp-time-t sp-time-t*)
   (sp-times-blend a b fraction size out)
   (void sp-time-t* sp-time-t* sp-sample-t sp-time-t sp-time-t*)
   (sp-times-mask a b coefficients size out)
   (void sp-time-t* sp-time-t* sp-sample-t* sp-time-t sp-time-t*)
   (sp-samples-blend a b fraction size out)
-  (void sp-sample-t* sp-sample-t* sp-sample-t sp-time-t sp-sample-t*))
+  (void sp-sample-t* sp-sample-t* sp-sample-t sp-time-t sp-sample-t*)
+  (sp-times-make-seamless-right a a-size b b-size out)
+  (void sp-time-t* sp-time-t sp-time-t* sp-time-t sp-time-t*)
+  (sp-times-make-seamless-left a a-size b b-size out)
+  (void sp-time-t* sp-time-t sp-time-t* sp-time-t sp-time-t*)
+  (sp-times-extract-in-range a size min max out out-size)
+  (void sp-time-t* sp-time-t sp-time-t sp-time-t sp-time-t* sp-time-t*))
 
 (sc-comment "filter")
 
@@ -480,6 +493,7 @@
   (define variable-name type (pointer-get (convert-type event:config type*))))
 
 (array3-declare-type sp-memory memreg2-t)
+(array3-declare-type sp-times3 sp-time-t)
 
 (declare
   sp-memory-free-t (type (function-pointer void void*))
