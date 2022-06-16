@@ -267,3 +267,63 @@ exit:
   };
   status_return;
 }
+status_t sp_path_curves_config_new(sp_time_t segment_count, sp_path_curves_config_t* out) {
+  status_declare;
+  srq((sp_times_new(segment_count, (&(out->x)))));
+  srq((sp_samples_new(segment_count, (&(out->y)))));
+  srq((sp_samples_new(segment_count, (&(out->c)))));
+  out->segment_count = segment_count;
+exit:
+  status_return;
+}
+void sp_path_curves_config_free(sp_path_curves_config_t a) {
+  free((a.x));
+  free((a.y));
+  free((a.c));
+}
+
+/** a path that uses linear or circular interpolation depending on the values of the config.c.
+   config.c 0 is linear and other values between -1.0 and 1.0 add curvature */
+status_t sp_path_curves_new(sp_path_curves_config_t config, sp_time_t length, sp_path_t* out) {
+  status_declare;
+  sp_path_segment_t* ss;
+  sp_time_t x;
+  sp_sample_t y;
+  sp_sample_t c;
+  srq((sp_malloc_type((config.segment_count), sp_path_segment_t, (&ss))));
+  for (size_t i = 0; (i < config.segment_count); i += 1) {
+    x = (config.x)[i];
+    y = (config.y)[i];
+    c = (config.c)[i];
+    ss[i] = ((0.0 == c) ? sp_path_line(x, y) : sp_path_circular_arc(c, x, y));
+  };
+  spline_path_set(out, ss, (config.segment_count));
+exit:
+  status_return;
+}
+status_t sp_path_curves_times_new(sp_path_curves_config_t config, sp_time_t length, sp_time_t** out) {
+  status_declare;
+  sp_path_t path;
+  free_on_error_init(1);
+  srq((sp_path_curves_new(config, length, (&path))));
+  free_on_error1((path.segments));
+  srq((sp_path_times_new(path, length, out)));
+exit:
+  if (status_is_failure) {
+    free_on_error_free;
+  };
+  status_return;
+}
+status_t sp_path_curves_samples_new(sp_path_curves_config_t config, sp_time_t length, sp_sample_t** out) {
+  status_declare;
+  sp_path_t path;
+  free_on_error_init(1);
+  srq((sp_path_curves_new(config, length, (&path))));
+  free_on_error1((path.segments));
+  srq((sp_path_samples_new(path, length, out)));
+exit:
+  if (status_is_failure) {
+    free_on_error_free;
+  };
+  status_return;
+}

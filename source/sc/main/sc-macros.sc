@@ -3,6 +3,14 @@
 
 (sc-define-syntax (sp-init* rate) (begin (pre-include "sph-sp.h") (pre-define _sp-rate rate)))
 
+(sc-define-syntax* (declare-struct-type name-and-fields ...)
+  "(declare-struct-type name (field/type ...):fields name/fields ...)"
+  (pair (q begin)
+    (map-slice 2
+      (l (name fields)
+        (qq (declare (unquote name) (type (struct (unquote-splicing (map-slice 2 list fields)))))))
+      name-and-fields)))
+
 (sc-define-syntax* (sp-define* (name parameter ...) types body ...)
   (let*
     ( (free-on-error-used (sc-contains-expression (q free-on-error-init) body))
@@ -77,6 +85,10 @@
     ((event size) (qq (status-require (sp-event-memory-init (unquote event) (unquote size)))))
     ((size) (qq (sp-event-memory* _event (unquote size))))))
 
+(sc-define-syntax* (sp-group-add* a ...)
+  (match a ((group event) (qq (srq (sp-group-add (unquote group) (unquote event)))))
+    ((event) (qq (sp-group-add* _event (unquote event))))))
+
 (sc-define-syntax* (sp-channel-config* channel-config-array (channel-index setting ...) ...)
   "set one or multiple channel config structs in an array"
   (pair (q begin)
@@ -105,17 +117,23 @@
   (qq (begin (declare name (type *)) (sp-event-config-new* type (address-of name)))))
 
 (sc-define-syntax* (sp-event-config-new* event type options ...)
+  "allocate, set with optional channel config syntax, track memory"
   (qq
     (begin
-      (status-require (sp-malloc-type 1 type (address-of event:config)))
-      (sp-event-config-options* (convert-type event:config (type *)) (unquote-splicing options))
-      (sp-event-memory-add (unquote event) event:config))))
+      (status-require
+        (sp-malloc-type 1 (unquote type) (address-of (struct-pointer-get (unquote event) config))))
+      (sp-event-config-options*
+        (convert-type (struct-pointer-get (unquote event) config) (sc-concat (unquote type) *))
+        (unquote-splicing options))
+      (sp-event-memory-init (unquote event) 1)
+      (sp-event-memory-add (unquote event) (struct-pointer-get (unquote event) config)))))
 
 (sc-define-syntax* (sp-event-config-new2* pointer type-new event options ...)
   (qq
     (begin
       (status-require ((unquote type-new) (address-of (unquote pointer))))
       (sp-event-config-options* (unquote pointer) (unquote-splicing options))
+      (sp-event-memory-init (unquote event) 1)
       (sp-event-memory-add (unquote event) (unquote pointer)))))
 
 (sc-define-syntax (sp-wave-config* name ...) "declare config variables"
@@ -145,7 +163,11 @@
 (sc-define-syntax (sp-cheap-noise* event config)
   (struct-pointer-set event config config prepare sp-cheap-noise-event-prepare))
 
-(sc-define-syntax (sp-event* name ...) (begin (sp-declare-event name) ...))
+(sc-define-syntax* (sp-event* a ...)
+  (match a
+    ( (name value)
+      (qq (begin (sp-declare-event (unquote name)) (set (unquote name) (unquote value)))))
+    ((name) (qq (sp-declare-event (unquote name))))))
 
 (sc-define-syntax* (sp-time* name/value ...)
   (pair (q begin)
@@ -161,6 +183,7 @@
   (begin
     (declare name type)
     (status-require (type-new size (address-of name)))
+    (sp-event-memory-init _event 1)
     (sp-event-memory-add _event name)
     (array-set* name values ...)))
 
@@ -191,9 +214,6 @@
 (sc-define-syntax (sp-samples-values* name values ...)
   (sp-array-values* sp-samples* name values ...))
 
-(sc-define-syntax (sp-group-add* group event) (status-require (sp-group-add group event)))
-(sc-define-syntax (sp-group-append* group event) (status-require (sp-group-append group event)))
-
 (sc-define-syntax* (define-array* name type values ...)
   "define an array on the stack instead of in heap memory"
   (qq
@@ -205,16 +225,8 @@
 (sc-define-syntax (sp-render-file*) (status-require (sp-render-quick *_event 0)))
 (sc-define-syntax (sp-render-plot*) (status-require (sp-render-quick *_event 1)))
 
-(sc-define-syntax* (declare-struct-type name-and-fields ...)
-  "(declare-struct-type name (field type) name/(field type) ...)"
-  (pair (q begin)
-    (map-slice 2
-      (l (name fields)
-        (qq (declare (unquote name) (type (struct (unquote-splicing (map-slice 2 list fields)))))))
-      name-and-fields)))
-
-(sc-define-syntax (sp-define-song* parallelization channels body ...)
-  (define (main) status-t
+(sc-define-syntax (sp-define-song* name parallelization channels body ...)
+  (define (name) status-t
     status-declare
     (sp-declare-group _song)
     (define _event sp-event-t* &_song)
@@ -260,6 +272,7 @@
           (unquote (length segments)))
         (status-require
           ((unquote sp-path-new) (unquote name-path) (unquote duration) (address-of (unquote name))))
+        (sp-event-memory-init _event 1)
         (sp-event-memory-add _event (unquote name))))))
 
 (sc-define-syntax (sp-path-samples* name segment-type points ...)

@@ -672,9 +672,28 @@ exit:
 status_t test_path() {
   sp_sample_t* samples;
   sp_time_t* times;
+  sp_path_curves_config_t curves_config;
+  sp_sample_t* out;
   status_declare;
   status_require((sp_path_samples_2((&samples), 100, (sp_path_line(10, 1)), (sp_path_line(100, 0)))));
   status_require((sp_path_times_2((&times), 100, (sp_path_line(10, 1)), (sp_path_line(100, 0)))));
+  srq((sp_path_curves_config_new(5, (&curves_config))));
+  (curves_config.x)[0] = 20;
+  (curves_config.x)[1] = 40;
+  (curves_config.x)[2] = 50;
+  (curves_config.x)[3] = 55;
+  (curves_config.x)[4] = 100;
+  (curves_config.y)[0] = 10;
+  (curves_config.y)[1] = 20;
+  (curves_config.y)[2] = 30;
+  (curves_config.y)[3] = 40;
+  (curves_config.y)[4] = 70;
+  (curves_config.c)[0] = -1;
+  (curves_config.c)[1] = 1;
+  (curves_config.c)[2] = 0.1;
+  (curves_config.c)[3] = 0.7;
+  (curves_config.c)[4] = -0.1;
+  sp_path_curves_samples_new(curves_config, 100, (&out));
 exit:
   status_return;
 }
@@ -996,6 +1015,7 @@ int main() {
   status_declare;
   rs = sp_random_state_new(3);
   sp_initialize(3, 2, _rate);
+  test_helper_test_one(test_path);
   test_helper_test_one(test_sp_sound_event);
   test_helper_test_one(test_sp_pan_to_amp);
   test_helper_test_one(test_windowed_sinc_continuity);
@@ -1010,7 +1030,6 @@ int main() {
   test_helper_test_one(test_render_block);
   test_helper_test_one(test_moving_average);
   test_helper_test_one(test_statistics);
-  test_helper_test_one(test_path);
   test_helper_test_one(test_file);
   test_helper_test_one(test_sp_cheap_filter);
   test_helper_test_one(test_sp_random);

@@ -640,6 +640,20 @@ status_t sp_sound_event_prepare(sp_event_t* event);
 #define sp_path_set spline_path_set
 #define sp_path_times_constant(out, size, value) sp_path_times_2(out, size, (sp_path_move(0, value)), (sp_path_constant()))
 #define sp_path_samples_constant(out, size, value) sp_path_samples_2(out, size, (sp_path_move(0, value)), (sp_path_constant()))
+#define sp_path_curves_config_declare(name, segment_count) \
+  sp_path_curves_config_t name; \
+  sp_time_t name##_x[segment_count]; \
+  sp_sample_t name##_y[segment_count]; \
+  sp_sample_t name##_c[segment_count]; \
+  name.x = name##_x; \
+  name.y = name##_y; \
+  name.c = name##_c
+typedef struct {
+  sp_time_t segment_count;
+  sp_time_t* x;
+  sp_sample_t* y;
+  sp_sample_t* c;
+} sp_path_curves_config_t;
 status_t sp_path_samples_new(sp_path_t path, sp_time_t size, sp_sample_t** out);
 status_t sp_path_samples_1(sp_sample_t** out, sp_time_t size, sp_path_segment_t s1);
 status_t sp_path_samples_2(sp_sample_t** out, sp_time_t size, sp_path_segment_t s1, sp_path_segment_t s2);
@@ -656,6 +670,11 @@ status_t sp_path_times_derivation(sp_path_t path, sp_sample_t** x_changes, sp_sa
 void sp_path_multiply(sp_path_t path, sp_sample_t x_factor, sp_sample_t y_factor);
 status_t sp_path_derivations_normalized(sp_path_t base, sp_time_t count, sp_sample_t** x_changes, sp_sample_t** y_changes, sp_path_t** out);
 status_t sp_path_samples_derivations_normalized(sp_path_t path, sp_time_t count, sp_sample_t** x_changes, sp_sample_t** y_changes, sp_sample_t*** out, sp_time_t** out_sizes);
+status_t sp_path_curves_config_new(sp_time_t segment_count, sp_path_curves_config_t* out);
+void sp_path_curves_config_free(sp_path_curves_config_t a);
+status_t sp_path_curves_new(sp_path_curves_config_t config, sp_time_t length, sp_path_t* out);
+status_t sp_path_curves_times_new(sp_path_curves_config_t config, sp_time_t length, sp_time_t** out);
+status_t sp_path_curves_samples_new(sp_path_curves_config_t config, sp_time_t length, sp_sample_t** out);
 /* statistics */
 sp_time_t sp_sequence_max(sp_time_t size, sp_time_t min_size);
 sp_time_t sp_set_sequence_max(sp_time_t set_size, sp_time_t selection_size);

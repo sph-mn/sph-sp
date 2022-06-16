@@ -136,7 +136,8 @@
     (sp-for-each-index sp-i (< sp-i (spline-path-segment-points-count *s))
       (if (= spline-path-i-constant s:interpolator) break
         (if (= spline-path-i-path s:interpolator) continue))
-      (set p (+ sp-i s:points)) (set* p:x x-factor p:y y-factor)))
+      (set p (+ sp-i s:points))
+      (set* p:x x-factor p:y y-factor)))
   (sp-path-prepare-segments path.segments path.segments-count))
 
 (define (sp-path-derivations-normalized base count x-changes y-changes out)
@@ -192,6 +193,56 @@
     (sp-path-get (+ paths i) 0 size (array-get samples i)))
   (set *out samples *out-sizes sizes)
   (label exit
-    (if status-is-failure (begin (sp-for-each-index i count (free (array-get samples i))) memreg-free))
+    (if status-is-failure
+      (begin (sp-for-each-index i count (free (array-get samples i))) memreg-free))
     (if paths (free paths))
     status-return))
+
+(define (sp-path-curves-config-new segment-count out) (status-t sp-time-t sp-path-curves-config-t*)
+  status-declare
+  (srq (sp-times-new segment-count &out:x))
+  (srq (sp-samples-new segment-count &out:y))
+  (srq (sp-samples-new segment-count &out:c))
+  (set out:segment-count segment-count)
+  (label exit status-return))
+
+(define (sp-path-curves-config-free a) (void sp-path-curves-config-t)
+  (free a.x)
+  (free a.y)
+  (free a.c))
+
+(define (sp-path-curves-new config length out)
+  (status-t sp-path-curves-config-t sp-time-t sp-path-t*)
+  "a path that uses linear or circular interpolation depending on the values of the config.c.
+   config.c 0 is linear and other values between -1.0 and 1.0 add curvature"
+  status-declare
+  (declare ss sp-path-segment-t* x sp-time-t y sp-sample-t c sp-sample-t)
+  (srq (sp-malloc-type config.segment-count sp-path-segment-t &ss))
+  (sp-for-each-index i config.segment-count
+    (set
+      x (array-get config.x i)
+      y (array-get config.y i)
+      c (array-get config.c i)
+      (array-get ss i) (if* (= 0.0 c) (sp-path-line x y) (sp-path-circular-arc c x y))))
+  (spline-path-set out ss config.segment-count)
+  (label exit status-return))
+
+(define (sp-path-curves-times-new config length out)
+  (status-t sp-path-curves-config-t sp-time-t sp-time-t**)
+  status-declare
+  (declare path sp-path-t)
+  (free-on-error-init 1)
+  (srq (sp-path-curves-new config length &path))
+  (free-on-error1 path.segments)
+  (srq (sp-path-times-new path length out))
+  (label exit (if status-is-failure free-on-error-free) status-return))
+
+(define (sp-path-curves-samples-new config length out)
+  (status-t sp-path-curves-config-t sp-time-t sp-sample-t**)
+  status-declare
+  (declare path sp-path-t)
+  (free-on-error-init 1)
+  (srq (sp-path-curves-new config length &path))
+  (free-on-error1 path.segments)
+  (srq (sp-path-samples-new path length out))
+  (label exit (if status-is-failure free-on-error-free) status-return))

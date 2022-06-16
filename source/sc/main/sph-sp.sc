@@ -658,9 +658,19 @@
   (sp-path-times-constant out size value)
   (sp-path-times-2 out size (sp-path-move 0 value) (sp-path-constant))
   (sp-path-samples-constant out size value)
-  (sp-path-samples-2 out size (sp-path-move 0 value) (sp-path-constant)))
+  (sp-path-samples-2 out size (sp-path-move 0 value) (sp-path-constant))
+  (sp-path-curves-config-declare name segment-count)
+  (begin
+    (declare
+      name sp-path-curves-config-t
+      (pre-concat name _x) (array sp-time-t segment-count)
+      (pre-concat name _y) (array sp-sample-t segment-count)
+      (pre-concat name _c) (array sp-sample-t segment-count))
+    (struct-set name x (pre-concat name _x) y (pre-concat name _y) c (pre-concat name _c))))
 
 (declare
+  sp-path-curves-config-t
+  (type (struct (segment-count sp-time-t) (x sp-time-t*) (y sp-sample-t*) (c sp-sample-t*)))
   (sp-path-samples-new path size out) (status-t sp-path-t sp-time-t sp-sample-t**)
   (sp-path-samples-1 out size s1) (status-t sp-sample-t** sp-time-t sp-path-segment-t)
   (sp-path-samples-2 out size s1 s2)
@@ -689,7 +699,14 @@
   (sp-path-derivations-normalized base count x-changes y-changes out)
   (status-t sp-path-t sp-time-t sp-sample-t** sp-sample-t** sp-path-t**)
   (sp-path-samples-derivations-normalized path count x-changes y-changes out out-sizes)
-  (status-t sp-path-t sp-time-t sp-sample-t** sp-sample-t** sp-sample-t*** sp-time-t**))
+  (status-t sp-path-t sp-time-t sp-sample-t** sp-sample-t** sp-sample-t*** sp-time-t**)
+  (sp-path-curves-config-new segment-count out) (status-t sp-time-t sp-path-curves-config-t*)
+  (sp-path-curves-config-free a) (void sp-path-curves-config-t)
+  (sp-path-curves-new config length out) (status-t sp-path-curves-config-t sp-time-t sp-path-t*)
+  (sp-path-curves-times-new config length out)
+  (status-t sp-path-curves-config-t sp-time-t sp-time-t**)
+  (sp-path-curves-samples-new config length out)
+  (status-t sp-path-curves-config-t sp-time-t sp-sample-t**))
 
 (sc-comment "statistics")
 

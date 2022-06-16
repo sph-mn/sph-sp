@@ -15,9 +15,7 @@
   (sp-noise-config* n1c)
   (sp-noise-config-new* n1c _event (amod amod) (0 use 1 amp (* 0.5 config.amp)))
   (sp-noise* _event n1c)
-  (printf "not prepared\n")
-  (_event:prepare _event)
-  (printf "prepared\n"))
+  (_event:prepare _event))
 
 (sc-comment
   "defines a group named r1 with a default duration of (1/1 * sample_rate). srq (status-require) checks return codes")

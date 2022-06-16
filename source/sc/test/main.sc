@@ -593,10 +593,19 @@
   (label exit (if status-is-failure free-on-error-free) status-return))
 
 (define (test-path) status-t
-  (declare samples sp-sample-t* times sp-time-t*)
+  (declare
+    samples sp-sample-t*
+    times sp-time-t*
+    curves-config sp-path-curves-config-t
+    out sp-sample-t*)
   status-declare
   (status-require (sp-path-samples-2 &samples 100 (sp-path-line 10 1) (sp-path-line 100 0)))
   (status-require (sp-path-times-2 &times 100 (sp-path-line 10 1) (sp-path-line 100 0)))
+  (srq (sp-path-curves-config-new 5 &curves-config))
+  (array-set* curves-config.x 20 40 50 55 100)
+  (array-set* curves-config.y 10 20 30 40 70)
+  (array-set* curves-config.c -1 1 0.1 0.7 -0.1)
+  (sp-path-curves-samples-new curves-config 100 &out)
   (label exit status-return))
 
 (pre-define (feq a b) (sp-sample-nearly-equal a b 0.01))
@@ -895,6 +904,7 @@
   status-declare
   (set rs (sp-random-state-new 3))
   (sp-initialize 3 2 _rate)
+  (test-helper-test-one test-path)
   (test-helper-test-one test-sp-sound-event)
   (test-helper-test-one test-sp-pan->amp)
   (test-helper-test-one test-windowed-sinc-continuity)
@@ -909,7 +919,6 @@
   (test-helper-test-one test-render-block)
   (test-helper-test-one test-moving-average)
   (test-helper-test-one test-statistics)
-  (test-helper-test-one test-path)
   (test-helper-test-one test-file)
   (test-helper-test-one test-sp-cheap-filter)
   (test-helper-test-one test-sp-random)
