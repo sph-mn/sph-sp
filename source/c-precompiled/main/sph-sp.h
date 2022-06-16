@@ -72,6 +72,12 @@
 #ifndef sp_sample_array_nearly_equal
 #define sp_sample_array_nearly_equal f64_array_nearly_equal
 #endif
+#ifndef sp_scalar_random
+#define sp_scalar_random sph_random_f64_0to1
+#endif
+#ifndef sp_scalar_random
+#define sp_scalar_random sph_random_f64_0to1
+#endif
 #ifndef sp_random_seed
 #define sp_random_seed 1557083953
 #endif
@@ -162,7 +168,8 @@
 #define sp_samples_to_hz(x) ((sp_time_t)((sp_rate / x)))
 #define sp_hz_to_factor(x) (((sp_sample_t)(x)) / ((sp_sample_t)(sp_rate)))
 #define sp_factor_to_hz(x) ((sp_time_t)((x * sp_rate)))
-#define sp_event_reset(x) x = sp_event_null
+#define sp_array_or_fixed(array, fixed, index) (array ? array[index] : fixed)
+#define sp_sample_to_scalar(a) ((1 + a) / 2.0)
 typedef struct {
   sp_channel_count_t channels;
   sp_time_t size;
@@ -181,7 +188,8 @@ sp_channel_count_t sp_channels;
 sp_sample_t* sp_sine_table;
 sp_sample_t* sp_sine_table_lfo;
 sp_time_t sp_sine_lfo_factor;
-void sp_sine(sp_time_t size, sp_time_t frq, sp_time_t phs, sp_sample_t* out);
+void sp_wave(sp_time_t size, sp_sample_t* wvf, sp_time_t wvf_size, sp_sample_t amp, sp_sample_t* amod, sp_time_t frq, sp_time_t* fmod, sp_time_t* phs_state, sp_sample_t* out);
+void sp_sine(sp_time_t size, sp_sample_t amp, sp_sample_t* amod, sp_time_t frq, sp_time_t* fmod, sp_time_t* phs_state, sp_sample_t* out);
 sp_random_state_t sp_random_state_new(sp_time_t seed);
 void sp_block_zero(sp_block_t a);
 void sp_block_copy(sp_block_t a, sp_block_t b);
@@ -410,6 +418,7 @@ void sp_plot_spectrum_file(uint8_t* path);
 void sp_plot_spectrum(sp_sample_t* a, sp_time_t a_size);
 /* sequencer */
 
+#define sp_event_reset(x) x = sp_event_null
 #define sp_declare_event(id) \
   sp_event_t id = { 0 }; \
   id.memory.data = 0
@@ -444,32 +453,6 @@ void sp_plot_spectrum(sp_sample_t* a, sp_time_t a_size);
   sp_event_memory_add_2(a, data1, data2); \
   sp_event_memory_add(a, data3)
 #define sp_sine_config_t sp_wave_event_config_t
-#define sp_declare_sine_config(name) \
-  sp_declare_wave_event_config(name); \
-  name.wvf = sp_sine_table; \
-  name.wvf_size = sp_rate; \
-  name.channels = sp_channels; \
-  name.amp = 1
-#define sp_declare_sine_config_lfo(name) \
-  sp_declare_wave_event_config(name); \
-  name.wvf = sp_sine_table_lfo; \
-  name.wvf_size = (sp_rate * sp_sine_lfo_factor); \
-  name.channels = sp_channels; \
-  name.amp = 1
-#define sp_declare_noise_config(name) \
-  sp_declare_noise_event_config(name); \
-  name.channels = sp_channels; \
-  name.amp = 1; \
-  name.cutl = 0; \
-  name.cuth = 0.5; \
-  name.trnl = 0.1; \
-  name.trnh = 0.1
-#define sp_declare_cheap_noise_config(name) \
-  sp_declare_cheap_noise_event_config(name); \
-  name.channels = sp_channels; \
-  name.amp = 1; \
-  name.type = sp_state_variable_filter_lp; \
-  name.cut = 0.5
 #define sp_memory_add array3_add
 #define sp_seq_events_prepare sp_event_list_reverse
 #define free_event_on_error(event_address) free_on_error((event_address->free), event_address)
@@ -494,7 +477,6 @@ void sp_plot_spectrum(sp_sample_t* a, sp_time_t a_size);
   sp_event_memory_add(_event, (*pointer_address))
 #define sp_event_config_load(variable_name, type, event) type variable_name = *((type*)(event->config))
 array3_declare_type(sp_memory, memreg2_t);
-array3_declare_type(sp_times3, sp_time_t);
 typedef void (*sp_memory_free_t)(void*);
 struct sp_event_t;
 typedef struct sp_event_t {
@@ -571,7 +553,6 @@ typedef struct {
   sp_channel_config_t channel_config[sp_channel_limit];
 } sp_cheap_noise_event_config_t;
 typedef struct {
-  sp_time_t duration;
   sp_bool_t noise;
   sp_sample_t amp;
   sp_sample_t* amod;
@@ -579,6 +560,7 @@ typedef struct {
   sp_time_t* fmod;
   sp_time_t wdt;
   sp_time_t* wmod;
+  sp_channel_count_t channels;
   sp_channel_config_t channel_config[sp_channel_limit];
 } sp_sound_event_config_t;
 status_t (*sp_event_prepare_t)(sp_event_t*);
@@ -630,7 +612,7 @@ status_t sp_cheap_noise_event_config_new(sp_cheap_noise_event_config_t** out);
 status_t sp_wave_event_config_new(sp_wave_event_config_t** out);
 status_t sp_map_event_config_new(sp_map_event_config_t** out);
 void sp_wave_event_config_defaults(sp_wave_event_config_t* config);
-status_t sp_sound_event(sp_sound_event_config_t config, sp_event_t* out);
+status_t sp_sound_event_prepare(sp_event_t* event);
 /* path */
 
 #define sp_path_t spline_path_t

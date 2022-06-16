@@ -8,10 +8,8 @@
 (define (sp-shuffle state swap a size)
   (void sp-random-state-t* (function-pointer void void* size-t size-t) void* size-t)
   "generic shuffle that works on any array type. fisher-yates algorithm"
-  (declare i size-t j size-t)
-  (for ((set i 0) (< i size) (set+ i 1))
-    (set j (+ i (sp-time-random-bounded state (- size i))))
-    (swap a i j)))
+  (declare j size-t)
+  (sp-for-each-index i size (set j (+ i (sp-time-random-bounded state (- size i)))) (swap a i j)))
 
 (define (sp-samples-new size out) (status-t sp-time-t sp-sample-t**)
   (return (sph-helper-calloc (* size (sizeof sp-sample-t)) out)))
@@ -36,7 +34,7 @@
   "get the maximum value in samples array, disregarding sign"
   (declare a sp-time-t)
   (define max sp-time-t 0)
-  (for-each-index i size (set a (sp-abs (array-get in i))) (if (> a max) (set max a)))
+  (sp-for-each-index i size (set a (sp-abs (array-get in i))) (if (> a max) (set max a)))
   (return max))
 
 (define (sp-samples-display a size) (void sp-sample-t* sp-time-t)
@@ -393,7 +391,7 @@
 
 (define (sp-times-sum a size) (sp-time-t sp-time-t* sp-time-t)
   (define sum sp-time-t 0)
-  (for-each-index i size (set+ sum (array-get a i)))
+  (sp-for-each-index i size (set+ sum (array-get a i)))
   (return sum))
 
 (define (sp-times-scale-sum a size n out) (void sp-time-t* sp-time-t sp-time-t sp-time-t*)
@@ -401,7 +399,7 @@
    a/out can be the same pointer"
   (declare factor sp-sample-t)
   (set factor (/ (convert-type n sp-sample-t) (sp-times-sum a size)))
-  (for-each-index i size
+  (sp-for-each-index i size
     (set (array-get out i) (sp-cheap-round-positive (* (array-get out i) factor)))))
 
 (define (sp-times-multiplications start factor count out)
@@ -583,7 +581,7 @@
   (set unique.size 0)
   (if (sp-time-set-new size &unique) sp-memory-error)
   (set unique-count 0)
-  (for-each-index i size
+  (sp-for-each-index i size
     (if (not (sp-time-set-get unique (array-get a i)))
       (begin
         (if (not (sp-time-set-add unique (array-get a i))) sp-memory-error)
@@ -616,7 +614,7 @@
    memory for $out is lend and should be allocated with sp_sequence_hashtable_new(size - (width - 1), &out)"
   (declare key sp-sequence-set-key-t value sp-time-t*)
   (set key.size width)
-  (for-each-index i (- size (- width 1))
+  (sp-for-each-index i (- size (- width 1))
     (set key.data (convert-type (+ i a) uint8-t*) value (sp-sequence-hashtable-get out key))
     (sc-comment "full-hashtable-error is ignored")
     (if value (set+ *value 1) (sp-sequence-hashtable-set out key 1))))
@@ -633,7 +631,7 @@
   "extract counts from a counted-sequences-hash and return as an array of structs"
   (declare count sp-time-t)
   (set count 0)
-  (for-each-index i known.size
+  (sp-for-each-index i known.size
     (if (and (array-get known.flags i) (< min (array-get known.values i)))
       (begin
         (set
@@ -648,7 +646,8 @@
   "remove count subsequent elements at index from in and write the result to out"
   (cond ((= 0 index) (memcpy out (+ in count) (* (- size count) (sizeof sp-time-t))))
     ((= (- size 1) index) (memcpy out in (* (- size count) (sizeof sp-time-t))))
-    (else (memcpy out in (* index (sizeof sp-time-t)))
+    (else
+      (memcpy out in (* index (sizeof sp-time-t)))
       (memcpy (+ out index) (+ in index count) (* (- size index count) (sizeof sp-time-t))))))
 
 (define (sp-times-insert-space in size index count out)
@@ -675,7 +674,7 @@
 (define (sp-times-blend a b fraction size out)
   (void sp-time-t* sp-time-t* sp-sample-t sp-time-t sp-time-t*)
   "interpolate values between $a and $b with interpolation distance fraction 0..1"
-  (for-each-index i size
+  (sp-for-each-index i size
     (set (array-get out i)
       (sp-cheap-round-positive
         (sp-time-interpolate-linear (array-get a i) (array-get b i) fraction)))))
@@ -683,7 +682,7 @@
 (define (sp-times-mask a b coefficients size out)
   (void sp-time-t* sp-time-t* sp-sample-t* sp-time-t sp-time-t*)
   "interpolate values pointwise between $a and $b with interpolation distance 0..1 from $coefficients"
-  (for-each-index i size
+  (sp-for-each-index i size
     (set (array-get out i)
       (sp-cheap-round-positive
         (sp-time-interpolate-linear (array-get a i) (array-get b i) (array-get coefficients i))))))
@@ -691,7 +690,7 @@
 (define (sp-samples-blend a b fraction size out)
   (void sp-sample-t* sp-sample-t* sp-sample-t sp-time-t sp-sample-t*)
   "interpolate values pointwise between $a and $b with fraction as a fixed interpolation distance 0..1"
-  (for-each-index i size
+  (sp-for-each-index i size
     (set (array-get out i) (sp-sample-interpolate-linear (array-get a i) (array-get b i) fraction))))
 
 (define (sp-times-limit a size n out) (void sp-time-t* sp-time-t sp-time-t sp-time-t*)

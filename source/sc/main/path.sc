@@ -131,9 +131,9 @@
 (define (sp-path-multiply path x-factor y-factor) (void sp-path-t sp-sample-t sp-sample-t)
   "multiply all x and y values of path segments by x_factor and y_factor respectively"
   (declare s sp-path-segment-t* p sp-path-point-t*)
-  (for-each-index s-i path.segments-count
+  (sp-for-each-index s-i path.segments-count
     (set s (+ path.segments s-i))
-    (for-each-index sp-i (< sp-i (spline-path-segment-points-count *s))
+    (sp-for-each-index sp-i (< sp-i (spline-path-segment-points-count *s))
       (if (= spline-path-i-constant s:interpolator) break
         (if (= spline-path-i-path s:interpolator) continue))
       (set p (+ sp-i s:points)) (set* p:x x-factor p:y y-factor)))
@@ -155,22 +155,22 @@
     factor sp-sample-t)
   status-declare
   (status-require (sph-helper-calloc (* count (sizeof sp-path-t)) &paths))
-  (for-each-index path-i count
+  (sp-for-each-index path-i count
     (status-require (sp-path-derivation base x-changes y-changes path-i (+ paths path-i))))
-  (for-each-index segment-i base.segments-count
+  (sp-for-each-index segment-i base.segments-count
     (set bs (+ base.segments segment-i))
-    (for-each-index point-i (spline-path-segment-points-count *bs)
+    (sp-for-each-index point-i (spline-path-segment-points-count *bs)
       (if (= spline-path-i-constant bs:interpolator) break
         (if (= spline-path-i-path bs:interpolator) continue))
       (set bp (+ bs:points point-i) y-sum 0)
-      (for-each-index path-i count
+      (sp-for-each-index path-i count
         (set s (+ (struct-get (array-get paths path-i) segments) segment-i) p (+ s:points point-i))
         (set+ y-sum p:y))
       (set factor (if* (= 0 y-sum) 0 (/ bp:y y-sum)))
-      (for-each-index path-i count
+      (sp-for-each-index path-i count
         (set s (+ (struct-get (array-get paths path-i) segments) segment-i) p (+ s:points point-i))
         (set* p:y factor))))
-  (for-each-index path-i count
+  (sp-for-each-index path-i count
     (sp-path-prepare-segments (struct-get (array-get paths path-i) segments) base.segments-count))
   (set *out paths)
   (label exit (if status-is-failure (if paths (free paths))) status-return))
@@ -186,12 +186,12 @@
   (status-require (sph-helper-malloc (* count (sizeof sp-time-t)) &sizes))
   (memreg-add sizes)
   (status-require (sp-path-derivations-normalized path count x-changes y-changes &paths))
-  (for-each-index i count
+  (sp-for-each-index i count
     (set size (sp-path-size (array-get paths i)) (array-get sizes i) size)
     (status-require (sp-samples-new size (+ samples i)))
     (sp-path-get (+ paths i) 0 size (array-get samples i)))
   (set *out samples *out-sizes sizes)
   (label exit
-    (if status-is-failure (begin (for-each-index i count (free (array-get samples i))) memreg-free))
+    (if status-is-failure (begin (sp-for-each-index i count (free (array-get samples i))) memreg-free))
     (if paths (free paths))
     status-return))

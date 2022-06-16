@@ -133,11 +133,11 @@
   (memreg-add out-control)
   (status-require (sp-samples-new in-b-length &carryover))
   (memreg-add carryover)
-  (for-each-index i in-a-length (set (array-get in-a i) i))
-  (for-each-index i in-b-length (set (array-get in-b i) (+ 1 i)))
+  (sp-for-each-index i in-a-length (set (array-get in-a i) i))
+  (sp-for-each-index i in-b-length (set (array-get in-b i) (+ 1 i)))
   (sp-convolve in-a in-a-length in-b in-b-length carryover-length carryover out-control)
   (sp-samples-zero carryover in-b-length)
-  (for-each-index i block-count
+  (sp-for-each-index i block-count
     (sp-convolve (+ (* i block-size) in-a) block-size
       in-b in-b-length carryover-length carryover (+ (* i block-size) out))
     (set carryover-length in-b-length))
@@ -205,9 +205,9 @@
   (memreg-add out)
   (status-require (sp-samples-new size &out-control))
   (memreg-add out-control)
-  (for-each-index i size (set (array-get in i) i))
+  (sp-for-each-index i size (set (array-get in i) i))
   (status-require (sp-windowed-sinc-bp-br in size cutl cuth trnl trnh 0 &state-control out-control))
-  (for-each-index i block-count
+  (sp-for-each-index i block-count
     (status-require
       (sp-windowed-sinc-bp-br (+ (* i block-size) in) block-size
         cutl cuth trnl trnh 0 &state (+ (* i block-size) out))))
@@ -385,10 +385,10 @@
   (free-on-error1 config)
   (status-require (sp-block-new 2 test-noise-duration &out))
   (free-on-error &out sp-block-free)
-  (for-each-index i test-noise-duration
+  (sp-for-each-index i test-noise-duration
     (set (array-get cutl i) 0.01 (array-get cuth i) 0.3 (array-get amod i) 1.0))
   (struct-set *config cutl-mod cutl cuth-mod cuth amod amod amp 1 channels 2 trnh 0.07 trnl 0.07)
-  (struct-set event start 0 end test-noise-duration prepare sp-noise-event-prepare data config)
+  (struct-set event start 0 end test-noise-duration prepare sp-noise-event-prepare config config)
   (status-require (sp-event-list-add &events event))
   (status-require (sp-seq 0 test-noise-duration out &events))
   (declare sum sp-sample-t)
@@ -442,7 +442,7 @@
     q-factor 0.1
     channels 2
     amp 1)
-  (struct-set event end test-noise-duration data &config prepare sp-cheap-noise-event-prepare)
+  (struct-set event end test-noise-duration config &config prepare sp-cheap-noise-event-prepare)
   (status-require (event.prepare &event))
   (status-require (event.generate 0 test-noise-duration out &event))
   (test-helper-assert "in range -1..1"
@@ -463,25 +463,14 @@
   (status-require (sp-block-new 2 test-noise-duration &out))
   (for ((set i 0) (< i test-noise-duration) (set+ i 1))
     (set (array-get fmod i) 30 (array-get wmod i) 200 (array-get amod i) 1.0))
-  (struct-set config
-    amp 1
-    amod amod
-    noise 0
-    duration test-noise-duration
-    frq 200
-    fmod 0
-    wmod 0
-    wdt 200)
-  (struct-set event end test-noise-duration)
-  (status-require (sp-sound-event config &event))
+  (struct-set config amp 1 amod amod noise 0 frq 200 fmod 0 wmod 0 wdt 200)
+  (struct-set event end test-noise-duration config &config prepare sp-sound-event-prepare)
   (status-require (event.prepare &event))
   (status-require (event.generate 0 test-noise-duration out &event))
   (set config.noise 1)
-  (status-require (sp-sound-event config &event))
   (status-require (event.prepare &event))
   (status-require (event.generate 0 test-noise-duration out &event))
   (set config.noise 2)
-  (status-require (sp-sound-event config &event))
   (status-require (event.prepare &event))
   (status-require (event.generate 0 test-noise-duration out &event))
   (label exit status-return))
@@ -557,15 +546,18 @@
   (free-on-error1 config)
   (status-require (sp-block-new 2 test-wave-event-duration &out))
   (free-on-error &out sp-block-free)
-  (for-each-index i test-wave-event-duration
+  (sp-for-each-index i test-wave-event-duration
     (set (array-get fmod i) 2000 (array-get amod1 i) 1 (array-get amod2 i) 0.5))
   (struct-set *config wvf sp-sine-table wvf-size sp-rate fmod fmod amp 1 amod amod1 channels 2)
   (array-set config:channel-config 1 (sp-channel-config 0 10 10 1 amod2))
-  (struct-set event start 0 end test-wave-event-duration data config prepare sp-wave-event-prepare)
+  (struct-set event
+    start 0
+    end test-wave-event-duration
+    config config
+    prepare sp-wave-event-prepare)
   (status-require (event.prepare &event))
-  (status-require (event.generate 0 30 out event.data))
-  (status-require
-    (event.generate 30 test-wave-event-duration (sp-block-with-offset out 30) event.data))
+  (status-require (event.generate 0 30 out &event))
+  (status-require (event.generate 30 test-wave-event-duration (sp-block-with-offset out 30) &event))
   (sc-comment (sp-plot-samples (array-get out.samples 0) test-wave-event-duration))
   (sp-block-free &out)
   (label exit (if status-is-failure free-on-error-free) status-return))
@@ -589,7 +581,11 @@
   (status-require (sp-block-new 1 test-wave-event-duration &out))
   (free-on-error &out sp-block-free)
   (struct-set *config wvf sp-sine-table wvf-size sp-rate fmod frq amp 1 amod amod channels 1)
-  (struct-set event start 0 end test-wave-event-duration data config prepare sp-wave-event-prepare)
+  (struct-set event
+    start 0
+    end test-wave-event-duration
+    config config
+    prepare sp-wave-event-prepare)
   (sc-comment (sp-render-file event test-wave-event-duration rc "/tmp/test.wav"))
   (sp-render-block event 0 test-wave-event-duration rc &out)
   (sc-comment (sp-block-plot-1 out))
@@ -810,7 +806,7 @@
   (free-on-error1 fmod)
   (struct-set *config wvf sp-sine-table wvf-size sp-rate fmod fmod amp 1 amod amod channels 2)
   (for ((set i 0) (< i 10) (set+ i 1))
-    (struct-set event start 0 end size data config prepare sp-wave-event-prepare)
+    (struct-set event start 0 end size config config prepare sp-wave-event-prepare)
     (status-require (sp-event-list-add &events event)))
   (status-require (sp-block-new 2 size &block))
   (sp-seq-events-prepare &events)
@@ -858,14 +854,14 @@
   (set size (* 10 _rate))
   (status-require (sp-path-samples-2 &amod size (sp-path-move 0 1.0) (sp-path-constant)))
   (struct-set *config wvf sp-sine-table wvf-size sp-rate frq 300 fmod 0 amp 1 amod amod channels 1)
-  (struct-set child start 0 end size data config prepare sp-wave-event-prepare)
+  (struct-set child start 0 end size config config prepare sp-wave-event-prepare)
   (status-require (sp-block-new 1 size &block))
   (struct-set *map-event-config event child map-generate test-sp-map-event-generate isolate #t)
   (struct-set parent
     start child.start
     end child.end
     prepare sp-map-event-prepare
-    data map-event-config)
+    config map-event-config)
   (status-require (parent.prepare &parent))
   (status-require (parent.generate 0 (/ size 2) block &parent))
   (status-require (parent.generate (/ size 2) size block &parent))
@@ -876,10 +872,14 @@
 
 (define (test-sp-pan->amp) status-t
   status-declare
-  (test-helper-assert "value 0, channel 0" (sp-sample-nearly-equal 1 (sp-pan->amp 0 0) error-margin))
-  (test-helper-assert "value 0, channel 1" (sp-sample-nearly-equal 0 (sp-pan->amp 0 1) error-margin))
-  (test-helper-assert "value 1, channel 0" (sp-sample-nearly-equal 0 (sp-pan->amp 1 0) error-margin))
-  (test-helper-assert "value 1, channel 1" (sp-sample-nearly-equal 1 (sp-pan->amp 1 1) error-margin))
+  (test-helper-assert "value 0, channel 0"
+    (sp-sample-nearly-equal 1 (sp-pan->amp 0 0) error-margin))
+  (test-helper-assert "value 0, channel 1"
+    (sp-sample-nearly-equal 0 (sp-pan->amp 0 1) error-margin))
+  (test-helper-assert "value 1, channel 0"
+    (sp-sample-nearly-equal 0 (sp-pan->amp 1 0) error-margin))
+  (test-helper-assert "value 1, channel 1"
+    (sp-sample-nearly-equal 1 (sp-pan->amp 1 1) error-margin))
   (test-helper-assert "value 0.5, channel 0"
     (sp-sample-nearly-equal 1 (sp-pan->amp 0.5 0) error-margin))
   (test-helper-assert "value 0.5, channel 0"

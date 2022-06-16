@@ -263,6 +263,11 @@ user input might have to be read in a separate thread and buffered for the time 
 ## how to do phase modulation
 slight changes of frequency over a short period of time by using the fmod frequency modulation feature of sp-wave-event.
 
+# caveats
+## event config
+event config like sp_wave_event_config_t and similar needs to be available when the event is prepared.
+unless the event is prepared in a sub function, it should be heap allocated, for example with sp_wave_event_config_new, and tracked with sp_event_memory_add.
+
 # troubleshooting
 issues, possible causes and solutions.
 

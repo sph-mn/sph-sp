@@ -5,9 +5,8 @@ sp-time-t addition is not limited. */
 
 /** generic shuffle that works on any array type. fisher-yates algorithm */
 void sp_shuffle(sp_random_state_t* state, void (*swap)(void*, size_t, size_t), void* a, size_t size) {
-  size_t i;
   size_t j;
-  for (i = 0; (i < size); i += 1) {
+  for (size_t i = 0; (i < size); i += 1) {
     j = (i + sp_time_random_bounded(state, (size - i)));
     swap(a, i, j);
   };
@@ -39,7 +38,7 @@ sp_sample_t sp_samples_absolute_max(sp_sample_t* in, sp_time_t in_size) {
 sp_time_t sp_times_absolute_max(sp_time_t* in, sp_time_t size) {
   sp_time_t a;
   sp_time_t max = 0;
-  for (sp_time_t i = 0; (i < size); i += 1) {
+  for (size_t i = 0; (i < size); i += 1) {
     a = sp_abs((in[i]));
     if (a > max) {
       max = a;
@@ -521,7 +520,7 @@ void sp_samples_scale_sum(sp_sample_t* a, sp_time_t size, sp_sample_t n, sp_samp
 }
 sp_time_t sp_times_sum(sp_time_t* a, sp_time_t size) {
   sp_time_t sum = 0;
-  for (sp_time_t i = 0; (i < size); i += 1) {
+  for (size_t i = 0; (i < size); i += 1) {
     sum += a[i];
   };
   return (sum);
@@ -532,7 +531,7 @@ sp_time_t sp_times_sum(sp_time_t* a, sp_time_t size) {
 void sp_times_scale_sum(sp_time_t* a, sp_time_t size, sp_time_t n, sp_time_t* out) {
   sp_sample_t factor;
   factor = (((sp_sample_t)(n)) / sp_times_sum(a, size));
-  for (sp_time_t i = 0; (i < size); i += 1) {
+  for (size_t i = 0; (i < size); i += 1) {
     out[i] = sp_cheap_round_positive((out[i] * factor));
   };
 }
@@ -771,7 +770,7 @@ status_t sp_times_deduplicate(sp_time_t* a, sp_time_t size, sp_time_t* out, sp_t
     sp_memory_error;
   };
   unique_count = 0;
-  for (sp_time_t i = 0; (i < size); i += 1) {
+  for (size_t i = 0; (i < size); i += 1) {
     if (!sp_time_set_get(unique, (a[i]))) {
       if (!sp_time_set_add(unique, (a[i]))) {
         sp_memory_error;
@@ -802,7 +801,7 @@ void sp_times_counted_sequences_add(sp_time_t* a, sp_time_t size, sp_time_t widt
   sp_sequence_set_key_t key;
   sp_time_t* value;
   key.size = width;
-  for (sp_time_t i = 0; (i < (size - (width - 1))); i += 1) {
+  for (size_t i = 0; (i < (size - (width - 1))); i += 1) {
     key.data = ((uint8_t*)((i + a)));
     value = sp_sequence_hashtable_get(out, key);
     /* full-hashtable-error is ignored */
@@ -828,7 +827,7 @@ sp_time_t sp_times_counted_sequences_count(sp_time_t* a, sp_time_t width, sp_seq
 void sp_times_counted_sequences_values(sp_sequence_hashtable_t known, sp_time_t min, sp_times_counted_sequences_t* out, sp_time_t* out_size) {
   sp_time_t count;
   count = 0;
-  for (sp_time_t i = 0; (i < known.size); i += 1) {
+  for (size_t i = 0; (i < known.size); i += 1) {
     if ((known.flags)[i] && (min < (known.values)[i])) {
       (out[count]).count = (known.values)[i];
       (out[count]).sequence = ((sp_time_t*)(((known.keys)[i]).data));
@@ -879,21 +878,21 @@ void sp_times_subdivide_difference(sp_time_t* a, sp_time_t size, sp_time_t index
 
 /** interpolate values between $a and $b with interpolation distance fraction 0..1 */
 void sp_times_blend(sp_time_t* a, sp_time_t* b, sp_sample_t fraction, sp_time_t size, sp_time_t* out) {
-  for (sp_time_t i = 0; (i < size); i += 1) {
+  for (size_t i = 0; (i < size); i += 1) {
     out[i] = sp_cheap_round_positive((sp_time_interpolate_linear((a[i]), (b[i]), fraction)));
   };
 }
 
 /** interpolate values pointwise between $a and $b with interpolation distance 0..1 from $coefficients */
 void sp_times_mask(sp_time_t* a, sp_time_t* b, sp_sample_t* coefficients, sp_time_t size, sp_time_t* out) {
-  for (sp_time_t i = 0; (i < size); i += 1) {
+  for (size_t i = 0; (i < size); i += 1) {
     out[i] = sp_cheap_round_positive((sp_time_interpolate_linear((a[i]), (b[i]), (coefficients[i]))));
   };
 }
 
 /** interpolate values pointwise between $a and $b with fraction as a fixed interpolation distance 0..1 */
 void sp_samples_blend(sp_sample_t* a, sp_sample_t* b, sp_sample_t fraction, sp_time_t size, sp_sample_t* out) {
-  for (sp_time_t i = 0; (i < size); i += 1) {
+  for (size_t i = 0; (i < size); i += 1) {
     out[i] = sp_sample_interpolate_linear((a[i]), (b[i]), fraction);
   };
 }

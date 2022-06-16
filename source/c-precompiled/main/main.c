@@ -46,7 +46,6 @@
   }
 #define sp_memory_error status_set_goto(sp_s_group_sp, sp_s_id_memory)
 #define sp_modvalue(fixed, array, index) (array ? array[index] : fixed)
-#define sp_array_or_fixed(array, fixed, index) (array ? array[index] : fixed)
 define_sp_interleave(sp_interleave, sp_sample_t, (b[b_size] = (a[channel])[a_size]))
   define_sp_interleave(sp_deinterleave, sp_sample_t, ((a[channel])[a_size] = b[b_size]))
 
@@ -169,19 +168,24 @@ sp_sample_t sp_square(sp_time_t t, sp_time_t size) { return (((((2 * t) % (2 * s
 /** writes one full period of a sine wave into out. the sine has the frequency that makes it fit exactly into size.
    can be used to create lookup tables */
 void sp_sine_period(sp_time_t size, sp_sample_t* out) {
-  sp_time_t i;
-  for (i = 0; (i < size); i += 1) {
+  for (sp_time_t i = 0; (i < size); i += 1) {
     out[i] = sin((i * (M_PI / (size / 2))));
   };
 }
-void sp_sine(sp_time_t size, sp_time_t frq, sp_time_t phs, sp_sample_t* out) {
-  sp_time_t i;
-  for (i = 0; (i < size); i += 1) {
-    out[i] = sin(((frq * i) + phs));
+void sp_wave(sp_time_t size, sp_sample_t* wvf, sp_time_t wvf_size, sp_sample_t amp, sp_sample_t* amod, sp_time_t frq, sp_time_t* fmod, sp_time_t* phs_state, sp_sample_t* out) {
+  sp_time_t phs = *phs_state;
+  for (sp_time_t i = 0; (i < size); i += 1) {
+    out[i] += (amp * sp_array_or_fixed(amod, amp, i) * wvf[phs]);
+    phs += sp_array_or_fixed(fmod, frq, i);
+    if (phs >= wvf_size) {
+      phs = (phs % wvf_size);
+    };
   };
+  *phs_state = phs;
 }
+void sp_sine(sp_time_t size, sp_sample_t amp, sp_sample_t* amod, sp_time_t frq, sp_time_t* fmod, sp_time_t* phs_state, sp_sample_t* out) { sp_wave(size, sp_sine_table, sp_rate, amp, amod, frq, fmod, phs_state, out); }
 
-/** calculate the amplitude values for summing sines to a sawtooth wave */
+/** calculate the amplitudes of sines summed to a sawtooth wave */
 void sp_sawtooth_amps(sp_time_t count, sp_sample_t amp, sp_time_t frq, sp_sample_t* amps) {
   sp_sample_t sum;
   for (sp_time_t k = 1; (k <= count); k += 1) {
@@ -190,7 +194,7 @@ void sp_sawtooth_amps(sp_time_t count, sp_sample_t amp, sp_time_t frq, sp_sample
   };
 }
 
-/** calculate the amplitude values for summing sines to a square wave */
+/** calculate the amplitudes of sines summed to a square wave */
 void sp_square_amps(sp_time_t count, sp_sample_t amp, sp_sample_t* amps) {
   sp_time_t i;
   sp_time_t k;

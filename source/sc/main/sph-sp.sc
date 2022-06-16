@@ -24,6 +24,8 @@
   sp-sample-random sph-random-f64-1to1
   sp-sample-nearly-equal f64-nearly-equal
   sp-sample-array-nearly-equal f64-array-nearly-equal
+  sp-scalar-random sph-random-f64-0to1
+  sp-scalar-random sph-random-f64-0to1
   sp-random-seed 1557083953
   sp-cheap-filter-passes-limit 8)
 
@@ -99,7 +101,8 @@
   (sp-samples->hz x) (convert-type (/ sp-rate x) sp-time-t)
   (sp-hz->factor x) (/ (convert-type x sp-sample-t) (convert-type sp-rate sp-sample-t))
   (sp-factor->hz x) (convert-type (* x sp-rate) sp-time-t)
-  (sp-event-reset x) (set x sp-event-null))
+  (sp-array-or-fixed array fixed index) (if* array (array-get array index) fixed)
+  (sp-sample->scalar a) (/ (+ 1 a) 2.0))
 
 (declare
   sp-block-t
@@ -118,7 +121,11 @@
   sp-sine-table sp-sample-t*
   sp-sine-table-lfo sp-sample-t*
   sp-sine-lfo-factor sp-time-t
-  (sp-sine size frq phs out) (void sp-time-t sp-time-t sp-time-t sp-sample-t*)
+  (sp-wave size wvf wvf-size amp amod frq fmod phs-state out)
+  (void sp-time-t sp-sample-t*
+    sp-time-t sp-sample-t sp-sample-t* sp-time-t sp-time-t* sp-time-t* sp-sample-t*)
+  (sp-sine size amp amod frq fmod phs-state out)
+  (void sp-time-t sp-sample-t sp-sample-t* sp-time-t sp-time-t* sp-time-t* sp-sample-t*)
   (sp-random-state-new seed) (sp-random-state-t sp-time-t)
   (sp-block-zero a) (void sp-block-t)
   (sp-block-copy a b) (void sp-block-t sp-block-t)
@@ -430,6 +437,7 @@
 (sc-comment "sequencer")
 
 (pre-define
+  (sp-event-reset x) (set x sp-event-null)
   (sp-declare-event id) (begin (define id sp-event-t (struct-literal 0)) (set id.memory.data 0))
   (sp-declare-event-2 id1 id2) (begin (sp-declare-event id1) (sp-declare-event id2))
   (sp-declare-event-3 id1 id2 id3)
@@ -450,26 +458,6 @@
   (sp-event-memory-add-3 a data1 data2 data3)
   (begin (sp-event-memory-add-2 a data1 data2) (sp-event-memory-add a data3))
   sp-sine-config-t sp-wave-event-config-t
-  (sp-declare-sine-config name)
-  (begin
-    (sp-declare-wave-event-config name)
-    (struct-set name wvf sp-sine-table wvf-size sp-rate channels sp-channels amp 1))
-  (sp-declare-sine-config-lfo name)
-  (begin
-    (sp-declare-wave-event-config name)
-    (struct-set name
-      wvf sp-sine-table-lfo
-      wvf-size (* sp-rate sp-sine-lfo-factor)
-      channels sp-channels
-      amp 1))
-  (sp-declare-noise-config name)
-  (begin
-    (sp-declare-noise-event-config name)
-    (struct-set name channels sp-channels amp 1 cutl 0 cuth 0.5 trnl 0.1 trnh 0.1))
-  (sp-declare-cheap-noise-config name)
-  (begin
-    (sp-declare-cheap-noise-event-config name)
-    (struct-set name channels sp-channels amp 1 type sp-state-variable-filter-lp cut 0.5))
   sp-memory-add array3-add
   sp-seq-events-prepare sp-event-list-reverse
   (free-event-on-error event-address) (free-on-error (: event-address free) event-address)
@@ -493,7 +481,6 @@
   (define variable-name type (pointer-get (convert-type event:config type*))))
 
 (array3-declare-type sp-memory memreg2-t)
-(array3-declare-type sp-times3 sp-time-t)
 
 (declare
   sp-memory-free-t (type (function-pointer void void*))
@@ -583,7 +570,6 @@
   sp-sound-event-config-t
   (type
     (struct
-      (duration sp-time-t)
       (noise sp-bool-t)
       (amp sp-sample-t)
       (amod sp-sample-t*)
@@ -591,6 +577,7 @@
       (fmod sp-time-t*)
       (wdt sp-time-t)
       (wmod sp-time-t*)
+      (channels sp-channel-count-t)
       (channel-config (array sp-channel-config-t sp-channel-limit))))
   sp-event-prepare-t (function-pointer status-t sp-event-t*)
   sp-map-generate-t
@@ -640,7 +627,7 @@
   (sp-wave-event-config-new out) (status-t sp-wave-event-config-t**)
   (sp-map-event-config-new out) (status-t sp-map-event-config-t**)
   (sp-wave-event-config-defaults config) (void sp-wave-event-config-t*)
-  (sp-sound-event config out) (status-t sp-sound-event-config-t sp-event-t*))
+  (sp-sound-event-prepare event) (status-t sp-event-t*))
 
 (sc-comment "path")
 

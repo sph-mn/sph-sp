@@ -24,8 +24,7 @@
         (set a-size (- a-size 1) channel channel-count)
         (while channel (set channel (- channel 1) b-size (- b-size 1)) body))))
   sp-memory-error (status-set-goto sp-s-group-sp sp-s-id-memory)
-  (sp-modvalue fixed array index) (if* array (array-get array index) fixed)
-  (sp-array-or-fixed array fixed index) (if* array (array-get array index) fixed))
+  (sp-modvalue fixed array index) (if* array (array-get array index) fixed))
 
 (define-sp-interleave sp-interleave sp-sample-t
   (set (array-get b b-size) (array-get (array-get a channel) a-size)))
@@ -121,22 +120,30 @@
 (define (sp-sine-period size out) (void sp-time-t sp-sample-t*)
   "writes one full period of a sine wave into out. the sine has the frequency that makes it fit exactly into size.
    can be used to create lookup tables"
-  (declare i sp-time-t)
-  (for ((set i 0) (< i size) (set+ i 1)) (set (array-get out i) (sin (* i (/ M_PI (/ size 2)))))))
+  (for ((define i sp-time-t 0) (< i size) (set+ i 1)) (set (array-get out i) (sin (* i (/ M_PI (/ size 2)))))))
 
-(define (sp-sine size frq phs out) (void sp-time-t sp-time-t sp-time-t sp-sample-t*)
-  (declare i sp-time-t)
-  (for ((set i 0) (< i size) (set+ i 1)) (set (array-get out i) (sin (+ (* frq i) phs)))))
+(define (sp-wave size wvf wvf-size amp amod frq fmod phs-state out)
+  (void sp-time-t sp-sample-t* sp-time-t sp-sample-t sp-sample-t* sp-time-t sp-time-t* sp-time-t* sp-sample-t*)
+  (define phs sp-time-t *phs-state)
+  (for ((define i sp-time-t 0) (< i size) (set+ i 1))
+    (set+ (array-get out i) (* amp (sp-array-or-fixed amod amp i) (array-get wvf phs))
+      phs (sp-array-or-fixed fmod frq i))
+    (if (>= phs wvf-size) (set phs (modulo phs wvf-size))))
+  (set *phs-state phs))
+
+(define (sp-sine size amp amod frq fmod phs-state out)
+  (void sp-time-t sp-sample-t sp-sample-t* sp-time-t sp-time-t* sp-time-t* sp-sample-t*)
+  (sp-wave size sp-sine-table sp-rate amp amod frq fmod phs-state out))
 
 (define (sp-sawtooth-amps count amp frq amps) (void sp-time-t sp-sample-t sp-time-t sp-sample-t*)
-  "calculate the amplitude values for summing sines to a sawtooth wave"
+  "calculate the amplitudes of sines summed to a sawtooth wave"
   (declare sum sp-sample-t)
   (for ((define k sp-time-t 1) (<= k count) (set+ k 1))
     (set+ sum (/ (* (pow -1 k) (sin (* 2 M_PI k frq))) k))
     (set (array-get amps (- k 1)) (- (/ amp 2) (* (/ amp M_PI) sum)))))
 
 (define (sp-square-amps count amp amps) (void sp-time-t sp-sample-t sp-sample-t*)
-  "calculate the amplitude values for summing sines to a square wave"
+  "calculate the amplitudes of sines summed to a square wave"
   (declare i sp-time-t k sp-time-t)
   (for ((set i 0 k 1) (< i count) (set+ i 1 k 2)) (set (array-get amps i) (* amp (/ 2 (* M_PI k))))))
 

@@ -73,6 +73,33 @@
   (while current (sp-event-free current:event) (set temp current current current:next) (free temp))
   (set events 0))
 
+(define (sp-event-memory-init a additional-size) (status-t sp-event-t* sp-time-t)
+  "ensures that event memory is initialized and can take $additional_size more elements"
+  status-declare
+  (if a:memory.data
+    (if
+      (and (> additional-size (array3-unused-size a:memory))
+        (sp-memory-resize &a:memory
+          (+ (array3-max-size a:memory) (- additional-size (array3-unused-size a:memory)))))
+      sp-memory-error)
+    (if (sp-memory-new additional-size &a:memory) sp-memory-error
+      (if (not a:free) (set a:free sp-event-memory-free))))
+  (label exit status-return))
+
+(define (sp-event-memory-add2 a address handler) (void sp-event-t* void* sp-memory-free-t)
+  (declare m memreg2-t)
+  (struct-set m address address handler handler)
+  (sp-memory-add a:memory m))
+
+(define (sp-event-memory-free a) (void sp-event-t*)
+  "free all registered memory and unitialize the event-memory register.
+   can be used as an event.free function if only memory should be removed before other fields have been set"
+  (if (not a:memory.data) return)
+  (declare m memreg2-t)
+  (sp-for-each-index i (array3-size a:memory) (set m (array3-get a:memory i)) (m.handler m.address))
+  (array3-free a:memory)
+  (set a:memory.data 0))
+
 (define (sp-seq start end out events) (status-t sp-time-t sp-time-t sp-block-t sp-event-list-t**)
   "event arrays must have been prepared/sorted once with sp_seq_event_prepare for seq to work correctly.
    like for paths, start is inclusive, end is exclusive, so that 0..100 and 100..200 attach seamless.
@@ -162,18 +189,16 @@
         (future-new sp-seq-parallel-future-f sf &sf:future)))
     (set current current:next))
   (sc-comment "merge")
-  (for-each-index sf-i active
-    (set sf (+ sf-array sf-i))
-    (touch &sf:future)
-    (status-require sf:status)
-    (for-each-index ci out.channels
-      (for-each-index i sf:out.size
+  (sp-for-each-index sf-i active
+    (set sf (+ sf-array sf-i)) (touch &sf:future) (status-require sf:status)
+    (sp-for-each-index ci out.channels
+      (sp-for-each-index i sf:out.size
         (set+ (array-get (array-get out.samples ci) (+ sf:out-start i))
           (array-get (array-get sf:out.samples ci) i)))))
   (label exit
     (if sf-array
       (begin
-        (for-each-index i allocated
+        (sp-for-each-index i allocated
           (sp-block-free (address-of (struct-get (array-get sf-array i) out))))
         (free sf-array)))
     (if status-is-failure (sp-event-list-free events))
@@ -209,6 +234,12 @@
   (if (< a:end event.end) (set a:end event.end))
   (label exit status-return))
 
+(define (sp-group-add-set group start duration event)
+  (status-t sp-event-t* sp-time-t sp-time-t sp-event-t)
+  "set event start and duration and add event to group"
+  (struct-set event start start end (+ start (if* (= 0 duration) event.end duration)))
+  (return (sp-group-add group event)))
+
 (define (sp-group-append a event) (status-t sp-event-t* sp-event-t)
   (set+ event.start a:end event.end a:end)
   (return (sp-group-add a event)))
@@ -221,10 +252,11 @@
 
 (define (sp-channel-config-zero a) (void sp-channel-config-t*)
   (define channel-config sp-channel-config-t (struct-literal 0))
-  (for-each-index i sp-channel-limit (set (array-get a i) channel-config)))
+  (sp-for-each-index i sp-channel-limit (set (array-get a i) channel-config)))
 
-(define (sp-wave-event-config-defaults config) (void sp-wave-event-config-t*)
-  (struct-pointer-set config
+(define (sp-wave-event-config) sp-wave-event-config-t
+  (declare result sp-wave-event-config-t)
+  (struct-set result
     wvf sp-sine-table
     wvf-size sp-rate
     phs 0
@@ -233,24 +265,17 @@
     amp 1
     amod 0
     channels sp-channels)
-  (sp-channel-config-zero config:channel-config))
+  (sp-channel-config-zero result.channel-config)
+  (return result))
 
 (define (sp-wave-event-config-new out) (status-t sp-wave-event-config-t**)
-  "heap allocates a sp_wave_event_config_t struct and sets some defaults"
+  "heap allocates a sp_wave_event_config_t struct and set defaults"
   status-declare
   (status-require (sp-malloc-type 1 sp-wave-event-config-t out))
-  (sp-wave-event-config-defaults *out)
+  (set **out (sp-wave-event-config))
   (label exit status-return))
 
-(define (sp-map-event-config-new out) (status-t sp-map-event-config-t**)
-  status-declare
-  (declare result sp-map-event-config-t*)
-  (status-require (sp-malloc-type 1 sp-map-event-config-t &result))
-  (struct-set *result state 0 isolate 0)
-  (set *out result)
-  (label exit status-return))
-
-(define (sp-wave-event-free a) (void sp-event-t*) (set a:free 0) (free a:data))
+(define (sp-wave-event-channel-free a) (void sp-event-t*) (set a:free 0) (free a:config))
 
 (define (sp-wave-event-generate start end out event)
   (status-t sp-time-t sp-time-t sp-block-t sp-event-t*)
@@ -286,14 +311,14 @@
     end (if* channel-config.use (+ duration channel-config.delay) duration)
     prepare 0
     generate sp-wave-event-generate
-    free sp-wave-event-free)
+    free sp-wave-event-channel-free)
   (set *out event)
   (label exit (if status-is-failure (if data (free data))) status-return))
 
 (define (sp-wave-event-prepare event) (status-t sp-event-t*)
   "prepare an event playing waveforms from an array.
-   config should have been declared with defaults using sp_declare_wave_event_config.
    event end will be longer if channel config delay is used.
+   expects sp_wave_event_config_t at event.config.
    config:
    * frq (frequency): fixed frequency, only used if fmod is null
    * fmod (frequency): array with hertz values
@@ -311,9 +336,9 @@
   status-declare
   (sp-declare-event channel)
   (define config sp-wave-event-config-t
-    (pointer-get (convert-type event:data sp-wave-event-config-t*)))
+    (pointer-get (convert-type event:config sp-wave-event-config-t*)))
   (set event:data 0 event:free sp-group-free)
-  (for-each-index ci config.channels
+  (sp-for-each-index ci config.channels
     (if (struct-get (array-get config.channel-config ci) mute) continue)
     (status-require (sp-wave-event-channel (- event:end event:start) config ci &channel))
     (status-require (sp-group-add event channel)))
@@ -478,7 +503,7 @@
   (declare duration sp-time-t rs sp-random-state-t state-noise sp-sample-t* state-temp sp-sample-t*)
   (sp-declare-event channel)
   (define config sp-noise-event-config-t
-    (pointer-get (convert-type event:data sp-noise-event-config-t*)))
+    (pointer-get (convert-type event:config sp-noise-event-config-t*)))
   (set
     event:data 0
     event:free sp-group-free
@@ -494,7 +519,7 @@
   (sp-event-memory-add event state-noise)
   (status-require (sp-malloc-type config.resolution sp-sample-t &state-temp))
   (sp-event-memory-add event state-temp)
-  (for-each-index ci config.channels
+  (sp-for-each-index ci config.channels
     (if (struct-get (array-get config.channel-config ci) mute) continue)
     (status-require (sp-noise-event-channel duration config ci rs state-noise state-temp &channel))
     (status-require (sp-group-add event channel)))
@@ -626,7 +651,7 @@
   (declare rs sp-random-state-t state-noise sp-sample-t* state-temp sp-sample-t* duration sp-time-t)
   (sp-declare-event channel)
   (define config sp-cheap-noise-event-config-t
-    (pointer-get (convert-type event:data sp-cheap-noise-event-config-t*)))
+    (pointer-get (convert-type event:config sp-cheap-noise-event-config-t*)))
   (set
     event:data 0
     event:free sp-group-free
@@ -643,7 +668,7 @@
   (sp-event-memory-add event state-noise)
   (status-require (sp-malloc-type config.resolution sp-sample-t &state-temp))
   (sp-event-memory-add event state-temp)
-  (for-each-index ci config.channels
+  (sp-for-each-index ci config.channels
     (if (struct-get (array-get config.channel-config ci) mute) continue)
     (status-require
       (sp-cheap-noise-event-channel (- event:end event:start) config
@@ -652,32 +677,13 @@
   (status-require (sp-group-prepare event))
   (label exit status-return))
 
-(define (sp-event-memory-init a additional-size) (status-t sp-event-t* sp-time-t)
-  "ensures that event memory is initialized and can take $additional_size more elements"
+(define (sp-map-event-config-new out) (status-t sp-map-event-config-t**)
   status-declare
-  (if a:memory.data
-    (if
-      (and (> additional-size (array3-unused-size a:memory))
-        (sp-memory-resize &a:memory
-          (+ (array3-max-size a:memory) (- additional-size (array3-unused-size a:memory)))))
-      sp-memory-error)
-    (if (sp-memory-new additional-size &a:memory) sp-memory-error
-      (if (not a:free) (set a:free sp-event-memory-free))))
+  (declare result sp-map-event-config-t*)
+  (status-require (sp-malloc-type 1 sp-map-event-config-t &result))
+  (struct-set *result state 0 isolate 0)
+  (set *out result)
   (label exit status-return))
-
-(define (sp-event-memory-add2 a address handler) (void sp-event-t* void* sp-memory-free-t)
-  (declare m memreg2-t)
-  (struct-set m address address handler handler)
-  (sp-memory-add a:memory m))
-
-(define (sp-event-memory-free a) (void sp-event-t*)
-  "free all registered memory and unitialize the event-memory register.
-   can be used as an event.free function if only memory should be removed before other fields have been set"
-  (if (not a:memory.data) return)
-  (declare m memreg2-t)
-  (for-each-index i (array3-size a:memory) (set m (array3-get a:memory i)) (m.handler m.address))
-  (array3-free a:memory)
-  (set a:memory.data 0))
 
 (define (sp-map-event-free event) (void sp-event-t*)
   (declare s sp-map-event-state-t*)
@@ -718,7 +724,7 @@
   (declare state sp-map-event-state-t*)
   (free-on-error-init 1)
   (define config sp-map-event-config-t
-    (pointer-get (convert-type event:data sp-map-event-config-t*)))
+    (pointer-get (convert-type event:config sp-map-event-config-t*)))
   (status-require (sp-malloc-type 1 sp-map-event-state-t &state))
   (free-on-error1 state)
   (status-require (config.event.prepare &config.event))
@@ -731,12 +737,14 @@
     event:free sp-map-event-free)
   (label exit (if status-is-failure free-on-error-free) status-return))
 
-(define (sp-group-add-set group start duration event)
-  (status-t sp-event-t* sp-time-t sp-time-t sp-event-t)
-  (struct-set event start start end (+ start (if* (= 0 duration) event.end duration)))
-  (return (sp-group-add group event)))
+(define (sp-sound-event-config) sp-sound-event-config-t
+  "return a sound event configuration struct with defaults set"
+  (declare result sp-sound-event-config-t)
+  (struct-set result noise 0 amp 1 amod 0 frq sp-rate fmod 0 wdt 0 wmod 0 channels sp-channels)
+  (sp-channel-config-zero result.channel-config)
+  (return result))
 
-(define (sp-sound-event-cheap-noise config out) (status-t sp-sound-event-config-t sp-event-t*)
+(define (sp-sound-event-prepare-cheap-noise event) (status-t sp-event-t*)
   status-declare
   (declare
     cut sp-sample-t
@@ -745,28 +753,32 @@
     q-factor-mod sp-sample-t*
     frq sp-time-t
     wdt sp-time-t
+    duration sp-time-t
     event-config sp-cheap-noise-event-config-t*)
+  (define config sp-sound-event-config-t
+    (pointer-get (convert-type event:config sp-sound-event-config-t*)))
   (set
+    duration (- event:end event:start)
     cut (sp-hz->factor (- config.frq (/ config.wdt 2)))
     q-factor (sp-hz->factor config.wdt)
     cut-mod 0
     q-factor-mod 0)
   (if (or config.fmod config.wmod)
     (begin
-      (sp-event-memory-init out 3)
-      (srq (sp-samples-new config.duration &cut-mod))
-      (sp-event-memory-add out cut-mod)
-      (srq (sp-samples-new config.duration &q-factor-mod))
-      (sp-event-memory-add out q-factor-mod)
-      (for-each-index i config.duration
+      (sp-event-memory-init event 3)
+      (srq (sp-samples-new duration &cut-mod))
+      (sp-event-memory-add event cut-mod)
+      (srq (sp-samples-new duration &q-factor-mod))
+      (sp-event-memory-add event q-factor-mod)
+      (sp-for-each-index i duration
         (set
           frq (if* config.fmod (array-get config.fmod i) config.frq)
           wdt (if* config.wmod (array-get config.wmod i) config.wdt)
           (array-get cut-mod i) (sp-hz->factor (- frq (/ wdt 2)))
           (array-get q-factor-mod i) (sp-hz->factor wdt))))
-    (sp-event-memory-init out 1))
+    (sp-event-memory-init event 1))
   (srq (sp-cheap-noise-event-config-new &event-config))
-  (sp-event-memory-add out event-config)
+  (sp-event-memory-add event event-config)
   (struct-pointer-set event-config
     amp config.amp
     amod config.amod
@@ -775,12 +787,14 @@
     q-factor q-factor
     q-factor-mod q-factor-mod
     type sp-state-variable-filter-bp)
-  (set out:data event-config out:prepare sp-cheap-noise-event-prepare)
+  (set event:config event-config event:prepare sp-cheap-noise-event-prepare)
+  (srq (event:prepare event))
   (label exit status-return))
 
-(define (sp-sound-event-noise config out) (status-t sp-sound-event-config-t sp-event-t*)
+(define (sp-sound-event-prepare-noise event) (status-t sp-event-t*)
   status-declare
   (declare
+    duration sp-time-t
     cutl-mod sp-sample-t*
     cuth-mod sp-sample-t*
     cutl sp-sample-t
@@ -788,27 +802,30 @@
     frq sp-time-t
     wdt sp-time-t
     event-config sp-noise-event-config-t*)
+  (define config sp-sound-event-config-t
+    (pointer-get (convert-type event:config sp-sound-event-config-t*)))
   (set
+    duration (- event:end event:start)
     cutl (sp-hz->factor config.frq)
     cuth (sp-hz->factor (+ config.wdt config.frq))
     cutl-mod 0
     cuth-mod 0)
   (if (or config.fmod config.wmod)
     (begin
-      (sp-event-memory-init out 3)
-      (srq (sp-samples-new config.duration &cutl-mod))
-      (sp-event-memory-add out cutl-mod)
-      (srq (sp-samples-new config.duration &cuth-mod))
-      (sp-event-memory-add out cuth-mod)
-      (for-each-index i config.duration
+      (sp-event-memory-init event 3)
+      (srq (sp-samples-new duration &cutl-mod))
+      (sp-event-memory-add event cutl-mod)
+      (srq (sp-samples-new duration &cuth-mod))
+      (sp-event-memory-add event cuth-mod)
+      (sp-for-each-index i duration
         (set
           frq (if* config.fmod (array-get config.fmod i) config.frq)
           wdt (if* config.wmod (array-get config.wmod i) config.wdt)
           (array-get cutl-mod i) (sp-hz->factor frq)
           (array-get cuth-mod i) (sp-hz->factor (+ frq wdt)))))
-    (sp-event-memory-init out 1))
+    (sp-event-memory-init event 1))
   (srq (sp-noise-event-config-new &event-config))
-  (sp-event-memory-add out event-config)
+  (sp-event-memory-add event event-config)
   (struct-pointer-set event-config
     amp config.amp
     amod config.amod
@@ -816,23 +833,31 @@
     cuth-mod cuth-mod
     cutl cutl
     cuth cuth)
-  (set out:data event-config out:prepare sp-noise-event-prepare)
+  (set event:config event-config event:prepare sp-noise-event-prepare)
+  (srq (event:prepare event))
   (label exit status-return))
 
-(define (sp-sound-event config out) (status-t sp-sound-event-config-t sp-event-t*)
-  "generic event for waves and filtered noise. all frequency values (frq, fmod, wdt, wmod) are in hertz, even for noise"
+(define (sp-sound-event-prepare-wave-event event) (status-t sp-event-t*)
   status-declare
-  (cond ((= 1 config.noise) (srq (sp-sound-event-noise config out)))
-    ((= 2 config.noise) (srq (sp-sound-event-cheap-noise config out)))
-    (else (declare event-config sp-wave-event-config-t*) (sc-comment (sp-event-memory-init out 1))
-      (srq (sp-wave-event-config-new &event-config))
-      (sc-comment (sp-event-memory-add out event-config))
-      (struct-pointer-set event-config
-        amp config.amp
-        amod config.amod
-        fmod config.fmod
-        frq config.frq)
-      (for-each-index i sp-channel-limit
-        (set (array-get event-config:channel-config i) (array-get config.channel-config i)))
-      (set out:data event-config out:prepare sp-wave-event-prepare)))
+  (declare event-config sp-wave-event-config-t*)
+  (define config sp-sound-event-config-t
+    (pointer-get (convert-type event:config sp-sound-event-config-t*)))
+  (sp-event-memory-init event 1)
+  (srq (sp-wave-event-config-new &event-config))
+  (sp-event-memory-add event event-config)
+  (struct-pointer-set event-config amp config.amp amod config.amod fmod config.fmod frq config.frq)
+  (sp-for-each-index i sp-channel-limit
+    (set (array-get event-config:channel-config i) (array-get config.channel-config i)))
+  (set event:config event-config event:prepare sp-wave-event-prepare)
+  (srq (event:prepare event))
   (label exit status-return))
+
+(define (sp-sound-event-prepare event) (status-t sp-event-t*)
+  "generic event for waves and filtered noise. all frequency values (frq, fmod, wdt, wmod) are in hertz, even for filtered noise"
+  status-declare
+  (define config sp-sound-event-config-t
+    (pointer-get (convert-type event:config sp-sound-event-config-t*)))
+  (cond ((= 1 config.noise) (srq (sp-sound-event-prepare-noise event)))
+    ((= 2 config.noise) (srq (sp-sound-event-prepare-cheap-noise event)))
+    (else (srq (sp-sound-event-prepare-wave-event event))))
+  (label exit (if (and status-is-failure event:free) (event:free event)) status-return))

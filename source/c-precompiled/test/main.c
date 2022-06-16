@@ -140,15 +140,15 @@ status_t test_convolve_larger() {
   memreg_add(out_control);
   status_require((sp_samples_new(in_b_length, (&carryover))));
   memreg_add(carryover);
-  for (sp_time_t i = 0; (i < in_a_length); i += 1) {
+  for (size_t i = 0; (i < in_a_length); i += 1) {
     in_a[i] = i;
   };
-  for (sp_time_t i = 0; (i < in_b_length); i += 1) {
+  for (size_t i = 0; (i < in_b_length); i += 1) {
     in_b[i] = (1 + i);
   };
   sp_convolve(in_a, in_a_length, in_b, in_b_length, carryover_length, carryover, out_control);
   sp_samples_zero(carryover, in_b_length);
-  for (sp_time_t i = 0; (i < block_count); i += 1) {
+  for (size_t i = 0; (i < block_count); i += 1) {
     sp_convolve(((i * block_size) + in_a), block_size, in_b, in_b_length, carryover_length, carryover, ((i * block_size) + out));
     carryover_length = in_b_length;
   };
@@ -214,11 +214,11 @@ status_t test_windowed_sinc_continuity() {
   memreg_add(out);
   status_require((sp_samples_new(size, (&out_control))));
   memreg_add(out_control);
-  for (sp_time_t i = 0; (i < size); i += 1) {
+  for (size_t i = 0; (i < size); i += 1) {
     in[i] = i;
   };
   status_require((sp_windowed_sinc_bp_br(in, size, cutl, cuth, trnl, trnh, 0, (&state_control), out_control)));
-  for (sp_time_t i = 0; (i < block_count); i += 1) {
+  for (size_t i = 0; (i < block_count); i += 1) {
     status_require((sp_windowed_sinc_bp_br(((i * block_size) + in), block_size, cutl, cuth, trnl, trnh, 0, (&state), ((i * block_size) + out))));
   };
   test_helper_assert("equal to block processing result", (sp_sample_array_nearly_equal(out, size, out_control, size, (0.01))));
@@ -412,7 +412,7 @@ status_t test_sp_noise_event() {
   free_on_error1(config);
   status_require((sp_block_new(2, test_noise_duration, (&out))));
   free_on_error((&out), sp_block_free);
-  for (sp_time_t i = 0; (i < test_noise_duration); i += 1) {
+  for (size_t i = 0; (i < test_noise_duration); i += 1) {
     cutl[i] = 0.01;
     cuth[i] = 0.3;
     amod[i] = 1.0;
@@ -427,7 +427,7 @@ status_t test_sp_noise_event() {
   event.start = 0;
   event.end = test_noise_duration;
   event.prepare = sp_noise_event_prepare;
-  event.data = config;
+  event.config = config;
   status_require((sp_event_list_add((&events), event)));
   status_require((sp_seq(0, test_noise_duration, out, (&events))));
   sp_sample_t sum;
@@ -482,7 +482,7 @@ status_t test_sp_cheap_noise_event() {
   (*config).channels = 2;
   (*config).amp = 1;
   event.end = test_noise_duration;
-  event.data = &config;
+  event.config = &config;
   event.prepare = sp_cheap_noise_event_prepare;
   status_require(((event.prepare)((&event))));
   status_require(((event.generate)(0, test_noise_duration, out, (&event))));
@@ -512,21 +512,19 @@ status_t test_sp_sound_event() {
   config.amp = 1;
   config.amod = amod;
   config.noise = 0;
-  config.duration = test_noise_duration;
   config.frq = 200;
   config.fmod = 0;
   config.wmod = 0;
   config.wdt = 200;
   event.end = test_noise_duration;
-  status_require((sp_sound_event(config, (&event))));
+  event.config = &config;
+  event.prepare = sp_sound_event_prepare;
   status_require(((event.prepare)((&event))));
   status_require(((event.generate)(0, test_noise_duration, out, (&event))));
   config.noise = 1;
-  status_require((sp_sound_event(config, (&event))));
   status_require(((event.prepare)((&event))));
   status_require(((event.generate)(0, test_noise_duration, out, (&event))));
   config.noise = 2;
-  status_require((sp_sound_event(config, (&event))));
   status_require(((event.prepare)((&event))));
   status_require(((event.generate)(0, test_noise_duration, out, (&event))));
 exit:
@@ -604,7 +602,7 @@ status_t test_sp_wave_event() {
   free_on_error1(config);
   status_require((sp_block_new(2, test_wave_event_duration, (&out))));
   free_on_error((&out), sp_block_free);
-  for (sp_time_t i = 0; (i < test_wave_event_duration); i += 1) {
+  for (size_t i = 0; (i < test_wave_event_duration); i += 1) {
     fmod[i] = 2000;
     amod1[i] = 1;
     amod2[i] = 0.5;
@@ -618,11 +616,11 @@ status_t test_sp_wave_event() {
   (config->channel_config)[1] = sp_channel_config(0, 10, 10, 1, amod2);
   event.start = 0;
   event.end = test_wave_event_duration;
-  event.data = config;
+  event.config = config;
   event.prepare = sp_wave_event_prepare;
   status_require(((event.prepare)((&event))));
-  status_require(((event.generate)(0, 30, out, (event.data))));
-  status_require(((event.generate)(30, test_wave_event_duration, (sp_block_with_offset(out, 30)), (event.data))));
+  status_require(((event.generate)(0, 30, out, (&event))));
+  status_require(((event.generate)(30, test_wave_event_duration, (sp_block_with_offset(out, 30)), (&event))));
   /* (sp-plot-samples (array-get out.samples 0) test-wave-event-duration) */
   sp_block_free((&out));
 exit:
@@ -659,7 +657,7 @@ status_t test_render_block() {
   (*config).channels = 1;
   event.start = 0;
   event.end = test_wave_event_duration;
-  event.data = config;
+  event.config = config;
   event.prepare = sp_wave_event_prepare;
   /* (sp-render-file event test-wave-event-duration rc /tmp/test.wav) */
   sp_render_block(event, 0, test_wave_event_duration, rc, (&out));
@@ -904,7 +902,7 @@ status_t test_sp_seq_parallel() {
   for (i = 0; (i < 10); i += 1) {
     event.start = 0;
     event.end = size;
-    event.data = config;
+    event.config = config;
     event.prepare = sp_wave_event_prepare;
     status_require((sp_event_list_add((&events), event)));
   };
@@ -957,7 +955,7 @@ status_t test_sp_map_event() {
   (*config).channels = 1;
   child.start = 0;
   child.end = size;
-  child.data = config;
+  child.config = config;
   child.prepare = sp_wave_event_prepare;
   status_require((sp_block_new(1, size, (&block))));
   (*map_event_config).event = child;
@@ -966,7 +964,7 @@ status_t test_sp_map_event() {
   parent.start = child.start;
   parent.end = child.end;
   parent.prepare = sp_map_event_prepare;
-  parent.data = map_event_config;
+  parent.config = map_event_config;
   status_require(((parent.prepare)((&parent))));
   status_require(((parent.generate)(0, (size / 2), block, (&parent))));
   status_require(((parent.generate)((size / 2), size, block, (&parent))));
