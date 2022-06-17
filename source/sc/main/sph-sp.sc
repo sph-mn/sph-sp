@@ -24,8 +24,8 @@
   sp-sample-random sph-random-f64-1to1
   sp-sample-nearly-equal f64-nearly-equal
   sp-sample-array-nearly-equal f64-array-nearly-equal
-  sp-scalar-random sph-random-f64-0to1
-  sp-scalar-random sph-random-f64-0to1
+  sp-unit-random sph-random-f64-0to1
+  sp-unit-random sph-random-f64-0to1
   sp-random-seed 1557083953
   sp-cheap-filter-passes-limit 8)
 
@@ -102,7 +102,7 @@
   (sp-hz->factor x) (/ (convert-type x sp-sample-t) (convert-type sp-rate sp-sample-t))
   (sp-factor->hz x) (convert-type (* x sp-rate) sp-time-t)
   (sp-array-or-fixed array fixed index) (if* array (array-get array index) fixed)
-  (sp-sample->scalar a) (/ (+ 1 a) 2.0))
+  (sp-sample->unit a) (/ (+ 1 a) 2.0))
 
 (declare
   sp-block-t
@@ -167,8 +167,6 @@
   (sp-time-expt base exp) (sp-time-t sp-time-t sp-time-t)
   (sp-time-factorial a) (sp-time-t sp-time-t)
   (sp-pan->amp value channel) (sp-sample-t sp-sample-t sp-channel-count-t)
-  (sp-sawtooth-amps count amp frq amps) (void sp-time-t sp-sample-t sp-time-t sp-sample-t*)
-  (sp-square-amps count amp amps) (void sp-time-t sp-sample-t sp-sample-t*)
   (sp-normal-random random-state min max) (sp-time-t sp-random-state-t* sp-time-t sp-time-t)
   (sp-time-harmonize a base amount) (sp-time-t sp-time-t sp-time-t sp-sample-t)
   (sp-time-deharmonize a base amount) (sp-time-t sp-time-t sp-time-t sp-sample-t))

@@ -185,24 +185,6 @@ void sp_wave(sp_time_t size, sp_sample_t* wvf, sp_time_t wvf_size, sp_sample_t a
 }
 void sp_sine(sp_time_t size, sp_sample_t amp, sp_sample_t* amod, sp_time_t frq, sp_time_t* fmod, sp_time_t* phs_state, sp_sample_t* out) { sp_wave(size, sp_sine_table, sp_rate, amp, amod, frq, fmod, phs_state, out); }
 
-/** calculate the amplitudes of sines summed to a sawtooth wave */
-void sp_sawtooth_amps(sp_time_t count, sp_sample_t amp, sp_time_t frq, sp_sample_t* amps) {
-  sp_sample_t sum;
-  for (sp_time_t k = 1; (k <= count); k += 1) {
-    sum += ((pow(-1, k) * sin((2 * M_PI * k * frq))) / k);
-    amps[(k - 1)] = ((amp / 2) - ((amp / M_PI) * sum));
-  };
-}
-
-/** calculate the amplitudes of sines summed to a square wave */
-void sp_square_amps(sp_time_t count, sp_sample_t amp, sp_sample_t* amps) {
-  sp_time_t i;
-  sp_time_t k;
-  for (i = 0, k = 1; (i < count); i += 1, k += 2) {
-    amps[i] = (amp * (2 / (M_PI * k)));
-  };
-}
-
 /** the normalised sinc function */
 sp_sample_t sp_sinc(sp_sample_t a) { return (((0 == a) ? 1 : (sin((M_PI * a)) / (M_PI * a)))); }
 

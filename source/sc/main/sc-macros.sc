@@ -3,7 +3,7 @@
 
 (sc-define-syntax (sp-init* rate) (begin (pre-include "sph-sp.h") (pre-define _sp-rate rate)))
 
-(sc-define-syntax* (declare-struct-type name-and-fields ...)
+(sc-define-syntax* (sp-declare-struct-type name-and-fields ...)
   "(declare-struct-type name (field/type ...):fields name/fields ...)"
   (pair (q begin)
     (map-slice 2

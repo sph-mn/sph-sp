@@ -72,11 +72,11 @@
 #ifndef sp_sample_array_nearly_equal
 #define sp_sample_array_nearly_equal f64_array_nearly_equal
 #endif
-#ifndef sp_scalar_random
-#define sp_scalar_random sph_random_f64_0to1
+#ifndef sp_unit_random
+#define sp_unit_random sph_random_f64_0to1
 #endif
-#ifndef sp_scalar_random
-#define sp_scalar_random sph_random_f64_0to1
+#ifndef sp_unit_random
+#define sp_unit_random sph_random_f64_0to1
 #endif
 #ifndef sp_random_seed
 #define sp_random_seed 1557083953
@@ -169,7 +169,7 @@
 #define sp_hz_to_factor(x) (((sp_sample_t)(x)) / ((sp_sample_t)(sp_rate)))
 #define sp_factor_to_hz(x) ((sp_time_t)((x * sp_rate)))
 #define sp_array_or_fixed(array, fixed, index) (array ? array[index] : fixed)
-#define sp_sample_to_scalar(a) ((1 + a) / 2.0)
+#define sp_sample_to_unit(a) ((1 + a) / 2.0)
 typedef struct {
   sp_channel_count_t channels;
   sp_time_t size;
@@ -225,8 +225,6 @@ sp_sample_t sp_triangle(sp_time_t t, sp_time_t a, sp_time_t b);
 sp_time_t sp_time_expt(sp_time_t base, sp_time_t exp);
 sp_time_t sp_time_factorial(sp_time_t a);
 sp_sample_t sp_pan_to_amp(sp_sample_t value, sp_channel_count_t channel);
-void sp_sawtooth_amps(sp_time_t count, sp_sample_t amp, sp_time_t frq, sp_sample_t* amps);
-void sp_square_amps(sp_time_t count, sp_sample_t amp, sp_sample_t* amps);
 sp_time_t sp_normal_random(sp_random_state_t* random_state, sp_time_t min, sp_time_t max);
 sp_time_t sp_time_harmonize(sp_time_t a, sp_time_t base, sp_sample_t amount);
 sp_time_t sp_time_deharmonize(sp_time_t a, sp_time_t base, sp_sample_t amount);

@@ -17,6 +17,7 @@
 
 (define (test-base) status-t
   status-declare
+  (declare amps (array sp-sample-t 10))
   (test-helper-assert "input 0.5" (sp-sample-nearly-equal 0.63662 (sp-sinc 0.5) error-margin))
   (test-helper-assert "input 1" (sp-sample-nearly-equal 1.0 (sp-sinc 0) error-margin))
   (test-helper-assert "window-blackman 0 51"
@@ -904,6 +905,7 @@
   status-declare
   (set rs (sp-random-state-new 3))
   (sp-initialize 3 2 _rate)
+  (test-helper-test-one test-base)
   (test-helper-test-one test-path)
   (test-helper-test-one test-sp-sound-event)
   (test-helper-test-one test-sp-pan->amp)
@@ -925,7 +927,6 @@
   (test-helper-test-one test-sp-triangle-square)
   (test-helper-test-one test-fft)
   (test-helper-test-one test-spectral-inversion-ir)
-  (test-helper-test-one test-base)
   (test-helper-test-one test-spectral-reversal-ir)
   (test-helper-test-one test-windowed-sinc)
   (test-helper-test-one test-times)

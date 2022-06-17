@@ -12,6 +12,7 @@ sp_sample_t error_margin = 0.1;
 uint8_t* test_file_path = "/tmp/test-sph-sp-file";
 status_t test_base() {
   status_declare;
+  sp_sample_t amps[10];
   test_helper_assert(("input 0.5"), (sp_sample_nearly_equal((0.63662), (sp_sinc((0.5))), error_margin)));
   test_helper_assert("input 1", (sp_sample_nearly_equal((1.0), (sp_sinc(0)), error_margin)));
   test_helper_assert("window-blackman 0 51", (sp_sample_nearly_equal(0, (sp_window_blackman(0, 51)), error_margin)));
@@ -1015,6 +1016,7 @@ int main() {
   status_declare;
   rs = sp_random_state_new(3);
   sp_initialize(3, 2, _rate);
+  test_helper_test_one(test_base);
   test_helper_test_one(test_path);
   test_helper_test_one(test_sp_sound_event);
   test_helper_test_one(test_sp_pan_to_amp);
@@ -1036,7 +1038,6 @@ int main() {
   test_helper_test_one(test_sp_triangle_square);
   test_helper_test_one(test_fft);
   test_helper_test_one(test_spectral_inversion_ir);
-  test_helper_test_one(test_base);
   test_helper_test_one(test_spectral_reversal_ir);
   test_helper_test_one(test_windowed_sinc);
   test_helper_test_one(test_times);
