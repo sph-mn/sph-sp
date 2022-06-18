@@ -914,6 +914,15 @@ sp_sound_event_config_t sp_sound_event_config() {
   sp_channel_config_zero((result.channel_config));
   return (result);
 }
+
+/** heap allocates a sp_wave_event_config_t struct and set defaults */
+status_t sp_sound_event_config_new(sp_sound_event_config_t** out) {
+  status_declare;
+  status_require((sp_malloc_type(1, sp_sound_event_config_t, out)));
+  **out = sp_sound_event_config();
+exit:
+  status_return;
+}
 status_t sp_sound_event_prepare_cheap_noise(sp_event_t* event) {
   status_declare;
   sp_sample_t cut;
@@ -1014,8 +1023,9 @@ status_t sp_sound_event_prepare_wave_event(sp_event_t* event) {
   sp_event_memory_add(event, event_config);
   event_config->amp = config.amp;
   event_config->amod = config.amod;
-  event_config->fmod = config.fmod;
   event_config->frq = config.frq;
+  event_config->fmod = config.fmod;
+  event_config->phs = config.phs;
   for (size_t i = 0; (i < sp_channel_limit); i += 1) {
     (event_config->channel_config)[i] = (config.channel_config)[i];
   };

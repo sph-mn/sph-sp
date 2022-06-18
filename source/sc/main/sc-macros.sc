@@ -143,8 +143,16 @@
   "allocate config object and set options. (name event (config ...) channel-config ...)"
   (sp-event-config-new2* name sp-wave-event-config-new event options ...))
 
-(sc-define-syntax (sp-wave* event config) "setup the event to be a wave event"
-  (struct-pointer-set event config config prepare sp-wave-event-prepare))
+(sc-define-syntax (sp-wave* event _config) "setup the event to be a wave event"
+  (struct-pointer-set event config _config prepare sp-wave-event-prepare))
+
+(sc-define-syntax (sp-sound-config-new* name event options ...)
+  (sp-event-config-new2* name sp-sound-event-config-new event options ...))
+
+(sc-define-syntax (sp-sound* event _config) "setup the event to be a wave event"
+  (struct-pointer-set event config _config prepare sp-sound-event-prepare))
+
+(sc-define-syntax (sp-sound-config* name ...) (begin (declare name sp-sound-event-config-t*) ...))
 
 (sc-define-syntax (sp-noise-config* name ...) (begin (declare name sp-noise-event-config-t*) ...))
 
@@ -160,8 +168,8 @@
 (sc-define-syntax (sp-cheap-noise-config-new* name event options ...)
   (sp-event-config-new2* name sp-cheap-noise-event-config-new event options ...))
 
-(sc-define-syntax (sp-cheap-noise* event config)
-  (struct-pointer-set event config config prepare sp-cheap-noise-event-prepare))
+(sc-define-syntax (sp-cheap-noise* event _config)
+  (struct-pointer-set event config _config prepare sp-cheap-noise-event-prepare))
 
 (sc-define-syntax* (sp-event* a ...)
   (match a

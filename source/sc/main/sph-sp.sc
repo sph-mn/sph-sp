@@ -573,6 +573,7 @@
       (amod sp-sample-t*)
       (frq sp-time-t)
       (fmod sp-time-t*)
+      (phs sp-time-t)
       (wdt sp-time-t)
       (wmod sp-time-t*)
       (channels sp-channel-count-t)
@@ -625,7 +626,8 @@
   (sp-wave-event-config-new out) (status-t sp-wave-event-config-t**)
   (sp-map-event-config-new out) (status-t sp-map-event-config-t**)
   (sp-wave-event-config-defaults config) (void sp-wave-event-config-t*)
-  (sp-sound-event-prepare event) (status-t sp-event-t*))
+  (sp-sound-event-prepare event) (status-t sp-event-t*)
+  (sp-sound-event-config-new out) (status-t sp-sound-event-config-t**))
 
 (sc-comment "path")
 
@@ -657,14 +659,14 @@
   (sp-path-times-2 out size (sp-path-move 0 value) (sp-path-constant))
   (sp-path-samples-constant out size value)
   (sp-path-samples-2 out size (sp-path-move 0 value) (sp-path-constant))
-  (sp-path-curves-config-declare name segment-count)
+  (sp-path-curves-config-declare name _segment-count)
   (begin
     (declare
       name sp-path-curves-config-t
-      (pre-concat name _x) (array sp-time-t segment-count)
-      (pre-concat name _y) (array sp-sample-t segment-count)
-      (pre-concat name _c) (array sp-sample-t segment-count))
-    (struct-set name x (pre-concat name _x) y (pre-concat name _y) c (pre-concat name _c))))
+      (pre-concat name _x) (array sp-time-t _segment-count)
+      (pre-concat name _y) (array sp-sample-t _segment-count)
+      (pre-concat name _c) (array sp-sample-t _segment-count))
+    (struct-set name segment-count _segment-count x (pre-concat name _x) y (pre-concat name _y) c (pre-concat name _c))))
 
 (declare
   sp-path-curves-config-t

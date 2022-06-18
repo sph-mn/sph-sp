@@ -190,7 +190,9 @@
     (set current current:next))
   (sc-comment "merge")
   (sp-for-each-index sf-i active
-    (set sf (+ sf-array sf-i)) (touch &sf:future) (status-require sf:status)
+    (set sf (+ sf-array sf-i))
+    (touch &sf:future)
+    (status-require sf:status)
     (sp-for-each-index ci out.channels
       (sp-for-each-index i sf:out.size
         (set+ (array-get (array-get out.samples ci) (+ sf:out-start i))
@@ -744,6 +746,13 @@
   (sp-channel-config-zero result.channel-config)
   (return result))
 
+(define (sp-sound-event-config-new out) (status-t sp-sound-event-config-t**)
+  "heap allocates a sp_wave_event_config_t struct and set defaults"
+  status-declare
+  (status-require (sp-malloc-type 1 sp-sound-event-config-t out))
+  (set **out (sp-sound-event-config))
+  (label exit status-return))
+
 (define (sp-sound-event-prepare-cheap-noise event) (status-t sp-event-t*)
   status-declare
   (declare
@@ -845,7 +854,12 @@
   (sp-event-memory-init event 1)
   (srq (sp-wave-event-config-new &event-config))
   (sp-event-memory-add event event-config)
-  (struct-pointer-set event-config amp config.amp amod config.amod fmod config.fmod frq config.frq)
+  (struct-pointer-set event-config
+    amp config.amp
+    amod config.amod
+    frq config.frq
+    fmod config.fmod
+    phs config.phs)
   (sp-for-each-index i sp-channel-limit
     (set (array-get event-config:channel-config i) (array-get config.channel-config i)))
   (set event:config event-config event:prepare sp-wave-event-prepare)

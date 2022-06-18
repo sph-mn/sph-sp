@@ -556,6 +556,7 @@ typedef struct {
   sp_sample_t* amod;
   sp_time_t frq;
   sp_time_t* fmod;
+  sp_time_t phs;
   sp_time_t wdt;
   sp_time_t* wmod;
   sp_channel_count_t channels;
@@ -611,6 +612,7 @@ status_t sp_wave_event_config_new(sp_wave_event_config_t** out);
 status_t sp_map_event_config_new(sp_map_event_config_t** out);
 void sp_wave_event_config_defaults(sp_wave_event_config_t* config);
 status_t sp_sound_event_prepare(sp_event_t* event);
+status_t sp_sound_event_config_new(sp_sound_event_config_t** out);
 /* path */
 
 #define sp_path_t spline_path_t
@@ -638,11 +640,12 @@ status_t sp_sound_event_prepare(sp_event_t* event);
 #define sp_path_set spline_path_set
 #define sp_path_times_constant(out, size, value) sp_path_times_2(out, size, (sp_path_move(0, value)), (sp_path_constant()))
 #define sp_path_samples_constant(out, size, value) sp_path_samples_2(out, size, (sp_path_move(0, value)), (sp_path_constant()))
-#define sp_path_curves_config_declare(name, segment_count) \
+#define sp_path_curves_config_declare(name, _segment_count) \
   sp_path_curves_config_t name; \
-  sp_time_t name##_x[segment_count]; \
-  sp_sample_t name##_y[segment_count]; \
-  sp_sample_t name##_c[segment_count]; \
+  sp_time_t name##_x[_segment_count]; \
+  sp_sample_t name##_y[_segment_count]; \
+  sp_sample_t name##_c[_segment_count]; \
+  name.segment_count = _segment_count; \
   name.x = name##_x; \
   name.y = name##_y; \
   name.c = name##_c
