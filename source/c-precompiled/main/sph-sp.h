@@ -228,6 +228,7 @@ sp_sample_t sp_pan_to_amp(sp_sample_t value, sp_channel_count_t channel);
 sp_time_t sp_normal_random(sp_random_state_t* random_state, sp_time_t min, sp_time_t max);
 sp_time_t sp_time_harmonize(sp_time_t a, sp_time_t base, sp_sample_t amount);
 sp_time_t sp_time_deharmonize(sp_time_t a, sp_time_t base, sp_sample_t amount);
+void sp_sine_lfo(sp_time_t size, sp_sample_t amp, sp_sample_t* amod, sp_time_t frq, sp_time_t* fmod, sp_time_t* phs_state, sp_sample_t* out);
 /* arrays */
 
 #define sp_samples_zero(a, size) memset(a, 0, (size * sizeof(sp_sample_t)))

@@ -184,6 +184,7 @@ void sp_wave(sp_time_t size, sp_sample_t* wvf, sp_time_t wvf_size, sp_sample_t a
   *phs_state = phs;
 }
 void sp_sine(sp_time_t size, sp_sample_t amp, sp_sample_t* amod, sp_time_t frq, sp_time_t* fmod, sp_time_t* phs_state, sp_sample_t* out) { sp_wave(size, sp_sine_table, sp_rate, amp, amod, frq, fmod, phs_state, out); }
+void sp_sine_lfo(sp_time_t size, sp_sample_t amp, sp_sample_t* amod, sp_time_t frq, sp_time_t* fmod, sp_time_t* phs_state, sp_sample_t* out) { sp_wave(size, sp_sine_table_lfo, (sp_rate * sp_sine_lfo_factor), amp, amod, frq, fmod, phs_state, out); }
 
 /** the normalised sinc function */
 sp_sample_t sp_sinc(sp_sample_t a) { return (((0 == a) ? 1 : (sin((M_PI * a)) / (M_PI * a)))); }
@@ -491,7 +492,7 @@ status_t sp_initialize(uint16_t cpu_count, sp_channel_count_t channels, sp_time_
   sp_rate = rate;
   sp_channels = channels;
   sp_random_state = sp_random_state_new(sp_random_seed);
-  sp_sine_lfo_factor = 10;
+  sp_sine_lfo_factor = 100;
   status_require((sp_samples_new(sp_rate, (&sp_sine_table))));
   status_require((sp_samples_new((sp_rate * sp_sine_lfo_factor), (&sp_sine_table_lfo))));
   sp_sine_period(sp_rate, sp_sine_table);

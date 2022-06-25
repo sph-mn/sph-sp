@@ -36,6 +36,16 @@
 (sc-comment "main")
 
 (pre-define
+  (error-memory-init register-size) (memreg2-init-named error register-size)
+  (local-memory-init register-size) (memreg2-init-named exit register-size)
+  error-memory-free (memreg2-free-named error)
+  local-memory-free (memreg2-free-named exit)
+  (error-memory-add2 address handler) (memreg2-add-named error address handler)
+  (local-memory-add2 address handler) (memreg2-add-named exit address handler)
+  (error-memory-add address) (error-memory-add2 address free)
+  (local-memory-add address) (local-memory-add2 address free))
+
+(pre-define
   sp-bool-t uint8-t
   f64 double
   sp-s-group-libc "libc"
@@ -89,14 +99,6 @@
   (sph-helper-calloc (* count (sizeof type)) pointer-address)
   (sp-realloc-type count type pointer-address)
   (sph-helper-realloc (* count (sizeof type)) pointer-address)
-  (free-on-error-init register-size) (memreg2-init-named error register-size)
-  (free-on-exit-init register-size) (memreg2-init-named exit register-size)
-  free-on-error-free (memreg2-free-named error)
-  free-on-exit-free (memreg2-free-named exit)
-  (free-on-error address handler) (memreg2-add-named error address handler)
-  (free-on-exit address handler) (memreg2-add-named exit address handler)
-  (free-on-error1 address) (free-on-error address free)
-  (free-on-exit1 address) (free-on-exit address free)
   (sp-hz->samples x) (/ sp-rate x)
   (sp-samples->hz x) (convert-type (/ sp-rate x) sp-time-t)
   (sp-hz->factor x) (/ (convert-type x sp-sample-t) (convert-type sp-rate sp-sample-t))
@@ -169,7 +171,9 @@
   (sp-pan->amp value channel) (sp-sample-t sp-sample-t sp-channel-count-t)
   (sp-normal-random random-state min max) (sp-time-t sp-random-state-t* sp-time-t sp-time-t)
   (sp-time-harmonize a base amount) (sp-time-t sp-time-t sp-time-t sp-sample-t)
-  (sp-time-deharmonize a base amount) (sp-time-t sp-time-t sp-time-t sp-sample-t))
+  (sp-time-deharmonize a base amount) (sp-time-t sp-time-t sp-time-t sp-sample-t)
+  (sp-sine-lfo size amp amod frq fmod phs-state out)
+  (void sp-time-t sp-sample-t sp-sample-t* sp-time-t sp-time-t* sp-time-t* sp-sample-t*))
 
 (sc-comment "arrays")
 
@@ -666,7 +670,11 @@
       (pre-concat name _x) (array sp-time-t _segment-count)
       (pre-concat name _y) (array sp-sample-t _segment-count)
       (pre-concat name _c) (array sp-sample-t _segment-count))
-    (struct-set name segment-count _segment-count x (pre-concat name _x) y (pre-concat name _y) c (pre-concat name _c))))
+    (struct-set name
+      segment-count _segment-count
+      x (pre-concat name _x)
+      y (pre-concat name _y)
+      c (pre-concat name _c))))
 
 (declare
   sp-path-curves-config-t

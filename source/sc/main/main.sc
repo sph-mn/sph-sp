@@ -136,6 +136,10 @@
   (void sp-time-t sp-sample-t sp-sample-t* sp-time-t sp-time-t* sp-time-t* sp-sample-t*)
   (sp-wave size sp-sine-table sp-rate amp amod frq fmod phs-state out))
 
+(define (sp-sine-lfo size amp amod frq fmod phs-state out)
+  (void sp-time-t sp-sample-t sp-sample-t* sp-time-t sp-time-t* sp-time-t* sp-sample-t*)
+  (sp-wave size sp-sine-table-lfo (* sp-rate sp-sine-lfo-factor) amp amod frq fmod phs-state out))
+
 (define (sp-sinc a) (sp-sample-t sp-sample-t)
   "the normalised sinc function"
   (return (if* (= 0 a) 1 (/ (sin (* M_PI a)) (* M_PI a)))))
@@ -378,7 +382,7 @@
     sp-rate rate
     sp-channels channels
     sp-random-state (sp-random-state-new sp-random-seed)
-    sp-sine-lfo-factor 10)
+    sp-sine-lfo-factor 100)
   (status-require (sp-samples-new sp-rate &sp-sine-table))
   (status-require (sp-samples-new (* sp-rate sp-sine-lfo-factor) &sp-sine-table-lfo))
   (sp-sine-period sp-rate sp-sine-table)

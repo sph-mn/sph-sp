@@ -11,52 +11,35 @@
         (qq (declare (unquote name) (type (struct (unquote-splicing (map-slice 2 list fields)))))))
       name-and-fields)))
 
-(sc-define-syntax* (sp-define* (name parameter ...) types body ...)
+(sc-define-syntax* (sp-define* name-and-parameters types body ...)
   (let*
-    ( (free-on-error-used (sc-contains-expression (q free-on-error-init) body))
-      (free-on-exit-used (sc-contains-expression (q free-on-exit-init) body))
+    ( (local-memory-used (sc-contains-expression (q local-memory-init) body))
+      (error-memory-used (sc-contains-expression (q error-memory-init) body))
       (free-memory
-        (if (or free-on-error-used free-on-exit-used)
-          (pairs (q if) (q status-is-failure)
-            (if free-on-error-used (q free-on-error-free) null)
-            (if free-on-exit-used (list (q free-on-exit-free)) null))
-          (q (begin))))
+        (if (or local-memory-used error-memory-used)
+          (list
+            (pairs (q if) (q status-is-failure)
+              (append (if local-memory-used (list (q local-memory-free)) null)
+                (if error-memory-used (list (q error-memory-free)) null))))
+          null))
       (body
         (match body
           ( (body ... ((quote label) (quote exit) exit-content ...))
-            (append body (qq ((label exit (unquote free-memory) (unquote-splicing exit-content))))))
-          (_ (append body (qq ((label exit (unquote free-memory) status-return))))))))
+            (append body
+              (qq ((label exit (unquote-splicing free-memory) (unquote-splicing exit-content))))))
+          (_ (append body (qq ((label exit (unquote-splicing free-memory) status-return))))))))
     (qq
-      (define ((unquote name) (unquote-splicing parameter))
-        (unquote (pair (q status-t) (any->list types)))
-        status-declare
-        (unquote-splicing body)))))
+      (define
+        name-and-parameters (unquote (pair (q status-t) (any->list types)))
+        status-declare (unquote-splicing body)))))
 
 (sc-define-syntax* (sp-define-event-prepare* name body ...)
-  "* arguments and types are implicit
-   * status-declare is implicit
-   * exit label with status-return is optional
-   * free-on-error-free/free-on-exit-free is added automatically if feature use found"
-  (let*
-    ( (free-on-error-used (sc-contains-expression (q free-on-error-init) body))
-      (free-on-exit-used (sc-contains-expression (q free-on-exit-init) body))
-      (free-memory
-        (if (or free-on-error-used free-on-exit-used)
-          (pairs (q if) (q status-is-failure)
-            (if free-on-error-used (q free-on-error-free) null)
-            (if free-on-exit-used (list (q free-on-exit-free)) null))
-          (q (begin))))
-      (body (append body (list (q (if _event:prepare (status-require (_event:prepare _event)))))))
-      (body
-        (match body
-          ( (body ... ((quote label) (quote exit) exit-content ...))
-            (append body (qq ((label exit (unquote free-memory) (unquote-splicing exit-content))))))
-          (_ (append body (qq ((label exit (unquote free-memory) status-return))))))))
-    (qq
-      (define ((unquote name) _event) (status-t sp-event-t*)
-        status-declare
-        (define _duration sp-time-t (- _event:end _event:start))
-        (unquote-splicing body)))))
+  (sp-define* (name _event)
+    sp-event-t*
+    (define _duration sp-time-t (- _event:end _event:start))
+    body
+    ...
+    (if _event:prepare (status-require (_event:prepare _event)))))
 
 (sc-define-syntax* (sp-define-event* name-and-options body ...)
   (let*
@@ -125,7 +108,6 @@
       (sp-event-config-options*
         (convert-type (struct-pointer-get (unquote event) config) (sc-concat (unquote type) *))
         (unquote-splicing options))
-      (sp-event-memory-init (unquote event) 1)
       (sp-event-memory-add (unquote event) (struct-pointer-get (unquote event) config)))))
 
 (sc-define-syntax* (sp-event-config-new2* pointer type-new event options ...)
@@ -133,7 +115,6 @@
     (begin
       (status-require ((unquote type-new) (address-of (unquote pointer))))
       (sp-event-config-options* (unquote pointer) (unquote-splicing options))
-      (sp-event-memory-init (unquote event) 1)
       (sp-event-memory-add (unquote event) (unquote pointer)))))
 
 (sc-define-syntax (sp-wave-config* name ...) "declare config variables"
@@ -153,7 +134,6 @@
   (struct-pointer-set event config _config prepare sp-sound-event-prepare))
 
 (sc-define-syntax (sp-sound-config* name ...) (begin (declare name sp-sound-event-config-t*) ...))
-
 (sc-define-syntax (sp-noise-config* name ...) (begin (declare name sp-noise-event-config-t*) ...))
 
 (sc-define-syntax (sp-noise-config-new* name event options ...)
@@ -186,14 +166,12 @@
     (map-slice 2 (l (name value) (qq (define (unquote name) sp-sample-t (unquote value))))
       name/value)))
 
-(sc-define-syntax (sp-array* type type-new name size values ...)
-  "declare array variable and length variable, allocate array,\n   register memory with current event and set given values in order"
+(sc-define-syntax (sp-array* type type-new pointer size values ...)
+  "declare array variable and length variable, allocate array,\n   register memory with current event and set optional given values in order"
   (begin
-    (declare name type)
-    (status-require (type-new size (address-of name)))
-    (sp-event-memory-init _event 1)
-    (sp-event-memory-add _event name)
-    (array-set* name values ...)))
+    (status-require (type-new size pointer))
+    (sp-event-memory-add* _event pointer)
+    (array-set* pointer values ...)))
 
 (sc-define-syntax* (sp-times* name size-and-values ...)
   (match size-and-values (() (qq (declare (unquote name) sp-time-t*)))
@@ -201,35 +179,28 @@
       (qq
         (sp-array* sp-time-t* sp-times-new (unquote name) (unquote size) (unquote-splicing values))))))
 
-(sc-define-syntax* (sp-samples* name size-and-values ...)
-  (match size-and-values (() (qq (declare (unquote name) sp-sample-t*)))
-    ( (size values ...)
-      (qq
-        (sp-array* sp-sample-t* sp-samples-new
-          (unquote name) (unquote size) (unquote-splicing values))))))
+(sc-define-syntax (sp-samples* size pointer) (status-require (sp-samples-new size pointer)))
+(sc-define-syntax (sp-times* size pointer) (status-require (sp-times-new size pointer)))
+(sc-define-syntax (sp-units* size pointer) (status-require (sp-units-new size pointer)))
 
-(sc-define-syntax* (sp-array-values* type-new name values ...)
-  "like sp-array* but uses the count of values as size"
-  (let ((name-length (symbol-append name (q -length))))
-    (qq
-      (begin
-        (sc-insert "// sp-array-values*\n")
-        (define (unquote name-length) sp-time-t (unquote (length values)))
-        ((unquote type-new) (unquote name) (unquote name-length) (unquote-splicing values))))))
+(sc-define-syntax (sp-local-samples* size pointer) (status-require (sp-samples-new size pointer))
+  (local-memory-add pointer))
 
-(sc-define-syntax (sp-times-values* name values ...) (sp-array-values* sp-times* name values ...))
+(sc-define-syntax (sp-local-times* size pointer) (status-require (sp-times-new size pointer))
+  (local-memory-add pointer))
 
-(sc-define-syntax (sp-samples-values* name values ...)
-  (sp-array-values* sp-samples* name values ...))
+(sc-define-syntax (sp-local-units* size pointer) (status-require (sp-units-new size pointer))
+  (local-memory-add pointer))
 
-(sc-define-syntax* (define-array* name type values ...)
-  "define an array on the stack instead of in heap memory"
-  (qq
-    (declare (unquote name)
-      (array (unquote type) (unquote (length values)) (unquote-splicing values)))))
+(sc-define-syntax (sp-event-samples* size pointer) (status-require (sp-samples-new size pointer))
+  (sp-event-memory-add* pointer))
 
-(sc-define-syntax (sp-define-times* name values ...) (define-array* name sp-time-t values ...))
-(sc-define-syntax (sp-define-samples* name values ...) (define-array* name sp-sample-t values ...))
+(sc-define-syntax (sp-event-times* size pointer) (status-require (sp-times-new size pointer))
+  (sp-event-memory-add* pointer))
+
+(sc-define-syntax (sp-event-units* size pointer) (status-require (sp-units-new size pointer))
+  (sp-event-memory-add* pointer))
+
 (sc-define-syntax (sp-render-file*) (status-require (sp-render-quick *_event 0)))
 (sc-define-syntax (sp-render-plot*) (status-require (sp-render-quick *_event 1)))
 
@@ -280,7 +251,6 @@
           (unquote (length segments)))
         (status-require
           ((unquote sp-path-new) (unquote name-path) (unquote duration) (address-of (unquote name))))
-        (sp-event-memory-init _event 1)
         (sp-event-memory-add _event (unquote name))))))
 
 (sc-define-syntax (sp-path-samples* name segment-type points ...)
