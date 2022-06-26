@@ -408,11 +408,11 @@ status_t test_sp_noise_event() {
   sp_noise_event_config_t* config;
   sp_declare_event(event);
   sp_declare_event_list(events);
-  free_on_error_init(2);
+  error_memory_init(2);
   status_require((sp_noise_event_config_new((&config))));
-  free_on_error1(config);
+  error_memory_add(config);
   status_require((sp_block_new(2, test_noise_duration, (&out))));
-  free_on_error((&out), sp_block_free);
+  error_memory_add2((&out), sp_block_free);
   for (size_t i = 0; (i < test_noise_duration); i += 1) {
     cutl[i] = 0.01;
     cuth[i] = 0.3;
@@ -436,7 +436,7 @@ status_t test_sp_noise_event() {
   sp_block_free((&out));
 exit:
   if (status_is_failure) {
-    free_on_error_free;
+    error_memory_free;
   };
   status_return;
 }
@@ -465,11 +465,11 @@ status_t test_sp_cheap_noise_event() {
   sp_time_t i;
   sp_cheap_noise_event_config_t* config;
   sp_declare_event(event);
-  free_on_error_init(2);
+  error_memory_init(2);
   status_require((sp_cheap_noise_event_config_new((&config))));
-  free_on_error1(config);
+  error_memory_add(config);
   status_require((sp_block_new(2, test_noise_duration, (&out))));
-  free_on_error((&out), sp_block_free);
+  error_memory_add2((&out), sp_block_free);
   for (i = 0; (i < test_noise_duration); i += 1) {
     cut_mod[i] = ((i < (test_noise_duration / 2)) ? 0.01 : 0.1);
     cut_mod[i] = 0.08;
@@ -491,7 +491,7 @@ status_t test_sp_cheap_noise_event() {
   sp_block_free((&out));
 exit:
   if (status_is_failure) {
-    free_on_error_free;
+    error_memory_free;
   };
   status_return;
 }
@@ -598,11 +598,11 @@ status_t test_sp_wave_event() {
   sp_sample_t amod2[test_wave_event_duration];
   sp_wave_event_config_t* config;
   sp_declare_event(event);
-  free_on_error_init(2);
+  error_memory_init(2);
   status_require((sp_wave_event_config_new((&config))));
-  free_on_error1(config);
+  error_memory_add(config);
   status_require((sp_block_new(2, test_wave_event_duration, (&out))));
-  free_on_error((&out), sp_block_free);
+  error_memory_add2((&out), sp_block_free);
   for (size_t i = 0; (i < test_wave_event_duration); i += 1) {
     fmod[i] = 2000;
     amod1[i] = 1;
@@ -626,7 +626,7 @@ status_t test_sp_wave_event() {
   sp_block_free((&out));
 exit:
   if (status_is_failure) {
-    free_on_error_free;
+    error_memory_free;
   };
   status_return;
 }
@@ -639,7 +639,7 @@ status_t test_render_block() {
   sp_render_config_t rc;
   sp_wave_event_config_t* config;
   sp_declare_event(event);
-  free_on_error_init(2);
+  error_memory_init(2);
   rc = sp_render_config(sp_channels, sp_rate, sp_rate);
   rc.block_size = 40;
   for (i = 0; (i < test_wave_event_duration); i += 1) {
@@ -647,9 +647,9 @@ status_t test_render_block() {
     amod[i] = 1;
   };
   status_require((sp_wave_event_config_new((&config))));
-  free_on_error1(config);
+  error_memory_add(config);
   status_require((sp_block_new(1, test_wave_event_duration, (&out))));
-  free_on_error((&out), sp_block_free);
+  error_memory_add2((&out), sp_block_free);
   (*config).wvf = sp_sine_table;
   (*config).wvf_size = sp_rate;
   (*config).fmod = frq;
@@ -666,7 +666,7 @@ status_t test_render_block() {
   sp_block_free((&out));
 exit:
   if (status_is_failure) {
-    free_on_error_free;
+    error_memory_free;
   };
   status_return;
 }
@@ -906,13 +906,13 @@ status_t test_sp_seq_parallel() {
   sp_declare_event(event);
   sp_declare_event_list(events);
   size = 10000;
-  free_on_error_init(4);
+  error_memory_init(4);
   status_require((sp_wave_event_config_new((&config))));
-  free_on_error1(config);
+  error_memory_add(config);
   status_require((sp_path_samples_2((&amod), size, (sp_path_move(0, (1.0))), (sp_path_constant()))));
-  free_on_error1(amod);
+  error_memory_add(amod);
   status_require((sp_path_times_2((&fmod), size, (sp_path_move(0, 250)), (sp_path_constant()))));
-  free_on_error1(fmod);
+  error_memory_add(fmod);
   (*config).wvf = sp_sine_table;
   (*config).wvf_size = sp_rate;
   (*config).fmod = fmod;
@@ -942,7 +942,7 @@ status_t test_sp_seq_parallel() {
   sp_block_free((&block));
 exit:
   if (status_is_failure) {
-    free_on_error_free;
+    error_memory_free;
   };
   status_return;
 }
@@ -959,11 +959,11 @@ status_t test_sp_map_event() {
   sp_wave_event_config_t* config;
   sp_map_event_config_t* map_event_config;
   sp_declare_event_2(parent, child);
-  free_on_error_init(2);
+  error_memory_init(2);
   status_require((sp_wave_event_config_new((&config))));
-  free_on_error1(config);
+  error_memory_add(config);
   status_require((sp_map_event_config_new((&map_event_config))));
-  free_on_error1(map_event_config);
+  error_memory_add(map_event_config);
   size = (10 * _rate);
   status_require((sp_path_samples_2((&amod), size, (sp_path_move(0, (1.0))), (sp_path_constant()))));
   (*config).wvf = sp_sine_table;
@@ -993,7 +993,7 @@ status_t test_sp_map_event() {
   free(amod);
 exit:
   if (status_is_failure) {
-    free_on_error_free;
+    error_memory_free;
   };
   status_return;
 }

@@ -29,11 +29,11 @@
               (qq ((label exit (unquote-splicing free-memory) (unquote-splicing exit-content))))))
           (_ (append body (qq ((label exit (unquote-splicing free-memory) status-return))))))))
     (qq
-      (define
-        name-and-parameters (unquote (pair (q status-t) (any->list types)))
-        status-declare (unquote-splicing body)))))
+      (define (unquote name-and-parameters) (unquote (pair (q status-t) (any->list types)))
+        status-declare
+        (unquote-splicing body)))))
 
-(sc-define-syntax* (sp-define-event-prepare* name body ...)
+(sc-define-syntax (sp-define-event-prepare* name body ...)
   (sp-define* (name _event)
     sp-event-t*
     (define _duration sp-time-t (- _event:end _event:start))
@@ -183,32 +183,32 @@
 (sc-define-syntax (sp-times* size pointer) (status-require (sp-times-new size pointer)))
 (sc-define-syntax (sp-units* size pointer) (status-require (sp-units-new size pointer)))
 
-(sc-define-syntax (sp-local-samples* size pointer) (status-require (sp-samples-new size pointer))
-  (local-memory-add pointer))
+(sc-define-syntax (sp-local-samples* size pointer)
+  (begin (status-require (sp-samples-new size pointer)) (local-memory-add pointer)))
 
-(sc-define-syntax (sp-local-times* size pointer) (status-require (sp-times-new size pointer))
-  (local-memory-add pointer))
+(sc-define-syntax (sp-local-times* size pointer)
+  (begin (status-require (sp-times-new size pointer)) (local-memory-add pointer)))
 
-(sc-define-syntax (sp-local-units* size pointer) (status-require (sp-units-new size pointer))
-  (local-memory-add pointer))
+(sc-define-syntax (sp-local-units* size pointer)
+  (begin (status-require (sp-units-new size pointer)) (local-memory-add pointer)))
 
-(sc-define-syntax (sp-event-samples* size pointer) (status-require (sp-samples-new size pointer))
-  (sp-event-memory-add* pointer))
+(sc-define-syntax (sp-event-samples* size pointer)
+  (begin (status-require (sp-samples-new size pointer)) (sp-event-memory-add* pointer)))
 
-(sc-define-syntax (sp-event-times* size pointer) (status-require (sp-times-new size pointer))
-  (sp-event-memory-add* pointer))
+(sc-define-syntax (sp-event-times* size pointer)
+  (begin (status-require (sp-times-new size pointer)) (sp-event-memory-add* pointer)))
 
-(sc-define-syntax (sp-event-units* size pointer) (status-require (sp-units-new size pointer))
-  (sp-event-memory-add* pointer))
+(sc-define-syntax (sp-event-units* size pointer)
+  (begin (status-require (sp-units-new size pointer)) (sp-event-memory-add* pointer)))
 
 (sc-define-syntax (sp-render-file*) (status-require (sp-render-quick *_event 0)))
 (sc-define-syntax (sp-render-plot*) (status-require (sp-render-quick *_event 1)))
 
-(sc-define-syntax (sp-define-song* name parallelization channels body ...)
+(sc-define-syntax (sp-define-main* name parallelization channels body ...)
   (define (name) status-t
     status-declare
-    (sp-declare-group _song)
-    (define _event sp-event-t* &_song)
+    (sp-declare-group _group)
+    (define _event sp-event-t* &_group)
     (sp-initialize parallelization channels _sp-rate)
     body
     ...

@@ -304,26 +304,26 @@ exit:
 status_t sp_path_curves_times_new(sp_path_curves_config_t config, sp_time_t length, sp_time_t** out) {
   status_declare;
   sp_path_t path;
-  free_on_error_init(1);
+  error_memory_init(1);
   srq((sp_path_curves_new(config, length, (&path))));
-  free_on_error1((path.segments));
+  error_memory_add((path.segments));
   srq((sp_path_times_new(path, length, out)));
 exit:
   if (status_is_failure) {
-    free_on_error_free;
+    error_memory_free;
   };
   status_return;
 }
 status_t sp_path_curves_samples_new(sp_path_curves_config_t config, sp_time_t length, sp_sample_t** out) {
   status_declare;
   sp_path_t path;
-  free_on_error_init(1);
+  error_memory_init(1);
   srq((sp_path_curves_new(config, length, (&path))));
-  free_on_error1((path.segments));
+  error_memory_add((path.segments));
   srq((sp_path_samples_new(path, length, out)));
 exit:
   if (status_is_failure) {
-    free_on_error_free;
+    error_memory_free;
   };
   status_return;
 }

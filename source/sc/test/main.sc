@@ -381,11 +381,11 @@
     config sp-noise-event-config-t*)
   (sp-declare-event event)
   (sp-declare-event-list events)
-  (free-on-error-init 2)
+  (error-memory-init 2)
   (status-require (sp-noise-event-config-new &config))
-  (free-on-error1 config)
+  (error-memory-add config)
   (status-require (sp-block-new 2 test-noise-duration &out))
-  (free-on-error &out sp-block-free)
+  (error-memory-add2 &out sp-block-free)
   (sp-for-each-index i test-noise-duration
     (set (array-get cutl i) 0.01 (array-get cuth i) 0.3 (array-get amod i) 1.0))
   (struct-set *config cutl-mod cutl cuth-mod cuth amod amod amp 1 channels 2 trnh 0.07 trnl 0.07)
@@ -396,7 +396,7 @@
   (test-helper-assert "in range -1..1"
     (>= 1.0 (sp-samples-absolute-max (array-get out.samples 0) test-noise-duration)))
   (sp-block-free &out)
-  (label exit (if status-is-failure free-on-error-free) status-return))
+  (label exit (if status-is-failure error-memory-free) status-return))
 
 (define (test-sp-cheap-filter) status-t
   status-declare
@@ -425,11 +425,11 @@
     i sp-time-t
     config sp-cheap-noise-event-config-t*)
   (sp-declare-event event)
-  (free-on-error-init 2)
+  (error-memory-init 2)
   (status-require (sp-cheap-noise-event-config-new &config))
-  (free-on-error1 config)
+  (error-memory-add config)
   (status-require (sp-block-new 2 test-noise-duration &out))
-  (free-on-error &out sp-block-free)
+  (error-memory-add2 &out sp-block-free)
   (for ((set i 0) (< i test-noise-duration) (set+ i 1))
     (set
       (array-get cut-mod i) (if* (< i (/ test-noise-duration 2)) 0.01 0.1)
@@ -449,7 +449,7 @@
   (test-helper-assert "in range -1..1"
     (>= 1.0 (sp-samples-absolute-max (array-get out.samples 0) test-noise-duration)))
   (sp-block-free &out)
-  (label exit (if status-is-failure free-on-error-free) status-return))
+  (label exit (if status-is-failure error-memory-free) status-return))
 
 (define (test-sp-sound-event) status-t
   status-declare
@@ -542,11 +542,11 @@
     amod2 (array sp-sample-t test-wave-event-duration)
     config sp-wave-event-config-t*)
   (sp-declare-event event)
-  (free-on-error-init 2)
+  (error-memory-init 2)
   (status-require (sp-wave-event-config-new &config))
-  (free-on-error1 config)
+  (error-memory-add config)
   (status-require (sp-block-new 2 test-wave-event-duration &out))
-  (free-on-error &out sp-block-free)
+  (error-memory-add2 &out sp-block-free)
   (sp-for-each-index i test-wave-event-duration
     (set (array-get fmod i) 2000 (array-get amod1 i) 1 (array-get amod2 i) 0.5))
   (struct-set *config wvf sp-sine-table wvf-size sp-rate fmod fmod amp 1 amod amod1 channels 2)
@@ -561,7 +561,7 @@
   (status-require (event.generate 30 test-wave-event-duration (sp-block-with-offset out 30) &event))
   (sc-comment (sp-plot-samples (array-get out.samples 0) test-wave-event-duration))
   (sp-block-free &out)
-  (label exit (if status-is-failure free-on-error-free) status-return))
+  (label exit (if status-is-failure error-memory-free) status-return))
 
 (define (test-render-block) status-t
   status-declare
@@ -573,14 +573,14 @@
     rc sp-render-config-t
     config sp-wave-event-config-t*)
   (sp-declare-event event)
-  (free-on-error-init 2)
+  (error-memory-init 2)
   (set rc (sp-render-config sp-channels sp-rate sp-rate) rc.block-size 40)
   (for ((set i 0) (< i test-wave-event-duration) (set+ i 1))
     (set (array-get frq i) 1500 (array-get amod i) 1))
   (status-require (sp-wave-event-config-new &config))
-  (free-on-error1 config)
+  (error-memory-add config)
   (status-require (sp-block-new 1 test-wave-event-duration &out))
-  (free-on-error &out sp-block-free)
+  (error-memory-add2 &out sp-block-free)
   (struct-set *config wvf sp-sine-table wvf-size sp-rate fmod frq amp 1 amod amod channels 1)
   (struct-set event
     start 0
@@ -591,7 +591,7 @@
   (sp-render-block event 0 test-wave-event-duration rc &out)
   (sc-comment (sp-block-plot-1 out))
   (sp-block-free &out)
-  (label exit (if status-is-failure free-on-error-free) status-return))
+  (label exit (if status-is-failure error-memory-free) status-return))
 
 (define (test-path) status-t
   (declare
@@ -807,13 +807,13 @@
   (sp-declare-event event)
   (sp-declare-event-list events)
   (set size 10000)
-  (free-on-error-init 4)
+  (error-memory-init 4)
   (status-require (sp-wave-event-config-new &config))
-  (free-on-error1 config)
+  (error-memory-add config)
   (status-require (sp-path-samples-2 &amod size (sp-path-move 0 1.0) (sp-path-constant)))
-  (free-on-error1 amod)
+  (error-memory-add amod)
   (status-require (sp-path-times-2 &fmod size (sp-path-move 0 250) (sp-path-constant)))
-  (free-on-error1 fmod)
+  (error-memory-add fmod)
   (struct-set *config wvf sp-sine-table wvf-size sp-rate fmod fmod amp 1 amod amod channels 2)
   (for ((set i 0) (< i 10) (set+ i 1))
     (struct-set event start 0 end size config config prepare sp-wave-event-prepare)
@@ -839,7 +839,7 @@
   (free amod)
   (free fmod)
   (sp-block-free &block)
-  (label exit (if status-is-failure free-on-error-free) status-return))
+  (label exit (if status-is-failure error-memory-free) status-return))
 
 (define (test-sp-map-event-generate start end in out state)
   (status-t sp-time-t sp-time-t sp-block-t sp-block-t void*)
@@ -856,11 +856,11 @@
     config sp-wave-event-config-t*
     map-event-config sp-map-event-config-t*)
   (sp-declare-event-2 parent child)
-  (free-on-error-init 2)
+  (error-memory-init 2)
   (status-require (sp-wave-event-config-new &config))
-  (free-on-error1 config)
+  (error-memory-add config)
   (status-require (sp-map-event-config-new &map-event-config))
-  (free-on-error1 map-event-config)
+  (error-memory-add map-event-config)
   (set size (* 10 _rate))
   (status-require (sp-path-samples-2 &amod size (sp-path-move 0 1.0) (sp-path-constant)))
   (struct-set *config wvf sp-sine-table wvf-size sp-rate frq 300 fmod 0 amp 1 amod amod channels 1)
@@ -878,7 +878,7 @@
   (parent.free &parent)
   (sp-block-free &block)
   (free amod)
-  (label exit (if status-is-failure free-on-error-free) status-return))
+  (label exit (if status-is-failure error-memory-free) status-return))
 
 (define (test-sp-pan->amp) status-t
   status-declare

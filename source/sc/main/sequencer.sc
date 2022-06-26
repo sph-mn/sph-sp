@@ -724,11 +724,11 @@
        finally writes to main out to mix with other events"
   status-declare
   (declare state sp-map-event-state-t*)
-  (free-on-error-init 1)
+  (error-memory-init 1)
   (define config sp-map-event-config-t
     (pointer-get (convert-type event:config sp-map-event-config-t*)))
   (status-require (sp-malloc-type 1 sp-map-event-state-t &state))
-  (free-on-error1 state)
+  (error-memory-add state)
   (status-require (config.event.prepare &config.event))
   (set
     state:event config.event
@@ -737,7 +737,7 @@
     event:data state
     event:generate (if* config.isolate sp-map-event-isolated-generate sp-map-event-generate)
     event:free sp-map-event-free)
-  (label exit (if status-is-failure free-on-error-free) status-return))
+  (label exit (if status-is-failure error-memory-free) status-return))
 
 (define (sp-sound-event-config) sp-sound-event-config-t
   "return a sound event configuration struct with defaults set"

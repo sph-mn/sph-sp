@@ -14,8 +14,7 @@
   (sp-path-samples* amod ((/ _duration 20) config.amp) (_duration 0))
   (sp-noise-config* n1c)
   (sp-noise-config-new* n1c _event (amod amod) (0 use 1 amp (* 0.5 config.amp)))
-  (sp-noise* _event n1c)
-  (_event:prepare _event))
+  (sp-noise* _event n1c))
 
 (sc-comment
   "defines a group named r1 with a default duration of (1/1 * sample_rate). srq (status-require) checks return codes")
@@ -44,4 +43,4 @@
 (sc-comment
   "use one cpu core and two output channels and add one riff to the song at specified offset, duration and volume")
 
-(sp-define-song* 1 1 (sp-group-add* _event r1-event) (sp-render-plot*))
+(sp-define-main* main 1 1 (sp-group-add* _event r1-event) (sp-render-plot*))

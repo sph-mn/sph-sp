@@ -97,6 +97,15 @@
 
 /* main */
 
+#define error_memory_init(register_size) memreg2_init_named(error, register_size)
+#define local_memory_init(register_size) memreg2_init_named(exit, register_size)
+#define error_memory_free memreg2_free_named(error)
+#define local_memory_free memreg2_free_named(exit)
+#define error_memory_add2(address, handler) memreg2_add_named(error, address, handler)
+#define local_memory_add2(address, handler) memreg2_add_named(exit, address, handler)
+#define error_memory_add(address) error_memory_add2(address, free)
+#define local_memory_add(address) local_memory_add2(address, free)
+
 #define sp_bool_t uint8_t
 #define f64 double
 #define sp_s_group_libc "libc"
@@ -156,14 +165,6 @@
 #define sp_malloc_type(count, type, pointer_address) sph_helper_malloc((count * sizeof(type)), pointer_address)
 #define sp_calloc_type(count, type, pointer_address) sph_helper_calloc((count * sizeof(type)), pointer_address)
 #define sp_realloc_type(count, type, pointer_address) sph_helper_realloc((count * sizeof(type)), pointer_address)
-#define free_on_error_init(register_size) memreg2_init_named(error, register_size)
-#define free_on_exit_init(register_size) memreg2_init_named(exit, register_size)
-#define free_on_error_free memreg2_free_named(error)
-#define free_on_exit_free memreg2_free_named(exit)
-#define free_on_error(address, handler) memreg2_add_named(error, address, handler)
-#define free_on_exit(address, handler) memreg2_add_named(exit, address, handler)
-#define free_on_error1(address) free_on_error(address, free)
-#define free_on_exit1(address) free_on_exit(address, free)
 #define sp_hz_to_samples(x) (sp_rate / x)
 #define sp_samples_to_hz(x) ((sp_time_t)((sp_rate / x)))
 #define sp_hz_to_factor(x) (((sp_sample_t)(x)) / ((sp_sample_t)(sp_rate)))

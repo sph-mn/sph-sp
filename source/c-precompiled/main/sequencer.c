@@ -882,10 +882,10 @@ exit:
 status_t sp_map_event_prepare(sp_event_t* event) {
   status_declare;
   sp_map_event_state_t* state;
-  free_on_error_init(1);
+  error_memory_init(1);
   sp_map_event_config_t config = *((sp_map_event_config_t*)(event->config));
   status_require((sp_malloc_type(1, sp_map_event_state_t, (&state))));
-  free_on_error1(state);
+  error_memory_add(state);
   status_require(((config.event.prepare)((&(config.event)))));
   state->event = config.event;
   state->state = config.state;
@@ -895,7 +895,7 @@ status_t sp_map_event_prepare(sp_event_t* event) {
   event->free = sp_map_event_free;
 exit:
   if (status_is_failure) {
-    free_on_error_free;
+    error_memory_free;
   };
   status_return;
 }

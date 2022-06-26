@@ -31,9 +31,6 @@ status_t s1_prepare(sp_event_t* _event) {
   sp_event_memory_add(_event, n1c);
   _event->config = n1c;
   _event->prepare = sp_noise_event_prepare;
-  printf("not prepared\n");
-  (_event->prepare)(_event);
-  printf("prepared\n");
   if (_event->prepare) {
     status_require(((_event->prepare)(_event)));
   };
@@ -63,7 +60,7 @@ status_t r1_prepare(sp_event_t* _event) {
     event.config = s1_config;
     event.start = (tempo * times[i]);
     event.end = (event.start + rt(1, 6));
-    status_require((sp_group_add(_event, event)));
+    srq((sp_group_add(_event, event)));
   };
   if (_event->prepare) {
     status_require(((_event->prepare)(_event)));
@@ -75,10 +72,10 @@ sp_define_event(r1_event, r1_prepare, (rts(1, 1)));
 /* use one cpu core and two output channels and add one riff to the song at specified offset, duration and volume */
 status_t main() {
   status_declare;
-  sp_declare_group(_song);
-  sp_event_t* _event = &_song;
+  sp_declare_group(_group);
+  sp_event_t* _event = &_group;
   sp_initialize(1, 1, _sp_rate);
-  status_require((sp_group_add(_event, r1_event)));
+  srq((sp_group_add(_event, r1_event)));
   status_require((sp_render_quick((*_event), 1)));
 exit:
   status_return;
