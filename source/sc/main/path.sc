@@ -218,7 +218,8 @@
   status-declare
   (declare ss sp-path-segment-t* x sp-time-t y sp-sample-t c sp-sample-t)
   (srq (sp-malloc-type config.segment-count sp-path-segment-t &ss))
-  (sp-for-each-index i config.segment-count
+  (set x (array-get config.x 0) y (array-get config.y 0) (array-get ss 0) (sp-path-move x y))
+  (for ((define i sp-time-t 1) (< i config.segment-count) (set+ i 1))
     (set
       x (array-get config.x i)
       y (array-get config.y i)

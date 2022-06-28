@@ -99,16 +99,19 @@
 (sc-define-syntax* (sp-event-config-define-new* name type event options ...)
   (qq (begin (declare name (type *)) (sp-event-config-new* type (address-of name)))))
 
-(sc-define-syntax* (sp-event-config-new* event type options ...)
+(sc-define-syntax (sp-event-malloc-type* event-pointer count type)
+  (begin
+    (status-require
+      (sp-malloc-type count type (address-of (struct-pointer-get event-pointer config))))
+    (sp-event-memory* event-pointer 1)
+    (sp-event-memory-add event-pointer (struct-pointer-get event-pointer config))))
+
+(sc-define-syntax (sp-event-config-new* event-pointer type options ...)
   "allocate, set with optional channel config syntax, track memory"
-  (qq
-    (begin
-      (status-require
-        (sp-malloc-type 1 (unquote type) (address-of (struct-pointer-get (unquote event) config))))
-      (sp-event-config-options*
-        (convert-type (struct-pointer-get (unquote event) config) (sc-concat (unquote type) *))
-        (unquote-splicing options))
-      (sp-event-memory-add (unquote event) (struct-pointer-get (unquote event) config)))))
+  (begin
+    (sp-event-malloc-type* event-pointer 1 type)
+    (sp-event-config-options*
+      (convert-type (struct-pointer-get event-pointer config) (sc-concat type *)) options ...)))
 
 (sc-define-syntax* (sp-event-config-new2* pointer type-new event options ...)
   (qq
@@ -170,7 +173,7 @@
   "declare array variable and length variable, allocate array,\n   register memory with current event and set optional given values in order"
   (begin
     (status-require (type-new size pointer))
-    (sp-event-memory-add* _event pointer)
+    (sp-event-memory-add _event pointer)
     (array-set* pointer values ...)))
 
 (sc-define-syntax* (sp-times* name size-and-values ...)
@@ -192,17 +195,17 @@
 (sc-define-syntax (sp-local-units* size pointer)
   (begin (status-require (sp-units-new size pointer)) (local-memory-add pointer)))
 
-(sc-define-syntax (sp-event-samples* size pointer)
-  (begin (status-require (sp-samples-new size pointer)) (sp-event-memory-add* pointer)))
+(sc-define-syntax (sp-event-samples* event size pointer)
+  (begin (status-require (sp-samples-new size pointer)) (sp-event-memory-add event pointer)))
 
-(sc-define-syntax (sp-event-times* size pointer)
-  (begin (status-require (sp-times-new size pointer)) (sp-event-memory-add* pointer)))
+(sc-define-syntax (sp-event-times* event size pointer)
+  (begin (status-require (sp-times-new size pointer)) (sp-event-memory-add event pointer)))
 
-(sc-define-syntax (sp-event-units* size pointer)
-  (begin (status-require (sp-units-new size pointer)) (sp-event-memory-add* pointer)))
+(sc-define-syntax (sp-event-units* event size pointer)
+  (begin (status-require (sp-units-new size pointer)) (sp-event-memory-add event pointer)))
 
-(sc-define-syntax (sp-render-file*) (status-require (sp-render-quick *_event 0)))
-(sc-define-syntax (sp-render-plot*) (status-require (sp-render-quick *_event 1)))
+(sc-define-syntax (sp-render-file* event) (status-require (sp-render-quick event 0)))
+(sc-define-syntax (sp-render-plot* event) (status-require (sp-render-quick event 1)))
 
 (sc-define-syntax (sp-define-main* name parallelization channels body ...)
   (define (name) status-t
@@ -212,6 +215,7 @@
     (sp-initialize parallelization channels _sp-rate)
     body
     ...
+    (_group.prepare &_group)
     (label exit status-return)))
 
 (sc-define-syntax* (sp-path* name type segment-type points ...)

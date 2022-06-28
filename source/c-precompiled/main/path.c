@@ -291,7 +291,10 @@ status_t sp_path_curves_new(sp_path_curves_config_t config, sp_time_t length, sp
   sp_sample_t y;
   sp_sample_t c;
   srq((sp_malloc_type((config.segment_count), sp_path_segment_t, (&ss))));
-  for (size_t i = 0; (i < config.segment_count); i += 1) {
+  x = (config.x)[0];
+  y = (config.y)[0];
+  ss[0] = sp_path_move(x, y);
+  for (sp_time_t i = 1; (i < config.segment_count); i += 1) {
     x = (config.x)[i];
     y = (config.y)[i];
     c = (config.c)[i];
