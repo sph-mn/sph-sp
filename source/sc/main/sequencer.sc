@@ -594,10 +594,7 @@
     block-rest (modulo duration s.resolution))
   (sc-comment "total block count is block-count plus rest-block")
   (for ((set block-i 0) (< block-i block-count) (set+ block-i 1))
-    (set
-      block-offset (* s.resolution block-i)
-      t (+ start block-offset)
-      duration (if* (= block-count block-i) block-rest s.resolution))
+    (set block-offset (* s.resolution block-i) t (+ start block-offset) duration s.resolution)
     (sp-samples-random &s.random-state duration s.noise)
     (sp-cheap-filter s.type s.noise
       duration (sp-array-or-fixed s.cut-mod s.cut t) s.passes
@@ -605,6 +602,16 @@
     (for ((set i 0) (< i duration) (set+ i 1))
       (set+ (array-get out.samples s.channel (+ block-offset i))
         (* s.amp (array-get s.amod (+ t i)) (array-get s.temp i)))))
+  (if block-rest
+    (begin
+      (set block-offset (* s.resolution block-count) t (+ start block-offset) duration block-rest)
+      (sp-samples-random &s.random-state duration s.noise)
+      (sp-cheap-filter s.type s.noise
+        duration (sp-array-or-fixed s.cut-mod s.cut t) s.passes
+        (sp-array-or-fixed s.q-factor-mod s.q-factor t) &s.filter-state s.temp)
+      (for ((set i 0) (< i duration) (set+ i 1))
+        (set+ (array-get out.samples s.channel (+ block-offset i))
+          (* s.amp (array-get s.amod (+ t i)) (array-get s.temp i))))))
   (set sp:random-state s.random-state sp:filter-state s.filter-state)
   status-return)
 
@@ -768,7 +775,7 @@
     (pointer-get (convert-type event:config sp-sound-event-config-t*)))
   (set
     duration (- event:end event:start)
-    cut (sp-hz->factor (- config.frq (/ config.wdt 2)))
+    cut (sp-hz->factor config.frq)
     q-factor (sp-hz->factor config.wdt)
     cut-mod 0
     q-factor-mod 0)

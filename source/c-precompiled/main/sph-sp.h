@@ -357,6 +357,7 @@ void sp_samples_blend(sp_sample_t* a, sp_sample_t* b, sp_sample_t fraction, sp_t
 void sp_times_make_seamless_right(sp_time_t* a, sp_time_t a_size, sp_time_t* b, sp_time_t b_size, sp_time_t* out);
 void sp_times_make_seamless_left(sp_time_t* a, sp_time_t a_size, sp_time_t* b, sp_time_t b_size, sp_time_t* out);
 void sp_times_extract_in_range(sp_time_t* a, sp_time_t size, sp_time_t min, sp_time_t max, sp_time_t* out, sp_time_t* out_size);
+void sp_samples_to_units(sp_sample_t* a, size_t size, sp_sample_t* b);
 /* filter */
 
 #define sp_filter_state_t sp_convolution_filter_state_t

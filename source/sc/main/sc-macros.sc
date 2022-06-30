@@ -196,13 +196,22 @@
   (begin (status-require (sp-units-new size pointer)) (local-memory-add pointer)))
 
 (sc-define-syntax (sp-event-samples* event size pointer)
-  (begin (status-require (sp-samples-new size pointer)) (sp-event-memory-add event pointer)))
+  (begin
+    (sp-event-memory* event 1)
+    (status-require (sp-samples-new size pointer))
+    (sp-event-memory-add event pointer)))
 
 (sc-define-syntax (sp-event-times* event size pointer)
-  (begin (status-require (sp-times-new size pointer)) (sp-event-memory-add event pointer)))
+  (begin
+    (sp-event-memory* event 1)
+    (status-require (sp-times-new size pointer))
+    (sp-event-memory-add event pointer)))
 
 (sc-define-syntax (sp-event-units* event size pointer)
-  (begin (status-require (sp-units-new size pointer)) (sp-event-memory-add event pointer)))
+  (begin
+    (sp-event-memory* event 1)
+    (status-require (sp-units-new size pointer))
+    (sp-event-memory-add event pointer)))
 
 (sc-define-syntax (sp-render-file* event) (status-require (sp-render-quick event 0)))
 (sc-define-syntax (sp-render-plot* event) (status-require (sp-render-quick event 1)))

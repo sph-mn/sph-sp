@@ -119,9 +119,8 @@ exit:
   status_return;
 }
 void sp_block_free(sp_block_t* a) {
-  sp_time_t i;
   if (a->size) {
-    for (i = 0; (i < a->channels); i += 1) {
+    for (size_t i = 0; (i < a->channels); i += 1) {
       free(((a->samples)[i]));
     };
   };

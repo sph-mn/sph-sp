@@ -740,7 +740,17 @@ status_t sp_cheap_noise_event_generate(sp_time_t start, sp_time_t end, sp_block_
   for (block_i = 0; (block_i < block_count); block_i += 1) {
     block_offset = (s.resolution * block_i);
     t = (start + block_offset);
-    duration = ((block_count == block_i) ? block_rest : s.resolution);
+    duration = s.resolution;
+    sp_samples_random((&(s.random_state)), duration, (s.noise));
+    sp_cheap_filter((s.type), (s.noise), duration, (sp_array_or_fixed((s.cut_mod), (s.cut), t)), (s.passes), (sp_array_or_fixed((s.q_factor_mod), (s.q_factor), t)), (&(s.filter_state)), (s.temp));
+    for (i = 0; (i < duration); i += 1) {
+      (out.samples)[s.channel][(block_offset + i)] += (s.amp * (s.amod)[(t + i)] * (s.temp)[i]);
+    };
+  };
+  if (block_rest) {
+    block_offset = (s.resolution * block_count);
+    t = (start + block_offset);
+    duration = block_rest;
     sp_samples_random((&(s.random_state)), duration, (s.noise));
     sp_cheap_filter((s.type), (s.noise), duration, (sp_array_or_fixed((s.cut_mod), (s.cut), t)), (s.passes), (sp_array_or_fixed((s.q_factor_mod), (s.q_factor), t)), (&(s.filter_state)), (s.temp));
     for (i = 0; (i < duration); i += 1) {
@@ -935,7 +945,7 @@ status_t sp_sound_event_prepare_cheap_noise(sp_event_t* event) {
   sp_cheap_noise_event_config_t* event_config;
   sp_sound_event_config_t config = *((sp_sound_event_config_t*)(event->config));
   duration = (event->end - event->start);
-  cut = sp_hz_to_factor((config.frq - (config.wdt / 2)));
+  cut = sp_hz_to_factor((config.frq));
   q_factor = sp_hz_to_factor((config.wdt));
   cut_mod = 0;
   q_factor_mod = 0;

@@ -339,7 +339,8 @@
   (sp-times-make-seamless-left a a-size b b-size out)
   (void sp-time-t* sp-time-t sp-time-t* sp-time-t sp-time-t*)
   (sp-times-extract-in-range a size min max out out-size)
-  (void sp-time-t* sp-time-t sp-time-t sp-time-t sp-time-t* sp-time-t*))
+  (void sp-time-t* sp-time-t sp-time-t sp-time-t sp-time-t* sp-time-t*)
+  (sp-samples->units a size b) (void sp-sample-t* size-t sp-sample-t*))
 
 (sc-comment "filter")
 

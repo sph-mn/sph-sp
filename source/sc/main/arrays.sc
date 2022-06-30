@@ -737,3 +737,7 @@
     (set (array-get out i)
       (sp-time-interpolate-linear (array-get b i) (array-get a (- a-size i)) (/ (+ 1 i) size))))
   (for ((set i (- size 1)) (< i b-size) (set+ i 1)) (set (array-get out i) (array-get b i))))
+
+(define (sp-samples->units a size b) (void sp-sample-t* size-t sp-sample-t*)
+  (sp-samples-add-1 a size 1 b)
+  (sp-samples-divide-1 a size 2 b))

@@ -78,8 +78,7 @@
   (label exit (if status-is-failure memreg-free) status-return))
 
 (define (sp-block-free a) (void sp-block-t*)
-  (declare i sp-time-t)
-  (if a:size (for ((set i 0) (< i a:channels) (set+ i 1)) (free (array-get a:samples i)))))
+  (if a:size (for ((define i size-t 0) (< i a:channels) (set+ i 1)) (free (array-get a:samples i)))))
 
 (define (sp-block-with-offset a offset) (sp-block-t sp-block-t sp-time-t)
   "return a new block with offset added to all channel sample arrays"

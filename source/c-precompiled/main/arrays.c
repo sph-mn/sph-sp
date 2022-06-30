@@ -961,3 +961,7 @@ void sp_times_make_seamless_left(sp_time_t* a, sp_time_t a_size, sp_time_t* b, s
     out[i] = b[i];
   };
 }
+void sp_samples_to_units(sp_sample_t* a, size_t size, sp_sample_t* b) {
+  sp_samples_add_1(a, size, 1, b);
+  sp_samples_divide_1(a, size, 2, b);
+}
