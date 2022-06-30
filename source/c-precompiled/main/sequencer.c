@@ -950,7 +950,7 @@ status_t sp_sound_event_prepare_cheap_noise(sp_event_t* event) {
   cut_mod = 0;
   q_factor_mod = 0;
   if (config.fmod || config.wmod) {
-    sp_event_memory_init(event, 3);
+    srq((sp_event_memory_init(event, 3)));
     srq((sp_samples_new(duration, (&cut_mod))));
     sp_event_memory_add(event, cut_mod);
     srq((sp_samples_new(duration, (&q_factor_mod))));
@@ -962,7 +962,7 @@ status_t sp_sound_event_prepare_cheap_noise(sp_event_t* event) {
       q_factor_mod[i] = sp_hz_to_factor(wdt);
     };
   } else {
-    sp_event_memory_init(event, 1);
+    srq((sp_event_memory_init(event, 1)));
   };
   srq((sp_cheap_noise_event_config_new((&event_config))));
   sp_event_memory_add(event, event_config);
@@ -973,6 +973,9 @@ status_t sp_sound_event_prepare_cheap_noise(sp_event_t* event) {
   event_config->q_factor = q_factor;
   event_config->q_factor_mod = q_factor_mod;
   event_config->type = sp_state_variable_filter_bp;
+  for (size_t i = 0; (i < sp_channel_limit); i += 1) {
+    (event_config->channel_config)[i] = (config.channel_config)[i];
+  };
   event->config = event_config;
   event->prepare = sp_cheap_noise_event_prepare;
   srq(((event->prepare)(event)));
@@ -1008,7 +1011,7 @@ status_t sp_sound_event_prepare_noise(sp_event_t* event) {
       cuth_mod[i] = sp_hz_to_factor((frq + wdt));
     };
   } else {
-    sp_event_memory_init(event, 1);
+    srq((sp_event_memory_init(event, 1)));
   };
   srq((sp_noise_event_config_new((&event_config))));
   sp_event_memory_add(event, event_config);
@@ -1018,6 +1021,9 @@ status_t sp_sound_event_prepare_noise(sp_event_t* event) {
   event_config->cuth_mod = cuth_mod;
   event_config->cutl = cutl;
   event_config->cuth = cuth;
+  for (size_t i = 0; (i < sp_channel_limit); i += 1) {
+    (event_config->channel_config)[i] = (config.channel_config)[i];
+  };
   event->config = event_config;
   event->prepare = sp_noise_event_prepare;
   srq(((event->prepare)(event)));
@@ -1028,7 +1034,7 @@ status_t sp_sound_event_prepare_wave_event(sp_event_t* event) {
   status_declare;
   sp_wave_event_config_t* event_config;
   sp_sound_event_config_t config = *((sp_sound_event_config_t*)(event->config));
-  sp_event_memory_init(event, 1);
+  srq((sp_event_memory_init(event, 1)));
   srq((sp_wave_event_config_new((&event_config))));
   sp_event_memory_add(event, event_config);
   event_config->amp = config.amp;

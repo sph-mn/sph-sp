@@ -172,7 +172,7 @@ void sp_sine_period(sp_time_t size, sp_sample_t* out) {
   };
 }
 void sp_wave(sp_time_t size, sp_sample_t* wvf, sp_time_t wvf_size, sp_sample_t amp, sp_sample_t* amod, sp_time_t frq, sp_time_t* fmod, sp_time_t* phs_state, sp_sample_t* out) {
-  sp_time_t phs = *phs_state;
+  sp_time_t phs = (phs_state ? *phs_state : 0);
   for (sp_time_t i = 0; (i < size); i += 1) {
     out[i] += (amp * sp_array_or_fixed(amod, amp, i) * wvf[phs]);
     phs += sp_array_or_fixed(fmod, frq, i);
@@ -180,7 +180,9 @@ void sp_wave(sp_time_t size, sp_sample_t* wvf, sp_time_t wvf_size, sp_sample_t a
       phs = (phs % wvf_size);
     };
   };
-  *phs_state = phs;
+  if (phs_state) {
+    *phs_state = phs;
+  };
 }
 void sp_sine(sp_time_t size, sp_sample_t amp, sp_sample_t* amod, sp_time_t frq, sp_time_t* fmod, sp_time_t* phs_state, sp_sample_t* out) { sp_wave(size, sp_sine_table, sp_rate, amp, amod, frq, fmod, phs_state, out); }
 void sp_sine_lfo(sp_time_t size, sp_sample_t amp, sp_sample_t* amod, sp_time_t frq, sp_time_t* fmod, sp_time_t* phs_state, sp_sample_t* out) { sp_wave(size, sp_sine_table_lfo, (sp_rate * sp_sine_lfo_factor), amp, amod, frq, fmod, phs_state, out); }

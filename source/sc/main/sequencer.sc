@@ -781,7 +781,7 @@
     q-factor-mod 0)
   (if (or config.fmod config.wmod)
     (begin
-      (sp-event-memory-init event 3)
+      (srq (sp-event-memory-init event 3))
       (srq (sp-samples-new duration &cut-mod))
       (sp-event-memory-add event cut-mod)
       (srq (sp-samples-new duration &q-factor-mod))
@@ -792,7 +792,7 @@
           wdt (if* config.wmod (array-get config.wmod i) config.wdt)
           (array-get cut-mod i) (sp-hz->factor (- frq (/ wdt 2)))
           (array-get q-factor-mod i) (sp-hz->factor wdt))))
-    (sp-event-memory-init event 1))
+    (srq (sp-event-memory-init event 1)))
   (srq (sp-cheap-noise-event-config-new &event-config))
   (sp-event-memory-add event event-config)
   (struct-pointer-set event-config
@@ -803,6 +803,8 @@
     q-factor q-factor
     q-factor-mod q-factor-mod
     type sp-state-variable-filter-bp)
+  (sp-for-each-index i sp-channel-limit
+    (set (array-get event-config:channel-config i) (array-get config.channel-config i)))
   (set event:config event-config event:prepare sp-cheap-noise-event-prepare)
   (srq (event:prepare event))
   (label exit status-return))
@@ -839,7 +841,7 @@
           wdt (if* config.wmod (array-get config.wmod i) config.wdt)
           (array-get cutl-mod i) (sp-hz->factor frq)
           (array-get cuth-mod i) (sp-hz->factor (+ frq wdt)))))
-    (sp-event-memory-init event 1))
+    (srq (sp-event-memory-init event 1)))
   (srq (sp-noise-event-config-new &event-config))
   (sp-event-memory-add event event-config)
   (struct-pointer-set event-config
@@ -849,6 +851,8 @@
     cuth-mod cuth-mod
     cutl cutl
     cuth cuth)
+  (sp-for-each-index i sp-channel-limit
+    (set (array-get event-config:channel-config i) (array-get config.channel-config i)))
   (set event:config event-config event:prepare sp-noise-event-prepare)
   (srq (event:prepare event))
   (label exit status-return))
@@ -858,7 +862,7 @@
   (declare event-config sp-wave-event-config-t*)
   (define config sp-sound-event-config-t
     (pointer-get (convert-type event:config sp-sound-event-config-t*)))
-  (sp-event-memory-init event 1)
+  (srq (sp-event-memory-init event 1))
   (srq (sp-wave-event-config-new &event-config))
   (sp-event-memory-add event event-config)
   (struct-pointer-set event-config

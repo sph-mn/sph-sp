@@ -124,12 +124,12 @@
 
 (define (sp-wave size wvf wvf-size amp amod frq fmod phs-state out)
   (void sp-time-t sp-sample-t* sp-time-t sp-sample-t sp-sample-t* sp-time-t sp-time-t* sp-time-t* sp-sample-t*)
-  (define phs sp-time-t *phs-state)
+  (define phs sp-time-t (if* phs-state *phs-state 0))
   (for ((define i sp-time-t 0) (< i size) (set+ i 1))
     (set+ (array-get out i) (* amp (sp-array-or-fixed amod amp i) (array-get wvf phs))
       phs (sp-array-or-fixed fmod frq i))
     (if (>= phs wvf-size) (set phs (modulo phs wvf-size))))
-  (set *phs-state phs))
+  (if phs-state (set *phs-state phs)))
 
 (define (sp-sine size amp amod frq fmod phs-state out)
   (void sp-time-t sp-sample-t sp-sample-t* sp-time-t sp-time-t* sp-time-t* sp-sample-t*)

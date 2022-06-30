@@ -101,9 +101,9 @@
 
 (sc-define-syntax (sp-event-malloc-type* event-pointer count type)
   (begin
+    (sp-event-memory* event-pointer 1)
     (status-require
       (sp-malloc-type count type (address-of (struct-pointer-get event-pointer config))))
-    (sp-event-memory* event-pointer 1)
     (sp-event-memory-add event-pointer (struct-pointer-get event-pointer config))))
 
 (sc-define-syntax (sp-event-config-new* event-pointer type options ...)
@@ -116,9 +116,10 @@
 (sc-define-syntax* (sp-event-config-new2* pointer type-new event options ...)
   (qq
     (begin
+      (sp-event-memory* (unquote event) 1)
       (status-require ((unquote type-new) (address-of (unquote pointer))))
-      (sp-event-config-options* (unquote pointer) (unquote-splicing options))
-      (sp-event-memory-add (unquote event) (unquote pointer)))))
+      (sp-event-memory-add (unquote event) (unquote pointer))
+      (sp-event-config-options* (unquote pointer) (unquote-splicing options)))))
 
 (sc-define-syntax (sp-wave-config* name ...) "declare config variables"
   (begin (declare name sp-wave-event-config-t*) ...))
@@ -171,10 +172,7 @@
 
 (sc-define-syntax (sp-array* type type-new pointer size values ...)
   "declare array variable and length variable, allocate array,\n   register memory with current event and set optional given values in order"
-  (begin
-    (status-require (type-new size pointer))
-    (sp-event-memory-add _event pointer)
-    (array-set* pointer values ...)))
+  (begin (status-require (type-new size pointer)) (array-set* pointer values ...)))
 
 (sc-define-syntax* (sp-times* name size-and-values ...)
   (match size-and-values (() (qq (declare (unquote name) sp-time-t*)))
@@ -198,19 +196,19 @@
 (sc-define-syntax (sp-event-samples* event size pointer)
   (begin
     (sp-event-memory* event 1)
-    (status-require (sp-samples-new size pointer))
+    (status-require (sp-samples-new size (address-of pointer)))
     (sp-event-memory-add event pointer)))
 
 (sc-define-syntax (sp-event-times* event size pointer)
   (begin
     (sp-event-memory* event 1)
-    (status-require (sp-times-new size pointer))
+    (status-require (sp-times-new size (address-of pointer)))
     (sp-event-memory-add event pointer)))
 
 (sc-define-syntax (sp-event-units* event size pointer)
   (begin
     (sp-event-memory* event 1)
-    (status-require (sp-units-new size pointer))
+    (status-require (sp-units-new size (address-of pointer)))
     (sp-event-memory-add event pointer)))
 
 (sc-define-syntax (sp-render-file* event) (status-require (sp-render-quick event 0)))
