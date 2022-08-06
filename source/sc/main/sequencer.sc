@@ -252,9 +252,10 @@
   (struct-set a use #t mute mute delay delay phs phs amp amp amod amod)
   (return a))
 
-(define (sp-channel-config-zero a) (void sp-channel-config-t*)
+(define (sp-channel-config-reset a) (void sp-channel-config-t*)
   (define channel-config sp-channel-config-t (struct-literal 0))
-  (sp-for-each-index i sp-channel-limit (set (array-get a i) channel-config)))
+  (sp-for-each-index i sp-channel-limit
+    (set (array-get a i) channel-config (struct-get (array-get a i) amp) 1)))
 
 (define (sp-wave-event-config) sp-wave-event-config-t
   (declare result sp-wave-event-config-t)
@@ -267,7 +268,7 @@
     amp 1
     amod 0
     channels sp-channels)
-  (sp-channel-config-zero result.channel-config)
+  (sp-channel-config-reset result.channel-config)
   (return result))
 
 (define (sp-wave-event-config-new out) (status-t sp-wave-event-config-t**)
@@ -382,7 +383,7 @@
     resolution (/ sp-rate 10)
     is-reject 0
     channels sp-channels)
-  (sp-channel-config-zero result:channel-config)
+  (sp-channel-config-reset result:channel-config)
   (set *out result)
   (label exit status-return))
 
@@ -561,7 +562,7 @@
     type sp-state-variable-filter-lp
     resolution (/ sp-rate 10)
     channels sp-channels)
-  (sp-channel-config-zero result:channel-config)
+  (sp-channel-config-reset result:channel-config)
   (set *out result)
   (label exit status-return))
 
@@ -750,7 +751,7 @@
   "return a sound event configuration struct with defaults set"
   (declare result sp-sound-event-config-t)
   (struct-set result noise 0 amp 1 amod 0 frq sp-rate fmod 0 wdt 0 wmod 0 channels sp-channels)
-  (sp-channel-config-zero result.channel-config)
+  (sp-channel-config-reset result.channel-config)
   (return result))
 
 (define (sp-sound-event-config-new out) (status-t sp-sound-event-config-t**)

@@ -369,10 +369,11 @@ sp_channel_config_t sp_channel_config(sp_bool_t mute, sp_time_t delay, sp_time_t
   a.amod = amod;
   return (a);
 }
-void sp_channel_config_zero(sp_channel_config_t* a) {
+void sp_channel_config_reset(sp_channel_config_t* a) {
   sp_channel_config_t channel_config = { 0 };
   for (size_t i = 0; (i < sp_channel_limit); i += 1) {
     a[i] = channel_config;
+    (a[i]).amp = 1;
   };
 }
 sp_wave_event_config_t sp_wave_event_config() {
@@ -385,7 +386,7 @@ sp_wave_event_config_t sp_wave_event_config() {
   result.amp = 1;
   result.amod = 0;
   result.channels = sp_channels;
-  sp_channel_config_zero((result.channel_config));
+  sp_channel_config_reset((result.channel_config));
   return (result);
 }
 
@@ -519,7 +520,7 @@ status_t sp_noise_event_config_new(sp_noise_event_config_t** out) {
   (*result).resolution = (sp_rate / 10);
   (*result).is_reject = 0;
   (*result).channels = sp_channels;
-  sp_channel_config_zero((result->channel_config));
+  sp_channel_config_reset((result->channel_config));
   *out = result;
 exit:
   status_return;
@@ -707,7 +708,7 @@ status_t sp_cheap_noise_event_config_new(sp_cheap_noise_event_config_t** out) {
   (*result).type = sp_state_variable_filter_lp;
   (*result).resolution = (sp_rate / 10);
   (*result).channels = sp_channels;
-  sp_channel_config_zero((result->channel_config));
+  sp_channel_config_reset((result->channel_config));
   *out = result;
 exit:
   status_return;
@@ -921,7 +922,7 @@ sp_sound_event_config_t sp_sound_event_config() {
   result.wdt = 0;
   result.wmod = 0;
   result.channels = sp_channels;
-  sp_channel_config_zero((result.channel_config));
+  sp_channel_config_reset((result.channel_config));
   return (result);
 }
 

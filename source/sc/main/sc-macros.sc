@@ -96,10 +96,10 @@
                   (unquote-splicing channel-config)))))))
       (_ null))))
 
-(sc-define-syntax* (sp-event-config-define-new* name type event options ...)
-  (qq (begin (declare name (type *)) (sp-event-config-new* type (address-of name)))))
+(sc-define-syntax (sp-event-config-define-new* name type event options ...)
+  (begin (declare name (type *)) (sp-event-config-new* type (address-of name) options ...)))
 
-(sc-define-syntax (sp-event-malloc-type* event-pointer count type)
+(sc-define-syntax (sp-event-config-malloc* event-pointer count type)
   (begin
     (sp-event-memory* event-pointer 1)
     (status-require
@@ -109,9 +109,18 @@
 (sc-define-syntax (sp-event-config-new* event-pointer type options ...)
   "allocate, set with optional channel config syntax, track memory"
   (begin
-    (sp-event-malloc-type* event-pointer 1 type)
+    (sp-event-config-malloc* event-pointer 1 type)
     (sp-event-config-options*
       (convert-type (struct-pointer-get event-pointer config) (sc-concat type *)) options ...)))
+
+(sc-define-syntax (sp-event-config-struct-set* event-pointer type key options ...)
+  (struct-set
+    (struct-pointer-get (convert-type (struct-pointer-get event-pointer config) (sc-concat type *))
+      key)
+    options ...))
+
+(sc-define-syntax (sp-event-config-get* event-pointer type)
+  (convert-type (struct-pointer-get event-pointer config) (sc-concat type *)))
 
 (sc-define-syntax* (sp-event-config-new2* pointer type-new event options ...)
   (qq
@@ -192,6 +201,12 @@
 
 (sc-define-syntax (sp-local-units* size pointer)
   (begin (status-require (sp-units-new size pointer)) (local-memory-add pointer)))
+
+(sc-define-syntax (sp-event-malloc-type* event count type pointer)
+  (begin
+    (sp-event-memory* event 1)
+    (srq (sp-malloc-type count type (address-of pointer)))
+    (sp-event-memory-add event pointer)))
 
 (sc-define-syntax (sp-event-samples* event size pointer)
   (begin
@@ -279,3 +294,12 @@
         (sp-times* (unquote name) (unquote count-name) (unquote-splicing values))
         (sp-times-multiply-1 (unquote name) (unquote count-name) (unquote tempo) (unquote name))
         (sp-times-cusum (unquote name) (unquote count-name) (unquote name))))))
+
+(sc-define-syntax (sp-time-random*) (sp-time-random &sp-random-state))
+(sc-define-syntax (sp-time-random-bounded* range) (sp-time-random-bounded &sp-random-state range))
+(sc-define-syntax (sp-sample-random*) (sp-sample-random &sp-random-state))
+
+(sc-define-syntax (sp-sample-random-bounded* range)
+  (sp-sample-random-bounded &sp-random-state range))
+
+(sc-define-syntax (sp-unit-random*) (sp-unit-random &sp-random-state))

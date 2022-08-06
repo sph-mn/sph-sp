@@ -8,6 +8,7 @@
   sp-channel-count-t uint8-t
   sp-file-format (bit-or SF-FORMAT-WAV SF_FORMAT_FLOAT)
   sp-sample-t double
+  sp-unit-t double
   spline-path-value-t sp-sample-t
   sp-samples-sum f64-sum
   sp-sample-t double

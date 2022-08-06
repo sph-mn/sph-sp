@@ -24,6 +24,9 @@
 #ifndef sp_sample_t
 #define sp_sample_t double
 #endif
+#ifndef sp_unit_t
+#define sp_unit_t double
+#endif
 #ifndef spline_path_value_t
 #define spline_path_value_t sp_sample_t
 #endif
