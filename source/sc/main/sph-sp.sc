@@ -482,7 +482,16 @@
     (sp-malloc-type count type pointer-address)
     (sp-event-memory-add _event *pointer-address))
   (sp-event-config-load variable-name type event)
-  (define variable-name type (pointer-get (convert-type event:config type*))))
+  (define variable-name type (pointer-get (convert-type event:config type*)))
+  (sp-sound-event event-pointer _config)
+  (struct-pointer-set event-pointer prepare sp-sound-event-prepare config _config)
+  (sp-wave-event event-pointer _config)
+  (struct-pointer-set event-pointer prepare sp-wave-event-prepare config _config)
+  (sp-noise-event event-pointer _config)
+  (struct-pointer-set event-pointer prepare sp-noise-event-prepare config _config)
+  (sp-cheap-noise-event event-pointer _config)
+  (struct-pointer-set event-pointer prepare sp-cheap-noise-event-prepare config _config)
+  (sp-group-event event-pointer) (struct-pointer-set event-pointer prepare sp-group-prepare))
 
 (array3-declare-type sp-memory memreg2-t)
 
@@ -777,4 +786,4 @@
   (status-t sp-event-t sp-time-t sp-time-t sp-render-config-t uint8-t*)
   (sp-render-block event start end config out)
   (status-t sp-event-t sp-time-t sp-time-t sp-render-config-t sp-block-t*)
-  (sp-render-quick event file-or-plot) (status-t sp-event-t uint8-t))
+  (sp-render event file-or-plot) (status-t sp-event-t uint8-t))

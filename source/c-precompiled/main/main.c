@@ -399,8 +399,8 @@ exit:
 }
 
 /** render the full duration of events with defaults to /tmp/sp-out.wav or plot the result.
-   example: sp_render_quick(event, 2, 48000, 1) */
-status_t sp_render_quick(sp_event_t event, uint8_t file_or_plot) {
+   example: sp_render_quick(event, 1) */
+status_t sp_render(sp_event_t event, uint8_t file_or_plot) {
   status_declare;
   sp_block_t block;
   sp_render_config_t config;

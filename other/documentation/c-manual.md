@@ -264,9 +264,13 @@ user input might have to be read in a separate thread and buffered for the time 
 slight changes of frequency over a short period of time by using the fmod frequency modulation feature of sp-wave-event.
 
 # caveats
-## event config
-event config like sp_wave_event_config_t and similar needs to be available when the event is prepared.
+## stack allocating event config
+event config like sp_wave_event_config_t and similar needs to be available when the event prepare function is called.
 unless the event is prepared in a sub function, it should be heap allocated, for example with sp_wave_event_config_new, and tracked with sp_event_memory_add.
+
+## not resetting event variables when reusing them
+local sp_event_t variables should be reset with sp_event_reset(event) or with event = other_event.
+otherwise tracked event memory might be duplicated and lead to memory errors when the event is added to a group for example.
 
 # troubleshooting
 issues, possible causes and solutions.

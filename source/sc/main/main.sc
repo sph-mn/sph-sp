@@ -309,9 +309,9 @@
   (set *out block)
   (label exit status-return))
 
-(define (sp-render-quick event file-or-plot) (status-t sp-event-t uint8-t)
+(define (sp-render event file-or-plot) (status-t sp-event-t uint8-t)
   "render the full duration of events with defaults to /tmp/sp-out.wav or plot the result.
-   example: sp_render_quick(event, 2, 48000, 1)"
+   example: sp_render_quick(event, 1)"
   status-declare
   (declare block sp-block-t config sp-render-config-t start sp-time-t end sp-time-t)
   (set config (sp-render-config sp-channels sp-rate sp-rate) start event.start end event.end)

@@ -480,6 +480,19 @@ void sp_plot_spectrum(sp_sample_t* a, sp_time_t a_size);
   sp_malloc_type(count, type, pointer_address); \
   sp_event_memory_add(_event, (*pointer_address))
 #define sp_event_config_load(variable_name, type, event) type variable_name = *((type*)(event->config))
+#define sp_sound_event(event_pointer, _config) \
+  event_pointer->prepare = sp_sound_event_prepare; \
+  event_pointer->config = _config
+#define sp_wave_event(event_pointer, _config) \
+  event_pointer->prepare = sp_wave_event_prepare; \
+  event_pointer->config = _config
+#define sp_noise_event(event_pointer, _config) \
+  event_pointer->prepare = sp_noise_event_prepare; \
+  event_pointer->config = _config
+#define sp_cheap_noise_event(event_pointer, _config) \
+  event_pointer->prepare = sp_cheap_noise_event_prepare; \
+  event_pointer->config = _config
+#define sp_group_event(event_pointer) event_pointer->prepare = sp_group_prepare
 array3_declare_type(sp_memory, memreg2_t);
 typedef void (*sp_memory_free_t)(void*);
 struct sp_event_t;
@@ -732,4 +745,4 @@ typedef struct {
 sp_render_config_t sp_render_config(sp_channel_count_t channels, sp_time_t rate, sp_time_t block_size);
 status_t sp_render_file(sp_event_t event, sp_time_t start, sp_time_t end, sp_render_config_t config, uint8_t* path);
 status_t sp_render_block(sp_event_t event, sp_time_t start, sp_time_t end, sp_render_config_t config, sp_block_t* out);
-status_t sp_render_quick(sp_event_t event, uint8_t file_or_plot);
+status_t sp_render(sp_event_t event, uint8_t file_or_plot);
