@@ -370,6 +370,15 @@
     (if (< a nearest) (return (- a amount))
       (if (bit-and 1 (sp-time-random &sp-random-state)) (return (- a amount)) (return (+ a amount))))))
 
+(define (sp-modulo-match partial-number divisors divisor-count out-divisor-index)
+  (uint8-t sp-time-t sp-time-t* sp-time-t sp-time-t*)
+  "return the index in divisors where partial_number modulo divisor is zero.
+   for example, if divisors are 3 and 2 and partial-number starts with 1 then every third partial will map to 0 and every second partial to 1"
+  (for-each-index i size-t divisor-count
+    (if (not (modulo partial-number (array-get divisors i)))
+      (begin (set *out-divisor-index i) (return 0))))
+  (return 1))
+
 (define (sp-initialize cpu-count channels rate) (status-t uint16-t sp-channel-count-t sp-time-t)
   "fills the sine wave lookup table.
    rate and channels are used to set sp_rate and sp_channels,

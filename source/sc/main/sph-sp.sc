@@ -174,7 +174,9 @@
   (sp-time-harmonize a base amount) (sp-time-t sp-time-t sp-time-t sp-sample-t)
   (sp-time-deharmonize a base amount) (sp-time-t sp-time-t sp-time-t sp-sample-t)
   (sp-sine-lfo size amp amod frq fmod phs-state out)
-  (void sp-time-t sp-sample-t sp-sample-t* sp-time-t sp-time-t* sp-time-t* sp-sample-t*))
+  (void sp-time-t sp-sample-t sp-sample-t* sp-time-t sp-time-t* sp-time-t* sp-sample-t*)
+  (sp-modulo-match partial-number divisors divisor-count out-divisor-index)
+  (uint8-t sp-time-t sp-time-t* sp-time-t sp-time-t*))
 
 (sc-comment "arrays")
 

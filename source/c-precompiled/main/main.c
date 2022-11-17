@@ -478,6 +478,18 @@ sp_time_t sp_time_deharmonize(sp_time_t a, sp_time_t base, sp_sample_t amount) {
   };
 }
 
+/** return the index in divisors where partial_number modulo divisor is zero.
+   for example, if divisors are 3 and 2 and partial-number starts with 1 then every third partial will map to 0 and every second partial to 1 */
+uint8_t sp_modulo_match(sp_time_t partial_number, sp_time_t* divisors, sp_time_t divisor_count, sp_time_t* out_divisor_index) {
+  for (size_t i = 0; (i < divisor_count); i += 1) {
+    if (!(partial_number % divisors[i])) {
+      *out_divisor_index = i;
+      return (0);
+    };
+  };
+  return (1);
+}
+
 /** fills the sine wave lookup table.
    rate and channels are used to set sp_rate and sp_channels,
    which are used as defaults in a few cases */

@@ -61,10 +61,6 @@
           (struct-set (array-get (unquote channel-config-array) (unquote i)) (unquote-splicing a))))
       channel-index setting)))
 
-(sc-define-syntax (sp-event-config-take* name type event-pointer)
-  (define name type
-    (pointer-get (convert-type (struct-pointer-get event-pointer config) (sc-concat type *)))))
-
 (sc-define-syntax (sp-local-samples* size pointer)
   (begin (status-require (sp-samples-new size (address-of pointer))) (local-memory-add pointer)))
 
