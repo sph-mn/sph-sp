@@ -7,4 +7,4 @@ require_file() {
 }
 
 require_file "/usr/include/sph/helper.c"
-require_file "/usr/include/sph/sndfile.h"
+require_file "/usr/include/sndfile.h"

@@ -1,6 +1,0 @@
-#!/bin/sh -e
-
-sc other/example.sc > other/example.c
-gcc -lsph-sp other/example.c -o temp/example
-chmod +x temp/example
-./temp/example
