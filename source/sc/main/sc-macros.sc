@@ -70,15 +70,15 @@
 (sc-define-syntax (sp-local-units* size pointer)
   (begin (status-require (sp-units-new size (address-of pointer))) (local-memory-add pointer)))
 
-(sc-define-syntax (sp-event-memory-new* event-pointer allocator allocator-arguments ... pointer)
+(sc-define-syntax (sp-event-alloc* event-pointer allocator allocator-arguments ... pointer)
   (begin
-    (sp-event-memory* event-pointer 1)
+    (srq (sp-event-memory-expand event-pointer 1))
     (srq (allocator allocator-arguments ... (address-of pointer)))
     (sp-event-memory-add event-pointer pointer)))
 
 (sc-define-syntax (sp-event-malloc* event-pointer size pointer)
   (begin
-    (sp-event-memory* event-pointer 1)
+    (srq (sp-event-memory-expand event-pointer 1))
     (srq (sph-helper-malloc size (address-of pointer)))
     (sp-event-memory-add event-pointer pointer)))
 
@@ -89,13 +89,13 @@
   (sp-event-malloc* event-pointer (sizeof type) pointer))
 
 (sc-define-syntax (sp-event-samples* event-pointer size pointer)
-  (sp-event-memory-new* event-pointer sp-samples-new size pointer))
+  (sp-event-alloc* event-pointer sp-samples-new size pointer))
 
 (sc-define-syntax (sp-event-times* event-pointer size pointer)
-  (sp-event-memory-new* event-pointer sp-times-new size pointer))
+  (sp-event-alloc* event-pointer sp-times-new size pointer))
 
 (sc-define-syntax (sp-event-units* event-pointer size pointer)
-  (sp-event-memory-new* event-pointer sp-units-new size pointer))
+  (sp-event-alloc* event-pointer sp-units-new size pointer))
 
 (sc-define-syntax (sp-time-random*) (sp-time-random &sp-random-state))
 (sc-define-syntax (sp-time-random-bounded* range) (sp-time-random-bounded &sp-random-state range))
@@ -106,8 +106,8 @@
 
 (sc-define-syntax (sp-unit-random*) (sp-unit-random &sp-random-state))
 
-(sc-define-syntax (sp-event-memory* event-pointer count)
-  (srq (sp-event-memory-init event-pointer count)))
+(sc-define-syntax (sp-event-memory-expand* event-pointer count)
+  (srq (sp-event-memory-expand event-pointer count)))
 
 (sc-define-syntax (sp-group-add* group event) (srq (sp-group-add group event)))
 (sc-define-syntax (sp-render-file* event) (srq (sp-render event 0)))

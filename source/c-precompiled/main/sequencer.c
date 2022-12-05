@@ -128,7 +128,7 @@ void sp_event_list_free(sp_event_list_t** events) {
 }
 
 /** ensures that event memory is initialized and can take $additional_size more elements */
-status_t sp_event_memory_init(sp_event_t* a, sp_time_t additional_size) {
+status_t sp_event_memory_expand(sp_event_t* a, sp_time_t additional_size) {
   status_declare;
   if (a->memory.data) {
     if ((additional_size > array3_unused_size((a->memory))) && sp_memory_resize((&(a->memory)), (array3_max_size((a->memory)) + (additional_size - array3_unused_size((a->memory)))))) {
@@ -659,7 +659,7 @@ status_t sp_noise_event_prepare(sp_event_t* event) {
   } else {
     config.resolution = duration;
   };
-  status_require((sp_event_memory_init(event, 2)));
+  status_require((sp_event_memory_expand(event, 2)));
   status_require((sp_malloc_type((config.resolution), sp_sample_t, (&state_noise))));
   sp_event_memory_add(event, state_noise);
   status_require((sp_malloc_type((config.resolution), sp_sample_t, (&state_temp))));
@@ -826,7 +826,7 @@ status_t sp_cheap_noise_event_prepare(sp_event_t* event) {
   } else {
     config.resolution = duration;
   };
-  status_require((sp_event_memory_init(event, 2)));
+  status_require((sp_event_memory_expand(event, 2)));
   status_require((sp_malloc_type((config.resolution), sp_sample_t, (&state_noise))));
   sp_event_memory_add(event, state_noise);
   status_require((sp_malloc_type((config.resolution), sp_sample_t, (&state_temp))));
@@ -921,6 +921,7 @@ sp_sound_event_config_t sp_sound_event_config() {
   result.fmod = 0;
   result.wdt = 0;
   result.wmod = 0;
+  result.phs = 0;
   result.channels = sp_channels;
   sp_channel_config_reset((result.channel_config));
   return (result);
@@ -951,7 +952,7 @@ status_t sp_sound_event_prepare_cheap_noise(sp_event_t* event) {
   cut_mod = 0;
   q_factor_mod = 0;
   if (config.fmod || config.wmod) {
-    srq((sp_event_memory_init(event, 3)));
+    srq((sp_event_memory_expand(event, 3)));
     srq((sp_samples_new(duration, (&cut_mod))));
     sp_event_memory_add(event, cut_mod);
     srq((sp_samples_new(duration, (&q_factor_mod))));
@@ -963,7 +964,7 @@ status_t sp_sound_event_prepare_cheap_noise(sp_event_t* event) {
       q_factor_mod[i] = sp_hz_to_factor(wdt);
     };
   } else {
-    srq((sp_event_memory_init(event, 1)));
+    srq((sp_event_memory_expand(event, 1)));
   };
   srq((sp_cheap_noise_event_config_new((&event_config))));
   sp_event_memory_add(event, event_config);
@@ -1000,7 +1001,7 @@ status_t sp_sound_event_prepare_noise(sp_event_t* event) {
   cutl_mod = 0;
   cuth_mod = 0;
   if (config.fmod || config.wmod) {
-    sp_event_memory_init(event, 3);
+    sp_event_memory_expand(event, 3);
     srq((sp_samples_new(duration, (&cutl_mod))));
     sp_event_memory_add(event, cutl_mod);
     srq((sp_samples_new(duration, (&cuth_mod))));
@@ -1012,7 +1013,7 @@ status_t sp_sound_event_prepare_noise(sp_event_t* event) {
       cuth_mod[i] = sp_hz_to_factor((frq + wdt));
     };
   } else {
-    srq((sp_event_memory_init(event, 1)));
+    srq((sp_event_memory_expand(event, 1)));
   };
   srq((sp_noise_event_config_new((&event_config))));
   sp_event_memory_add(event, event_config);
@@ -1035,8 +1036,8 @@ status_t sp_sound_event_prepare_wave_event(sp_event_t* event) {
   status_declare;
   sp_wave_event_config_t* event_config;
   sp_sound_event_config_t config = *((sp_sound_event_config_t*)(event->config));
-  srq((sp_event_memory_init(event, 1)));
   srq((sp_wave_event_config_new((&event_config))));
+  srq((sp_event_memory_expand(event, 1)));
   sp_event_memory_add(event, event_config);
   event_config->amp = config.amp;
   event_config->amod = config.amod;

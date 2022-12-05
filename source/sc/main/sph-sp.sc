@@ -614,7 +614,7 @@
   (sp-event-list-remove-element a element) (void sp-event-list-t** sp-event-list-t*)
   (sp-event-list-add a event) (status-t sp-event-list-t** sp-event-t)
   (sp-event-list-free events) (void sp-event-list-t**)
-  (sp-event-memory-init a additional-size) (status-t sp-event-t* sp-time-t)
+  (sp-event-memory-expand a additional-size) (status-t sp-event-t* sp-time-t)
   (sp-event-memory-add2 event address handler) (void sp-event-t* void* sp-memory-free-t)
   (sp-event-memory-free event) (void sp-event-t*)
   (sp-seq start end out events) (status-t sp-time-t sp-time-t sp-block-t sp-event-list-t**)

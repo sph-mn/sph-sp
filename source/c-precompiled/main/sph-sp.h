@@ -603,7 +603,7 @@ void sp_event_list_validate(sp_event_list_t* a);
 void sp_event_list_remove_element(sp_event_list_t** a, sp_event_list_t* element);
 status_t sp_event_list_add(sp_event_list_t** a, sp_event_t event);
 void sp_event_list_free(sp_event_list_t** events);
-status_t sp_event_memory_init(sp_event_t* a, sp_time_t additional_size);
+status_t sp_event_memory_expand(sp_event_t* a, sp_time_t additional_size);
 void sp_event_memory_add2(sp_event_t* event, void* address, sp_memory_free_t handler);
 void sp_event_memory_free(sp_event_t* event);
 status_t sp_seq(sp_time_t start, sp_time_t end, sp_block_t out, sp_event_list_t** events);
