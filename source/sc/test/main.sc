@@ -511,7 +511,7 @@
   (status-require (sp-group-add &g1 e2))
   (status-require (sp-group-add &g g1))
   (status-require (sp-group-add &g e3))
-  (status-require (sp-event-memory-expand &g 2))
+  (status-require (sp-event-memory-ensure &g 2))
   (sp-event-memory-add &g m1)
   (sp-event-memory-add &g m2)
   (status-require (g.prepare &g))

@@ -603,7 +603,7 @@ void sp_event_list_validate(sp_event_list_t* a);
 void sp_event_list_remove_element(sp_event_list_t** a, sp_event_list_t* element);
 status_t sp_event_list_add(sp_event_list_t** a, sp_event_t event);
 void sp_event_list_free(sp_event_list_t** events);
-status_t sp_event_memory_expand(sp_event_t* a, sp_time_t additional_size);
+status_t sp_event_memory_ensure(sp_event_t* a, sp_time_t additional_size);
 void sp_event_memory_add2(sp_event_t* event, void* address, sp_memory_free_t handler);
 void sp_event_memory_free(sp_event_t* event);
 status_t sp_seq(sp_time_t start, sp_time_t end, sp_block_t out, sp_event_list_t** events);
@@ -693,7 +693,7 @@ status_t sp_path_derivations_normalized(sp_path_t base, sp_time_t count, sp_samp
 status_t sp_path_samples_derivations_normalized(sp_path_t path, sp_time_t count, sp_sample_t** x_changes, sp_sample_t** y_changes, sp_sample_t*** out, sp_time_t** out_sizes);
 status_t sp_path_curves_config_new(sp_time_t segment_count, sp_path_curves_config_t* out);
 void sp_path_curves_config_free(sp_path_curves_config_t a);
-status_t sp_path_curves_new(sp_path_curves_config_t config, sp_time_t length, sp_path_t* out);
+status_t sp_path_curves_new(sp_path_curves_config_t config, sp_path_t* out);
 status_t sp_path_curves_times_new(sp_path_curves_config_t config, sp_time_t length, sp_time_t** out);
 status_t sp_path_curves_samples_new(sp_path_curves_config_t config, sp_time_t length, sp_sample_t** out);
 /* statistics */

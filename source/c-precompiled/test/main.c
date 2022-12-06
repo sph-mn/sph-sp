@@ -571,7 +571,7 @@ status_t test_sp_group() {
   status_require((sp_group_add((&g1), e2)));
   status_require((sp_group_add((&g), g1)));
   status_require((sp_group_add((&g), e3)));
-  status_require((sp_event_memory_expand((&g), 2)));
+  status_require((sp_event_memory_ensure((&g), 2)));
   sp_event_memory_add((&g), m1);
   sp_event_memory_add((&g), m2);
   status_require(((g.prepare)((&g))));

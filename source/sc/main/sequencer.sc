@@ -73,7 +73,7 @@
   (while current (sp-event-free current:event) (set temp current current current:next) (free temp))
   (set events 0))
 
-(define (sp-event-memory-expand a additional-size) (status-t sp-event-t* sp-time-t)
+(define (sp-event-memory-ensure a additional-size) (status-t sp-event-t* sp-time-t)
   "ensures that event memory is initialized and can take $additional_size more elements"
   status-declare
   (if a:memory.data
@@ -287,7 +287,8 @@
   (set sp event:data s *sp)
   (for ((set i start) (< i end) (set+ i 1))
     (set+ (array-get out.samples s.channel (- i start))
-      (* s.amp (array-get s.amod i) (array-get s.wvf s.phs)) s.phs (sp-array-or-fixed s.fmod s.frq i))
+      (* s.amp (array-get s.amod i) (array-get s.wvf s.phs)) s.phs
+      (if* s.fmod (+ s.frq (array-get s.fmod i)) s.frq))
     (if (>= s.phs s.wvf-size) (set s.phs (modulo s.phs s.wvf-size))))
   (set sp:phs s.phs)
   status-return)
@@ -380,7 +381,7 @@
     trnh 0.07
     cutl-mod 0
     cuth-mod 0
-    resolution (/ sp-rate 10)
+    resolution (/ sp-rate 1000)
     is-reject 0
     channels sp-channels)
   (sp-channel-config-reset result:channel-config)
@@ -468,7 +469,7 @@
       (sp-array-or-fixed config.cuth-mod config.cuth 0) config.trnl config.trnh
       config.is-reject &rs &filter-state))
   (status-require (sp-malloc-type 1 sp-noise-event-state-t &state))
-  (struct-set *state
+  (struct-pointer-set state
     amp (if* channel-config.use (* config.amp channel-config.amp) config.amp)
     amod (if* (and channel-config.use channel-config.amod) channel-config.amod config.amod)
     cutl config.cutl
@@ -517,7 +518,7 @@
       config.resolution (if* config.resolution config.resolution 96)
       config.resolution (sp-min config.resolution duration))
     (set config.resolution duration))
-  (status-require (sp-event-memory-expand event 2))
+  (status-require (sp-event-memory-ensure event 2))
   (status-require (sp-malloc-type config.resolution sp-sample-t &state-noise))
   (sp-event-memory-add event state-noise)
   (status-require (sp-malloc-type config.resolution sp-sample-t &state-temp))
@@ -673,7 +674,7 @@
       config.resolution (if* config.resolution config.resolution 96)
       config.resolution (sp-min config.resolution duration))
     (set config.resolution duration))
-  (status-require (sp-event-memory-expand event 2))
+  (status-require (sp-event-memory-ensure event 2))
   (status-require (sp-malloc-type config.resolution sp-sample-t &state-noise))
   (sp-event-memory-add event state-noise)
   (status-require (sp-malloc-type config.resolution sp-sample-t &state-temp))
@@ -750,7 +751,16 @@
 (define (sp-sound-event-config) sp-sound-event-config-t
   "return a sound event configuration struct with defaults set"
   (declare result sp-sound-event-config-t)
-  (struct-set result noise 0 amp 1 amod 0 frq sp-rate fmod 0 wdt 0 wmod 0 phs 0 channels sp-channels)
+  (struct-set result
+    noise 0
+    amp 1
+    amod 0
+    frq 0
+    fmod 0
+    wdt 0
+    wmod 0
+    phs 0
+    channels sp-channels)
   (sp-channel-config-reset result.channel-config)
   (return result))
 
@@ -782,7 +792,7 @@
     q-factor-mod 0)
   (if (or config.fmod config.wmod)
     (begin
-      (srq (sp-event-memory-expand event 3))
+      (srq (sp-event-memory-ensure event 3))
       (srq (sp-samples-new duration &cut-mod))
       (sp-event-memory-add event cut-mod)
       (srq (sp-samples-new duration &q-factor-mod))
@@ -793,7 +803,7 @@
           wdt (if* config.wmod (array-get config.wmod i) config.wdt)
           (array-get cut-mod i) (sp-hz->factor (- frq (/ wdt 2)))
           (array-get q-factor-mod i) (sp-hz->factor wdt))))
-    (srq (sp-event-memory-expand event 1)))
+    (srq (sp-event-memory-ensure event 1)))
   (srq (sp-cheap-noise-event-config-new &event-config))
   (sp-event-memory-add event event-config)
   (struct-pointer-set event-config
@@ -831,7 +841,7 @@
     cuth-mod 0)
   (if (or config.fmod config.wmod)
     (begin
-      (sp-event-memory-expand event 3)
+      (sp-event-memory-ensure event 3)
       (srq (sp-samples-new duration &cutl-mod))
       (sp-event-memory-add event cutl-mod)
       (srq (sp-samples-new duration &cuth-mod))
@@ -842,7 +852,7 @@
           wdt (if* config.wmod (array-get config.wmod i) config.wdt)
           (array-get cutl-mod i) (sp-hz->factor frq)
           (array-get cuth-mod i) (sp-hz->factor (+ frq wdt)))))
-    (srq (sp-event-memory-expand event 1)))
+    (srq (sp-event-memory-ensure event 1)))
   (srq (sp-noise-event-config-new &event-config))
   (sp-event-memory-add event event-config)
   (struct-pointer-set event-config
@@ -864,7 +874,7 @@
   (define config sp-sound-event-config-t
     (pointer-get (convert-type event:config sp-sound-event-config-t*)))
   (srq (sp-wave-event-config-new &event-config))
-  (srq (sp-event-memory-expand event 1))
+  (srq (sp-event-memory-ensure event 1))
   (sp-event-memory-add event event-config)
   (struct-pointer-set event-config
     amp config.amp

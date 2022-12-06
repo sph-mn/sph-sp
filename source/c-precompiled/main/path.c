@@ -284,7 +284,7 @@ void sp_path_curves_config_free(sp_path_curves_config_t a) {
 
 /** a path that uses linear or circular interpolation depending on the values of the config.c.
    config.c 0 is linear and other values between -1.0 and 1.0 add curvature */
-status_t sp_path_curves_new(sp_path_curves_config_t config, sp_time_t length, sp_path_t* out) {
+status_t sp_path_curves_new(sp_path_curves_config_t config, sp_path_t* out) {
   status_declare;
   sp_path_segment_t* ss;
   sp_time_t x;
@@ -308,7 +308,7 @@ status_t sp_path_curves_times_new(sp_path_curves_config_t config, sp_time_t leng
   status_declare;
   sp_path_t path;
   error_memory_init(1);
-  srq((sp_path_curves_new(config, length, (&path))));
+  srq((sp_path_curves_new(config, (&path))));
   error_memory_add((path.segments));
   srq((sp_path_times_new(path, length, out)));
 exit:
@@ -321,7 +321,7 @@ status_t sp_path_curves_samples_new(sp_path_curves_config_t config, sp_time_t le
   status_declare;
   sp_path_t path;
   error_memory_init(1);
-  srq((sp_path_curves_new(config, length, (&path))));
+  srq((sp_path_curves_new(config, (&path))));
   error_memory_add((path.segments));
   srq((sp_path_samples_new(path, length, out)));
 exit:

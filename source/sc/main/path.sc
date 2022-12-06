@@ -211,8 +211,7 @@
   (free a.y)
   (free a.c))
 
-(define (sp-path-curves-new config length out)
-  (status-t sp-path-curves-config-t sp-time-t sp-path-t*)
+(define (sp-path-curves-new config out) (status-t sp-path-curves-config-t sp-path-t*)
   "a path that uses linear or circular interpolation depending on the values of the config.c.
    config.c 0 is linear and other values between -1.0 and 1.0 add curvature"
   status-declare
@@ -233,7 +232,7 @@
   status-declare
   (declare path sp-path-t)
   (error-memory-init 1)
-  (srq (sp-path-curves-new config length &path))
+  (srq (sp-path-curves-new config &path))
   (error-memory-add path.segments)
   (srq (sp-path-times-new path length out))
   (label exit (if status-is-failure error-memory-free) status-return))
@@ -243,7 +242,7 @@
   status-declare
   (declare path sp-path-t)
   (error-memory-init 1)
-  (srq (sp-path-curves-new config length &path))
+  (srq (sp-path-curves-new config &path))
   (error-memory-add path.segments)
   (srq (sp-path-samples-new path length out))
   (label exit (if status-is-failure error-memory-free) status-return))

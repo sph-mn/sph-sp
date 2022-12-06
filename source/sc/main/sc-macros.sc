@@ -1,7 +1,7 @@
 (sc-define-syntax (sp-for-each-index index limit body ...)
   (for-each-index index size-t limit body ...))
 
-(sc-define-syntax (sp-init* rate) (begin (pre-include "sph-sp.h") (pre-define _sp-rate rate)))
+(sc-define-syntax (sp-include* rate) (begin (pre-include "sph-sp.h") (pre-define _sp-rate rate)))
 
 (sc-define-syntax* (sp-define* name-and-parameters types body ...)
   (let*
@@ -72,13 +72,13 @@
 
 (sc-define-syntax (sp-event-alloc* event-pointer allocator allocator-arguments ... pointer)
   (begin
-    (srq (sp-event-memory-expand event-pointer 1))
+    (srq (sp-event-memory-ensure event-pointer 1))
     (srq (allocator allocator-arguments ... (address-of pointer)))
     (sp-event-memory-add event-pointer pointer)))
 
 (sc-define-syntax (sp-event-malloc* event-pointer size pointer)
   (begin
-    (srq (sp-event-memory-expand event-pointer 1))
+    (srq (sp-event-memory-ensure event-pointer 1))
     (srq (sph-helper-malloc size (address-of pointer)))
     (sp-event-memory-add event-pointer pointer)))
 
@@ -106,8 +106,8 @@
 
 (sc-define-syntax (sp-unit-random*) (sp-unit-random &sp-random-state))
 
-(sc-define-syntax (sp-event-memory-expand* event-pointer count)
-  (srq (sp-event-memory-expand event-pointer count)))
+(sc-define-syntax (sp-event-memory-ensure* event-pointer count)
+  (srq (sp-event-memory-ensure event-pointer count)))
 
 (sc-define-syntax (sp-group-add* group event) (srq (sp-group-add group event)))
 (sc-define-syntax (sp-render-file* event) (srq (sp-render event 0)))
