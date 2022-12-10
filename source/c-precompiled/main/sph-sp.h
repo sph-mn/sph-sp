@@ -644,6 +644,7 @@ status_t sp_sound_event_config_new(sp_sound_event_config_t** out);
 #define sp_path_move spline_path_move
 #define sp_path_bezier spline_path_bezier
 #define sp_path_circular_arc spline_path_circular_arc
+#define sp_path_bezier_arc spline_path_bezier_arc
 #define sp_path_constant spline_path_constant
 #define sp_path_path spline_path_path
 #define sp_path_prepare_segments spline_path_prepare_segments
@@ -651,6 +652,7 @@ status_t sp_sound_event_config_new(sp_sound_event_config_t** out);
 #define sp_path_i_move spline_path_i_move
 #define sp_path_i_bezier spline_path_i_bezier
 #define sp_path_i_circular_arc spline_path_i_circular_arc
+#define sp_path_i_bezier_arc spline_path_i_bezier_arc
 #define sp_path_i_constant spline_path_i_constant
 #define sp_path_i_path spline_path_i_path
 #define sp_path_end spline_path_end

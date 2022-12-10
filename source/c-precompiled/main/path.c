@@ -298,7 +298,7 @@ status_t sp_path_curves_new(sp_path_curves_config_t config, sp_path_t* out) {
     x = (config.x)[i];
     y = (config.y)[i];
     c = (config.c)[i];
-    ss[i] = ((0.0 == c) ? sp_path_line(x, y) : sp_path_circular_arc(c, x, y));
+    ss[i] = ((c < 1.0e-5) ? sp_path_line(x, y) : sp_path_bezier_arc(c, x, y));
   };
   spline_path_set(out, ss, (config.segment_count));
 exit:

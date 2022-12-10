@@ -171,6 +171,8 @@ void sp_sine_period(sp_time_t size, sp_sample_t* out) {
     out[i] = sin((i * (M_PI / (size / 2))));
   };
 }
+
+/** sums to out */
 void sp_wave(sp_time_t size, sp_sample_t* wvf, sp_time_t wvf_size, sp_sample_t amp, sp_sample_t* amod, sp_time_t frq, sp_time_t* fmod, sp_time_t* phs_state, sp_sample_t* out) {
   sp_time_t phs = (phs_state ? *phs_state : 0);
   for (sp_time_t i = 0; (i < size); i += 1) {

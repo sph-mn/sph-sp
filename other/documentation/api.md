@@ -27,8 +27,8 @@ sp_event_list_remove_element :: sp_event_list_t**:a sp_event_list_t*:element -> 
 sp_event_list_reverse :: sp_event_list_t**:a -> void
 sp_event_list_validate :: sp_event_list_t*:a -> void
 sp_event_memory_add2 :: sp_event_t*:event void*:address sp_memory_free_t:handler -> void
+sp_event_memory_ensure :: sp_event_t*:a sp_time_t:additional_size -> status_t
 sp_event_memory_free :: sp_event_t*:event -> void
-sp_event_memory_init :: sp_event_t*:a sp_time_t:additional_size -> status_t
 sp_fft :: sp_time_t:input_len double*:input_or_output_real double*:input_or_output_imag -> int
 sp_ffti :: sp_time_t:input_len double*:input_or_output_real double*:input_or_output_imag -> int
 sp_file_close :: sp_file_t:a -> status_t
@@ -62,7 +62,7 @@ sp_pan_to_amp :: sp_sample_t:value sp_channel_count_t:channel -> sp_sample_t
 sp_passthrough_ir :: sp_sample_t**:out_ir sp_time_t*:out_len -> status_t
 sp_path_curves_config_free :: sp_path_curves_config_t:a -> void
 sp_path_curves_config_new :: sp_time_t:segment_count sp_path_curves_config_t*:out -> status_t
-sp_path_curves_new :: sp_path_curves_config_t:config sp_time_t:length sp_path_t*:out -> status_t
+sp_path_curves_new :: sp_path_curves_config_t:config sp_path_t*:out -> status_t
 sp_path_curves_samples_new :: sp_path_curves_config_t:config sp_time_t:length sp_sample_t**:out -> status_t
 sp_path_curves_times_new :: sp_path_curves_config_t:config sp_time_t:length sp_time_t**:out -> status_t
 sp_path_derivation :: sp_path_t:path sp_sample_t**:x_changes sp_sample_t**:y_changes sp_time_t:index sp_path_t*:out -> status_t
@@ -352,6 +352,7 @@ sp_no_zero_divide(a, b)
 sp_noise
 sp_noise_event(event_pointer, _config)
 sp_path_bezier
+sp_path_bezier_arc
 sp_path_circular_arc
 sp_path_constant
 sp_path_curves_config_declare(name, _segment_count)
@@ -359,6 +360,7 @@ sp_path_end
 sp_path_free
 sp_path_get
 sp_path_i_bezier
+sp_path_i_bezier_arc
 sp_path_i_circular_arc
 sp_path_i_constant
 sp_path_i_line

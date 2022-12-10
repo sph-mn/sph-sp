@@ -751,16 +751,7 @@
 (define (sp-sound-event-config) sp-sound-event-config-t
   "return a sound event configuration struct with defaults set"
   (declare result sp-sound-event-config-t)
-  (struct-set result
-    noise 0
-    amp 1
-    amod 0
-    frq 0
-    fmod 0
-    wdt 0
-    wmod 0
-    phs 0
-    channels sp-channels)
+  (struct-set result noise 0 amp 1 amod 0 frq 0 fmod 0 wdt 0 wmod 0 phs 0 channels sp-channels)
   (sp-channel-config-reset result.channel-config)
   (return result))
 

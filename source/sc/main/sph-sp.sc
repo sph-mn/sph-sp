@@ -658,6 +658,7 @@
   sp-path-move spline-path-move
   sp-path-bezier spline-path-bezier
   sp-path-circular-arc spline-path-circular-arc
+  sp-path-bezier-arc spline-path-bezier-arc
   sp-path-constant spline-path-constant
   sp-path-path spline-path-path
   sp-path-prepare-segments spline-path-prepare-segments
@@ -665,6 +666,7 @@
   sp-path-i-move spline-path-i-move
   sp-path-i-bezier spline-path-i-bezier
   sp-path-i-circular-arc spline-path-i-circular-arc
+  sp-path-i-bezier-arc spline-path-i-bezier-arc
   sp-path-i-constant spline-path-i-constant
   sp-path-i-path spline-path-i-path
   sp-path-end spline-path-end

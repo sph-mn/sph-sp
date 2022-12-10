@@ -223,7 +223,7 @@
       x (array-get config.x i)
       y (array-get config.y i)
       c (array-get config.c i)
-      (array-get ss i) (if* (= 0.0 c) (sp-path-line x y) (sp-path-circular-arc c x y))))
+      (array-get ss i) (if* (< c 1.0e-5) (sp-path-line x y) (sp-path-bezier-arc c x y))))
   (spline-path-set out ss config.segment-count)
   (label exit status-return))
 
