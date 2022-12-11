@@ -556,7 +556,7 @@ status_t sp_noise_event_generate(sp_time_t start, sp_time_t end, sp_block_t out,
   for (block_i = 0; (block_i < block_count); block_i += 1) {
     block_offset = (resolution * block_i);
     t = (start + block_offset);
-    sp_samples_random((&(s.random_state)), resolution, (s.noise));
+    sp_samples_random_primitive((&(s.random_state)), resolution, (s.noise));
     sp_windowed_sinc_bp_br((s.noise), resolution, (sp_array_or_fixed((s.cutl_mod), (s.cutl), t)), (sp_array_or_fixed((s.cuth_mod), (s.cuth), t)), (s.trnl), (s.trnh), (s.is_reject), (&(s.filter_state)), (s.temp));
     for (i = 0; (i < resolution); i += 1) {
       (out.samples)[s.channel][(block_offset + i)] += sp_limit((s.amp * (s.amod)[(t + i)] * (s.temp)[i]), -1, 1);
@@ -565,7 +565,7 @@ status_t sp_noise_event_generate(sp_time_t start, sp_time_t end, sp_block_t out,
   if (block_rest) {
     block_offset = (block_rest + (resolution * (block_i - 1)));
     t = (start + block_offset);
-    sp_samples_random((&(s.random_state)), resolution, (s.noise));
+    sp_samples_random_primitive((&(s.random_state)), resolution, (s.noise));
     sp_windowed_sinc_bp_br((s.noise), block_rest, (sp_array_or_fixed((s.cutl_mod), (s.cutl), t)), (sp_array_or_fixed((s.cuth_mod), (s.cuth), t)), (s.trnl), (s.trnh), (s.is_reject), (&(s.filter_state)), (s.temp));
     for (i = 0; (i < block_rest); i += 1) {
       (out.samples)[s.channel][(block_offset + i)] += sp_limit((s.amp * (s.amod)[(t + i)] * (s.temp)[i]), -1, 1);
@@ -589,7 +589,7 @@ status_t sp_noise_event_filter_state(sp_sample_t cutl, sp_sample_t cuth, sp_samp
   memreg_add(noise);
   sp_malloc_type(ir_len, sp_sample_t, (&temp));
   memreg_add(temp);
-  sp_samples_random(rs, ir_len, noise);
+  sp_samples_random_primitive(rs, ir_len, noise);
   status_require((sp_windowed_sinc_bp_br(noise, ir_len, cutl, cuth, trnl, trnh, is_reject, out, temp)));
 exit:
   memreg_free;
@@ -652,7 +652,7 @@ status_t sp_noise_event_prepare(sp_event_t* event) {
   event->data = 0;
   event->free = sp_group_free;
   duration = (event->end - event->start);
-  rs = sp_random_state_new((sp_time_random((&sp_random_state))));
+  rs = sp_random_state_new((sp_time_random_primitive((&sp_random_state))));
   if ((config.cutl_mod || config.cuth_mod) && !(duration == config.resolution)) {
     config.resolution = (config.resolution ? config.resolution : 96);
     config.resolution = sp_min((config.resolution), duration);
@@ -742,7 +742,7 @@ status_t sp_cheap_noise_event_generate(sp_time_t start, sp_time_t end, sp_block_
     block_offset = (s.resolution * block_i);
     t = (start + block_offset);
     duration = s.resolution;
-    sp_samples_random((&(s.random_state)), duration, (s.noise));
+    sp_samples_random_primitive((&(s.random_state)), duration, (s.noise));
     sp_cheap_filter((s.type), (s.noise), duration, (sp_array_or_fixed((s.cut_mod), (s.cut), t)), (s.passes), (sp_array_or_fixed((s.q_factor_mod), (s.q_factor), t)), (&(s.filter_state)), (s.temp));
     for (i = 0; (i < duration); i += 1) {
       (out.samples)[s.channel][(block_offset + i)] += (s.amp * (s.amod)[(t + i)] * (s.temp)[i]);
@@ -752,7 +752,7 @@ status_t sp_cheap_noise_event_generate(sp_time_t start, sp_time_t end, sp_block_
     block_offset = (s.resolution * block_count);
     t = (start + block_offset);
     duration = block_rest;
-    sp_samples_random((&(s.random_state)), duration, (s.noise));
+    sp_samples_random_primitive((&(s.random_state)), duration, (s.noise));
     sp_cheap_filter((s.type), (s.noise), duration, (sp_array_or_fixed((s.cut_mod), (s.cut), t)), (s.passes), (sp_array_or_fixed((s.q_factor_mod), (s.q_factor), t)), (&(s.filter_state)), (s.temp));
     for (i = 0; (i < duration); i += 1) {
       (out.samples)[s.channel][(block_offset + i)] += (s.amp * (s.amod)[(t + i)] * (s.temp)[i]);
@@ -819,7 +819,7 @@ status_t sp_cheap_noise_event_prepare(sp_event_t* event) {
   event->free = sp_group_free;
   duration = (event->end - event->start);
   config.passes = (config.passes ? config.passes : 1);
-  rs = sp_random_state_new((sp_time_random((&sp_random_state))));
+  rs = sp_random_state_new((sp_time_random_primitive((&sp_random_state))));
   if (config.cut_mod && !(duration == config.resolution)) {
     config.resolution = (config.resolution ? config.resolution : 96);
     config.resolution = sp_min((config.resolution), duration);

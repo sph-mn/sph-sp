@@ -420,7 +420,7 @@
     block-rest (modulo duration resolution))
   (for ((set block-i 0) (< block-i block-count) (set+ block-i 1))
     (set block-offset (* resolution block-i) t (+ start block-offset))
-    (sp-samples-random &s.random-state resolution s.noise)
+    (sp-samples-random-primitive &s.random-state resolution s.noise)
     (sp-windowed-sinc-bp-br s.noise resolution
       (sp-array-or-fixed s.cutl-mod s.cutl t) (sp-array-or-fixed s.cuth-mod s.cuth t) s.trnl
       s.trnh s.is-reject &s.filter-state s.temp)
@@ -430,7 +430,7 @@
   (if block-rest
     (begin
       (set block-offset (+ block-rest (* resolution (- block-i 1))) t (+ start block-offset))
-      (sp-samples-random &s.random-state resolution s.noise)
+      (sp-samples-random-primitive &s.random-state resolution s.noise)
       (sp-windowed-sinc-bp-br s.noise block-rest
         (sp-array-or-fixed s.cutl-mod s.cutl t) (sp-array-or-fixed s.cuth-mod s.cuth t) s.trnl
         s.trnh s.is-reject &s.filter-state s.temp)
@@ -452,7 +452,7 @@
   (memreg-add noise)
   (sp-malloc-type ir-len sp-sample-t &temp)
   (memreg-add temp)
-  (sp-samples-random rs ir-len noise)
+  (sp-samples-random-primitive rs ir-len noise)
   (status-require (sp-windowed-sinc-bp-br noise ir-len cutl cuth trnl trnh is-reject out temp))
   (label exit memreg-free status-return))
 
@@ -512,7 +512,7 @@
     event:data 0
     event:free sp-group-free
     duration (- event:end event:start)
-    rs (sp-random-state-new (sp-time-random &sp-random-state)))
+    rs (sp-random-state-new (sp-time-random-primitive &sp-random-state)))
   (if (and (or config.cutl-mod config.cuth-mod) (not (= duration config.resolution)))
     (set
       config.resolution (if* config.resolution config.resolution 96)
@@ -597,7 +597,7 @@
   (sc-comment "total block count is block-count plus rest-block")
   (for ((set block-i 0) (< block-i block-count) (set+ block-i 1))
     (set block-offset (* s.resolution block-i) t (+ start block-offset) duration s.resolution)
-    (sp-samples-random &s.random-state duration s.noise)
+    (sp-samples-random-primitive &s.random-state duration s.noise)
     (sp-cheap-filter s.type s.noise
       duration (sp-array-or-fixed s.cut-mod s.cut t) s.passes
       (sp-array-or-fixed s.q-factor-mod s.q-factor t) &s.filter-state s.temp)
@@ -607,7 +607,7 @@
   (if block-rest
     (begin
       (set block-offset (* s.resolution block-count) t (+ start block-offset) duration block-rest)
-      (sp-samples-random &s.random-state duration s.noise)
+      (sp-samples-random-primitive &s.random-state duration s.noise)
       (sp-cheap-filter s.type s.noise
         duration (sp-array-or-fixed s.cut-mod s.cut t) s.passes
         (sp-array-or-fixed s.q-factor-mod s.q-factor t) &s.filter-state s.temp)
@@ -668,7 +668,7 @@
     event:free sp-group-free
     duration (- event:end event:start)
     config.passes (if* config.passes config.passes 1)
-    rs (sp-random-state-new (sp-time-random &sp-random-state)))
+    rs (sp-random-state-new (sp-time-random-primitive &sp-random-state)))
   (if (and config.cut-mod (not (= duration config.resolution)))
     (set
       config.resolution (if* config.resolution config.resolution 96)

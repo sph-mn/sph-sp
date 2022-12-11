@@ -26,12 +26,9 @@
         (unquote-splicing body)))))
 
 (sc-define-syntax (sp-define-event-prepare* name body ...)
-  (sp-define* (name _event)
-    sp-event-t*
-    (define _duration sp-time-t (- _event:end _event:start))
-    body
-    ...
-    (if _event:prepare (status-require (_event:prepare _event)))))
+  (sp-define* (name _event) sp-event-t*
+    (define _duration sp-time-t (- _event:end _event:start)) body
+    ... (if _event:prepare (status-require (_event:prepare _event)))))
 
 (sc-define-syntax* (sp-define-event* name-and-options body ...)
   (let*
@@ -61,54 +58,6 @@
           (struct-set (array-get (unquote channel-config-array) (unquote i)) (unquote-splicing a))))
       channel-index setting)))
 
-(sc-define-syntax (sp-local-samples* size pointer)
-  (begin (status-require (sp-samples-new size (address-of pointer))) (local-memory-add pointer)))
-
-(sc-define-syntax (sp-local-times* size pointer)
-  (begin (status-require (sp-times-new size (address-of pointer))) (local-memory-add pointer)))
-
-(sc-define-syntax (sp-local-units* size pointer)
-  (begin (status-require (sp-units-new size (address-of pointer))) (local-memory-add pointer)))
-
-(sc-define-syntax (sp-event-alloc* event-pointer allocator allocator-arguments ... pointer)
-  (begin
-    (srq (sp-event-memory-ensure event-pointer 1))
-    (srq (allocator allocator-arguments ... (address-of pointer)))
-    (sp-event-memory-add event-pointer pointer)))
-
-(sc-define-syntax (sp-event-malloc* event-pointer size pointer)
-  (begin
-    (srq (sp-event-memory-ensure event-pointer 1))
-    (srq (sph-helper-malloc size (address-of pointer)))
-    (sp-event-memory-add event-pointer pointer)))
-
-(sc-define-syntax (sp-event-malloc-type-n* event-pointer count type pointer)
-  (sp-event-malloc* event-pointer (* count (sizeof type)) pointer))
-
-(sc-define-syntax (sp-event-malloc-type* event-pointer type pointer)
-  (sp-event-malloc* event-pointer (sizeof type) pointer))
-
-(sc-define-syntax (sp-event-samples* event-pointer size pointer)
-  (sp-event-alloc* event-pointer sp-samples-new size pointer))
-
-(sc-define-syntax (sp-event-times* event-pointer size pointer)
-  (sp-event-alloc* event-pointer sp-times-new size pointer))
-
-(sc-define-syntax (sp-event-units* event-pointer size pointer)
-  (sp-event-alloc* event-pointer sp-units-new size pointer))
-
-(sc-define-syntax (sp-time-random*) (sp-time-random &sp-random-state))
-(sc-define-syntax (sp-time-random-bounded* range) (sp-time-random-bounded &sp-random-state range))
-(sc-define-syntax (sp-sample-random*) (sp-sample-random &sp-random-state))
-
-(sc-define-syntax (sp-sample-random-bounded* range)
-  (sp-sample-random-bounded &sp-random-state range))
-
-(sc-define-syntax (sp-unit-random*) (sp-unit-random &sp-random-state))
-
-(sc-define-syntax (sp-event-memory-ensure* event-pointer count)
-  (srq (sp-event-memory-ensure event-pointer count)))
-
 (sc-define-syntax (sp-group-add* group event) (srq (sp-group-add group event)))
 (sc-define-syntax (sp-render-file* event) (srq (sp-render event 0)))
 (sc-define-syntax (sp-render-plot* event) (srq (sp-render event 1)))
@@ -120,48 +69,3 @@
       (l (name fields)
         (qq (declare (unquote name) (type (struct (unquote-splicing (map-slice 2 list fields)))))))
       name-and-fields)))
-
-(sc-define-syntax* (sp-define-path* name type segment-type points ...)
-  "automatically takes duration from points list.
-   segment-type is used when elements of points arent prefixed with a segment-type.
-   segment-type is a short symbol instead of the full function name (eg line instead of sp_path_line)
-   segment-type can be omitted, in which case the default is line"
-  (let*
-    ( (segment-type?
-        (l (a)
-          (and (symbol? a)
-            (or (eq? (q line) a) (eq? (q bezier) a)
-              (eq? (q move) a) (eq? (q constant) a) (eq? (q path) a)))))
-      (points (if (segment-type? segment-type) points (pair segment-type points)))
-      (segment-type (if (segment-type? segment-type) segment-type (q line)))
-      (sp-path-new (if (eq? type (q times)) (q sp-path-times-new) (q sp-path-samples-new)))
-      (data-type (if (eq? type (q times)) (q sp-time-t*) (q sp-sample-t*)))
-      (duration (second (reverse (last points))))
-      (segments
-        (map
-          (l (points)
-            (pair
-              (symbol-append (q sp-path-)
-                (if (segment-type? (first points)) (first points) segment-type))
-              (if (segment-type? (first points)) (tail points) points)))
-          points))
-      (name-path (symbol-append name (q -path))) (name-segments (symbol-append name (q -segments))))
-    (qq
-      (begin
-        (sc-insert "// sp-path*\n")
-        (declare
-          (unquote name) (unquote data-type)
-          (unquote name-path) sp-path-t
-          (unquote name-segments) (array sp-path-segment-t (unquote (length segments))))
-        (array-set* (unquote name-segments) (unquote-splicing segments))
-        (spline-path-set (address-of (unquote name-path)) (unquote name-segments)
-          (unquote (length segments)))
-        (status-require
-          ((unquote sp-path-new) (unquote name-path) (unquote duration) (address-of (unquote name))))
-        (sp-event-memory-add _event (unquote name))))))
-
-(sc-define-syntax (sp-define-path-samples* name segment-type points ...)
-  (sp-define-path* name samples segment-type points ...))
-
-(sc-define-syntax (sp-define-path-times* name segment-type points ...)
-  (sp-define-path* name times segment-type points ...))

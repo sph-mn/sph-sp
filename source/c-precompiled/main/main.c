@@ -426,8 +426,8 @@ exit:
 sp_random_state_t sp_random_state_new(sp_time_t seed) {
   sp_random_state_t result = sph_random_state_new(seed);
   /* random state needs warm-up for some reason */
-  sp_time_random((&result));
-  sp_time_random((&result));
+  sp_time_random_primitive((&result));
+  sp_time_random_primitive((&result));
   return (result);
 }
 
@@ -441,10 +441,10 @@ sp_random_state_t sp_random_state_new(sp_time_t seed) {
 sp_sample_t sp_pan_to_amp(sp_sample_t value, sp_channel_count_t channel) { return (((1 & channel) ? (sp_limit(value, (channel - 1), (channel - 0.5)) / 0.5) : (1 - ((sp_limit(value, (channel + 0.5), (channel + 1)) - 0.5) / 0.5)))); }
 
 /** untested. return normally distributed numbers in range */
-sp_time_t sp_normal_random(sp_random_state_t* random_state, sp_time_t min, sp_time_t max) {
+sp_time_t sp_normal_random(sp_time_t min, sp_time_t max) {
   sp_time_t samples[32];
   sp_sample_t result;
-  sp_times_random_bounded(random_state, (max - min), 32, samples);
+  sp_times_random_bounded((max - min), 32, samples);
   sp_times_add_1(samples, 32, min, samples);
   sp_stat_times_mean(samples, 32, (&result));
   return (((sp_time_t)(result)));
@@ -464,14 +464,14 @@ sp_time_t sp_time_deharmonize(sp_time_t a, sp_time_t base, sp_sample_t amount) {
   sp_sample_t distance_ratio;
   nearest = ((((a + base) - 1) / base) * base);
   distance_ratio = ((base - sp_absolute_difference(a, nearest)) / ((sp_sample_t)(base)));
-  amount = (amount * distance_ratio * (1 + sp_time_random_bounded((&sp_random_state), (base / 2))));
+  amount = (amount * distance_ratio * (1 + sp_time_random_bounded((base / 2))));
   if ((a > nearest) || (a < amount)) {
     return ((a + amount));
   } else {
     if (a < nearest) {
       return ((a - amount));
     } else {
-      if (1 & sp_time_random((&sp_random_state))) {
+      if (1 & sp_time_random()) {
         return ((a - amount));
       } else {
         return ((a + amount));
@@ -481,15 +481,16 @@ sp_time_t sp_time_deharmonize(sp_time_t a, sp_time_t base, sp_sample_t amount) {
 }
 
 /** return the index in divisors where partial_number modulo divisor is zero.
-   for example, if divisors are 3 and 2 and partial-number starts with 1 then every third partial will map to 0 and every second partial to 1 */
-uint8_t sp_modulo_match(sp_time_t partial_number, sp_time_t* divisors, sp_time_t divisor_count, sp_time_t* out_divisor_index) {
+   returns the last divisors index if none were matched.
+   for example, if divisors are 3 and 2 and index starts with 1 then every third partial will map to 0 and every second partial to 1.
+   for selecting ever nth index */
+size_t sp_modulo_match(size_t index, size_t* divisors, size_t divisor_count) {
   for (size_t i = 0; (i < divisor_count); i += 1) {
-    if (!(partial_number % divisors[i])) {
-      *out_divisor_index = i;
-      return (0);
+    if (!(index % divisors[i])) {
+      return (i);
     };
   };
-  return (1);
+  return ((divisor_count - 1));
 }
 
 /** fills the sine wave lookup table.

@@ -386,8 +386,8 @@ status_t test_sp_random() {
   sp_random_state_t s;
   sp_sample_t out[20];
   s = sp_random_state_new(80);
-  sp_samples_random((&s), 10, out);
-  sp_samples_random((&s), 10, (10 + out));
+  sp_samples_random_primitive((&s), 10, out);
+  sp_samples_random_primitive((&s), 10, (10 + out));
   test_helper_assert("last value", (f64_nearly_equal((-0.553401), (out[19]), error_margin)));
 exit:
   status_return;
@@ -448,7 +448,7 @@ status_t test_sp_cheap_filter() {
   sp_time_t i;
   sp_random_state_t s;
   s = sp_random_state_new(80);
-  sp_samples_random((&s), test_noise_duration, in);
+  sp_samples_random_primitive((&s), test_noise_duration, in);
   status_require((sp_cheap_filter_state_new(test_noise_duration, sp_cheap_filter_passes_limit, (&state))));
   sp_cheap_filter_lp(in, test_noise_duration, (0.2), 1, 0, (&state), out);
   sp_cheap_filter_lp(in, test_noise_duration, (0.2), sp_cheap_filter_passes_limit, 0, (&state), out);
@@ -732,12 +732,12 @@ status_t test_times() {
   test_helper_assert(("bits->times"), ((1 == bits[0]) && (1 == bits[3]) && (0 == bits[4]) && (1 == bits[10])));
   free(bits);
   sp_times_multiplications(1, 3, size, a);
-  sp_times_shuffle((&s), a, size);
+  sp_times_shuffle(a, size);
   s = sp_random_state_new(12);
-  sp_times_random_binary((&s), size, a);
+  sp_times_random_binary(size, a);
   sp_times_multiplications(1, 3, size, a);
   s = sp_random_state_new(113);
-  sp_times_select_random((&s), a, size, b, (&b_size));
+  sp_times_select_random(a, size, b, (&b_size));
 exit:
   free(a_temp);
   status_return;
@@ -851,7 +851,7 @@ status_t test_random_discrete() {
   cudist_size = 4;
   size = 8;
   sp_times_cusum(prob, size, cudist);
-  sp_times_random_discrete((&rs), cudist, cudist_size, 8, a);
+  sp_times_random_discrete(cudist, cudist_size, 8, a);
   for (i = 1; (i < size); i = (1 + i)) {
     test_helper_assert("random-discrete", ((1 == a[i]) || (3 == a[i])));
   };

@@ -329,8 +329,8 @@
 (define (sp-random-state-new seed) (sp-random-state-t sp-time-t)
   (define result sp-random-state-t (sph-random-state-new seed))
   (sc-comment "random state needs warm-up for some reason")
-  (sp-time-random &result)
-  (sp-time-random &result)
+  (sp-time-random-primitive &result)
+  (sp-time-random-primitive &result)
   (return result))
 
 (define (sp-pan->amp value channel) (sp-sample-t sp-sample-t sp-channel-count-t)
@@ -345,10 +345,10 @@
     (if* (bit-and 1 channel) (/ (sp-limit value (- channel 1) (- channel 0.5)) 0.5)
       (- 1 (/ (- (sp-limit value (+ channel 0.5) (+ channel 1)) 0.5) 0.5)))))
 
-(define (sp-normal-random random-state min max) (sp-time-t sp-random-state-t* sp-time-t sp-time-t)
+(define (sp-normal-random min max) (sp-time-t sp-time-t sp-time-t)
   "untested. return normally distributed numbers in range"
   (declare samples (array sp-time-t 32) result sp-sample-t)
-  (sp-times-random-bounded random-state (- max min) 32 samples)
+  (sp-times-random-bounded (- max min) 32 samples)
   (sp-times-add-1 samples 32 min samples)
   (sp-stat-times-mean samples 32 &result)
   (return (convert-type result sp-time-t)))
@@ -366,19 +366,19 @@
   (set
     nearest (* (/ (- (+ a base) 1) base) base)
     distance-ratio (/ (- base (sp-absolute-difference a nearest)) (convert-type base sp-sample-t))
-    amount (* amount distance-ratio (+ 1 (sp-time-random-bounded &sp-random-state (/ base 2)))))
+    amount (* amount distance-ratio (+ 1 (sp-time-random-bounded (/ base 2)))))
   (if (or (> a nearest) (< a amount)) (return (+ a amount))
     (if (< a nearest) (return (- a amount))
-      (if (bit-and 1 (sp-time-random &sp-random-state)) (return (- a amount)) (return (+ a amount))))))
+      (if (bit-and 1 (sp-time-random)) (return (- a amount)) (return (+ a amount))))))
 
-(define (sp-modulo-match partial-number divisors divisor-count out-divisor-index)
-  (uint8-t sp-time-t sp-time-t* sp-time-t sp-time-t*)
+(define (sp-modulo-match index divisors divisor-count) (size-t size-t size-t* size-t)
   "return the index in divisors where partial_number modulo divisor is zero.
-   for example, if divisors are 3 and 2 and partial-number starts with 1 then every third partial will map to 0 and every second partial to 1"
-  (for-each-index i size-t divisor-count
-    (if (not (modulo partial-number (array-get divisors i)))
-      (begin (set *out-divisor-index i) (return 0))))
-  (return 1))
+   returns the last divisors index if none were matched.
+   for example, if divisors are 3 and 2 and index starts with 1 then every third partial will map to 0 and every second partial to 1.
+   for selecting ever nth index"
+  (for-each-index i size-t
+    divisor-count (if (not (modulo index (array-get divisors i))) (return i)))
+  (return (- divisor-count 1)))
 
 (define (sp-initialize cpu-count channels rate) (status-t uint16-t sp-channel-count-t sp-time-t)
   "fills the sine wave lookup table.

@@ -4,10 +4,10 @@ sp-time-t subtraction is limited to zero.
 sp-time-t addition is not limited. */
 
 /** generic shuffle that works on any array type. fisher-yates algorithm */
-void sp_shuffle(sp_random_state_t* state, void (*swap)(void*, size_t, size_t), void* a, size_t size) {
+void sp_shuffle(void (*swap)(void*, size_t, size_t), void* a, size_t size) {
   size_t j;
   for (size_t i = 0; (i < size); i += 1) {
-    j = (i + sp_time_random_bounded(state, (size - i)));
+    j = (i + sp_time_random_bounded((size - i)));
     swap(a, i, j);
   };
 }
@@ -307,14 +307,14 @@ void sp_times_cusum(sp_time_t* a, sp_time_t size, sp_time_t* out) {
 
 /** generate random integers in the range 0..(cudist-size - 1)
    with probability distribution given via cudist, the cumulative sums of the distribution */
-void sp_times_random_discrete(sp_random_state_t* state, sp_time_t* cudist, sp_time_t cudist_size, sp_time_t count, sp_time_t* out) {
+void sp_times_random_discrete(sp_time_t* cudist, sp_time_t cudist_size, sp_time_t count, sp_time_t* out) {
   sp_time_t deviate;
   sp_time_t sum;
   sp_time_t i;
   sp_time_t i1;
   sum = cudist[(cudist_size - 1)];
   for (i = 0; (i < count); i += 1) {
-    deviate = sp_time_random_bounded(state, sum);
+    deviate = sp_time_random_bounded(sum);
     for (i1 = 0; (i1 < cudist_size); i1 += 1) {
       if (deviate < cudist[i1]) {
         out[i] = i1;
@@ -323,10 +323,10 @@ void sp_times_random_discrete(sp_random_state_t* state, sp_time_t* cudist, sp_ti
     };
   };
 }
-sp_time_t sp_time_random_discrete(sp_random_state_t* state, sp_time_t* cudist, sp_time_t cudist_size) {
+sp_time_t sp_time_random_discrete(sp_time_t* cudist, sp_time_t cudist_size) {
   sp_time_t deviate;
   sp_time_t i;
-  deviate = sp_time_random_bounded(state, (cudist[(cudist_size - 1)]));
+  deviate = sp_time_random_bounded((cudist[(cudist_size - 1)]));
   for (i = 0; (i < cudist_size); i += 1) {
     if (deviate < cudist[i]) {
       return (i);
@@ -337,11 +337,11 @@ sp_time_t sp_time_random_discrete(sp_random_state_t* state, sp_time_t* cudist, s
 
 /** get a random number in range with a custom probability distribution given by cudist,
    the cumulative sums of the distribution. the resulting number resolution is proportional to cudist-size */
-sp_time_t sp_time_random_custom(sp_random_state_t* state, sp_time_t* cudist, sp_time_t cudist_size, sp_time_t range) {
+sp_time_t sp_time_random_custom(sp_time_t* cudist, sp_time_t cudist_size, sp_time_t range) {
   /* cudist-size minus one because range end is exclusive */
-  return ((sp_cheap_round_positive((range * (sp_time_random_discrete(state, cudist, cudist_size) / ((sp_sample_t)((cudist_size - 1))))))));
+  return ((sp_cheap_round_positive((range * (sp_time_random_discrete(cudist, cudist_size) / ((sp_sample_t)((cudist_size - 1))))))));
 }
-sp_sample_t sp_sample_random_custom(sp_random_state_t* state, sp_time_t* cudist, sp_time_t cudist_size, sp_sample_t range) { return ((range * (sp_time_random_discrete(state, cudist, cudist_size) / ((sp_sample_t)(cudist_size))))); }
+sp_sample_t sp_sample_random_custom(sp_time_t* cudist, sp_time_t cudist_size, sp_sample_t range) { return ((range * (sp_time_random_discrete(cudist, cudist_size) / ((sp_sample_t)(cudist_size))))); }
 void sp_times_swap(sp_time_t* a, ssize_t i1, ssize_t i2) {
   sp_time_t temp;
   temp = a[i1];
@@ -598,12 +598,12 @@ void sp_times_bits_to_times(sp_time_t* a, sp_time_t size, sp_time_t* out) {
 
 /** modern yates shuffle.
    https://en.wikipedia.org/wiki/Fisher%E2%80%93Yates_shuffle#The_modern_algorithm */
-void sp_times_shuffle(sp_random_state_t* state, sp_time_t* a, sp_time_t size) {
+void sp_times_shuffle(sp_time_t* a, sp_time_t size) {
   sp_time_t i;
   sp_time_t j;
   sp_time_t t;
   for (i = 0; (i < size); i += 1) {
-    j = (i + sp_time_random_bounded(state, (size - i)));
+    j = (i + sp_time_random_bounded((size - i)));
     t = a[i];
     a[i] = a[j];
     a[j] = t;
@@ -611,13 +611,13 @@ void sp_times_shuffle(sp_random_state_t* state, sp_time_t* a, sp_time_t size) {
 }
 
 /** write to out values that are randomly either 1 or 0 */
-status_t sp_times_random_binary(sp_random_state_t* state, sp_time_t size, sp_time_t* out) {
+status_t sp_times_random_binary(sp_time_t size, sp_time_t* out) {
   sp_time_t random_size;
   sp_time_t* temp;
   status_declare;
   random_size = ((size < (sizeof(sp_time_t) * 8)) ? 1 : ((size / (sizeof(sp_time_t) * 8)) + 1));
   status_require((sp_times_new(random_size, (&temp))));
-  sp_times_random(state, random_size, temp);
+  sp_times_random(random_size, temp);
   sp_times_bits_to_times(temp, size, out);
   free(temp);
 exit:
@@ -641,9 +641,9 @@ void sp_times_gt_indices(sp_time_t* a, sp_time_t size, sp_time_t n, sp_time_t* o
 /** a/out can not be the same pointer.
    out-size will be less or equal than size.
    memory is allocated and owned by caller */
-void sp_times_select_random(sp_random_state_t* state, sp_time_t* a, sp_time_t size, sp_time_t* out, sp_time_t* out_size) {
+void sp_times_select_random(sp_time_t* a, sp_time_t size, sp_time_t* out, sp_time_t* out_size) {
   status_declare;
-  sp_times_random_binary(state, size, out);
+  sp_times_random_binary(size, out);
   sp_times_gt_indices(out, size, 0, out, out_size);
   sp_times_select(a, out, (*out_size), out);
 }
@@ -721,13 +721,13 @@ uint8_t sp_times_contains(sp_time_t* a, sp_time_t size, sp_time_t b) {
    size is the requested size of generated output values and should be smaller than a-size.
    size must not be greater than the maximum possible count of unique discrete random values
    (non-null values in the probability distribution) */
-void sp_times_random_discrete_unique(sp_random_state_t* state, sp_time_t* cudist, sp_time_t cudist_size, sp_time_t size, sp_time_t* out) {
+void sp_times_random_discrete_unique(sp_time_t* cudist, sp_time_t cudist_size, sp_time_t size, sp_time_t* out) {
   status_declare;
   sp_time_t a;
   sp_time_t remaining;
   remaining = sp_min(size, cudist_size);
   while (remaining) {
-    a = sp_time_random_discrete(state, cudist, cudist_size);
+    a = sp_time_random_discrete(cudist, cudist_size);
     if (sp_times_contains(out, (size - remaining), a)) {
       continue;
     };

@@ -360,8 +360,8 @@
   status-declare
   (declare s sp-random-state-t out (array sp-sample-t 20))
   (set s (sp-random-state-new 80))
-  (sp-samples-random &s 10 out)
-  (sp-samples-random &s 10 (+ 10 out))
+  (sp-samples-random-primitive &s 10 out)
+  (sp-samples-random-primitive &s 10 (+ 10 out))
   (test-helper-assert "last value" (f64-nearly-equal -0.553401 (array-get out 19) error-margin))
   (label exit status-return))
 
@@ -407,7 +407,7 @@
     i sp-time-t
     s sp-random-state-t)
   (set s (sp-random-state-new 80))
-  (sp-samples-random &s test-noise-duration in)
+  (sp-samples-random-primitive &s test-noise-duration in)
   (status-require
     (sp-cheap-filter-state-new test-noise-duration sp-cheap-filter-passes-limit &state))
   (sp-cheap-filter-lp in test-noise-duration 0.2 1 0 &state out)
@@ -646,12 +646,12 @@
       (= 0 (array-get bits 4)) (= 1 (array-get bits 10))))
   (free bits)
   (sp-times-multiplications 1 3 size a)
-  (sp-times-shuffle &s a size)
+  (sp-times-shuffle a size)
   (set s (sp-random-state-new 12))
-  (sp-times-random-binary &s size a)
+  (sp-times-random-binary size a)
   (sp-times-multiplications 1 3 size a)
   (set s (sp-random-state-new 113))
-  (sp-times-select-random &s a size b &b-size)
+  (sp-times-select-random a size b &b-size)
   (label exit (free a-temp) status-return))
 
 (pre-define test-stats-a-size 8)
@@ -765,7 +765,7 @@
     a (array sp-time-t 8))
   (set cudist-size 4 size 8)
   (sp-times-cusum prob size cudist)
-  (sp-times-random-discrete &rs cudist cudist-size 8 a)
+  (sp-times-random-discrete cudist cudist-size 8 a)
   (for ((set i 1) (< i size) (set i (+ 1 i)))
     (test-helper-assert "random-discrete" (or (= 1 (array-get a i)) (= 3 (array-get a i)))))
   (label exit status-return))

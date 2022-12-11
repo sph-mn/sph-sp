@@ -16,17 +16,17 @@
   sp-sf-write sf-writef-double
   sp-time-t uint32-t
   sp-time-half-t uint16-t
-  sp-times-random sph-random-u32-array
-  sp-times-random-bounded sph-random-u32-bounded-array
-  sp-samples-random sph-random-f64-array-1to1
-  sp-samples-random-bounded sph-random-f64-bounded-array
-  sp-time-random sph-random-u32
-  sp-time-random-bounded sph-random-u32-bounded
-  sp-sample-random sph-random-f64-1to1
+  sp-times-random-primitive sph-random-u32-array
+  sp-times-random-bounded-primitive sph-random-u32-bounded-array
+  sp-samples-random-primitive sph-random-f64-array-1to1
+  sp-samples-random-bounded-primitive sph-random-f64-bounded-array
+  sp-time-random-primitive sph-random-u32
+  sp-time-random-bounded-primitive sph-random-u32-bounded
+  sp-sample-random-primitive sph-random-f64-1to1
   sp-sample-nearly-equal f64-nearly-equal
   sp-sample-array-nearly-equal f64-array-nearly-equal
-  sp-unit-random sph-random-f64-0to1
-  sp-unit-random sph-random-f64-0to1
+  sp-unit-random-primitive sph-random-f64-0to1
+  sp-units-random-primitive sph-random-f64-array-0to1
   sp-random-seed 1557083953
   sp-cheap-filter-passes-limit 8)
 
@@ -105,7 +105,44 @@
   (sp-hz->factor x) (/ (convert-type x sp-sample-t) (convert-type sp-rate sp-sample-t))
   (sp-factor->hz x) (convert-type (* x sp-rate) sp-time-t)
   (sp-array-or-fixed array fixed index) (if* array (array-get array index) fixed)
-  (sp-sample->unit a) (/ (+ 1 a) 2.0))
+  (sp-sample->unit a) (/ (+ 1 a) 2.0)
+  (sp-time-random) (sp-time-random-primitive &sp-random-state)
+  (sp-times-random size out) (sp-times-random-primitive &sp-random-state size out)
+  (sp-samples-random size out) (sp-samples-random-primitive &sp-random-state size out)
+  (sp-units-random size out) (sp-units-random-primitive &sp-random-state size out)
+  (sp-times-random-bounded range size out)
+  (sp-times-random-bounded-primitive &sp-random-state range size out)
+  (sp-samples-random-bounded range size out)
+  (sp-samples-random-bounded-primitive &sp-random-state range size out)
+  (sp-units-random-bounded range size out)
+  (sp-units-random-bounded-primitive &sp-random-state range size out)
+  (sp-time-random-bounded range) (sp-time-random-bounded-primitive &sp-random-state range)
+  (sp-sample-random) (sp-sample-random-primitive &sp-random-state)
+  (sp-sample-random-bounded range) (sp-sample-random-bounded-primitive &sp-random-state range)
+  (sp-unit-random) (sp-unit-random-primitive &sp-random-state)
+  (sp-local-alloc allocator size pointer-address)
+  (begin (srq (allocator size pointer-address)) (local-memory-add (pointer-get pointer-address)))
+  (sp-local-units size pointer-address) (sp-local-alloc sp-units-new size pointer-address)
+  (sp-local-times size pointer-address) (sp-local-alloc sp-times-new size pointer-address)
+  (sp-local-samples size pointer-address) (sp-local-alloc sp-samples-new size pointer-address)
+  (sp-event-alloc event-pointer allocator size pointer-address)
+  (begin
+    (srq (allocator size pointer-address))
+    (sp-event-memory-add event-pointer (pointer-get pointer-address)))
+  (sp-event-malloc event-pointer size pointer-address)
+  (begin
+    (srq (sph-helper-malloc size pointer-address))
+    (sp-event-memory-add event-pointer (pointer-get pointer-address)))
+  (sp-event-malloc-type-n* event-pointer count type pointer-address)
+  (sp-event-malloc event-pointer (* count (sizeof type)) pointer-address)
+  (sp-event-malloc-type* event-pointer type pointer-address)
+  (sp-event-malloc event-pointer (sizeof type) pointer-address)
+  (sp-event-samples event-pointer size pointer-address)
+  (sp-event-alloc event-pointer sp-samples-new size pointer-address)
+  (sp-event-times event-pointer size pointer-address)
+  (sp-event-alloc event-pointer sp-times-new size pointer-address)
+  (sp-event-units event-pointer size pointer-address)
+  (sp-event-alloc event-pointer sp-units-new size pointer-address))
 
 (declare
   sp-block-t
@@ -170,13 +207,12 @@
   (sp-time-expt base exp) (sp-time-t sp-time-t sp-time-t)
   (sp-time-factorial a) (sp-time-t sp-time-t)
   (sp-pan->amp value channel) (sp-sample-t sp-sample-t sp-channel-count-t)
-  (sp-normal-random random-state min max) (sp-time-t sp-random-state-t* sp-time-t sp-time-t)
+  (sp-normal-random min max) (sp-time-t sp-time-t sp-time-t)
   (sp-time-harmonize a base amount) (sp-time-t sp-time-t sp-time-t sp-sample-t)
   (sp-time-deharmonize a base amount) (sp-time-t sp-time-t sp-time-t sp-sample-t)
   (sp-sine-lfo size amp amod frq fmod phs-state out)
   (void sp-time-t sp-sample-t sp-sample-t* sp-time-t sp-time-t* sp-time-t* sp-sample-t*)
-  (sp-modulo-match partial-number divisors divisor-count out-divisor-index)
-  (uint8-t sp-time-t sp-time-t* sp-time-t sp-time-t*))
+  (sp-modulo-match index divisors divisor-count) (size-t size-t size-t* size-t))
 
 (sc-comment "arrays")
 
@@ -274,14 +310,11 @@
   (sp-times-duplicate a size out) (status-t sp-time-t sp-time-t sp-time-t**)
   (sp-times-differences a size out) (void sp-time-t* sp-time-t sp-time-t*)
   (sp-times-cusum a size out) (void sp-time-t* sp-time-t sp-time-t*)
-  (sp-time-random-custom state cudist cudist-size range)
-  (sp-time-t sp-random-state-t* sp-time-t* sp-time-t sp-time-t)
-  (sp-time-random-discrete state cudist cudist-size)
-  (sp-time-t sp-random-state-t* sp-time-t* sp-time-t)
-  (sp-times-random-discrete state cudist cudist-size count out)
-  (void sp-random-state-t* sp-time-t* sp-time-t sp-time-t sp-time-t*)
-  (sp-sample-random-custom state cudist cudist-size range)
-  (sp-sample-t sp-random-state-t* sp-time-t* sp-time-t sp-sample-t)
+  (sp-time-random-custom cudist cudist-size range) (sp-time-t sp-time-t* sp-time-t sp-time-t)
+  (sp-time-random-discrete cudist cudist-size) (sp-time-t sp-time-t* sp-time-t)
+  (sp-times-random-discrete cudist cudist-size count out)
+  (void sp-time-t* sp-time-t sp-time-t sp-time-t*)
+  (sp-sample-random-custom cudist cudist-size range) (sp-sample-t sp-time-t* sp-time-t sp-sample-t)
   (sp-times-swap a i1 i2) (void sp-time-t* ssize-t ssize-t)
   (sp-times-sequence-increment a size set-size) (void sp-time-t* sp-time-t sp-time-t)
   (sp-times-compositions sum out out-size out-sizes)
@@ -292,23 +325,21 @@
   (sp-times-additions start summand count out) (void sp-time-t sp-time-t sp-time-t sp-time-t*)
   (sp-times-select a indices size out) (void sp-time-t* sp-time-t* sp-time-t sp-time-t*)
   (sp-times-bits->times a size out) (void sp-time-t* sp-time-t sp-time-t*)
-  (sp-times-shuffle state a size) (void sp-random-state-t* sp-time-t* sp-time-t)
-  (sp-times-random-binary state size out) (status-t sp-random-state-t* sp-time-t sp-time-t*)
+  (sp-times-shuffle a size) (void sp-time-t* sp-time-t)
+  (sp-times-random-binary size out) (status-t sp-time-t sp-time-t*)
   (sp-times-gt-indices a size n out out-size)
   (void sp-time-t* sp-time-t sp-time-t sp-time-t* sp-time-t*)
-  (sp-times-select-random state a size out out-size)
-  (void sp-random-state-t* sp-time-t* sp-time-t sp-time-t* sp-time-t*)
+  (sp-times-select-random a size out out-size) (void sp-time-t* sp-time-t sp-time-t* sp-time-t*)
   (sp-times-constant a size value out) (status-t sp-time-t sp-time-t sp-time-t sp-time-t**)
-  (sp-shuffle state swap a size)
-  (void sp-random-state-t* (function-pointer void void* size-t size-t) void* size-t)
+  (sp-shuffle swap a size) (void (function-pointer void void* size-t size-t) void* size-t)
   (sp-times-scale a a-size factor out) (status-t sp-time-t* sp-time-t sp-time-t sp-time-t*)
   (sp-times-shuffle-swap a i1 i2) (void void* size-t size-t)
   (sp-samples-smooth a size radius out) (status-t sp-sample-t* sp-time-t sp-time-t sp-sample-t*)
   (sp-times-array-free a size) (void sp-time-t** sp-time-t)
   (sp-samples-array-free a size) (void sp-sample-t** sp-time-t)
   (sp-times-contains a size b) (uint8-t sp-time-t* sp-time-t sp-time-t)
-  (sp-times-random-discrete-unique state cudist cudist-size size out)
-  (void sp-random-state-t* sp-time-t* sp-time-t sp-time-t sp-time-t*)
+  (sp-times-random-discrete-unique cudist cudist-size size out)
+  (void sp-time-t* sp-time-t sp-time-t sp-time-t*)
   (sp-times-sequences base digits size out) (void sp-time-t sp-time-t sp-time-t sp-time-t*)
   (sp-times-range start end out) (void sp-time-t sp-time-t sp-time-t*)
   (sp-time-round-to-multiple a base) (sp-time-t sp-time-t sp-time-t)

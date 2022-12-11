@@ -5,11 +5,10 @@
 
 (sc-include-once "./sc-macros")
 
-(define (sp-shuffle state swap a size)
-  (void sp-random-state-t* (function-pointer void void* size-t size-t) void* size-t)
+(define (sp-shuffle swap a size) (void (function-pointer void void* size-t size-t) void* size-t)
   "generic shuffle that works on any array type. fisher-yates algorithm"
   (declare j size-t)
-  (sp-for-each-index i size (set j (+ i (sp-time-random-bounded state (- size i)))) (swap a i j)))
+  (sp-for-each-index i size (set j (+ i (sp-time-random-bounded (- size i)))) (swap a i j)))
 
 (define (sp-samples-new size out) (status-t sp-time-t sp-sample-t**)
   (return (sph-helper-calloc (* size (sizeof sp-sample-t)) out)))
@@ -238,40 +237,38 @@
   (set sum (array-get a 0) (array-get out 0) sum)
   (for ((set i 1) (< i size) (set+ i 1)) (set sum (+ sum (array-get a i)) (array-get out i) sum)))
 
-(define (sp-times-random-discrete state cudist cudist-size count out)
-  (void sp-random-state-t* sp-time-t* sp-time-t sp-time-t sp-time-t*)
+(define (sp-times-random-discrete cudist cudist-size count out)
+  (void sp-time-t* sp-time-t sp-time-t sp-time-t*)
   "generate random integers in the range 0..(cudist-size - 1)
    with probability distribution given via cudist, the cumulative sums of the distribution"
   (declare deviate sp-time-t sum sp-time-t i sp-time-t i1 sp-time-t)
   (set sum (array-get cudist (- cudist-size 1)))
   (for ((set i 0) (< i count) (set+ i 1))
-    (set deviate (sp-time-random-bounded state sum))
+    (set deviate (sp-time-random-bounded sum))
     (for ((set i1 0) (< i1 cudist-size) (set+ i1 1))
       (if (< deviate (array-get cudist i1)) (begin (set (array-get out i) i1) break)))))
 
-(define (sp-time-random-discrete state cudist cudist-size)
-  (sp-time-t sp-random-state-t* sp-time-t* sp-time-t)
+(define (sp-time-random-discrete cudist cudist-size) (sp-time-t sp-time-t* sp-time-t)
   (declare deviate sp-time-t i sp-time-t)
-  (set deviate (sp-time-random-bounded state (array-get cudist (- cudist-size 1))))
+  (set deviate (sp-time-random-bounded (array-get cudist (- cudist-size 1))))
   (for ((set i 0) (< i cudist-size) (set+ i 1)) (if (< deviate (array-get cudist i)) (return i)))
   (return cudist-size))
 
-(define (sp-time-random-custom state cudist cudist-size range)
-  (sp-time-t sp-random-state-t* sp-time-t* sp-time-t sp-time-t)
+(define (sp-time-random-custom cudist cudist-size range) (sp-time-t sp-time-t* sp-time-t sp-time-t)
   "get a random number in range with a custom probability distribution given by cudist,
    the cumulative sums of the distribution. the resulting number resolution is proportional to cudist-size"
   (sc-comment "cudist-size minus one because range end is exclusive")
   (return
     (sp-cheap-round-positive
       (* range
-        (/ (sp-time-random-discrete state cudist cudist-size)
+        (/ (sp-time-random-discrete cudist cudist-size)
           (convert-type (- cudist-size 1) sp-sample-t))))))
 
-(define (sp-sample-random-custom state cudist cudist-size range)
-  (sp-sample-t sp-random-state-t* sp-time-t* sp-time-t sp-sample-t)
+(define (sp-sample-random-custom cudist cudist-size range)
+  (sp-sample-t sp-time-t* sp-time-t sp-sample-t)
   (return
     (* range
-      (/ (sp-time-random-discrete state cudist cudist-size) (convert-type cudist-size sp-sample-t)))))
+      (/ (sp-time-random-discrete cudist cudist-size) (convert-type cudist-size sp-sample-t)))))
 
 (define (sp-times-swap a i1 i2) (void sp-time-t* ssize-t ssize-t)
   (declare temp sp-time-t)
@@ -443,25 +440,25 @@
       (set+ i 1 bits-i 1))
     (set+ a-i 1)))
 
-(define (sp-times-shuffle state a size) (void sp-random-state-t* sp-time-t* sp-time-t)
+(define (sp-times-shuffle a size) (void sp-time-t* sp-time-t)
   "modern yates shuffle.
    https://en.wikipedia.org/wiki/Fisher%E2%80%93Yates_shuffle#The_modern_algorithm"
   (declare i sp-time-t j sp-time-t t sp-time-t)
   (for ((set i 0) (< i size) (set+ i 1))
     (set
-      j (+ i (sp-time-random-bounded state (- size i)))
+      j (+ i (sp-time-random-bounded (- size i)))
       t (array-get a i)
       (array-get a i) (array-get a j)
       (array-get a j) t)))
 
-(define (sp-times-random-binary state size out) (status-t sp-random-state-t* sp-time-t sp-time-t*)
+(define (sp-times-random-binary size out) (status-t sp-time-t sp-time-t*)
   "write to out values that are randomly either 1 or 0"
   (declare random-size sp-time-t temp sp-time-t*)
   status-declare
   (set random-size
     (if* (< size (* (sizeof sp-time-t) 8)) 1 (+ (/ size (* (sizeof sp-time-t) 8)) 1)))
   (status-require (sp-times-new random-size &temp))
-  (sp-times-random state random-size temp)
+  (sp-times-random random-size temp)
   (sp-times-bits->times temp size out)
   (free temp)
   (label exit status-return))
@@ -475,13 +472,13 @@
     (if (< n (array-get a i)) (set (array-get out i2) i i2 (+ i2 1))))
   (set *out-size i2))
 
-(define (sp-times-select-random state a size out out-size)
-  (void sp-random-state-t* sp-time-t* sp-time-t sp-time-t* sp-time-t*)
+(define (sp-times-select-random a size out out-size)
+  (void sp-time-t* sp-time-t sp-time-t* sp-time-t*)
   "a/out can not be the same pointer.
    out-size will be less or equal than size.
    memory is allocated and owned by caller"
   status-declare
-  (sp-times-random-binary state size out)
+  (sp-times-random-binary size out)
   (sp-times-gt-indices out size 0 out out-size)
   (sp-times-select a out *out-size out))
 
@@ -535,8 +532,8 @@
   (for ((set i 0) (< i size) (set+ i 1)) (if (= b (array-get a i)) (return #t)))
   (return #f))
 
-(define (sp-times-random-discrete-unique state cudist cudist-size size out)
-  (void sp-random-state-t* sp-time-t* sp-time-t sp-time-t sp-time-t*)
+(define (sp-times-random-discrete-unique cudist cudist-size size out)
+  (void sp-time-t* sp-time-t sp-time-t sp-time-t*)
   "create size number of discrete random numbers corresponding to the distribution given by cudist
    without duplicates. cudist-size must be equal to a-size.
    a/out should not be the same pointer. out is managed by the caller.
@@ -547,7 +544,7 @@
   (declare a sp-time-t remaining sp-time-t)
   (set remaining (sp-min size cudist-size))
   (while remaining
-    (set a (sp-time-random-discrete state cudist cudist-size))
+    (set a (sp-time-random-discrete cudist cudist-size))
     (if (sp-times-contains out (- size remaining) a) continue)
     (set (array-get out (- size remaining)) a)
     (set- remaining 1)))
@@ -646,8 +643,7 @@
   "remove count subsequent elements at index from in and write the result to out"
   (cond ((= 0 index) (memcpy out (+ in count) (* (- size count) (sizeof sp-time-t))))
     ((= (- size 1) index) (memcpy out in (* (- size count) (sizeof sp-time-t))))
-    (else
-      (memcpy out in (* index (sizeof sp-time-t)))
+    (else (memcpy out in (* index (sizeof sp-time-t)))
       (memcpy (+ out index) (+ in index count) (* (- size index count) (sizeof sp-time-t))))))
 
 (define (sp-times-insert-space in size index count out)

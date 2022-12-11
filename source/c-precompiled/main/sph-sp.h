@@ -48,26 +48,26 @@
 #ifndef sp_time_half_t
 #define sp_time_half_t uint16_t
 #endif
-#ifndef sp_times_random
-#define sp_times_random sph_random_u32_array
+#ifndef sp_times_random_primitive
+#define sp_times_random_primitive sph_random_u32_array
 #endif
-#ifndef sp_times_random_bounded
-#define sp_times_random_bounded sph_random_u32_bounded_array
+#ifndef sp_times_random_bounded_primitive
+#define sp_times_random_bounded_primitive sph_random_u32_bounded_array
 #endif
-#ifndef sp_samples_random
-#define sp_samples_random sph_random_f64_array_1to1
+#ifndef sp_samples_random_primitive
+#define sp_samples_random_primitive sph_random_f64_array_1to1
 #endif
-#ifndef sp_samples_random_bounded
-#define sp_samples_random_bounded sph_random_f64_bounded_array
+#ifndef sp_samples_random_bounded_primitive
+#define sp_samples_random_bounded_primitive sph_random_f64_bounded_array
 #endif
-#ifndef sp_time_random
-#define sp_time_random sph_random_u32
+#ifndef sp_time_random_primitive
+#define sp_time_random_primitive sph_random_u32
 #endif
-#ifndef sp_time_random_bounded
-#define sp_time_random_bounded sph_random_u32_bounded
+#ifndef sp_time_random_bounded_primitive
+#define sp_time_random_bounded_primitive sph_random_u32_bounded
 #endif
-#ifndef sp_sample_random
-#define sp_sample_random sph_random_f64_1to1
+#ifndef sp_sample_random_primitive
+#define sp_sample_random_primitive sph_random_f64_1to1
 #endif
 #ifndef sp_sample_nearly_equal
 #define sp_sample_nearly_equal f64_nearly_equal
@@ -75,11 +75,11 @@
 #ifndef sp_sample_array_nearly_equal
 #define sp_sample_array_nearly_equal f64_array_nearly_equal
 #endif
-#ifndef sp_unit_random
-#define sp_unit_random sph_random_f64_0to1
+#ifndef sp_unit_random_primitive
+#define sp_unit_random_primitive sph_random_f64_0to1
 #endif
-#ifndef sp_unit_random
-#define sp_unit_random sph_random_f64_0to1
+#ifndef sp_units_random_primitive
+#define sp_units_random_primitive sph_random_f64_array_0to1
 #endif
 #ifndef sp_random_seed
 #define sp_random_seed 1557083953
@@ -174,6 +174,34 @@
 #define sp_factor_to_hz(x) ((sp_time_t)((x * sp_rate)))
 #define sp_array_or_fixed(array, fixed, index) (array ? array[index] : fixed)
 #define sp_sample_to_unit(a) ((1 + a) / 2.0)
+#define sp_time_random() sp_time_random_primitive((&sp_random_state))
+#define sp_times_random(size, out) sp_times_random_primitive((&sp_random_state), size, out)
+#define sp_samples_random(size, out) sp_samples_random_primitive((&sp_random_state), size, out)
+#define sp_units_random(size, out) sp_units_random_primitive((&sp_random_state), size, out)
+#define sp_times_random_bounded(range, size, out) sp_times_random_bounded_primitive((&sp_random_state), range, size, out)
+#define sp_samples_random_bounded(range, size, out) sp_samples_random_bounded_primitive((&sp_random_state), range, size, out)
+#define sp_units_random_bounded(range, size, out) sp_units_random_bounded_primitive((&sp_random_state), range, size, out)
+#define sp_time_random_bounded(range) sp_time_random_bounded_primitive((&sp_random_state), range)
+#define sp_sample_random() sp_sample_random_primitive((&sp_random_state))
+#define sp_sample_random_bounded(range) sp_sample_random_bounded_primitive((&sp_random_state), range)
+#define sp_unit_random() sp_unit_random_primitive((&sp_random_state))
+#define sp_local_alloc(allocator, size, pointer_address) \
+  srq((allocator(size, pointer_address))); \
+  local_memory_add((*pointer_address))
+#define sp_local_units(size, pointer_address) sp_local_alloc(sp_units_new, size, pointer_address)
+#define sp_local_times(size, pointer_address) sp_local_alloc(sp_times_new, size, pointer_address)
+#define sp_local_samples(size, pointer_address) sp_local_alloc(sp_samples_new, size, pointer_address)
+#define sp_event_alloc(event_pointer, allocator, size, pointer_address) \
+  srq((allocator(size, pointer_address))); \
+  sp_event_memory_add(event_pointer, (*pointer_address))
+#define sp_event_malloc(event_pointer, size, pointer_address) \
+  srq((sph_helper_malloc(size, pointer_address))); \
+  sp_event_memory_add(event_pointer, (*pointer_address))
+#define sp_event_malloc_type_n *(event_pointer, count, type, pointer_address)sp_event_malloc(event_pointer, (count * sizeof(type)), pointer_address)
+#define sp_event_malloc_type *(event_pointer, type, pointer_address)sp_event_malloc(event_pointer, (sizeof(type)), pointer_address)
+#define sp_event_samples(event_pointer, size, pointer_address) sp_event_alloc(event_pointer, sp_samples_new, size, pointer_address)
+#define sp_event_times(event_pointer, size, pointer_address) sp_event_alloc(event_pointer, sp_times_new, size, pointer_address)
+#define sp_event_units(event_pointer, size, pointer_address) sp_event_alloc(event_pointer, sp_units_new, size, pointer_address)
 typedef struct {
   sp_channel_count_t channels;
   sp_time_t size;
@@ -229,11 +257,11 @@ sp_sample_t sp_triangle(sp_time_t t, sp_time_t a, sp_time_t b);
 sp_time_t sp_time_expt(sp_time_t base, sp_time_t exp);
 sp_time_t sp_time_factorial(sp_time_t a);
 sp_sample_t sp_pan_to_amp(sp_sample_t value, sp_channel_count_t channel);
-sp_time_t sp_normal_random(sp_random_state_t* random_state, sp_time_t min, sp_time_t max);
+sp_time_t sp_normal_random(sp_time_t min, sp_time_t max);
 sp_time_t sp_time_harmonize(sp_time_t a, sp_time_t base, sp_sample_t amount);
 sp_time_t sp_time_deharmonize(sp_time_t a, sp_time_t base, sp_sample_t amount);
 void sp_sine_lfo(sp_time_t size, sp_sample_t amp, sp_sample_t* amod, sp_time_t frq, sp_time_t* fmod, sp_time_t* phs_state, sp_sample_t* out);
-uint8_t sp_modulo_match(sp_time_t partial_number, sp_time_t* divisors, sp_time_t divisor_count, sp_time_t* out_divisor_index);
+size_t sp_modulo_match(size_t index, size_t* divisors, size_t divisor_count);
 /* arrays */
 
 #define sp_samples_zero(a, size) memset(a, 0, (size * sizeof(sp_sample_t)))
@@ -311,10 +339,10 @@ void sp_times_xor(sp_time_t* a, sp_time_t* b, sp_time_t size, sp_time_t limit, s
 status_t sp_times_duplicate(sp_time_t a, sp_time_t size, sp_time_t** out);
 void sp_times_differences(sp_time_t* a, sp_time_t size, sp_time_t* out);
 void sp_times_cusum(sp_time_t* a, sp_time_t size, sp_time_t* out);
-sp_time_t sp_time_random_custom(sp_random_state_t* state, sp_time_t* cudist, sp_time_t cudist_size, sp_time_t range);
-sp_time_t sp_time_random_discrete(sp_random_state_t* state, sp_time_t* cudist, sp_time_t cudist_size);
-void sp_times_random_discrete(sp_random_state_t* state, sp_time_t* cudist, sp_time_t cudist_size, sp_time_t count, sp_time_t* out);
-sp_sample_t sp_sample_random_custom(sp_random_state_t* state, sp_time_t* cudist, sp_time_t cudist_size, sp_sample_t range);
+sp_time_t sp_time_random_custom(sp_time_t* cudist, sp_time_t cudist_size, sp_time_t range);
+sp_time_t sp_time_random_discrete(sp_time_t* cudist, sp_time_t cudist_size);
+void sp_times_random_discrete(sp_time_t* cudist, sp_time_t cudist_size, sp_time_t count, sp_time_t* out);
+sp_sample_t sp_sample_random_custom(sp_time_t* cudist, sp_time_t cudist_size, sp_sample_t range);
 void sp_times_swap(sp_time_t* a, ssize_t i1, ssize_t i2);
 void sp_times_sequence_increment(sp_time_t* a, sp_time_t size, sp_time_t set_size);
 status_t sp_times_compositions(sp_time_t sum, sp_time_t*** out, sp_time_t* out_size, sp_time_t** out_sizes);
@@ -323,19 +351,19 @@ void sp_times_multiplications(sp_time_t start, sp_time_t factor, sp_time_t count
 void sp_times_additions(sp_time_t start, sp_time_t summand, sp_time_t count, sp_time_t* out);
 void sp_times_select(sp_time_t* a, sp_time_t* indices, sp_time_t size, sp_time_t* out);
 void sp_times_bits_to_times(sp_time_t* a, sp_time_t size, sp_time_t* out);
-void sp_times_shuffle(sp_random_state_t* state, sp_time_t* a, sp_time_t size);
-status_t sp_times_random_binary(sp_random_state_t* state, sp_time_t size, sp_time_t* out);
+void sp_times_shuffle(sp_time_t* a, sp_time_t size);
+status_t sp_times_random_binary(sp_time_t size, sp_time_t* out);
 void sp_times_gt_indices(sp_time_t* a, sp_time_t size, sp_time_t n, sp_time_t* out, sp_time_t* out_size);
-void sp_times_select_random(sp_random_state_t* state, sp_time_t* a, sp_time_t size, sp_time_t* out, sp_time_t* out_size);
+void sp_times_select_random(sp_time_t* a, sp_time_t size, sp_time_t* out, sp_time_t* out_size);
 status_t sp_times_constant(sp_time_t a, sp_time_t size, sp_time_t value, sp_time_t** out);
-void sp_shuffle(sp_random_state_t* state, void (*swap)(void*, size_t, size_t), void* a, size_t size);
+void sp_shuffle(void (*swap)(void*, size_t, size_t), void* a, size_t size);
 status_t sp_times_scale(sp_time_t* a, sp_time_t a_size, sp_time_t factor, sp_time_t* out);
 void sp_times_shuffle_swap(void* a, size_t i1, size_t i2);
 status_t sp_samples_smooth(sp_sample_t* a, sp_time_t size, sp_time_t radius, sp_sample_t* out);
 void sp_times_array_free(sp_time_t** a, sp_time_t size);
 void sp_samples_array_free(sp_sample_t** a, sp_time_t size);
 uint8_t sp_times_contains(sp_time_t* a, sp_time_t size, sp_time_t b);
-void sp_times_random_discrete_unique(sp_random_state_t* state, sp_time_t* cudist, sp_time_t cudist_size, sp_time_t size, sp_time_t* out);
+void sp_times_random_discrete_unique(sp_time_t* cudist, sp_time_t cudist_size, sp_time_t size, sp_time_t* out);
 void sp_times_sequences(sp_time_t base, sp_time_t digits, sp_time_t size, sp_time_t* out);
 void sp_times_range(sp_time_t start, sp_time_t end, sp_time_t* out);
 sp_time_t sp_time_round_to_multiple(sp_time_t a, sp_time_t base);
