@@ -69,3 +69,5 @@
       (l (name fields)
         (qq (declare (unquote name) (type (struct (unquote-splicing (map-slice 2 list fields)))))))
       name-and-fields)))
+
+(sc-define-syntax (srq* a ...) (begin (srq a) ...))

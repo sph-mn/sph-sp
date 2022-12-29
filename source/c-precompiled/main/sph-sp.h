@@ -9,26 +9,39 @@
 #include <byteswap.h>
 #include <inttypes.h>
 #include <string.h>
+#include <sys/types.h>
 
 /* configuration */
 
-#ifndef sp_channel_limit
-#define sp_channel_limit 2
-#endif
 #ifndef sp_channel_count_t
 #define sp_channel_count_t uint8_t
 #endif
-#ifndef sp_file_format
-#define sp_file_format (SF_FORMAT_WAV | SF_FORMAT_FLOAT)
+#ifndef sp_channel_limit
+#define sp_channel_limit 2
 #endif
-#ifndef sp_sample_t
-#define sp_sample_t double
-#endif
-#ifndef sp_unit_t
-#define sp_unit_t double
+#ifndef sp_cheap_filter_passes_limit
+#define sp_cheap_filter_passes_limit 8
 #endif
 #ifndef spline_path_value_t
 #define spline_path_value_t sp_sample_t
+#endif
+#ifndef sp_random_seed
+#define sp_random_seed 1557083953
+#endif
+#ifndef sp_sample_array_nearly_equal
+#define sp_sample_array_nearly_equal f64_array_nearly_equal
+#endif
+#ifndef sp_sample_nearly_equal
+#define sp_sample_nearly_equal f64_nearly_equal
+#endif
+#ifndef sp_sample_random_primitive
+#define sp_sample_random_primitive sph_random_f64_1to1
+#endif
+#ifndef sp_samples_random_bounded_primitive
+#define sp_samples_random_bounded_primitive sph_random_f64_bounded_array
+#endif
+#ifndef sp_samples_random_primitive
+#define sp_samples_random_primitive sph_random_f64_array_1to1
 #endif
 #ifndef sp_samples_sum
 #define sp_samples_sum f64_sum
@@ -36,44 +49,23 @@
 #ifndef sp_sample_t
 #define sp_sample_t double
 #endif
-#ifndef sp_sf_read
-#define sp_sf_read sf_readf_double
-#endif
-#ifndef sp_sf_write
-#define sp_sf_write sf_writef_double
-#endif
-#ifndef sp_time_t
-#define sp_time_t uint32_t
-#endif
 #ifndef sp_time_half_t
 #define sp_time_half_t uint16_t
-#endif
-#ifndef sp_times_random_primitive
-#define sp_times_random_primitive sph_random_u32_array
-#endif
-#ifndef sp_times_random_bounded_primitive
-#define sp_times_random_bounded_primitive sph_random_u32_bounded_array
-#endif
-#ifndef sp_samples_random_primitive
-#define sp_samples_random_primitive sph_random_f64_array_1to1
-#endif
-#ifndef sp_samples_random_bounded_primitive
-#define sp_samples_random_bounded_primitive sph_random_f64_bounded_array
-#endif
-#ifndef sp_time_random_primitive
-#define sp_time_random_primitive sph_random_u32
 #endif
 #ifndef sp_time_random_bounded_primitive
 #define sp_time_random_bounded_primitive sph_random_u32_bounded
 #endif
-#ifndef sp_sample_random_primitive
-#define sp_sample_random_primitive sph_random_f64_1to1
+#ifndef sp_time_random_primitive
+#define sp_time_random_primitive sph_random_u32
 #endif
-#ifndef sp_sample_nearly_equal
-#define sp_sample_nearly_equal f64_nearly_equal
+#ifndef sp_times_random_bounded_primitive
+#define sp_times_random_bounded_primitive sph_random_u32_bounded_array
 #endif
-#ifndef sp_sample_array_nearly_equal
-#define sp_sample_array_nearly_equal f64_array_nearly_equal
+#ifndef sp_times_random_primitive
+#define sp_times_random_primitive sph_random_u32_array
+#endif
+#ifndef sp_time_t
+#define sp_time_t uint32_t
 #endif
 #ifndef sp_unit_random_primitive
 #define sp_unit_random_primitive sph_random_f64_0to1
@@ -81,11 +73,8 @@
 #ifndef sp_units_random_primitive
 #define sp_units_random_primitive sph_random_f64_array_0to1
 #endif
-#ifndef sp_random_seed
-#define sp_random_seed 1557083953
-#endif
-#ifndef sp_cheap_filter_passes_limit
-#define sp_cheap_filter_passes_limit 8
+#ifndef sp_unit_t
+#define sp_unit_t double
 #endif
 #include <sph/status.c>
 #include <sph/spline-path.h>
@@ -111,35 +100,22 @@
 
 #define sp_bool_t uint8_t
 #define f64 double
+#define f128 long double
 #define sp_s_group_libc "libc"
-#define sp_s_group_sndfile "sndfile"
 #define sp_s_group_sp "sp"
 #define sp_s_group_sph "sph"
 #define sp_s_id_undefined 1
-#define sp_s_id_file_channel_mismatch 2
-#define sp_s_id_file_encoding 3
-#define sp_s_id_file_header 4
-#define sp_s_id_file_incompatible 5
-#define sp_s_id_file_incomplete 6
+#define sp_s_id_file_write 2
+#define sp_s_id_file_read 3
+#define sp_s_id_file_not_implemented 4
+#define sp_s_id_file_eof 5
 #define sp_s_id_eof 7
 #define sp_s_id_input_type 8
 #define sp_s_id_memory 9
 #define sp_s_id_invalid_argument 10
 #define sp_s_id_not_implemented 11
-#define sp_s_id_file_closed 11
-#define sp_s_id_file_position 12
-#define sp_s_id_file_type 13
-#define sp_file_bit_input 1
-#define sp_file_bit_output 2
-#define sp_file_bit_position 4
-#define sp_file_mode_read 1
-#define sp_file_mode_write 2
-#define sp_file_mode_read_write 3
 #define sp_random_state_t sph_random_state_t
 #define sp_noise sp_samples_random
-#define sp_file_declare(a) \
-  sp_file_t a; \
-  a.flags = 0
 #define sp_block_declare(a) \
   sp_block_t a; \
   a.size = 0
@@ -162,9 +138,12 @@
 
 /** divide a by b (a / b) but return 0 if b is zero */
 #define sp_no_zero_divide(a, b) ((0 == b) ? 0 : (a / b))
-#define sp_status_set(id) \
-  status.id = sp_s_id_memory; \
-  status.group = sp_s_group_sp
+#define sp_status_set(_id) \
+  status.group = sp_s_group_sp; \
+  status.id = _id
+#define sp_status_set_goto(id) \
+  sp_status_set(id); \
+  status_goto
 #define sp_malloc_type(count, type, pointer_address) sph_helper_malloc((count * sizeof(type)), pointer_address)
 #define sp_calloc_type(count, type, pointer_address) sph_helper_calloc((count * sizeof(type)), pointer_address)
 #define sp_realloc_type(count, type, pointer_address) sph_helper_realloc((count * sizeof(type)), pointer_address)
@@ -191,7 +170,10 @@
 #define sp_local_units(size, pointer_address) sp_local_alloc(sp_units_new, size, pointer_address)
 #define sp_local_times(size, pointer_address) sp_local_alloc(sp_times_new, size, pointer_address)
 #define sp_local_samples(size, pointer_address) sp_local_alloc(sp_samples_new, size, pointer_address)
-#define sp_event_alloc(event_pointer, allocator, size, pointer_address) \
+#define sp_event_alloc(event_pointer, allocator, pointer_address) \
+  srq((allocator(pointer_address))); \
+  sp_event_memory_add(event_pointer, (*pointer_address))
+#define sp_event_alloc1(event_pointer, allocator, size, pointer_address) \
   srq((allocator(size, pointer_address))); \
   sp_event_memory_add(event_pointer, (*pointer_address))
 #define sp_event_malloc(event_pointer, size, pointer_address) \
@@ -203,20 +185,19 @@
 #define sp_event_times(event_pointer, size, pointer_address) sp_event_alloc(event_pointer, sp_times_new, size, pointer_address)
 #define sp_event_units(event_pointer, size, pointer_address) sp_event_alloc(event_pointer, sp_units_new, size, pointer_address)
 typedef struct {
-  sp_channel_count_t channels;
+  sp_channel_count_t channel_count;
   sp_time_t size;
   sp_sample_t* samples[sp_channel_limit];
 } sp_block_t;
 typedef struct {
-  uint8_t flags;
-  sp_time_t sample_rate;
+  FILE* file;
+  size_t data_size;
   sp_channel_count_t channel_count;
-  void* data;
 } sp_file_t;
 uint32_t sp_cpu_count;
 sp_random_state_t sp_random_state;
 sp_time_t sp_rate;
-sp_channel_count_t sp_channels;
+sp_channel_count_t sp_channel_count;
 sp_sample_t* sp_sine_table;
 sp_sample_t* sp_sine_table_lfo;
 sp_time_t sp_sine_lfo_factor;
@@ -225,17 +206,16 @@ void sp_sine(sp_time_t size, sp_sample_t amp, sp_sample_t* amod, sp_time_t frq, 
 sp_random_state_t sp_random_state_new(sp_time_t seed);
 void sp_block_zero(sp_block_t a);
 void sp_block_copy(sp_block_t a, sp_block_t b);
-status_t sp_file_read(sp_file_t* file, sp_time_t sample_count, sp_sample_t** result_block, sp_time_t* result_sample_count);
-status_t sp_file_write(sp_file_t* file, sp_sample_t** block, sp_time_t sample_count, sp_time_t* result_sample_count);
-status_t sp_file_position(sp_file_t* file, sp_time_t* result_position);
-status_t sp_file_position_set(sp_file_t* file, sp_time_t sample_offset);
-status_t sp_file_open(uint8_t* path, int mode, sp_channel_count_t channel_count, sp_time_t sample_rate, sp_file_t* result_file);
-status_t sp_file_close(sp_file_t a);
+status_t sp_file_open_write(uint8_t* path, sp_channel_count_t channel_count, sp_time_t sample_rate, sp_file_t* file);
+status_t sp_file_write(sp_file_t* file, sp_sample_t** samples, sp_time_t sample_count);
+void sp_file_close_write(sp_file_t* file);
+status_t sp_file_read(sp_file_t file, sp_time_t sample_count, sp_sample_t** samples);
+status_t sp_file_open_read(uint8_t* path, sp_file_t* file);
+void sp_file_close_read(sp_file_t file);
 status_t sp_block_to_file(sp_block_t block, uint8_t* path, sp_time_t rate);
 status_t sp_block_new(sp_channel_count_t channel_count, sp_time_t sample_count, sp_block_t* out_block);
 uint8_t* sp_status_description(status_t a);
 uint8_t* sp_status_name(status_t a);
-sp_sample_t sp_sin_lq(sp_sample_t a);
 sp_sample_t sp_sinc(sp_sample_t a);
 sp_sample_t sp_window_blackman(sp_sample_t a, sp_time_t width);
 void sp_spectral_inversion_ir(sp_sample_t* a, sp_time_t a_len);
@@ -248,7 +228,7 @@ void sp_block_free(sp_block_t* a);
 sp_block_t sp_block_with_offset(sp_block_t a, sp_time_t offset);
 status_t sp_null_ir(sp_sample_t** out_ir, sp_time_t* out_len);
 status_t sp_passthrough_ir(sp_sample_t** out_ir, sp_time_t* out_len);
-status_t sp_initialize(uint16_t cpu_count, sp_channel_count_t channels, sp_time_t rate);
+status_t sp_initialize(uint16_t cpu_count, sp_channel_count_t channel_count, sp_time_t rate);
 void sp_sine_period(sp_time_t size, sp_sample_t* out);
 sp_time_t sp_phase(sp_time_t current, sp_time_t change, sp_time_t cycle);
 sp_time_t sp_phase_float(sp_time_t current, double change, sp_time_t cycle);
@@ -557,7 +537,7 @@ typedef struct {
   sp_time_t* fmod;
   sp_sample_t amp;
   sp_sample_t* amod;
-  sp_channel_count_t channels;
+  sp_channel_count_t channel_count;
   sp_channel_config_t channel_config[sp_channel_limit];
 } sp_wave_event_config_t;
 typedef struct {
@@ -581,7 +561,7 @@ typedef struct {
   sp_sample_t* cuth_mod;
   sp_time_t resolution;
   uint8_t is_reject;
-  sp_channel_count_t channels;
+  sp_channel_count_t channel_count;
   sp_channel_config_t channel_config[sp_channel_limit];
 } sp_noise_event_config_t;
 typedef struct {
@@ -595,7 +575,7 @@ typedef struct {
   sp_state_variable_filter_t type;
   sp_random_state_t* random_state;
   sp_time_t resolution;
-  sp_channel_count_t channels;
+  sp_channel_count_t channel_count;
   sp_channel_config_t channel_config[sp_channel_limit];
 } sp_cheap_noise_event_config_t;
 typedef struct {
@@ -607,7 +587,7 @@ typedef struct {
   sp_time_t phs;
   sp_time_t wdt;
   sp_time_t* wmod;
-  sp_channel_count_t channels;
+  sp_channel_count_t channel_count;
   sp_channel_config_t channel_config[sp_channel_limit];
 } sp_sound_event_config_t;
 status_t (*sp_event_prepare_t)(sp_event_t*);
@@ -692,18 +672,18 @@ status_t sp_sound_event_config_new(sp_sound_event_config_t** out);
 #define sp_path_samples_constant(out, size, value) sp_path_samples_2(out, size, (sp_path_move(0, value)), (sp_path_constant()))
 #define sp_path_curves_config_declare(name, _segment_count) \
   sp_path_curves_config_t name; \
-  sp_time_t name##_x[_segment_count]; \
-  sp_sample_t name##_y[_segment_count]; \
-  sp_sample_t name##_c[_segment_count]; \
+  sp_path_value_t name##_x[_segment_count]; \
+  sp_path_value_t name##_y[_segment_count]; \
+  sp_path_value_t name##_c[_segment_count]; \
   name.segment_count = _segment_count; \
   name.x = name##_x; \
   name.y = name##_y; \
   name.c = name##_c
 typedef struct {
   sp_time_t segment_count;
-  sp_time_t* x;
-  sp_sample_t* y;
-  sp_sample_t* c;
+  sp_path_value_t* x;
+  sp_path_value_t* y;
+  sp_path_value_t* c;
 } sp_path_curves_config_t;
 status_t sp_path_samples_new(sp_path_t path, sp_time_t size, sp_sample_t** out);
 status_t sp_path_samples_1(sp_sample_t** out, sp_time_t size, sp_path_segment_t s1);
@@ -769,11 +749,11 @@ sp_time_t sp_stat_repetition_max(sp_time_t size, sp_time_t width);
 #define rts(n, d) ((sp_time_t)(((_sp_rate / d) * n)))
 #define srq status_require
 typedef struct {
-  sp_channel_count_t channels;
+  sp_channel_count_t channel_count;
   sp_time_t rate;
   sp_time_t block_size;
 } sp_render_config_t;
-sp_render_config_t sp_render_config(sp_channel_count_t channels, sp_time_t rate, sp_time_t block_size);
+sp_render_config_t sp_render_config(sp_channel_count_t channel_count, sp_time_t rate, sp_time_t block_size);
 status_t sp_render_file(sp_event_t event, sp_time_t start, sp_time_t end, sp_render_config_t config, uint8_t* path);
 status_t sp_render_block(sp_event_t event, sp_time_t start, sp_time_t end, sp_render_config_t config, sp_block_t* out);
 status_t sp_render(sp_event_t event, uint8_t file_or_plot);

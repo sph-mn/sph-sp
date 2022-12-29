@@ -264,73 +264,40 @@ exit:
 }
 status_t test_file() {
   status_declare;
-  sp_block_t block_2;
-  sp_block_t block;
   sp_channel_count_t channel_count;
-  sp_time_t channel;
   sp_file_t file;
-  sp_time_t len;
-  sp_time_t position;
   sp_time_t result_sample_count;
   sp_time_t sample_count;
   sp_time_t sample_rate;
-  int8_t unequal;
+  sp_block_declare(block_write);
+  sp_block_declare(block_read);
   if (file_exists(test_file_path)) {
     unlink(test_file_path);
   };
   channel_count = 2;
   sample_rate = 8000;
   sample_count = 5;
-  position = 0;
-  channel = channel_count;
-  status_require((sp_block_new(channel_count, sample_count, (&block))));
-  status_require((sp_block_new(channel_count, sample_count, (&block_2))));
-  while (channel) {
-    channel = (channel - 1);
-    len = sample_count;
-    while (len) {
-      len = (len - 1);
-      ((block.samples)[channel])[len] = len;
+  status_require((sp_block_new(channel_count, sample_count, (&block_write))));
+  for (sp_channel_count_t j = 0; (j < channel_count); j += 1) {
+    for (sp_time_t i = 0; (i < sample_count); i += 1) {
+      ((block_write.samples)[j])[i] = (sample_count - i);
     };
   };
-  /* test create */
-  status_require((sp_file_open(test_file_path, sp_file_mode_read_write, channel_count, sample_rate, (&file))));
-  printf("  create\n");
-  status_require((sp_file_position((&file), (&position))));
-  status_require((sp_file_write((&file), (block.samples), sample_count, (&result_sample_count))));
-  status_require((sp_file_position((&file), (&position))));
-  test_helper_assert("sp-file-position file after write", (sample_count == position));
-  status_require((sp_file_position_set((&file), 0)));
-  status_require((sp_file_read((&file), sample_count, (block_2.samples), (&result_sample_count))));
-  /* compare read result with output data */
-  len = channel_count;
-  unequal = 0;
-  while ((len && !unequal)) {
-    len = (len - 1);
-    unequal = !sp_samples_nearly_equal(((block.samples)[len]), sample_count, ((block_2.samples)[len]), sample_count, error_margin);
+  /* test write */
+  status_require((sp_file_open_write(test_file_path, channel_count, sample_rate, (&file))));
+  status_require((sp_file_write((&file), (block_write.samples), sample_count)));
+  sp_file_close_write((&file));
+  /* test read */
+  status_require((sp_block_new(channel_count, sample_count, (&block_read))));
+  status_require((sp_file_open_read(test_file_path, (&file))));
+  status_require((sp_file_read(file, sample_count, (block_read.samples))));
+  for (sp_channel_count_t j = 0; (j < channel_count); j += 1) {
+    test_helper_assert("sp-file-read new file result", (sp_samples_nearly_equal(((block_write.samples)[j]), sample_count, ((block_read.samples)[j]), sample_count, error_margin)));
   };
-  test_helper_assert("sp-file-read new file result", !unequal);
-  status_require((sp_file_close(file)));
-  printf("  write\n");
-  /* test open */
-  status_require((sp_file_open(test_file_path, sp_file_mode_read_write, 2, 8000, (&file))));
-  status_require((sp_file_position((&file), (&position))));
-  test_helper_assert("sp-file-position existing file", (sample_count == position));
-  status_require((sp_file_position_set((&file), 0)));
-  sp_file_read((&file), sample_count, (block_2.samples), (&result_sample_count));
-  /* compare read result with output data */
-  unequal = 0;
-  len = channel_count;
-  while ((len && !unequal)) {
-    len = (len - 1);
-    unequal = !sp_samples_nearly_equal(((block.samples)[len]), sample_count, ((block_2.samples)[len]), sample_count, error_margin);
-  };
-  test_helper_assert("sp-file-read existing result", !unequal);
-  status_require((sp_file_close(file)));
-  printf("  open\n");
+  sp_file_close_read(file);
 exit:
-  sp_block_free((&block));
-  sp_block_free((&block_2));
+  sp_block_free((&block_write));
+  sp_block_free((&block_read));
   status_return;
 }
 status_t test_fft() {
@@ -422,7 +389,7 @@ status_t test_sp_noise_event() {
   (*config).cuth_mod = cuth;
   (*config).amod = amod;
   (*config).amp = 1;
-  (*config).channels = 2;
+  (*config).channel_count = 2;
   (*config).trnh = 0.07;
   (*config).trnl = 0.07;
   event.start = 0;
@@ -480,7 +447,7 @@ status_t test_sp_cheap_noise_event() {
   (*config).amod = amod;
   (*config).cut_mod = cut_mod;
   (*config).q_factor = 0.1;
-  (*config).channels = 2;
+  (*config).channel_count = 2;
   (*config).amp = 1;
   event.end = test_noise_duration;
   event.config = &config;
@@ -613,7 +580,7 @@ status_t test_sp_wave_event() {
   (*config).fmod = fmod;
   (*config).amp = 1;
   (*config).amod = amod1;
-  (*config).channels = 2;
+  (*config).channel_count = 2;
   (config->channel_config)[1] = sp_channel_config(0, 10, 10, 1, amod2);
   event.start = 0;
   event.end = test_wave_event_duration;
@@ -640,7 +607,7 @@ status_t test_render_block() {
   sp_wave_event_config_t* config;
   sp_declare_event(event);
   error_memory_init(2);
-  rc = sp_render_config(sp_channels, sp_rate, sp_rate);
+  rc = sp_render_config(sp_channel_count, sp_rate, sp_rate);
   rc.block_size = 40;
   for (i = 0; (i < test_wave_event_duration); i += 1) {
     frq[i] = 1500;
@@ -655,7 +622,7 @@ status_t test_render_block() {
   (*config).fmod = frq;
   (*config).amp = 1;
   (*config).amod = amod;
-  (*config).channels = 1;
+  (*config).channel_count = 1;
   event.start = 0;
   event.end = test_wave_event_duration;
   event.config = config;
@@ -918,7 +885,7 @@ status_t test_sp_seq_parallel() {
   (*config).fmod = fmod;
   (*config).amp = 1;
   (*config).amod = amod;
-  (*config).channels = 2;
+  (*config).channel_count = 2;
   for (i = 0; (i < 10); i += 1) {
     event.start = 0;
     event.end = size;
@@ -972,7 +939,7 @@ status_t test_sp_map_event() {
   (*config).fmod = 0;
   (*config).amp = 1;
   (*config).amod = amod;
-  (*config).channels = 1;
+  (*config).channel_count = 1;
   child.start = 0;
   child.end = size;
   child.config = config;
@@ -1016,6 +983,7 @@ int main() {
   status_declare;
   rs = sp_random_state_new(3);
   sp_initialize(3, 2, _rate);
+  test_helper_test_one(test_file);
   test_helper_test_one(test_base);
   test_helper_test_one(test_path);
   test_helper_test_one(test_sp_sound_event);
@@ -1032,7 +1000,6 @@ int main() {
   test_helper_test_one(test_render_block);
   test_helper_test_one(test_moving_average);
   test_helper_test_one(test_statistics);
-  test_helper_test_one(test_file);
   test_helper_test_one(test_sp_cheap_filter);
   test_helper_test_one(test_sp_random);
   test_helper_test_one(test_sp_triangle_square);

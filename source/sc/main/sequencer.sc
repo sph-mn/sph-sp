@@ -185,7 +185,7 @@
           sf:out-start (if* (> e.start start) (- e.start start) 0)
           sf:event ep
           sf:status.id status-id-success)
-        (status-require (sp-block-new out.channels (- e-end e-start) &sf:out)) (set+ allocated 1)
+        (status-require (sp-block-new out.channel-count (- e-end e-start) &sf:out)) (set+ allocated 1)
         (future-new sp-seq-parallel-future-f sf &sf:future)))
     (set current current:next))
   (sc-comment "merge")
@@ -193,7 +193,7 @@
     (set sf (+ sf-array sf-i))
     (touch &sf:future)
     (status-require sf:status)
-    (sp-for-each-index ci out.channels
+    (sp-for-each-index ci out.channel-count
       (sp-for-each-index i sf:out.size
         (set+ (array-get (array-get out.samples ci) (+ sf:out-start i))
           (array-get (array-get sf:out.samples ci) i)))))
@@ -267,7 +267,7 @@
     fmod 0
     amp 1
     amod 0
-    channels sp-channels)
+    channel-count sp-channel-count)
   (sp-channel-config-reset result.channel-config)
   (return result))
 
@@ -342,7 +342,7 @@
   (define config sp-wave-event-config-t
     (pointer-get (convert-type event:config sp-wave-event-config-t*)))
   (set event:data 0 event:free sp-group-free)
-  (sp-for-each-index ci config.channels
+  (sp-for-each-index ci config.channel-count
     (if (struct-get (array-get config.channel-config ci) mute) continue)
     (status-require (sp-wave-event-channel (- event:end event:start) config ci &channel))
     (status-require (sp-group-add event channel)))
@@ -383,7 +383,7 @@
     cuth-mod 0
     resolution (/ sp-rate 1000)
     is-reject 0
-    channels sp-channels)
+    channel-count sp-channel-count)
   (sp-channel-config-reset result:channel-config)
   (set *out result)
   (label exit status-return))
@@ -502,7 +502,7 @@
   "an event for noise filtered by a windowed-sinc filter.
    very processing intensive if parameters change with low resolution.
    memory for event.state will be allocated and then owned by the caller.
-   all channels use the same initial random-state"
+   all channel-count use the same initial random-state"
   status-declare
   (declare duration sp-time-t rs sp-random-state-t state-noise sp-sample-t* state-temp sp-sample-t*)
   (sp-declare-event channel)
@@ -523,7 +523,7 @@
   (sp-event-memory-add event state-noise)
   (status-require (sp-malloc-type config.resolution sp-sample-t &state-temp))
   (sp-event-memory-add event state-temp)
-  (sp-for-each-index ci config.channels
+  (sp-for-each-index ci config.channel-count
     (if (struct-get (array-get config.channel-config ci) mute) continue)
     (status-require (sp-noise-event-channel duration config ci rs state-noise state-temp &channel))
     (status-require (sp-group-add event channel)))
@@ -562,7 +562,7 @@
     passes 1
     type sp-state-variable-filter-lp
     resolution (/ sp-rate 10)
-    channels sp-channels)
+    channel-count sp-channel-count)
   (sp-channel-config-reset result:channel-config)
   (set *out result)
   (label exit status-return))
@@ -679,7 +679,7 @@
   (sp-event-memory-add event state-noise)
   (status-require (sp-malloc-type config.resolution sp-sample-t &state-temp))
   (sp-event-memory-add event state-temp)
-  (sp-for-each-index ci config.channels
+  (sp-for-each-index ci config.channel-count
     (if (struct-get (array-get config.channel-config ci) mute) continue)
     (status-require
       (sp-cheap-noise-event-channel (- event:end event:start) config
@@ -717,7 +717,7 @@
   status-declare
   (declare temp-out sp-block-t)
   (define s sp-map-event-state-t* event:data)
-  (status-require (sp-block-new out.channels out.size &temp-out))
+  (status-require (sp-block-new out.channel-count out.size &temp-out))
   (status-require (s:event.generate start end temp-out &s:event))
   (status-require (s:map-generate start end temp-out out s:state))
   (label exit (sp-block-free &temp-out) status-return))
@@ -751,7 +751,7 @@
 (define (sp-sound-event-config) sp-sound-event-config-t
   "return a sound event configuration struct with defaults set"
   (declare result sp-sound-event-config-t)
-  (struct-set result noise 0 amp 1 amod 0 frq 0 fmod 0 wdt 0 wmod 0 phs 0 channels sp-channels)
+  (struct-set result noise 0 amp 1 amod 0 frq 0 fmod 0 wdt 0 wmod 0 phs 0 channel-count sp-channel-count)
   (sp-channel-config-reset result.channel-config)
   (return result))
 
@@ -790,8 +790,8 @@
       (sp-event-memory-add event q-factor-mod)
       (sp-for-each-index i duration
         (set
-          frq (if* config.fmod (array-get config.fmod i) config.frq)
-          wdt (if* config.wmod (array-get config.wmod i) config.wdt)
+          frq (if* config.fmod (+ config.frq (array-get config.fmod i)) config.frq)
+          wdt (if* config.wmod (+ config.wdt (array-get config.wmod i)) config.wdt)
           (array-get cut-mod i) (sp-hz->factor (- frq (/ wdt 2)))
           (array-get q-factor-mod i) (sp-hz->factor wdt))))
     (srq (sp-event-memory-ensure event 1)))
@@ -812,6 +812,7 @@
   (label exit status-return))
 
 (define (sp-sound-event-prepare-noise event) (status-t sp-event-t*)
+  "each sound event copies fmod and wmod if used"
   status-declare
   (declare
     duration sp-time-t
@@ -839,8 +840,8 @@
       (sp-event-memory-add event cuth-mod)
       (sp-for-each-index i duration
         (set
-          frq (if* config.fmod (array-get config.fmod i) config.frq)
-          wdt (if* config.wmod (array-get config.wmod i) config.wdt)
+          frq (if* config.fmod (+ config.frq (array-get config.fmod i)) config.frq)
+          wdt (if* config.wmod (+ config.wdt (array-get config.wmod i)) config.wdt)
           (array-get cutl-mod i) (sp-hz->factor frq)
           (array-get cuth-mod i) (sp-hz->factor (+ frq wdt)))))
     (srq (sp-event-memory-ensure event 1)))

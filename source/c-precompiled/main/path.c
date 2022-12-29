@@ -269,7 +269,7 @@ exit:
 }
 status_t sp_path_curves_config_new(sp_time_t segment_count, sp_path_curves_config_t* out) {
   status_declare;
-  srq((sp_times_new(segment_count, (&(out->x)))));
+  srq((sp_samples_new(segment_count, (&(out->x)))));
   srq((sp_samples_new(segment_count, (&(out->y)))));
   srq((sp_samples_new(segment_count, (&(out->c)))));
   out->segment_count = segment_count;

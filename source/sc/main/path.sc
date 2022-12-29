@@ -200,7 +200,7 @@
 
 (define (sp-path-curves-config-new segment-count out) (status-t sp-time-t sp-path-curves-config-t*)
   status-declare
-  (srq (sp-times-new segment-count &out:x))
+  (srq (sp-samples-new segment-count &out:x))
   (srq (sp-samples-new segment-count &out:y))
   (srq (sp-samples-new segment-count &out:c))
   (set out:segment-count segment-count)

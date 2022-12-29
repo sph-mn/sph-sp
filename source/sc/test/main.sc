@@ -254,65 +254,35 @@
 (define (test-file) status-t
   status-declare
   (declare
-    block-2 sp-block-t
-    block sp-block-t
     channel-count sp-channel-count-t
-    channel sp-time-t
     file sp-file-t
-    len sp-time-t
-    position sp-time-t
     result-sample-count sp-time-t
     sample-count sp-time-t
-    sample-rate sp-time-t
-    unequal int8-t)
+    sample-rate sp-time-t)
+  (sp-block-declare block-write)
+  (sp-block-declare block-read)
   (if (file-exists test-file-path) (unlink test-file-path))
-  (set channel-count 2 sample-rate 8000 sample-count 5 position 0 channel channel-count)
-  (status-require (sp-block-new channel-count sample-count &block))
-  (status-require (sp-block-new channel-count sample-count &block-2))
-  (while channel
-    (set channel (- channel 1) len sample-count)
-    (while len (set len (- len 1) (array-get (array-get block.samples channel) len) len)))
-  (sc-comment "test create")
-  (status-require
-    (sp-file-open test-file-path sp-file-mode-read-write channel-count sample-rate &file))
-  (printf "  create\n")
-  (status-require (sp-file-position &file &position))
-  (status-require (sp-file-write &file block.samples sample-count &result-sample-count))
-  (status-require (sp-file-position &file &position))
-  (test-helper-assert "sp-file-position file after write" (= sample-count position))
-  (status-require (sp-file-position-set &file 0))
-  (status-require (sp-file-read &file sample-count block-2.samples &result-sample-count))
-  (sc-comment "compare read result with output data")
-  (set len channel-count unequal 0)
-  (while (and len (not unequal))
-    (set
-      len (- len 1)
-      unequal
-      (not
-        (sp-samples-nearly-equal (array-get block.samples len) sample-count
-          (array-get block-2.samples len) sample-count error-margin))))
-  (test-helper-assert "sp-file-read new file result" (not unequal))
-  (status-require (sp-file-close file))
-  (printf "  write\n")
-  (sc-comment "test open")
-  (status-require (sp-file-open test-file-path sp-file-mode-read-write 2 8000 &file))
-  (status-require (sp-file-position &file &position))
-  (test-helper-assert "sp-file-position existing file" (= sample-count position))
-  (status-require (sp-file-position-set &file 0))
-  (sp-file-read &file sample-count block-2.samples &result-sample-count)
-  (sc-comment "compare read result with output data")
-  (set unequal 0 len channel-count)
-  (while (and len (not unequal))
-    (set
-      len (- len 1)
-      unequal
-      (not
-        (sp-samples-nearly-equal (array-get block.samples len) sample-count
-          (array-get block-2.samples len) sample-count error-margin))))
-  (test-helper-assert "sp-file-read existing result" (not unequal))
-  (status-require (sp-file-close file))
-  (printf "  open\n")
-  (label exit (sp-block-free &block) (sp-block-free &block-2) status-return))
+  (set channel-count 2 sample-rate 8000 sample-count 5)
+  (status-require (sp-block-new channel-count sample-count &block-write))
+  (for-each-index j sp-channel-count-t
+    channel-count
+    (for-each-index i sp-time-t
+      sample-count (set (array-get (array-get block-write.samples j) i) (- sample-count i))))
+  (sc-comment "test write")
+  (status-require (sp-file-open-write test-file-path channel-count sample-rate &file))
+  (status-require (sp-file-write &file block-write.samples sample-count))
+  (sp-file-close-write &file)
+  (sc-comment "test read")
+  (status-require (sp-block-new channel-count sample-count &block-read))
+  (status-require (sp-file-open-read test-file-path &file))
+  (status-require (sp-file-read file sample-count block-read.samples))
+  (for-each-index j sp-channel-count-t
+    channel-count
+    (test-helper-assert "sp-file-read new file result"
+      (sp-samples-nearly-equal (array-get block-write.samples j) sample-count
+        (array-get block-read.samples j) sample-count error-margin)))
+  (sp-file-close-read file)
+  (label exit (sp-block-free &block-write) (sp-block-free &block-read) status-return))
 
 (define (test-fft) status-t
   status-declare
@@ -388,7 +358,14 @@
   (error-memory-add2 &out sp-block-free)
   (sp-for-each-index i test-noise-duration
     (set (array-get cutl i) 0.01 (array-get cuth i) 0.3 (array-get amod i) 1.0))
-  (struct-set *config cutl-mod cutl cuth-mod cuth amod amod amp 1 channels 2 trnh 0.07 trnl 0.07)
+  (struct-set *config
+    cutl-mod cutl
+    cuth-mod cuth
+    amod amod
+    amp 1
+    channel-count 2
+    trnh 0.07
+    trnl 0.07)
   (struct-set event start 0 end test-noise-duration prepare sp-noise-event-prepare config config)
   (status-require (sp-event-list-add &events event))
   (status-require (sp-seq 0 test-noise-duration out &events))
@@ -441,7 +418,7 @@
     amod amod
     cut-mod cut-mod
     q-factor 0.1
-    channels 2
+    channel-count 2
     amp 1)
   (struct-set event end test-noise-duration config &config prepare sp-cheap-noise-event-prepare)
   (status-require (event.prepare &event))
@@ -549,7 +526,7 @@
   (error-memory-add2 &out sp-block-free)
   (sp-for-each-index i test-wave-event-duration
     (set (array-get fmod i) 2000 (array-get amod1 i) 1 (array-get amod2 i) 0.5))
-  (struct-set *config wvf sp-sine-table wvf-size sp-rate fmod fmod amp 1 amod amod1 channels 2)
+  (struct-set *config wvf sp-sine-table wvf-size sp-rate fmod fmod amp 1 amod amod1 channel-count 2)
   (array-set config:channel-config 1 (sp-channel-config 0 10 10 1 amod2))
   (struct-set event
     start 0
@@ -574,14 +551,14 @@
     config sp-wave-event-config-t*)
   (sp-declare-event event)
   (error-memory-init 2)
-  (set rc (sp-render-config sp-channels sp-rate sp-rate) rc.block-size 40)
+  (set rc (sp-render-config sp-channel-count sp-rate sp-rate) rc.block-size 40)
   (for ((set i 0) (< i test-wave-event-duration) (set+ i 1))
     (set (array-get frq i) 1500 (array-get amod i) 1))
   (status-require (sp-wave-event-config-new &config))
   (error-memory-add config)
   (status-require (sp-block-new 1 test-wave-event-duration &out))
   (error-memory-add2 &out sp-block-free)
-  (struct-set *config wvf sp-sine-table wvf-size sp-rate fmod frq amp 1 amod amod channels 1)
+  (struct-set *config wvf sp-sine-table wvf-size sp-rate fmod frq amp 1 amod amod channel-count 1)
   (struct-set event
     start 0
     end test-wave-event-duration
@@ -814,7 +791,7 @@
   (error-memory-add amod)
   (status-require (sp-path-times-2 &fmod size (sp-path-move 0 250) (sp-path-constant)))
   (error-memory-add fmod)
-  (struct-set *config wvf sp-sine-table wvf-size sp-rate fmod fmod amp 1 amod amod channels 2)
+  (struct-set *config wvf sp-sine-table wvf-size sp-rate fmod fmod amp 1 amod amod channel-count 2)
   (for ((set i 0) (< i 10) (set+ i 1))
     (struct-set event start 0 end size config config prepare sp-wave-event-prepare)
     (status-require (sp-event-list-add &events event)))
@@ -863,7 +840,14 @@
   (error-memory-add map-event-config)
   (set size (* 10 _rate))
   (status-require (sp-path-samples-2 &amod size (sp-path-move 0 1.0) (sp-path-constant)))
-  (struct-set *config wvf sp-sine-table wvf-size sp-rate frq 300 fmod 0 amp 1 amod amod channels 1)
+  (struct-set *config
+    wvf sp-sine-table
+    wvf-size sp-rate
+    frq 300
+    fmod 0
+    amp 1
+    amod amod
+    channel-count 1)
   (struct-set child start 0 end size config config prepare sp-wave-event-prepare)
   (status-require (sp-block-new 1 size &block))
   (struct-set *map-event-config event child map-generate test-sp-map-event-generate isolate #t)
@@ -905,6 +889,7 @@
   status-declare
   (set rs (sp-random-state-new 3))
   (sp-initialize 3 2 _rate)
+  (test-helper-test-one test-file)
   (test-helper-test-one test-base)
   (test-helper-test-one test-path)
   (test-helper-test-one test-sp-sound-event)
@@ -921,7 +906,6 @@
   (test-helper-test-one test-render-block)
   (test-helper-test-one test-moving-average)
   (test-helper-test-one test-statistics)
-  (test-helper-test-one test-file)
   (test-helper-test-one test-sp-cheap-filter)
   (test-helper-test-one test-sp-random)
   (test-helper-test-one test-sp-triangle-square)

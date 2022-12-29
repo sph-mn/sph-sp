@@ -2,8 +2,8 @@
 /* this file contains basics and includes dependencies */
 #define M_PI 3.141592653589793
 #include <stdio.h>
-#include <fcntl.h>
-#include <sndfile.h>
+#include <errno.h>
+#include <arpa/inet.h>
 #include <foreign/nayuki-fft/fft.c>
 #include "../main/sph-sp.h"
 #include <sph/spline-path.c>
@@ -61,15 +61,17 @@ define_sp_interleave(sp_interleave, sp_sample_t, (b[b_size] = (a[channel])[a_siz
       b = "not implemented";
     } else if (sp_s_id_memory == a.id) {
       b = "memory allocation error";
-    } else if (sp_s_id_file_incompatible == a.id) {
-      b = "file channel count or sample rate is different from what was requested";
-    } else if (sp_s_id_file_incomplete == a.id) {
-      b = "incomplete write";
+    } else if (sp_s_id_file_write == a.id) {
+      b = "invalid file write";
+    } else if (sp_s_id_file_read == a.id) {
+      b = "invalid file read";
+    } else if (sp_s_id_file_not_implemented == a.id) {
+      b = "unsupported format (only 32 bit float supported)";
+    } else if (sp_s_id_file_eof == a.id) {
+      b = "end of file";
     } else {
       b = "";
     };
-  } else if (!strcmp(sp_s_group_sndfile, (a.group))) {
-    b = ((uint8_t*)(sf_error_number((a.id))));
   } else if (!strcmp(sp_s_group_sph, (a.group))) {
     b = sph_helper_status_description(a);
   } else {
@@ -88,30 +90,36 @@ uint8_t* sp_status_name(status_t a) {
       b = "not-implemented";
     } else if (sp_s_id_memory == a.id) {
       b = "memory";
+    } else if (sp_s_id_file_write == a.id) {
+      b = "invalid-file-write";
+    } else if (sp_s_id_file_read == a.id) {
+      b = "invalid-file-read";
+    } else if (sp_s_id_file_not_implemented == a.id) {
+      b = "not-implemented";
+    } else if (sp_s_id_file_eof == a.id) {
+      b = "end-of-file";
     } else {
       b = "unknown";
     };
-  } else if (0 == strcmp(sp_s_group_sndfile, (a.group))) {
-    b = "sndfile";
   } else {
     b = "unknown";
   };
   return (b);
 }
 
-/** return a newly allocated array for channels with data arrays for each channel */
-status_t sp_block_new(sp_channel_count_t channels, sp_time_t size, sp_block_t* out) {
+/** return a newly allocated array for channel-count with data arrays for each channel */
+status_t sp_block_new(sp_channel_count_t channel_count, sp_time_t size, sp_block_t* out) {
   status_declare;
-  memreg_init(channels);
+  memreg_init(channel_count);
   sp_sample_t* channel;
   sp_time_t i;
-  for (i = 0; (i < channels); i = (1 + i)) {
+  for (i = 0; (i < channel_count); i = (1 + i)) {
     status_require((sph_helper_calloc((size * sizeof(sp_sample_t)), (&channel))));
     memreg_add(channel);
     (out->samples)[i] = channel;
   };
   out->size = size;
-  out->channels = channels;
+  out->channel_count = channel_count;
 exit:
   if (status_is_failure) {
     memreg_free;
@@ -120,7 +128,7 @@ exit:
 }
 void sp_block_free(sp_block_t* a) {
   if (a->size) {
-    for (size_t i = 0; (i < a->channels); i += 1) {
+    for (size_t i = 0; (i < a->channel_count); i += 1) {
       free(((a->samples)[i]));
     };
   };
@@ -129,19 +137,10 @@ void sp_block_free(sp_block_t* a) {
 /** return a new block with offset added to all channel sample arrays */
 sp_block_t sp_block_with_offset(sp_block_t a, sp_time_t offset) {
   sp_time_t i;
-  for (i = 0; (i < a.channels); i = (1 + i)) {
+  for (i = 0; (i < a.channel_count); i = (1 + i)) {
     (a.samples)[i] = (offset + (a.samples)[i]);
   };
   return (a);
-}
-
-/** lower precision version of sin() that should be faster */
-sp_sample_t sp_sin_lq(sp_sample_t a) {
-  sp_sample_t b;
-  sp_sample_t c;
-  b = (4 / M_PI);
-  c = (-4 / (M_PI * M_PI));
-  return ((-((b * a) + (c * a * abs(a)))));
 }
 sp_time_t sp_phase(sp_time_t current, sp_time_t change, sp_time_t cycle) {
   sp_time_t a = (current + change);
@@ -325,31 +324,149 @@ sp_time_t sp_compositions_max(sp_time_t sum) { return ((sp_time_expt(2, (sum - 1
 #include "../main/arrays.c"
 void sp_block_zero(sp_block_t a) {
   sp_channel_count_t i;
-  for (i = 0; (i < a.channels); i += 1) {
+  for (i = 0; (i < a.channel_count); i += 1) {
     sp_samples_zero(((a.samples)[i]), (a.size));
   };
 }
 
-/** copies all channels and samples from $a to $b.
+/** copies all channel-count and samples from $a to $b.
    $b channel count and size must be equal or greater than $a */
 void sp_block_copy(sp_block_t a, sp_block_t b) {
   sp_channel_count_t ci;
   sp_time_t i;
-  for (ci = 0; (ci < a.channels); ci += 1) {
+  for (ci = 0; (ci < a.channel_count); ci += 1) {
     for (i = 0; (i < a.size); i += 1) {
       (b.samples)[ci][i] = (a.samples)[ci][i];
     };
   };
 }
 #include "../main/path.c"
-#include "../main/io.c"
 #include "../main/plot.c"
 #include "../main/filter.c"
 #include "../main/sequencer.c"
 #include "../main/statistics.c"
-sp_render_config_t sp_render_config(sp_channel_count_t channels, sp_time_t rate, sp_time_t block_size) {
+
+#define wav_string_riff htonl(0x52494646)
+#define wav_string_fmt htonl(0x666d7420)
+#define wav_string_wav htonl(0x57415645)
+#define wav_string_data htonl(0x64617461)
+
+/** opens a 32 bit float wav file for writing. http://soundfile.sapp.org/doc/WaveFormat */
+status_t sp_file_open_write(uint8_t* path, sp_channel_count_t channel_count, sp_time_t sample_rate, sp_file_t* file) {
+  status_declare;
+  uint8_t header[40];
+  *((uint32_t*)(header)) = wav_string_riff;
+  *((uint32_t*)((8 + header))) = wav_string_wav;
+  *((uint32_t*)((12 + header))) = wav_string_fmt;
+  *((uint32_t*)((16 + header))) = 16;
+  *((uint16_t*)((20 + header))) = 3;
+  *((uint16_t*)((22 + header))) = channel_count;
+  *((uint32_t*)((24 + header))) = sample_rate;
+  *((uint32_t*)((28 + header))) = (sample_rate * channel_count * 4);
+  *((uint16_t*)((32 + header))) = (channel_count * 4);
+  *((uint16_t*)((34 + header))) = 32;
+  *((uint32_t*)((36 + header))) = wav_string_data;
+  file->data_size = 0;
+  file->channel_count = channel_count;
+  file->file = fopen(path, "w");
+  if (!file->file) {
+    status_set_goto(sp_s_group_libc, errno);
+  };
+  if (!fwrite(header, 40, 1, (file->file))) {
+    fclose((file->file));
+    sp_status_set_goto(sp_s_id_file_write);
+  };
+  fseek((file->file), 4, SEEK_CUR);
+exit:
+  status_return;
+}
+void sp_file_close_write(sp_file_t* file) {
+  uint32_t chunk_size;
+  chunk_size = (36 + file->data_size);
+  fseek((file->file), 4, SEEK_SET);
+  fwrite((&chunk_size), 4, 1, (file->file));
+  fseek((file->file), 40, SEEK_SET);
+  fwrite((&(file->data_size)), 4, 1, (file->file));
+  fclose((file->file));
+}
+status_t sp_file_write(sp_file_t* file, sp_sample_t** samples, sp_time_t sample_count) {
+  status_declare;
+  float* file_data;
+  size_t interleaved_size;
+  sp_channel_count_t channel_count;
+  file_data = 0;
+  channel_count = file->channel_count;
+  interleaved_size = (channel_count * sample_count * 4);
+  srq((sph_helper_malloc(interleaved_size, (&file_data))));
+  for (sp_time_t i = 0; (i < sample_count); i += 1) {
+    for (sp_channel_count_t j = 0; (j < channel_count); j += 1) {
+      file_data[((i * channel_count) + j)] = (samples[j])[i];
+    };
+  };
+  if (!fwrite(file_data, interleaved_size, 1, (file->file))) {
+    sp_status_set_goto(sp_s_id_file_write);
+  };
+  file->data_size += interleaved_size;
+exit:
+  free(file_data);
+  status_return;
+}
+status_t sp_file_open_read(uint8_t* path, sp_file_t* file) {
+  status_declare;
+  uint8_t header[44];
+  uint32_t subchunk_id;
+  uint32_t subchunk_size;
+  file->file = fopen(path, "r");
+  if (!(fread(header, 44, 1, (file->file)) && (*((uint32_t*)(header)) == wav_string_riff) && (*((uint32_t*)((8 + header))) == wav_string_wav) && (*((uint32_t*)((12 + header))) == wav_string_fmt))) {
+    sp_status_set_goto(sp_s_id_file_read);
+  };
+  if (!((3 == *((uint16_t*)((20 + header)))) && (32 == *((uint16_t*)((34 + header)))))) {
+    sp_status_set_goto(sp_s_id_file_not_implemented);
+  };
+  subchunk_id = *((uint32_t*)((36 + header)));
+  subchunk_size = *((uint32_t*)((40 + header)));
+  while (!(wav_string_data == subchunk_id)) {
+    fseek((file->file), subchunk_size, SEEK_CUR);
+    if (!fread((&subchunk_id), 4, 1, (file->file))) {
+      sp_status_set_goto(sp_s_id_file_read);
+    };
+    if (!fread((&subchunk_size), 4, 1, (file->file))) {
+      sp_status_set_goto(sp_s_id_file_read);
+    };
+  };
+exit:
+  status_return;
+}
+status_t sp_file_read(sp_file_t file, sp_time_t sample_count, sp_sample_t** samples) {
+  status_declare;
+  sp_time_t interleaved_count;
+  float* file_data;
+  sp_time_t read;
+  file_data = 0;
+  interleaved_count = (file.channel_count * sample_count);
+  srq((sph_helper_malloc((4 * interleaved_count), (&file_data))));
+  read = fread(file_data, 4, interleaved_count, (file.file));
+  if (!(interleaved_count == read)) {
+    if (feof((file.file))) {
+      if (!read) {
+        sp_status_set_goto(sp_s_id_file_eof);
+      };
+    } else {
+      sp_status_set_goto(sp_s_id_file_read);
+    };
+  };
+  for (sp_time_t i = 0; (i < (read / file.channel_count)); i += 1) {
+    for (sp_channel_count_t j = 0; (j < file.channel_count); j += 1) {
+      (samples[j])[i] = file_data[((i * file.channel_count) + j)];
+    };
+  };
+exit:
+  free(file_data);
+}
+void sp_file_close_read(sp_file_t file) { fclose((file.file)); }
+sp_render_config_t sp_render_config(sp_channel_count_t channel_count, sp_time_t rate, sp_time_t block_size) {
   sp_render_config_t a;
-  a.channels = channels;
+  a.channel_count = channel_count;
   a.rate = rate;
   a.block_size = block_size;
   return (a);
@@ -361,27 +478,26 @@ status_t sp_render_file(sp_event_t event, sp_time_t start, sp_time_t end, sp_ren
   sp_time_t block_end;
   sp_time_t remainder;
   sp_time_t i;
-  sp_time_t written;
+  sp_file_t file;
   sp_block_declare(block);
-  sp_file_declare(file);
   sp_declare_event_list(events);
   status_require((sp_event_list_add((&events), event)));
-  status_require((sp_block_new((config.channels), (config.block_size), (&block))));
-  status_require((sp_file_open(path, sp_file_mode_write, (config.channels), (config.rate), (&file))));
+  status_require((sp_block_new((config.channel_count), (config.block_size), (&block))));
+  status_require((sp_file_open_write(path, (config.channel_count), (config.rate), (&file))));
   remainder = ((end - start) % config.block_size);
   block_end = (config.block_size * ((end - start) / config.block_size));
   for (i = 0; (i < block_end); i += config.block_size) {
     status_require((sp_seq(i, (i + config.block_size), block, (&events))));
-    status_require((sp_file_write((&file), (block.samples), (config.block_size), (&written))));
+    status_require((sp_file_write((&file), (block.samples), (config.block_size))));
     sp_block_zero(block);
   };
   if (remainder) {
     status_require((sp_seq(i, (i + remainder), block, (&events))));
-    status_require((sp_file_write((&file), (block.samples), remainder, (&written))));
+    status_require((sp_file_write((&file), (block.samples), remainder)));
   };
 exit:
   sp_block_free((&block));
-  sp_file_close(file);
+  sp_file_close_write((&file));
   status_return;
 }
 
@@ -393,7 +509,7 @@ status_t sp_render_block(sp_event_t event, sp_time_t start, sp_time_t end, sp_re
   sp_block_t block;
   sp_declare_event_list(events);
   status_require((sp_event_list_add((&events), event)));
-  status_require((sp_block_new((config.channels), (end - start), (&block))));
+  status_require((sp_block_new((config.channel_count), (end - start), (&block))));
   status_require((sp_seq(start, end, block, (&events))));
   *out = block;
 exit:
@@ -408,7 +524,7 @@ status_t sp_render(sp_event_t event, uint8_t file_or_plot) {
   sp_render_config_t config;
   sp_time_t start;
   sp_time_t end;
-  config = sp_render_config(sp_channels, sp_rate, sp_rate);
+  config = sp_render_config(sp_channel_count, sp_rate, sp_rate);
   start = event.start;
   end = event.end;
   printf("rendering %lu seconds to %s\n", (sp_cheap_round_positive(((end - start) / config.rate))), (file_or_plot ? "plot" : "file"));
@@ -494,9 +610,9 @@ size_t sp_modulo_match(size_t index, size_t* divisors, size_t divisor_count) {
 }
 
 /** fills the sine wave lookup table.
-   rate and channels are used to set sp_rate and sp_channels,
+   rate and channel-count are used to set sp_rate and sp_channel-count,
    which are used as defaults in a few cases */
-status_t sp_initialize(uint16_t cpu_count, sp_channel_count_t channels, sp_time_t rate) {
+status_t sp_initialize(uint16_t cpu_count, sp_channel_count_t channel_count, sp_time_t rate) {
   status_declare;
   if (cpu_count) {
     status.id = future_init(cpu_count);
@@ -506,7 +622,7 @@ status_t sp_initialize(uint16_t cpu_count, sp_channel_count_t channels, sp_time_
   };
   sp_cpu_count = cpu_count;
   sp_rate = rate;
-  sp_channels = channels;
+  sp_channel_count = channel_count;
   sp_random_state = sp_random_state_new(sp_random_seed);
   sp_sine_lfo_factor = 100;
   status_require((sp_samples_new(sp_rate, (&sp_sine_table))));

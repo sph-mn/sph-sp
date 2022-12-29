@@ -12,8 +12,8 @@ gcc_options_test="-Wfatal-errors -Og"
 compile_sph_sp() {
   target="$target_dir/libsph-sp.so"
   source="$c_sc/main/main.c"
-  gcc -shared -fpic "$source" -o "$target" \
-    $gcc_options -lsndfile -lpthread -lm -I"$c"
+  gcc -shared -fno-builtin -fpic "$source" -o "$target" \
+    $gcc_options -lpthread -lm -I"$c"
 }
 
 compile_test_sph_sp() {

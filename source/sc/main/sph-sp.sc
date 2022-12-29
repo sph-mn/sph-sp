@@ -1,34 +1,30 @@
 (pre-define-if-not-defined __USE_POSIX199309)
 (pre-define-if-not-defined _GNU_SOURCE)
-(pre-include "byteswap.h" "inttypes.h" "string.h")
+(pre-include "byteswap.h" "inttypes.h" "string.h" "sys/types.h")
 (sc-comment "configuration")
 
 (pre-define-if-not-defined
-  sp-channel-limit 2
   sp-channel-count-t uint8-t
-  sp-file-format (bit-or SF-FORMAT-WAV SF_FORMAT_FLOAT)
-  sp-sample-t double
-  sp-unit-t double
+  sp-channel-limit 2
+  sp-cheap-filter-passes-limit 8
   spline-path-value-t sp-sample-t
+  sp-random-seed 1557083953
+  sp-sample-array-nearly-equal f64-array-nearly-equal
+  sp-sample-nearly-equal f64-nearly-equal
+  sp-sample-random-primitive sph-random-f64-1to1
+  sp-samples-random-bounded-primitive sph-random-f64-bounded-array
+  sp-samples-random-primitive sph-random-f64-array-1to1
   sp-samples-sum f64-sum
   sp-sample-t double
-  sp-sf-read sf-readf-double
-  sp-sf-write sf-writef-double
-  sp-time-t uint32-t
   sp-time-half-t uint16-t
-  sp-times-random-primitive sph-random-u32-array
-  sp-times-random-bounded-primitive sph-random-u32-bounded-array
-  sp-samples-random-primitive sph-random-f64-array-1to1
-  sp-samples-random-bounded-primitive sph-random-f64-bounded-array
-  sp-time-random-primitive sph-random-u32
   sp-time-random-bounded-primitive sph-random-u32-bounded
-  sp-sample-random-primitive sph-random-f64-1to1
-  sp-sample-nearly-equal f64-nearly-equal
-  sp-sample-array-nearly-equal f64-array-nearly-equal
+  sp-time-random-primitive sph-random-u32
+  sp-times-random-bounded-primitive sph-random-u32-bounded-array
+  sp-times-random-primitive sph-random-u32-array
+  sp-time-t uint32-t
   sp-unit-random-primitive sph-random-f64-0to1
   sp-units-random-primitive sph-random-f64-array-0to1
-  sp-random-seed 1557083953
-  sp-cheap-filter-passes-limit 8)
+  sp-unit-t double)
 
 (pre-include "sph/status.c" "sph/spline-path.h"
   "sph/random.c" "sph/array3.c" "sph/array4.c"
@@ -49,33 +45,22 @@
 (pre-define
   sp-bool-t uint8-t
   f64 double
+  f128 (sc-insert "long double")
   sp-s-group-libc "libc"
-  sp-s-group-sndfile "sndfile"
   sp-s-group-sp "sp"
   sp-s-group-sph "sph"
   sp-s-id-undefined 1
-  sp-s-id-file-channel-mismatch 2
-  sp-s-id-file-encoding 3
-  sp-s-id-file-header 4
-  sp-s-id-file-incompatible 5
-  sp-s-id-file-incomplete 6
+  sp-s-id-file-write 2
+  sp-s-id-file-read 3
+  sp-s-id-file-not-implemented 4
+  sp-s-id-file-eof 5
   sp-s-id-eof 7
   sp-s-id-input-type 8
   sp-s-id-memory 9
   sp-s-id-invalid-argument 10
   sp-s-id-not-implemented 11
-  sp-s-id-file-closed 11
-  sp-s-id-file-position 12
-  sp-s-id-file-type 13
-  sp-file-bit-input 1
-  sp-file-bit-output 2
-  sp-file-bit-position 4
-  sp-file-mode-read 1
-  sp-file-mode-write 2
-  sp-file-mode-read-write 3
   sp-random-state-t sph-random-state-t
   sp-noise sp-samples-random
-  (sp-file-declare a) (begin (declare a sp-file-t) (set a.flags 0))
   (sp-block-declare a) (begin (declare a sp-block-t) (set a.size 0))
   (sp-cheap-round-positive a) (convert-type (+ 0.5 a) sp-time-t)
   (sp-cheap-floor-positive a) (begin "only works for non-negative values" (convert-type a sp-time-t))
@@ -93,7 +78,8 @@
   (begin "subtract b from a but return 0 for negative results" (if* (> a b) (- a b) 0))
   (sp-no-zero-divide a b)
   (begin "divide a by b (a / b) but return 0 if b is zero" (if* (= 0 b) 0 (/ a b)))
-  (sp-status-set id) (set status.id sp-s-id-memory status.group sp-s-group-sp)
+  (sp-status-set _id) (set status.group sp-s-group-sp status.id _id)
+  (sp-status-set-goto id) (begin (sp-status-set id) status-goto)
   (sp-malloc-type count type pointer-address)
   (sph-helper-malloc (* count (sizeof type)) pointer-address)
   (sp-calloc-type count type pointer-address)
@@ -125,7 +111,11 @@
   (sp-local-units size pointer-address) (sp-local-alloc sp-units-new size pointer-address)
   (sp-local-times size pointer-address) (sp-local-alloc sp-times-new size pointer-address)
   (sp-local-samples size pointer-address) (sp-local-alloc sp-samples-new size pointer-address)
-  (sp-event-alloc event-pointer allocator size pointer-address)
+  (sp-event-alloc event-pointer allocator pointer-address)
+  (begin
+    (srq (allocator pointer-address))
+    (sp-event-memory-add event-pointer (pointer-get pointer-address)))
+  (sp-event-alloc1 event-pointer allocator size pointer-address)
   (begin
     (srq (allocator size pointer-address))
     (sp-event-memory-add event-pointer (pointer-get pointer-address)))
@@ -148,16 +138,14 @@
   sp-block-t
   (type
     (struct
-      (channels sp-channel-count-t)
+      (channel-count sp-channel-count-t)
       (size sp-time-t)
       (samples (array sp-sample-t* sp-channel-limit))))
-  sp-file-t
-  (type
-    (struct (flags uint8-t) (sample-rate sp-time-t) (channel-count sp-channel-count-t) (data void*)))
+  sp-file-t (type (struct (file FILE*) (data-size size-t) (channel-count sp-channel-count-t)))
   sp-cpu-count uint32-t
   sp-random-state sp-random-state-t
   sp-rate sp-time-t
-  sp-channels sp-channel-count-t
+  sp-channel-count sp-channel-count-t
   sp-sine-table sp-sample-t*
   sp-sine-table-lfo sp-sample-t*
   sp-sine-lfo-factor sp-time-t
@@ -169,21 +157,18 @@
   (sp-random-state-new seed) (sp-random-state-t sp-time-t)
   (sp-block-zero a) (void sp-block-t)
   (sp-block-copy a b) (void sp-block-t sp-block-t)
-  (sp-file-read file sample-count result-block result-sample-count)
-  (status-t sp-file-t* sp-time-t sp-sample-t** sp-time-t*)
-  (sp-file-write file block sample-count result-sample-count)
-  (status-t sp-file-t* sp-sample-t** sp-time-t sp-time-t*)
-  (sp-file-position file result-position) (status-t sp-file-t* sp-time-t*)
-  (sp-file-position-set file sample-offset) (status-t sp-file-t* sp-time-t)
-  (sp-file-open path mode channel-count sample-rate result-file)
-  (status-t uint8-t* int sp-channel-count-t sp-time-t sp-file-t*)
-  (sp-file-close a) (status-t sp-file-t)
+  (sp-file-open-write path channel-count sample-rate file)
+  (status-t uint8-t* sp-channel-count-t sp-time-t sp-file-t*)
+  (sp-file-write file samples sample-count) (status-t sp-file-t* sp-sample-t** sp-time-t)
+  (sp-file-close-write file) (void sp-file-t*)
+  (sp-file-read file sample-count samples) (status-t sp-file-t sp-time-t sp-sample-t**)
+  (sp-file-open-read path file) (status-t uint8-t* sp-file-t*)
+  (sp-file-close-read file) (void sp-file-t)
   (sp-block->file block path rate) (status-t sp-block-t uint8-t* sp-time-t)
   (sp-block-new channel-count sample-count out-block)
   (status-t sp-channel-count-t sp-time-t sp-block-t*)
   (sp-status-description a) (uint8-t* status-t)
   (sp-status-name a) (uint8-t* status-t)
-  (sp-sin-lq a) (sp-sample-t sp-sample-t)
   (sp-sinc a) (sp-sample-t sp-sample-t)
   (sp-window-blackman a width) (sp-sample-t sp-sample-t sp-time-t)
   (sp-spectral-inversion-ir a a-len) (void sp-sample-t* sp-time-t)
@@ -198,7 +183,7 @@
   (sp-block-with-offset a offset) (sp-block-t sp-block-t sp-time-t)
   (sp-null-ir out-ir out-len) (status-t sp-sample-t** sp-time-t*)
   (sp-passthrough-ir out-ir out-len) (status-t sp-sample-t** sp-time-t*)
-  (sp-initialize cpu-count channels rate) (status-t uint16-t sp-channel-count-t sp-time-t)
+  (sp-initialize cpu-count channel-count rate) (status-t uint16-t sp-channel-count-t sp-time-t)
   (sp-sine-period size out) (void sp-time-t sp-sample-t*)
   (sp-phase current change cycle) (sp-time-t sp-time-t sp-time-t sp-time-t)
   (sp-phase-float current change cycle) (sp-time-t sp-time-t double sp-time-t)
@@ -570,7 +555,7 @@
       (fmod sp-time-t*)
       (amp sp-sample-t)
       (amod sp-sample-t*)
-      (channels sp-channel-count-t)
+      (channel-count sp-channel-count-t)
       (channel-config (array sp-channel-config-t sp-channel-limit))))
   sp-wave-event-state-t
   (type
@@ -596,7 +581,7 @@
       (cuth-mod sp-sample-t*)
       (resolution sp-time-t)
       (is-reject uint8-t)
-      (channels sp-channel-count-t)
+      (channel-count sp-channel-count-t)
       (channel-config (array sp-channel-config-t sp-channel-limit))))
   sp-cheap-noise-event-config-t
   (type
@@ -611,7 +596,7 @@
       (type sp-state-variable-filter-t)
       (random-state sp-random-state-t*)
       (resolution sp-time-t)
-      (channels sp-channel-count-t)
+      (channel-count sp-channel-count-t)
       (channel-config (array sp-channel-config-t sp-channel-limit))))
   sp-sound-event-config-t
   (type
@@ -624,7 +609,7 @@
       (phs sp-time-t)
       (wdt sp-time-t)
       (wmod sp-time-t*)
-      (channels sp-channel-count-t)
+      (channel-count sp-channel-count-t)
       (channel-config (array sp-channel-config-t sp-channel-limit))))
   sp-event-prepare-t (function-pointer status-t sp-event-t*)
   sp-map-generate-t
@@ -713,9 +698,9 @@
   (begin
     (declare
       name sp-path-curves-config-t
-      (pre-concat name _x) (array sp-time-t _segment-count)
-      (pre-concat name _y) (array sp-sample-t _segment-count)
-      (pre-concat name _c) (array sp-sample-t _segment-count))
+      (pre-concat name _x) (array sp-path-value-t _segment-count)
+      (pre-concat name _y) (array sp-path-value-t _segment-count)
+      (pre-concat name _c) (array sp-path-value-t _segment-count))
     (struct-set name
       segment-count _segment-count
       x (pre-concat name _x)
@@ -724,7 +709,12 @@
 
 (declare
   sp-path-curves-config-t
-  (type (struct (segment-count sp-time-t) (x sp-time-t*) (y sp-sample-t*) (c sp-sample-t*)))
+  (type
+    (struct
+      (segment-count sp-time-t)
+      (x sp-path-value-t*)
+      (y sp-path-value-t*)
+      (c sp-path-value-t*)))
   (sp-path-samples-new path size out) (status-t sp-path-t sp-time-t sp-sample-t**)
   (sp-path-samples-1 out size s1) (status-t sp-sample-t** sp-time-t sp-path-segment-t)
   (sp-path-samples-2 out size s1 s2)
@@ -814,8 +804,8 @@
 
 (declare
   sp-render-config-t
-  (type (struct (channels sp-channel-count-t) (rate sp-time-t) (block-size sp-time-t)))
-  (sp-render-config channels rate block-size)
+  (type (struct (channel-count sp-channel-count-t) (rate sp-time-t) (block-size sp-time-t)))
+  (sp-render-config channel-count rate block-size)
   (sp-render-config-t sp-channel-count-t sp-time-t sp-time-t)
   (sp-render-file event start end config path)
   (status-t sp-event-t sp-time-t sp-time-t sp-render-config-t uint8-t*)

@@ -1,8 +1,8 @@
 (sc-comment "this file contains basics and includes dependencies")
 (pre-define M_PI 3.141592653589793)
 
-(pre-include "stdio.h" "fcntl.h"
-  "sndfile.h" "foreign/nayuki-fft/fft.c" "../main/sph-sp.h"
+(pre-include "stdio.h" "errno.h"
+  "arpa/inet.h" "foreign/nayuki-fft/fft.c" "../main/sph-sp.h"
   "sph/spline-path.c" "sph/quicksort.c" "sph/queue.c" "sph/thread-pool.c" "sph/futures.c")
 
 (pre-define
@@ -42,12 +42,11 @@
         (sp-s-id-input-type (set b "input argument is of wrong type"))
         (sp-s-id-not-implemented (set b "not implemented"))
         (sp-s-id-memory (set b "memory allocation error"))
-        (sp-s-id-file-incompatible
-          (set b "file channel count or sample rate is different from what was requested"))
-        (sp-s-id-file-incomplete (set b "incomplete write"))
+        (sp-s-id-file-write (set b "invalid file write"))
+        (sp-s-id-file-read (set b "invalid file read"))
+        (sp-s-id-file-not-implemented (set b "unsupported format (only 32 bit float supported)"))
+        (sp-s-id-file-eof (set b "end of file"))
         (else (set b ""))))
-    ( (not (strcmp sp-s-group-sndfile a.group))
-      (set b (convert-type (sf-error-number a.id) uint8-t*)))
     ((not (strcmp sp-s-group-sph a.group)) (set b (sph-helper-status-description a)))
     (else (set b "")))
   (return b))
@@ -61,37 +60,36 @@
         (sp-s-id-input-type (set b "input-type"))
         (sp-s-id-not-implemented (set b "not-implemented"))
         (sp-s-id-memory (set b "memory"))
+        (sp-s-id-file-write (set b "invalid-file-write"))
+        (sp-s-id-file-read (set b "invalid-file-read"))
+        (sp-s-id-file-not-implemented (set b "not-implemented"))
+        (sp-s-id-file-eof (set b "end-of-file"))
         (else (set b "unknown"))))
-    ((= 0 (strcmp sp-s-group-sndfile a.group)) (set b "sndfile")) (else (set b "unknown")))
+    (else (set b "unknown")))
   (return b))
 
-(define (sp-block-new channels size out) (status-t sp-channel-count-t sp-time-t sp-block-t*)
-  "return a newly allocated array for channels with data arrays for each channel"
+(define (sp-block-new channel-count size out) (status-t sp-channel-count-t sp-time-t sp-block-t*)
+  "return a newly allocated array for channel-count with data arrays for each channel"
   status-declare
-  (memreg-init channels)
+  (memreg-init channel-count)
   (declare channel sp-sample-t* i sp-time-t)
-  (for ((set i 0) (< i channels) (set i (+ 1 i)))
+  (for ((set i 0) (< i channel-count) (set i (+ 1 i)))
     (status-require (sph-helper-calloc (* size (sizeof sp-sample-t)) &channel))
     (memreg-add channel)
     (set (array-get out:samples i) channel))
-  (set out:size size out:channels channels)
+  (set out:size size out:channel-count channel-count)
   (label exit (if status-is-failure memreg-free) status-return))
 
 (define (sp-block-free a) (void sp-block-t*)
-  (if a:size (for ((define i size-t 0) (< i a:channels) (set+ i 1)) (free (array-get a:samples i)))))
+  (if a:size
+    (for ((define i size-t 0) (< i a:channel-count) (set+ i 1)) (free (array-get a:samples i)))))
 
 (define (sp-block-with-offset a offset) (sp-block-t sp-block-t sp-time-t)
   "return a new block with offset added to all channel sample arrays"
   (declare i sp-time-t)
-  (for ((set i 0) (< i a.channels) (set i (+ 1 i)))
+  (for ((set i 0) (< i a.channel-count) (set i (+ 1 i)))
     (set (array-get a.samples i) (+ offset (array-get a.samples i))))
   (return a))
-
-(define (sp-sin-lq a) (sp-sample-t sp-sample-t)
-  "lower precision version of sin() that should be faster"
-  (declare b sp-sample-t c sp-sample-t)
-  (set b (/ 4 M_PI) c (/ -4 (* M_PI M_PI)))
-  (return (- (+ (* b a) (* c a (abs a))))))
 
 (define (sp-phase current change cycle) (sp-time-t sp-time-t sp-time-t sp-time-t)
   (define a sp-time-t (+ current change))
@@ -253,48 +251,149 @@
 
 (define (sp-block-zero a) (void sp-block-t)
   (declare i sp-channel-count-t)
-  (for ((set i 0) (< i a.channels) (set+ i 1)) (sp-samples-zero (array-get a.samples i) a.size)))
+  (for ((set i 0) (< i a.channel-count) (set+ i 1))
+    (sp-samples-zero (array-get a.samples i) a.size)))
 
 (define (sp-block-copy a b) (void sp-block-t sp-block-t)
-  "copies all channels and samples from $a to $b.
+  "copies all channel-count and samples from $a to $b.
    $b channel count and size must be equal or greater than $a"
   (declare ci sp-channel-count-t i sp-time-t)
-  (for ((set ci 0) (< ci a.channels) (set+ ci 1))
+  (for ((set ci 0) (< ci a.channel-count) (set+ ci 1))
     (for ((set i 0) (< i a.size) (set+ i 1))
       (set (array-get b.samples ci i) (array-get a.samples ci i)))))
 
-(pre-include "../main/path.c" "../main/io.c"
-  "../main/plot.c" "../main/filter.c" "../main/sequencer.c" "../main/statistics.c")
+(pre-include "../main/path.c" "../main/plot.c"
+  "../main/filter.c" "../main/sequencer.c" "../main/statistics.c")
 
-(define (sp-render-config channels rate block-size)
+(pre-define
+  wav-string-riff (htonl 0x52494646)
+  wav-string-fmt (htonl 0x666d7420)
+  wav-string-wav (htonl 0x57415645)
+  wav-string-data (htonl 0x64617461))
+
+(define (sp-file-open-write path channel-count sample-rate file)
+  (status-t uint8-t* sp-channel-count-t sp-time-t sp-file-t*)
+  "opens a 32 bit float wav file for writing. http://soundfile.sapp.org/doc/WaveFormat"
+  status-declare
+  (declare header (array uint8-t 40))
+  (set
+    (pointer-get (convert-type header uint32-t*)) wav-string-riff
+    (pointer-get (convert-type (+ 8 header) uint32-t*)) wav-string-wav
+    (pointer-get (convert-type (+ 12 header) uint32-t*)) wav-string-fmt
+    (pointer-get (convert-type (+ 16 header) uint32-t*)) 16
+    (pointer-get (convert-type (+ 20 header) uint16-t*)) 3
+    (pointer-get (convert-type (+ 22 header) uint16-t*)) channel-count
+    (pointer-get (convert-type (+ 24 header) uint32-t*)) sample-rate
+    (pointer-get (convert-type (+ 28 header) uint32-t*)) (* sample-rate channel-count 4)
+    (pointer-get (convert-type (+ 32 header) uint16-t*)) (* channel-count 4)
+    (pointer-get (convert-type (+ 34 header) uint16-t*)) 32
+    (pointer-get (convert-type (+ 36 header) uint32-t*)) wav-string-data
+    file:data-size 0
+    file:channel-count channel-count
+    file:file (fopen path "w"))
+  (if (not file:file) (status-set-goto sp-s-group-libc errno))
+  (if (not (fwrite header 40 1 file:file))
+    (begin (fclose file:file) (sp-status-set-goto sp-s-id-file-write)))
+  (fseek file:file 4 SEEK_CUR)
+  (label exit status-return))
+
+(define (sp-file-close-write file) (void sp-file-t*)
+  (declare chunk-size uint32-t)
+  (set chunk-size (+ 36 file:data-size))
+  (fseek file:file 4 SEEK_SET)
+  (fwrite &chunk-size 4 1 file:file)
+  (fseek file:file 40 SEEK_SET)
+  (fwrite &file:data-size 4 1 file:file)
+  (fclose file:file))
+
+(define (sp-file-write file samples sample-count) (status-t sp-file-t* sp-sample-t** sp-time-t)
+  status-declare
+  (declare file-data float* interleaved-size size-t channel-count sp-channel-count-t)
+  (set
+    file-data 0
+    channel-count file:channel-count
+    interleaved-size (* channel-count sample-count 4))
+  (srq (sph-helper-malloc interleaved-size &file-data))
+  (for-each-index i sp-time-t
+    sample-count
+    (for-each-index j sp-channel-count-t
+      channel-count
+      (set (array-get file-data (+ (* i channel-count) j)) (array-get (array-get samples j) i))))
+  (if (not (fwrite file-data interleaved-size 1 file:file)) (sp-status-set-goto sp-s-id-file-write))
+  (set+ file:data-size interleaved-size)
+  (label exit (free file-data) status-return))
+
+(define (sp-file-open-read path file) (status-t uint8-t* sp-file-t*)
+  status-declare
+  (declare header (array uint8-t 44) subchunk-id uint32-t subchunk-size uint32-t)
+  (set file:file (fopen path "r"))
+  (if
+    (not
+      (and (fread header 44 1 file:file)
+        (= (pointer-get (convert-type header uint32-t*)) wav-string-riff)
+        (= (pointer-get (convert-type (+ 8 header) uint32-t*)) wav-string-wav)
+        (= (pointer-get (convert-type (+ 12 header) uint32-t*)) wav-string-fmt)))
+    (sp-status-set-goto sp-s-id-file-read))
+  (if
+    (not
+      (and (= 3 (pointer-get (convert-type (+ 20 header) uint16-t*)))
+        (= 32 (pointer-get (convert-type (+ 34 header) uint16-t*)))))
+    (sp-status-set-goto sp-s-id-file-not-implemented))
+  (set
+    subchunk-id (pointer-get (convert-type (+ 36 header) uint32-t*))
+    subchunk-size (pointer-get (convert-type (+ 40 header) uint32-t*)))
+  (while (not (= wav-string-data subchunk-id))
+    (fseek file:file subchunk-size SEEK_CUR)
+    (if (not (fread &subchunk-id 4 1 file:file)) (sp-status-set-goto sp-s-id-file-read))
+    (if (not (fread &subchunk-size 4 1 file:file)) (sp-status-set-goto sp-s-id-file-read)))
+  (label exit status-return))
+
+(define (sp-file-read file sample-count samples) (status-t sp-file-t sp-time-t sp-sample-t**)
+  status-declare
+  (declare interleaved-count sp-time-t file-data float* read sp-time-t)
+  (set file-data 0 interleaved-count (* file.channel-count sample-count))
+  (srq (sph-helper-malloc (* 4 interleaved-count) &file-data))
+  (set read (fread file-data 4 interleaved-count file.file))
+  (if (not (= interleaved-count read))
+    (if (feof file.file) (if (not read) (sp-status-set-goto sp-s-id-file-eof))
+      (sp-status-set-goto sp-s-id-file-read)))
+  (for-each-index i sp-time-t
+    (/ read file.channel-count)
+    (for-each-index j sp-channel-count-t
+      file.channel-count
+      (set (array-get (array-get samples j) i) (array-get file-data (+ (* i file.channel-count) j)))))
+  (label exit (free file-data)))
+
+(define (sp-file-close-read file) (void sp-file-t) (fclose file.file))
+
+(define (sp-render-config channel-count rate block-size)
   (sp-render-config-t sp-channel-count-t sp-time-t sp-time-t)
   (declare a sp-render-config-t)
-  (struct-set a channels channels rate rate block-size block-size)
+  (struct-set a channel-count channel-count rate rate block-size block-size)
   (return a))
 
 (define (sp-render-file event start end config path)
   (status-t sp-event-t sp-time-t sp-time-t sp-render-config-t uint8-t*)
   "render an event with sp_seq to a file. the file is created or overwritten"
   status-declare
-  (declare block-end sp-time-t remainder sp-time-t i sp-time-t written sp-time-t)
+  (declare block-end sp-time-t remainder sp-time-t i sp-time-t file sp-file-t)
   (sp-block-declare block)
-  (sp-file-declare file)
   (sp-declare-event-list events)
   (status-require (sp-event-list-add &events event))
-  (status-require (sp-block-new config.channels config.block-size &block))
-  (status-require (sp-file-open path sp-file-mode-write config.channels config.rate &file))
+  (status-require (sp-block-new config.channel-count config.block-size &block))
+  (status-require (sp-file-open-write path config.channel-count config.rate &file))
   (set
     remainder (modulo (- end start) config.block-size)
     block-end (* config.block-size (/ (- end start) config.block-size)))
   (for ((set i 0) (< i block-end) (set+ i config.block-size))
     (status-require (sp-seq i (+ i config.block-size) block &events))
-    (status-require (sp-file-write &file block.samples config.block-size &written))
+    (status-require (sp-file-write &file block.samples config.block-size))
     (sp-block-zero block))
   (if remainder
     (begin
       (status-require (sp-seq i (+ i remainder) block &events))
-      (status-require (sp-file-write &file block.samples remainder &written))))
-  (label exit (sp-block-free &block) (sp-file-close file) status-return))
+      (status-require (sp-file-write &file block.samples remainder))))
+  (label exit (sp-block-free &block) (sp-file-close-write &file) status-return))
 
 (define (sp-render-block event start end config out)
   (status-t sp-event-t sp-time-t sp-time-t sp-render-config-t sp-block-t*)
@@ -305,7 +404,7 @@
   (declare block sp-block-t)
   (sp-declare-event-list events)
   (status-require (sp-event-list-add &events event))
-  (status-require (sp-block-new config.channels (- end start) &block))
+  (status-require (sp-block-new config.channel-count (- end start) &block))
   (status-require (sp-seq start end block &events))
   (set *out block)
   (label exit status-return))
@@ -315,7 +414,7 @@
    example: sp_render_quick(event, 1)"
   status-declare
   (declare block sp-block-t config sp-render-config-t start sp-time-t end sp-time-t)
-  (set config (sp-render-config sp-channels sp-rate sp-rate) start event.start end event.end)
+  (set config (sp-render-config sp-channel-count sp-rate sp-rate) start event.start end event.end)
   (printf "rendering %lu seconds to %s\n" (sp-cheap-round-positive (/ (- end start) config.rate))
     (if* file-or-plot "plot" "file"))
   (if end
@@ -380,16 +479,17 @@
     divisor-count (if (not (modulo index (array-get divisors i))) (return i)))
   (return (- divisor-count 1)))
 
-(define (sp-initialize cpu-count channels rate) (status-t uint16-t sp-channel-count-t sp-time-t)
+(define (sp-initialize cpu-count channel-count rate)
+  (status-t uint16-t sp-channel-count-t sp-time-t)
   "fills the sine wave lookup table.
-   rate and channels are used to set sp_rate and sp_channels,
+   rate and channel-count are used to set sp_rate and sp_channel-count,
    which are used as defaults in a few cases"
   status-declare
   (if cpu-count (begin (set status.id (future-init cpu-count)) (if status.id status-return)))
   (set
     sp-cpu-count cpu-count
     sp-rate rate
-    sp-channels channels
+    sp-channel-count channel-count
     sp-random-state (sp-random-state-new sp-random-seed)
     sp-sine-lfo-factor 100)
   (status-require (sp-samples-new sp-rate &sp-sine-table))

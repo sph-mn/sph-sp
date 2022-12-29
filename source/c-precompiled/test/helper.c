@@ -30,7 +30,7 @@ status_t test_helper_event_generate(sp_time_t start, sp_time_t end, sp_block_t o
   uint64_t value;
   value = ((sp_time_t)(((uint64_t)(event->data))));
   for (i = start; (i < end); i += 1) {
-    for (ci = 0; (ci < out.channels); ci += 1) {
+    for (ci = 0; (ci < out.channel_count); ci += 1) {
       (out.samples)[ci][(i - start)] = value;
     };
   };

@@ -3,7 +3,7 @@ c code and shared library for sound synthesis and sequencing. the sound processo
 
 # features
 * basics
-  * file output with many supported file [formats](http://www.mega-nerd.com/libsndfile/)
+  * 32 bit float wav file output
   * 64 bit float sample format by default, other formats possible for many processors
   * processing of non-interleaved sample arrays with one array per channel. number of channels and sample rate can be custom set
   * fast fourier transform (fft) and inverse fast fourier transform (ifft)
@@ -98,6 +98,12 @@ gcc -lsph-sp main.c
 # thanks to
 * [tom roelandts](https://tomroelandts.com/) on whose information the windowed sinc filters are based on
 * [mborg](https://github.com/mborgerding/kissfft) for the first fft implementation that was used
+* [mhroth](https://github.com/mhroth/tinywav) for a simple example of reading/writing wav files
 * [nayuki](https://www.nayuki.io/page/free-small-fft-in-multiple-languages) for the concise fft implementation that is currently used
 * [steve smith's dspguide](http://www.dspguide.com/) for information about dsp theory
 * [xoshiro.di.unimi.it](http://xoshiro.di.unimi.it/) for the pseudorandom number generator
+
+# similar projects
+* [clm](https://ccrma.stanford.edu/software/snd/snd/clm.html)
+* [puredata](https://puredata.info/)
+* csound, supercollider, cmix, cmusic, and arctic

@@ -15,7 +15,7 @@
   (declare i sp-time-t ci sp-channel-count-t value uint64-t)
   (set value (convert-type (convert-type event:data uint64-t) sp-time-t))
   (for ((set i start) (< i end) (set+ i 1))
-    (for ((set ci 0) (< ci out.channels) (set+ ci 1))
+    (for ((set ci 0) (< ci out.channel-count) (set+ ci 1))
       (set (array-get out.samples ci (- i start)) value)))
   status-return)
 
