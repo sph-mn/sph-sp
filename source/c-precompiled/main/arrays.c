@@ -642,7 +642,6 @@ void sp_times_gt_indices(sp_time_t* a, sp_time_t size, sp_time_t n, sp_time_t* o
    out-size will be less or equal than size.
    memory is allocated and owned by caller */
 void sp_times_select_random(sp_time_t* a, sp_time_t size, sp_time_t* out, sp_time_t* out_size) {
-  status_declare;
   sp_times_random_binary(size, out);
   sp_times_gt_indices(out, size, 0, out, out_size);
   sp_times_select(a, out, (*out_size), out);
@@ -722,7 +721,6 @@ uint8_t sp_times_contains(sp_time_t* a, sp_time_t size, sp_time_t b) {
    size must not be greater than the maximum possible count of unique discrete random values
    (non-null values in the probability distribution) */
 void sp_times_random_discrete_unique(sp_time_t* cudist, sp_time_t cudist_size, sp_time_t size, sp_time_t* out) {
-  status_declare;
   sp_time_t a;
   sp_time_t remaining;
   remaining = sp_min(size, cudist_size);

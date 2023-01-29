@@ -1,16 +1,5 @@
 (pre-include "./helper.c")
 (sc-include "../main/sc-macros")
-
-(pre-cond
-  ( (= sp-sample-format-f64 sp-sample-format)
-    (pre-define
-      sp-sample-nearly-equal f64-nearly-equal
-      sp-samples-nearly-equal f64-array-nearly-equal))
-  ( (= sp-sample-format-f32 sp-sample-format)
-    (pre-define
-      sp-sample-nearly-equal f32-nearly-equal
-      sp-samples-nearly-equal f32-array-nearly-equal)))
-
 (pre-define _rate 960)
 (define error-margin sp-sample-t 0.1)
 (define test-file-path uint8-t* "/tmp/test-sph-sp-file")
@@ -143,7 +132,7 @@
       in-b in-b-length carryover-length carryover (+ (* i block-size) out))
     (set carryover-length in-b-length))
   (test-helper-assert "equal to block processing result"
-    (sp-sample-array-nearly-equal out in-a-length out-control in-a-length 0.01))
+    (sp-samples-nearly-equal out in-a-length out-control in-a-length 0.01))
   (label exit memreg-free status-return))
 
 (define (test-moving-average) status-t
@@ -213,7 +202,7 @@
       (sp-windowed-sinc-bp-br (+ (* i block-size) in) block-size
         cutl cuth trnl trnh 0 &state (+ (* i block-size) out))))
   (test-helper-assert "equal to block processing result"
-    (sp-sample-array-nearly-equal out size out-control size 0.01))
+    (sp-samples-nearly-equal out size out-control size 0.01))
   (label exit
     memreg-free
     (sp-convolution-filter-state-free state)
@@ -315,7 +304,7 @@
       (array-get out-s i) (sp-square i size)))
   (test-helper-assert "triangle 0" (= 0 (array-get out-t 0)))
   (test-helper-assert "triangle 1/2" (= 1 (array-get out-t 48000)))
-  (test-helper-assert "triangle 1" (f64-nearly-equal 0 (array-get out-t 95999) error-margin))
+  (test-helper-assert "triangle 1" (sp-sample-nearly-equal 0 (array-get out-t 95999) error-margin))
   (test-helper-assert "square 0" (= -1 (array-get out-s 0)))
   (test-helper-assert "square 1/4" (= -1 (array-get out-s 24000)))
   (test-helper-assert "square 1/2 - 1" (= -1 (array-get out-s 47999)))
@@ -332,7 +321,7 @@
   (set s (sp-random-state-new 80))
   (sp-samples-random-primitive &s 10 out)
   (sp-samples-random-primitive &s 10 (+ 10 out))
-  (test-helper-assert "last value" (f64-nearly-equal -0.553401 (array-get out 19) error-margin))
+  (test-helper-assert "last value" (sp-sample-nearly-equal -0.553401 (array-get out 19) error-margin))
   (label exit status-return))
 
 (pre-define (max a b) (if* (> a b) a b) (min a b) (if* (< a b) a b))

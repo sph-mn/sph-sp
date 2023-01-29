@@ -6,31 +6,37 @@ see exe/run-example or exe/run-example-sc for how to compile and run with gcc */
 
 #include <sph-sp.h>
 #define _sp_rate 48000
+
+/* custom type for event configuration */
 typedef struct {
   sp_sample_t amp;
 } s1_c_t;
 status_t s1_prepare(sp_event_t* _event) {
   status_declare;
   sp_time_t _duration = (_event->end - _event->start);
-  sp_noise_event_config_t* n1_c;
-  s1_c_t c = *((s1_c_t*)(_event->config));
-  srq((sp_event_memory_init(_event, 2)));
-  // sp-path*
+  s1_c_t c;
+  sp_sound_event_config_t* se_c;
   sp_sample_t* amod;
-  sp_path_t amod_path;
-  sp_path_segment_t amod_segments[2];
-  amod_segments[0] = sp_path_line((_duration / 20), (c.amp));
-  amod_segments[1] = sp_path_line(_duration, 0);
-  spline_path_set((&amod_path), amod_segments, 2);
-  status_require((sp_path_samples_new(amod_path, _duration, (&amod))));
+  c = *((s1_c_t*)(_event->config));
+  sp_event_memory_ensure(_event, 2);
+  /* envelope */
+  sp_path_curves_config_declare(amod_path, 3);
+  (amod_path.x)[0] = 0;
+  (amod_path.x)[1] = (_duration / 20);
+  (amod_path.x)[2] = _duration;
+  (amod_path.y)[0] = 0;
+  (amod_path.y)[1] = c.amp;
+  (amod_path.y)[2] = 0;
+  srq((sp_path_curves_samples_new(amod_path, _duration, (&amod))));
   sp_event_memory_add(_event, amod);
-  srq((sp_event_memory_init(_event, 1)));
-  srq((sp_noise_event_config_new((&n1_c))));
-  sp_event_memory_add(_event, n1_c);
-  n1_c->amod = amod;
-  ((n1_c->channel_config)[0]).use = 1;
-  ((n1_c->channel_config)[0]).amp = (0.5 * c.amp);
-  sp_noise_event(_event, n1_c);
+  /* sound event */
+  srq((sp_sound_event_config_new((&se_c))));
+  sp_event_memory_add(_event, se_c);
+  se_c->amod = amod;
+  se_c->noise = 1;
+  ((se_c->channel_config)[0]).use = 1;
+  ((se_c->channel_config)[0]).amp = (0.5 * c.amp);
+  sp_sound_event(_event, se_c);
   if (_event->prepare) {
     status_require(((_event->prepare)(_event)));
   };
@@ -38,12 +44,12 @@ exit:
   status_return;
 }
 sp_define_event(s1_event, s1_prepare, 0);
-/* defines a group named t1 with a default duration of (2/1 * sample_rate).
-   srq (alias for status_require) checks return codes and jumps to an exit label on error */
 status_t t1_prepare(sp_event_t* _event) {
   status_declare;
   sp_time_t _duration = (_event->end - _event->start);
   _event->prepare = sp_group_prepare;
+  /* defines a group named t1 with a default duration of (1/1 * sample_rate).
+       srq (alias for status_require) checks return codes and jumps to a label named 'exit' on error */
   s1_c_t* s1_c;
   sp_time_t tempo;
   sp_time_t times_length;
@@ -51,13 +57,10 @@ status_t t1_prepare(sp_event_t* _event) {
   sp_event_t event;
   times_length = 4;
   tempo = (rt(1, 1) / 8);
-  srq((sp_event_memory_init(_event, times_length)));
+  sp_event_memory_ensure(_event, times_length);
   for (size_t i = 0; (i < times_length); i += 1) {
     event = s1_event;
-    srq((sp_event_memory_init((&event), 1)));
-    srq((sp_event_memory_init((&event), 1)));
-    srq((sph_helper_malloc((sizeof(s1_c_t)), (&s1_c))));
-    sp_event_memory_add((&event), s1_c);
+    sp_event_malloc_type((&event), s1_c_t, (&s1_c));
     s1_c->amp = ((i % 2) ? 0.5 : 1.0);
     event.config = s1_c;
     event.start = (tempo * times[i]);

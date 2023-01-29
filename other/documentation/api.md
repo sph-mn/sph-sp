@@ -31,9 +31,10 @@ sp_event_memory_ensure :: sp_event_t*:a sp_time_t:additional_size -> status_t
 sp_event_memory_free :: sp_event_t*:event -> void
 sp_fft :: sp_time_t:input_len double*:input_or_output_real double*:input_or_output_imag -> int
 sp_ffti :: sp_time_t:input_len double*:input_or_output_real double*:input_or_output_imag -> int
+sp_file_close_read :: sp_file_t:file -> void
 sp_file_close_write :: sp_file_t*:file -> void
-sp_file_open_read :: uint8_t*:path sp_channel_count_t:channels sp_time_t:sample_rate sp_file_t*:file -> status_t
-sp_file_open_write :: uint8_t*:path sp_channel_count_t:channels sp_time_t:sample_rate sp_file_t*:file -> status_t
+sp_file_open_read :: uint8_t*:path sp_file_t*:file -> status_t
+sp_file_open_write :: uint8_t*:path sp_channel_count_t:channel_count sp_time_t:sample_rate sp_file_t*:file -> status_t
 sp_file_read :: sp_file_t:file sp_time_t:sample_count sp_sample_t**:samples -> status_t
 sp_file_write :: sp_file_t*:file sp_sample_t**:samples sp_time_t:sample_count -> status_t
 sp_filter :: sp_sample_t*:in sp_time_t:in_size sp_sample_t:cutoff_l sp_sample_t:cutoff_h sp_sample_t:transition_l sp_sample_t:transition_h sp_bool_t:is_reject sp_filter_state_t**:out_state sp_sample_t*:out_samples -> status_t
@@ -46,7 +47,7 @@ sp_group_event_parallel_f :: sp_time_t:start sp_time_t:end sp_block_t:out sp_eve
 sp_group_free :: -> void
 sp_group_prepare :: sp_event_t*:event -> status_t
 sp_group_prepare_parallel :: sp_event_t*:a -> status_t
-sp_initialize :: uint16_t:cpu_count sp_channel_count_t:channels sp_time_t:rate -> status_t
+sp_initialize :: uint16_t:cpu_count sp_channel_count_t:channel_count sp_time_t:rate -> status_t
 sp_map_event_config_new :: sp_map_event_config_t**:out -> status_t
 sp_map_event_free :: -> void
 sp_map_event_prepare :: sp_event_t*:event -> status_t
@@ -94,7 +95,7 @@ sp_plot_times_to_file :: sp_time_t*:a sp_time_t:a_size uint8_t*:path -> void
 sp_random_state_new :: sp_time_t:seed -> sp_random_state_t
 sp_render :: sp_event_t:event uint8_t:file_or_plot -> status_t
 sp_render_block :: sp_event_t:event sp_time_t:start sp_time_t:end sp_render_config_t:config sp_block_t*:out -> status_t
-sp_render_config :: sp_channel_count_t:channels sp_time_t:rate sp_time_t:block_size -> sp_render_config_t
+sp_render_config :: sp_channel_count_t:channel_count sp_time_t:rate sp_time_t:block_size -> sp_render_config_t
 sp_render_file :: sp_event_t:event sp_time_t:start sp_time_t:end sp_render_config_t:config uint8_t*:path -> status_t
 sp_sample_random_custom :: sp_time_t*:cudist sp_time_t:cudist_size sp_sample_t:range -> sp_sample_t
 sp_samples_to_times :: sp_sample_t*:in sp_time_t:in_size sp_time_t*:out -> void
@@ -140,7 +141,6 @@ sp_sequence_max :: sp_time_t:size sp_time_t:min_size -> sp_time_t
 sp_sequence_set_hash :: sp_sequence_set_key_t:a sp_time_t:memory_size -> uint64_t
 sp_set_sequence_max :: sp_time_t:set_size sp_time_t:selection_size -> sp_time_t
 sp_shuffle :: function_pointer void void* size_t size_t:swap void*:a size_t:size -> void
-sp_sin_lq :: sp_sample_t:a -> sp_sample_t
 sp_sinc :: sp_sample_t:a -> sp_sample_t
 sp_sine :: sp_time_t:size sp_sample_t:amp sp_sample_t*:amod sp_time_t:frq sp_time_t*:fmod sp_time_t*:phs_state sp_sample_t*:out -> void
 sp_sine_lfo :: sp_time_t:size sp_sample_t:amp sp_sample_t*:amod sp_time_t:frq sp_time_t*:fmod sp_time_t*:phs_state sp_sample_t*:out -> void
@@ -278,6 +278,7 @@ error_memory_add(address)
 error_memory_add2(address, handler)
 error_memory_free
 error_memory_init(register_size)
+f128
 f64
 free_event_on_error(event_address)
 free_event_on_exit(event_address)
@@ -389,6 +390,9 @@ sp_s_group_libc
 sp_s_group_sp
 sp_s_group_sph
 sp_s_id_eof
+sp_s_id_file_eof
+sp_s_id_file_not_implemented
+sp_s_id_file_read
 sp_s_id_file_write
 sp_s_id_input_type
 sp_s_id_invalid_argument
@@ -414,7 +418,8 @@ sp_seq_events_prepare
 sp_sequence_set_equal(a, b)
 sp_sine_config_t
 sp_sound_event(event_pointer, _config)
-sp_status_set(id)
+sp_status_set(_id)
+sp_status_set_goto(id)
 sp_time_half_t
 sp_time_interpolate_linear(a, b, t)
 sp_time_random
@@ -440,7 +445,7 @@ srq
 
 # variables
 ~~~
-sp_channel_count_t sp_channels
+sp_channel_count_t sp_channel_count
 sp_event_t sp_event_null
 sp_random_state_t sp_random_state
 sp_sample_t* sp_sine_table
@@ -462,7 +467,7 @@ sp_stat_samples_f_t: sp_sample_t* sp_time_t sp_sample_t* -> uint8_t
 sp_stat_times_f_t: sp_time_t* sp_time_t sp_sample_t* -> uint8_t
 sp_state_variable_filter_t: sp_sample_t* sp_sample_t* sp_sample_t sp_sample_t sp_time_t sp_sample_t* -> void
 sp_block_t: struct
-  channels: sp_channel_count_t
+  channel_count: sp_channel_count_t
   size: sp_time_t
   samples: array sp_sample_t* sp_channel_limit
 sp_channel_config_t: struct
@@ -487,7 +492,7 @@ sp_cheap_noise_event_config_t: struct
   type: sp_state_variable_filter_t
   random_state: sp_random_state_t*
   resolution: sp_time_t
-  channels: sp_channel_count_t
+  channel_count: sp_channel_count_t
   channel_config: array sp_channel_config_t sp_channel_limit
 sp_convolution_filter_state_t: struct
   carryover: sp_sample_t*
@@ -518,8 +523,8 @@ sp_events_t: struct
   current: size_t
 sp_file_t: struct
   file: FILE*
-  written: size_t
-  channels: sp_channel_count_t
+  data_size: size_t
+  channel_count: sp_channel_count_t
 sp_map_event_config_t: struct
   event: sp_event_t
   map_generate: sp_map_generate_t
@@ -540,7 +545,7 @@ sp_noise_event_config_t: struct
   cuth_mod: sp_sample_t*
   resolution: sp_time_t
   is_reject: uint8_t
-  channels: sp_channel_count_t
+  channel_count: sp_channel_count_t
   channel_config: array sp_channel_config_t sp_channel_limit
 sp_path_curves_config_t: struct
   segment_count: sp_time_t
@@ -552,7 +557,7 @@ sp_path_segments_t: struct
   size: size_t
   used: size_t
 sp_render_config_t: struct
-  channels: sp_channel_count_t
+  channel_count: sp_channel_count_t
   rate: sp_time_t
   block_size: sp_time_t
 sp_samples_t: struct
@@ -571,7 +576,7 @@ sp_sound_event_config_t: struct
   phs: sp_time_t
   wdt: sp_time_t
   wmod: sp_time_t*
-  channels: sp_channel_count_t
+  channel_count: sp_channel_count_t
   channel_config: array sp_channel_config_t sp_channel_limit
 sp_times_counted_sequences_t: struct
   count: sp_time_t
@@ -588,7 +593,7 @@ sp_wave_event_config_t: struct
   fmod: sp_time_t*
   amp: sp_sample_t
   amod: sp_sample_t*
-  channels: sp_channel_count_t
+  channel_count: sp_channel_count_t
   channel_config: array sp_channel_config_t sp_channel_limit
 sp_wave_event_state_t: struct
   wvf: sp_sample_t*

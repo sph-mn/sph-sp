@@ -1,12 +1,5 @@
 
 #include "./helper.c"
-#if (sp_sample_format_f64 == sp_sample_format)
-#define sp_sample_nearly_equal f64_nearly_equal
-#define sp_samples_nearly_equal f64_array_nearly_equal
-#elif (sp_sample_format_f32 == sp_sample_format)
-#define sp_sample_nearly_equal f32_nearly_equal
-#define sp_samples_nearly_equal f32_array_nearly_equal
-#endif
 #define _rate 960
 sp_sample_t error_margin = 0.1;
 uint8_t* test_file_path = "/tmp/test-sph-sp-file";
@@ -153,7 +146,7 @@ status_t test_convolve_larger() {
     sp_convolve(((i * block_size) + in_a), block_size, in_b, in_b_length, carryover_length, carryover, ((i * block_size) + out));
     carryover_length = in_b_length;
   };
-  test_helper_assert("equal to block processing result", (sp_sample_array_nearly_equal(out, in_a_length, out_control, in_a_length, (0.01))));
+  test_helper_assert("equal to block processing result", (sp_samples_nearly_equal(out, in_a_length, out_control, in_a_length, (0.01))));
 exit:
   memreg_free;
   status_return;
@@ -222,7 +215,7 @@ status_t test_windowed_sinc_continuity() {
   for (size_t i = 0; (i < block_count); i += 1) {
     status_require((sp_windowed_sinc_bp_br(((i * block_size) + in), block_size, cutl, cuth, trnl, trnh, 0, (&state), ((i * block_size) + out))));
   };
-  test_helper_assert("equal to block processing result", (sp_sample_array_nearly_equal(out, size, out_control, size, (0.01))));
+  test_helper_assert("equal to block processing result", (sp_samples_nearly_equal(out, size, out_control, size, (0.01))));
 exit:
   memreg_free;
   sp_convolution_filter_state_free(state);
@@ -336,7 +329,7 @@ status_t test_sp_triangle_square() {
   };
   test_helper_assert("triangle 0", (0 == out_t[0]));
   test_helper_assert("triangle 1/2", (1 == out_t[48000]));
-  test_helper_assert("triangle 1", (f64_nearly_equal(0, (out_t[95999]), error_margin)));
+  test_helper_assert("triangle 1", (sp_sample_nearly_equal(0, (out_t[95999]), error_margin)));
   test_helper_assert("square 0", (-1 == out_s[0]));
   test_helper_assert("square 1/4", (-1 == out_s[24000]));
   test_helper_assert("square 1/2 - 1", (-1 == out_s[47999]));
@@ -355,7 +348,7 @@ status_t test_sp_random() {
   s = sp_random_state_new(80);
   sp_samples_random_primitive((&s), 10, out);
   sp_samples_random_primitive((&s), 10, (10 + out));
-  test_helper_assert("last value", (f64_nearly_equal((-0.553401), (out[19]), error_margin)));
+  test_helper_assert("last value", (sp_sample_nearly_equal((-0.553401), (out[19]), error_margin)));
 exit:
   status_return;
 }

@@ -11,10 +11,11 @@ sc_source="$PWD/source/sc/main/sc-macros.sc"
 lib_target="$prefix/usr/lib"
 header_target="$prefix/usr/include"
 sc_target="$prefix/usr/share/sph-sp"
+sph_sc_lib_source="$PWD/source/c/foreign/sph-sc-lib/sph-sp"
 
 mkdir -p "$lib_target" "$header_target" "$sc_target" &&
 chmod 755 "$lib_target" "$header_target" "$sc_target" &&
 cp -t "$lib_target" "$lib_source" $cp_args &&
-cp -t "$header_target" "$header_source" $cp_args &&
+cp -rt "$header_target" "$header_source" "$sph_sc_lib_source" $cp_args &&
 cp -t "$sc_target" "$sc_source" $cp_args &&
 chmod 644 "$lib_target/libsph-sp.so" "$header_target/sph-sp.h" "$sc_target/sc-macros.sc"

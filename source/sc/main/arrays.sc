@@ -477,7 +477,6 @@
   "a/out can not be the same pointer.
    out-size will be less or equal than size.
    memory is allocated and owned by caller"
-  status-declare
   (sp-times-random-binary size out)
   (sp-times-gt-indices out size 0 out out-size)
   (sp-times-select a out *out-size out))
@@ -540,7 +539,6 @@
    size is the requested size of generated output values and should be smaller than a-size.
    size must not be greater than the maximum possible count of unique discrete random values
    (non-null values in the probability distribution)"
-  status-declare
   (declare a sp-time-t remaining sp-time-t)
   (set remaining (sp-min size cudist-size))
   (while remaining

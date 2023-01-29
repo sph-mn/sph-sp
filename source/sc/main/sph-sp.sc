@@ -1,6 +1,12 @@
+(pre-include-guard-begin sph-sp-h)
 (pre-define-if-not-defined __USE_POSIX199309)
 (pre-define-if-not-defined _GNU_SOURCE)
-(pre-include "byteswap.h" "inttypes.h" "string.h" "sys/types.h")
+
+(pre-include "byteswap.h" "inttypes.h"
+  "string.h" "sys/types.h" "sph-sp/status.h"
+  "sph-sp/array3.c" "sph-sp/float.h" "sph-sp/hashtable.c"
+  "sph-sp/helper.h" "sph-sp/memreg.c" "sph-sp/random.h" "sph-sp/set.c" "sph-sp/spline-path.h")
+
 (sc-comment "configuration")
 
 (pre-define-if-not-defined
@@ -9,12 +15,12 @@
   sp-cheap-filter-passes-limit 8
   spline-path-value-t sp-sample-t
   sp-random-seed 1557083953
-  sp-sample-array-nearly-equal f64-array-nearly-equal
-  sp-sample-nearly-equal f64-nearly-equal
+  sp-samples-nearly-equal sph-f64-array-nearly-equal
+  sp-sample-nearly-equal sph-f64-nearly-equal
   sp-sample-random-primitive sph-random-f64-1to1
   sp-samples-random-bounded-primitive sph-random-f64-bounded-array
   sp-samples-random-primitive sph-random-f64-array-1to1
-  sp-samples-sum f64-sum
+  sp-samples-sum sph-f64-sum
   sp-sample-t double
   sp-time-half-t uint16-t
   sp-time-random-bounded-primitive sph-random-u32-bounded
@@ -25,10 +31,6 @@
   sp-unit-random-primitive sph-random-f64-0to1
   sp-units-random-primitive sph-random-f64-array-0to1
   sp-unit-t double)
-
-(pre-include "sph/status.c" "sph/spline-path.h"
-  "sph/random.c" "sph/array3.c" "sph/array4.c"
-  "sph/float.c" "sph/set.c" "sph/hashtable.c" "sph/memreg.c" "sph/helper.c")
 
 (sc-comment "main")
 
@@ -125,7 +127,7 @@
     (sp-event-memory-add event-pointer (pointer-get pointer-address)))
   (sp-event-malloc-type-n* event-pointer count type pointer-address)
   (sp-event-malloc event-pointer (* count (sizeof type)) pointer-address)
-  (sp-event-malloc-type* event-pointer type pointer-address)
+  (sp-event-malloc-type event-pointer type pointer-address)
   (sp-event-malloc event-pointer (sizeof type) pointer-address)
   (sp-event-samples event-pointer size pointer-address)
   (sp-event-alloc event-pointer sp-samples-new size pointer-address)
@@ -229,7 +231,7 @@
 
 (sph-set-declare-type sp-time-set sp-time-t sph-set-hash-integer sph-set-equal-integer 0 1 2)
 
-(hashtable-declare-type sp-sequence-hashtable sp-sequence-set-key-t
+(sph-hashtable-declare-type sp-sequence-hashtable sp-sequence-set-key-t
   sp-time-t sp-sequence-set-hash sp-sequence-set-equal 2)
 
 (declare
@@ -673,7 +675,6 @@
   sp-path-line spline-path-line
   sp-path-move spline-path-move
   sp-path-bezier spline-path-bezier
-  sp-path-circular-arc spline-path-circular-arc
   sp-path-bezier-arc spline-path-bezier-arc
   sp-path-constant spline-path-constant
   sp-path-path spline-path-path
@@ -681,7 +682,6 @@
   sp-path-i-line spline-path-i-line
   sp-path-i-move spline-path-i-move
   sp-path-i-bezier spline-path-i-bezier
-  sp-path-i-circular-arc spline-path-i-circular-arc
   sp-path-i-bezier-arc spline-path-i-bezier-arc
   sp-path-i-constant spline-path-i-constant
   sp-path-i-path spline-path-i-path
@@ -812,3 +812,5 @@
   (sp-render-block event start end config out)
   (status-t sp-event-t sp-time-t sp-time-t sp-render-config-t sp-block-t*)
   (sp-render event file-or-plot) (status-t sp-event-t uint8-t))
+
+(pre-include-guard-end)

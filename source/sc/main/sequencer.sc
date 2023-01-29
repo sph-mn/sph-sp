@@ -135,7 +135,7 @@
       (out sp-block-t)
       (event sp-event-t*)
       (status status-t)
-      (future future-t))))
+      (future sph-future-t))))
 
 (define (sp-seq-parallel-future-f data) (void* void*)
   status-declare
@@ -185,13 +185,13 @@
           sf:out-start (if* (> e.start start) (- e.start start) 0)
           sf:event ep
           sf:status.id status-id-success)
-        (status-require (sp-block-new out.channel-count (- e-end e-start) &sf:out)) (set+ allocated 1)
-        (future-new sp-seq-parallel-future-f sf &sf:future)))
+        (status-require (sp-block-new out.channel-count (- e-end e-start) &sf:out))
+        (set+ allocated 1) (sph-future-new sp-seq-parallel-future-f sf &sf:future)))
     (set current current:next))
   (sc-comment "merge")
   (sp-for-each-index sf-i active
     (set sf (+ sf-array sf-i))
-    (touch &sf:future)
+    (sph-future-touch &sf:future)
     (status-require sf:status)
     (sp-for-each-index ci out.channel-count
       (sp-for-each-index i sf:out.size
@@ -751,7 +751,16 @@
 (define (sp-sound-event-config) sp-sound-event-config-t
   "return a sound event configuration struct with defaults set"
   (declare result sp-sound-event-config-t)
-  (struct-set result noise 0 amp 1 amod 0 frq 0 fmod 0 wdt 0 wmod 0 phs 0 channel-count sp-channel-count)
+  (struct-set result
+    noise 0
+    amp 1
+    amod 0
+    frq 0
+    fmod 0
+    wdt (/ sp-rate 2)
+    wmod 0
+    phs 0
+    channel-count sp-channel-count)
   (sp-channel-config-reset result.channel-config)
   (return result))
 

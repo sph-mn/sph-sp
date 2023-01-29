@@ -380,7 +380,6 @@ void sp_cheap_filter_state_free(sp_cheap_filter_state_t* a) {
    sp-cheap-filter-state-new and sp-cheap-filter-state-free.
    uses separate svf-state values for multiple passes as it is like filters in series */
 void sp_cheap_filter(sp_state_variable_filter_t filter, sp_sample_t* in, sp_time_t in_size, sp_sample_t cutoff, sp_time_t passes, sp_sample_t q_factor, sp_cheap_filter_state_t* state, sp_sample_t* out) {
-  status_declare;
   sp_sample_t* in_swap;
   sp_sample_t* in_temp;
   sp_sample_t* out_temp;

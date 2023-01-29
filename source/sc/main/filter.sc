@@ -359,7 +359,6 @@
   "the sph-sp default fast filter. caller has to manage the state object with
    sp-cheap-filter-state-new and sp-cheap-filter-state-free.
    uses separate svf-state values for multiple passes as it is like filters in series"
-  status-declare
   (declare in-swap sp-sample-t* in-temp sp-sample-t* out-temp sp-sample-t* i sp-time-t)
   (if (= 1 passes) (filter out in in-size cutoff q-factor state:svf-state)
     (begin

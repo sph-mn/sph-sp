@@ -216,7 +216,7 @@ typedef struct {
   sp_block_t out;
   sp_event_t* event;
   status_t status;
-  future_t future;
+  sph_future_t future;
 } sp_seq_future_t;
 void* sp_seq_parallel_future_f(void* data) {
   status_declare;
@@ -288,14 +288,14 @@ status_t sp_seq_parallel(sp_time_t start, sp_time_t end, sp_block_t out, sp_even
       sf->status.id = status_id_success;
       status_require((sp_block_new((out.channel_count), (e_end - e_start), (&(sf->out)))));
       allocated += 1;
-      future_new(sp_seq_parallel_future_f, sf, (&(sf->future)));
+      sph_future_new(sp_seq_parallel_future_f, sf, (&(sf->future)));
     };
     current = current->next;
   };
   /* merge */
   for (size_t sf_i = 0; (sf_i < active); sf_i += 1) {
     sf = (sf_array + sf_i);
-    touch((&(sf->future)));
+    sph_future_touch((&(sf->future)));
     status_require((sf->status));
     for (size_t ci = 0; (ci < out.channel_count); ci += 1) {
       for (size_t i = 0; (i < sf->out.size); i += 1) {
@@ -919,7 +919,7 @@ sp_sound_event_config_t sp_sound_event_config() {
   result.amod = 0;
   result.frq = 0;
   result.fmod = 0;
-  result.wdt = 0;
+  result.wdt = (sp_rate / 2);
   result.wmod = 0;
   result.phs = 0;
   result.channel_count = sp_channel_count;

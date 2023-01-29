@@ -2,7 +2,7 @@
 
 optimisation=3
 target_dir=temp
-c=source/c/
+c=source/c
 c_sc=source/c-precompiled
 root="$PWD"
 warnings="-Wunused-label -Wunused-value -Wunused-variable"
@@ -13,12 +13,12 @@ compile_sph_sp() {
   target="$target_dir/libsph-sp.so"
   source="$c_sc/main/main.c"
   gcc -shared -fno-builtin -fpic "$source" -o "$target" \
-    $gcc_options -lpthread -lm -I"$c"
+    $gcc_options -lpthread -lm -I"$c/foreign" -I"$c/foreign/sph-sc-lib"
 }
 
 compile_test_sph_sp() {
   export LIBRARY_PATH="$root/temp"
-  gcc "$c_sc/test/main.c" -o temp/test-libsph-sp -lsph-sp -lm $gcc_options_test
+  gcc "$c_sc/test/main.c" -o temp/test-libsph-sp -lsph-sp -lm $gcc_options_test -I"$c/foreign/sph-sc-lib"
 }
 
 mkdir -p "$target_dir"

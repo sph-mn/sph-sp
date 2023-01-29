@@ -1,4 +1,7 @@
 
+#ifndef sph_sp_h
+#define sph_sp_h
+
 #ifndef __USE_POSIX199309
 #define __USE_POSIX199309
 #endif
@@ -10,6 +13,15 @@
 #include <inttypes.h>
 #include <string.h>
 #include <sys/types.h>
+#include <sph-sp/status.h>
+#include <sph-sp/array3.c>
+#include <sph-sp/float.h>
+#include <sph-sp/hashtable.c>
+#include <sph-sp/helper.h>
+#include <sph-sp/memreg.c>
+#include <sph-sp/random.h>
+#include <sph-sp/set.c>
+#include <sph-sp/spline-path.h>
 
 /* configuration */
 
@@ -28,11 +40,11 @@
 #ifndef sp_random_seed
 #define sp_random_seed 1557083953
 #endif
-#ifndef sp_sample_array_nearly_equal
-#define sp_sample_array_nearly_equal f64_array_nearly_equal
+#ifndef sp_samples_nearly_equal
+#define sp_samples_nearly_equal sph_f64_array_nearly_equal
 #endif
 #ifndef sp_sample_nearly_equal
-#define sp_sample_nearly_equal f64_nearly_equal
+#define sp_sample_nearly_equal sph_f64_nearly_equal
 #endif
 #ifndef sp_sample_random_primitive
 #define sp_sample_random_primitive sph_random_f64_1to1
@@ -44,7 +56,7 @@
 #define sp_samples_random_primitive sph_random_f64_array_1to1
 #endif
 #ifndef sp_samples_sum
-#define sp_samples_sum f64_sum
+#define sp_samples_sum sph_f64_sum
 #endif
 #ifndef sp_sample_t
 #define sp_sample_t double
@@ -76,16 +88,6 @@
 #ifndef sp_unit_t
 #define sp_unit_t double
 #endif
-#include <sph/status.c>
-#include <sph/spline-path.h>
-#include <sph/random.c>
-#include <sph/array3.c>
-#include <sph/array4.c>
-#include <sph/float.c>
-#include <sph/set.c>
-#include <sph/hashtable.c>
-#include <sph/memreg.c>
-#include <sph/helper.c>
 
 /* main */
 
@@ -180,7 +182,7 @@
   srq((sph_helper_malloc(size, pointer_address))); \
   sp_event_memory_add(event_pointer, (*pointer_address))
 #define sp_event_malloc_type_n *(event_pointer, count, type, pointer_address)sp_event_malloc(event_pointer, (count * sizeof(type)), pointer_address)
-#define sp_event_malloc_type *(event_pointer, type, pointer_address)sp_event_malloc(event_pointer, (sizeof(type)), pointer_address)
+#define sp_event_malloc_type(event_pointer, type, pointer_address) sp_event_malloc(event_pointer, (sizeof(type)), pointer_address)
 #define sp_event_samples(event_pointer, size, pointer_address) sp_event_alloc(event_pointer, sp_samples_new, size, pointer_address)
 #define sp_event_times(event_pointer, size, pointer_address) sp_event_alloc(event_pointer, sp_times_new, size, pointer_address)
 #define sp_event_units(event_pointer, size, pointer_address) sp_event_alloc(event_pointer, sp_units_new, size, pointer_address)
@@ -260,7 +262,7 @@ sp_sequence_set_key_t sp_sequence_set_null = { 0, 0 };
 uint64_t sp_sequence_set_hash(sp_sequence_set_key_t a, sp_time_t memory_size) { return ((sp_u64_from_array((a.data), (a.size)) % memory_size)); }
 sph_set_declare_type_nonull(sp_sequence_set, sp_sequence_set_key_t, sp_sequence_set_hash, sp_sequence_set_equal, sp_sequence_set_null, 2);
 sph_set_declare_type(sp_time_set, sp_time_t, sph_set_hash_integer, sph_set_equal_integer, 0, 1, 2);
-hashtable_declare_type(sp_sequence_hashtable, sp_sequence_set_key_t, sp_time_t, sp_sequence_set_hash, sp_sequence_set_equal, 2);
+sph_hashtable_declare_type(sp_sequence_hashtable, sp_sequence_set_key_t, sp_time_t, sp_sequence_set_hash, sp_sequence_set_equal, 2);
 sp_sample_t sp_samples_absolute_max(sp_sample_t* in, sp_time_t in_size);
 void sp_samples_add_1(sp_sample_t* a, sp_time_t size, sp_sample_t n, sp_sample_t* out);
 void sp_samples_add(sp_sample_t* a, sp_time_t size, sp_sample_t* b, sp_sample_t* out);
@@ -651,7 +653,6 @@ status_t sp_sound_event_config_new(sp_sound_event_config_t** out);
 #define sp_path_line spline_path_line
 #define sp_path_move spline_path_move
 #define sp_path_bezier spline_path_bezier
-#define sp_path_circular_arc spline_path_circular_arc
 #define sp_path_bezier_arc spline_path_bezier_arc
 #define sp_path_constant spline_path_constant
 #define sp_path_path spline_path_path
@@ -659,7 +660,6 @@ status_t sp_sound_event_config_new(sp_sound_event_config_t** out);
 #define sp_path_i_line spline_path_i_line
 #define sp_path_i_move spline_path_i_move
 #define sp_path_i_bezier spline_path_i_bezier
-#define sp_path_i_circular_arc spline_path_i_circular_arc
 #define sp_path_i_bezier_arc spline_path_i_bezier_arc
 #define sp_path_i_constant spline_path_i_constant
 #define sp_path_i_path spline_path_i_path
@@ -757,3 +757,4 @@ sp_render_config_t sp_render_config(sp_channel_count_t channel_count, sp_time_t 
 status_t sp_render_file(sp_event_t event, sp_time_t start, sp_time_t end, sp_render_config_t config, uint8_t* path);
 status_t sp_render_block(sp_event_t event, sp_time_t start, sp_time_t end, sp_render_config_t config, sp_block_t* out);
 status_t sp_render(sp_event_t event, uint8_t file_or_plot);
+#endif

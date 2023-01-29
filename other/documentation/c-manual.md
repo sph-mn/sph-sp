@@ -98,6 +98,23 @@ spline_path_set(&amod_path, amod_segments, 2);
 status_require(sp_path_samples_new(amod_path, 80000, &amod));
 ~~~
 
+## sp_path_curves
+interface to create a path of possibly bent lines.
+configuration is a struct with separate arrays for the x and y values, and an additional array for curvature values from -1.0 to 1.0.
+~~~
+sp_path_curves_config_declare(amod_path, 3);
+amod_path.x[0] = 0;
+amod_path.x[1] = 20000;
+amod_path.x[2] = 80000;
+amod_path.y[0] = 0;
+amod_path.y[1] = 1.0;
+amod_path.y[2] = 0;
+amod_path.c[0] = 0.5;
+amod_path.c[1] = 0;
+amod_path.c[2] = 0;
+srq(sp_path_curves_samples_new(amod_path, 80000, &amod));
+~~~
+
 # sample processors
 ## filtering
 * filter state is allocated if null
