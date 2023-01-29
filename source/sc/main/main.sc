@@ -1,11 +1,11 @@
 (sc-comment "this file contains basics and includes dependencies")
 (pre-define M_PI 3.141592653589793)
 
-(pre-include "stdio.h" "errno.h"
-  "arpa/inet.h" "nayuki-fft/fft.c" "../main/sph-sp.h"
-  "sph-sp/spline-path.c" "sph-sp/quicksort.c" "sph-sp/queue.h"
-  "sph-sp/random.c" "sph-sp/float.c" "sph-sp/thread-pool.h"
-  "sph-sp/thread-pool.c" "sph-sp/futures.h" "sph-sp/futures.c" "sph-sp/helper.c")
+(pre-include "errno.h" "arpa/inet.h"
+  "nayuki-fft/fft.c" "../main/sph-sp.h" "sph-sp/spline-path.c"
+  "sph-sp/quicksort.c" "sph-sp/queue.h" "sph-sp/random.c"
+  "sph-sp/float.c" "sph-sp/thread-pool.h" "sph-sp/thread-pool.c"
+  "sph-sp/futures.h" "sph-sp/futures.c" "sph-sp/helper.c")
 
 (pre-define
   sp-status-declare (status-declare-group sp-s-group-sp)

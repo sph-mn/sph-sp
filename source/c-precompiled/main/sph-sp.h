@@ -12,6 +12,7 @@
 #include <byteswap.h>
 #include <inttypes.h>
 #include <string.h>
+#include <stdio.h>
 #include <sys/types.h>
 #include <sph-sp/status.h>
 #include <sph-sp/array3.c>

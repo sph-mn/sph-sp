@@ -1,10 +1,10 @@
 
+/* 32 bit float wav file writing and reading. http://soundfile.sapp.org/doc/WaveFormat */
+
 #define wav_string_riff htonl(0x52494646)
 #define wav_string_fmt htonl(0x666d7420)
 #define wav_string_wav htonl(0x57415645)
 #define wav_string_data htonl(0x64617461)
-
-/** opens a 32 bit float wav file for writing. http://soundfile.sapp.org/doc/WaveFormat */
 status_t sp_file_open_write(uint8_t* path, sp_channel_count_t channel_count, sp_time_t sample_rate, sp_file_t* file) {
   status_declare;
   uint8_t header[40];

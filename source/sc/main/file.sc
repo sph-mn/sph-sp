@@ -1,3 +1,5 @@
+(sc-comment "32 bit float wav file writing and reading. http://soundfile.sapp.org/doc/WaveFormat")
+
 (pre-define
   wav-string-riff (htonl 0x52494646)
   wav-string-fmt (htonl 0x666d7420)
@@ -6,7 +8,6 @@
 
 (define (sp-file-open-write path channel-count sample-rate file)
   (status-t uint8-t* sp-channel-count-t sp-time-t sp-file-t*)
-  "opens a 32 bit float wav file for writing. http://soundfile.sapp.org/doc/WaveFormat"
   status-declare
   (declare header (array uint8-t 40))
   (set

@@ -976,7 +976,6 @@ int main() {
   status_declare;
   rs = sp_random_state_new(3);
   sp_initialize(3, 2, _rate);
-  test_helper_test_one(test_file);
   test_helper_test_one(test_base);
   test_helper_test_one(test_path);
   test_helper_test_one(test_sp_sound_event);
@@ -1006,6 +1005,7 @@ int main() {
   test_helper_test_one(test_simple_mappings);
   test_helper_test_one(test_random_discrete);
   test_helper_test_one(test_sp_seq_parallel);
+  test_helper_test_one(test_file);
 exit:
   test_helper_display_summary();
   return ((status.id));

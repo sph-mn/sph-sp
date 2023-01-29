@@ -6,16 +6,17 @@ prefix="$1"
 cp_args="$2"
 lib_name="libsph-sp.so"
 lib_source="$PWD/temp/$lib_name"
-header_source="$PWD/source/c-precompiled/main/sph-sp.h"
+header_source="$PWD/source/c-precompiled/main"
 sc_source="$PWD/source/sc/main/sc-macros.sc"
 lib_target="$prefix/usr/lib"
 header_target="$prefix/usr/include"
 sc_target="$prefix/usr/share/sph-sp"
 sph_sc_lib_source="$PWD/source/c/foreign/sph-sc-lib/sph-sp"
 
-mkdir -p "$lib_target" "$header_target" "$sc_target" &&
-chmod 755 "$lib_target" "$header_target" "$sc_target" &&
+mkdir -p "$lib_target" "$header_target" "$header_target/sph-sp" "$sc_target" &&
+chmod 755 "$lib_target" "$header_target" "$header_target/sph-sp" "$sc_target" &&
 cp -t "$lib_target" "$lib_source" $cp_args &&
-cp -rt "$header_target" "$header_source" "$sph_sc_lib_source" $cp_args &&
+cp -t "$header_target" "$header_source/sph-sp.h" $cp_args &&
+cp -t "$header_target/sph-sp" "$sph_sc_lib_source"/* $cp_args &&
 cp -t "$sc_target" "$sc_source" $cp_args &&
-chmod 644 "$lib_target/libsph-sp.so" "$header_target/sph-sp.h" "$sc_target/sc-macros.sc"
+chmod -R 644 "$lib_target/libsph-sp.so" "$header_target/sph-sp.h" "$sc_target/sc-macros.sc"

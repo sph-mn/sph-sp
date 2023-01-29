@@ -1,7 +1,6 @@
 
 /* this file contains basics and includes dependencies */
 #define M_PI 3.141592653589793
-#include <stdio.h>
 #include <errno.h>
 #include <arpa/inet.h>
 #include <nayuki-fft/fft.c>

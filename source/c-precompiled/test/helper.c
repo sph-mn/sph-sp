@@ -6,8 +6,8 @@
 #include <float.h>
 #include <math.h>
 #include "../main/sph-sp.h"
-#include <sph/string.c>
-#include <sph/filesystem.c>
+#include <sph/string.h>
+#include <sph/filesystem.h>
 
 #define test_helper_test_one(func) \
   printf("%s\n", #func); \

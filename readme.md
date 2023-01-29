@@ -39,7 +39,7 @@ c code and shared library for sound synthesis and sequencing. the sound processo
 * linux or compatible (libc)
 * gcc and shell for the provided compile script
 * optional: gnuplot
-* [sph-sc](https://github.com/sph-mn/sph-sc) for development or when using sc
+* optional: [sph-sc](https://github.com/sph-mn/sph-sc), for development on sph-sp itself or when using sc
 
 # setup
 * install dependencies
@@ -82,9 +82,6 @@ gcc -lsph-sp main.c
 # license
 * files under `source/c/foreign/nayuki-fft`: mit license
 * rest: lgpl3+
-
-# possible enhancements
-* split header into core and extra
 
 # thanks to
 * [tom roelandts](https://tomroelandts.com/) on whose information the windowed sinc filters are based on

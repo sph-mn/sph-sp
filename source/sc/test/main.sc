@@ -321,7 +321,8 @@
   (set s (sp-random-state-new 80))
   (sp-samples-random-primitive &s 10 out)
   (sp-samples-random-primitive &s 10 (+ 10 out))
-  (test-helper-assert "last value" (sp-sample-nearly-equal -0.553401 (array-get out 19) error-margin))
+  (test-helper-assert "last value"
+    (sp-sample-nearly-equal -0.553401 (array-get out 19) error-margin))
   (label exit status-return))
 
 (pre-define (max a b) (if* (> a b) a b) (min a b) (if* (< a b) a b))
@@ -878,7 +879,6 @@
   status-declare
   (set rs (sp-random-state-new 3))
   (sp-initialize 3 2 _rate)
-  (test-helper-test-one test-file)
   (test-helper-test-one test-base)
   (test-helper-test-one test-path)
   (test-helper-test-one test-sp-sound-event)
@@ -908,4 +908,5 @@
   (test-helper-test-one test-simple-mappings)
   (test-helper-test-one test-random-discrete)
   (test-helper-test-one test-sp-seq-parallel)
+  (test-helper-test-one test-file)
   (label exit (test-helper-display-summary) (return status.id)))

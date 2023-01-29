@@ -3,9 +3,10 @@
 (pre-define-if-not-defined _GNU_SOURCE)
 
 (pre-include "byteswap.h" "inttypes.h"
-  "string.h" "sys/types.h" "sph-sp/status.h"
-  "sph-sp/array3.c" "sph-sp/float.h" "sph-sp/hashtable.c"
-  "sph-sp/helper.h" "sph-sp/memreg.c" "sph-sp/random.h" "sph-sp/set.c" "sph-sp/spline-path.h")
+  "string.h" "stdio.h" "sys/types.h"
+  "sph-sp/status.h" "sph-sp/array3.c" "sph-sp/float.h"
+  "sph-sp/hashtable.c" "sph-sp/helper.h" "sph-sp/memreg.c"
+  "sph-sp/random.h" "sph-sp/set.c" "sph-sp/spline-path.h")
 
 (sc-comment "configuration")
 
