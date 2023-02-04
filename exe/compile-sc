@@ -17,7 +17,10 @@ compile_sc() {
   find -type f -name "*.sc" -exec sc --parents '{}' "$root/$c" \;
   cd "$root" &&
   find "$c" -type f -exec ./exe/format-c -i '{}' \; &&
-  mv "$c/main/sph-sp.c" "$c/main/sph-sp.h"
+  for path in "$c/sph-sp"/*.h.c
+  do
+    mv "$path" "$(dirname $path)/$(basename $path .h.c).h"
+  done
 }
 
 compile_sc

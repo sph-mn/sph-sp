@@ -237,7 +237,7 @@ uint8_t sp_stat_times_mean(sp_time_t* a, sp_time_t size, sp_sample_t* out) {
   return (0);
 }
 define_sp_stat_deviation(sp_stat_times_deviation, sp_stat_times_mean, sp_time_t)
-  define_sp_stat_median(sp_stat_times_median, sp_times_sort_less, sp_times_sort_swap, sp_time_t)
+  define_sp_stat_median(sp_stat_times_median, sp_time_sort_less, sp_time_sort_swap, sp_time_t)
     define_sp_stat_skewness(sp_stat_times_skewness, sp_stat_times_mean, sp_time_t)
       define_sp_stat_kurtosis(sp_stat_times_kurtosis, sp_stat_times_mean, sp_time_t)
 
@@ -287,7 +287,7 @@ uint8_t sp_stat_samples_mean(sp_sample_t* a, sp_time_t size, sp_sample_t* out) {
   return (0);
 }
 define_sp_stat_deviation(sp_stat_samples_deviation, sp_stat_samples_mean, sp_sample_t)
-  define_sp_stat_median(sp_stat_samples_median, sp_samples_sort_less, sp_samples_sort_swap, sp_sample_t)
+  define_sp_stat_median(sp_stat_samples_median, sp_sample_sort_less, sp_sample_sort_swap, sp_sample_t)
     define_sp_stat_skewness(sp_stat_samples_skewness, sp_stat_samples_mean, sp_sample_t)
       define_sp_stat_kurtosis(sp_stat_samples_kurtosis, sp_stat_samples_mean, sp_sample_t)
         define_sp_stat_inharmonicity(sp_stat_samples_inharmonicity, sp_sample_t)

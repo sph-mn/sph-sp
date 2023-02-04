@@ -153,7 +153,7 @@
   (return 0))
 
 (define-sp-stat-deviation sp-stat-times-deviation sp-stat-times-mean sp-time-t)
-(define-sp-stat-median sp-stat-times-median sp-times-sort-less sp-times-sort-swap sp-time-t)
+(define-sp-stat-median sp-stat-times-median sp-time-sort-less sp-time-sort-swap sp-time-t)
 (define-sp-stat-skewness sp-stat-times-skewness sp-stat-times-mean sp-time-t)
 (define-sp-stat-kurtosis sp-stat-times-kurtosis sp-stat-times-mean sp-time-t)
 (sc-comment "samples")
@@ -195,7 +195,7 @@
   (return 0))
 
 (define-sp-stat-deviation sp-stat-samples-deviation sp-stat-samples-mean sp-sample-t)
-(define-sp-stat-median sp-stat-samples-median sp-samples-sort-less sp-samples-sort-swap sp-sample-t)
+(define-sp-stat-median sp-stat-samples-median sp-sample-sort-less sp-sample-sort-swap sp-sample-t)
 (define-sp-stat-skewness sp-stat-samples-skewness sp-stat-samples-mean sp-sample-t)
 (define-sp-stat-kurtosis sp-stat-samples-kurtosis sp-stat-samples-mean sp-sample-t)
 (define-sp-stat-inharmonicity sp-stat-samples-inharmonicity sp-sample-t)

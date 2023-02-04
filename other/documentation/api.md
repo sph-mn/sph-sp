@@ -322,7 +322,7 @@ sp_event_duration(a)
 sp_event_duration_set(a, duration)
 sp_event_free(a)
 sp_event_malloc(event_pointer, size, pointer_address)
-sp_event_malloc_type*(event_pointer, type, pointer_address)
+sp_event_malloc_type(event_pointer, type, pointer_address)
 sp_event_malloc_type_n*(event_pointer, count, type, pointer_address)
 sp_event_memory_add(event, address)
 sp_event_memory_add_2(a, data1, data2)
@@ -357,7 +357,6 @@ sp_noise
 sp_noise_event(event_pointer, _config)
 sp_path_bezier
 sp_path_bezier_arc
-sp_path_circular_arc
 sp_path_constant
 sp_path_curves_config_declare(name, _segment_count)
 sp_path_end
@@ -365,7 +364,6 @@ sp_path_free
 sp_path_get
 sp_path_i_bezier
 sp_path_i_bezier_arc
-sp_path_i_circular_arc
 sp_path_i_constant
 sp_path_i_line
 sp_path_i_move
@@ -399,7 +397,6 @@ sp_s_id_invalid_argument
 sp_s_id_memory
 sp_s_id_not_implemented
 sp_s_id_undefined
-sp_sample_array_nearly_equal
 sp_sample_interpolate_linear(a, b, t)
 sp_sample_nearly_equal
 sp_sample_random
@@ -407,6 +404,7 @@ sp_sample_random_bounded(range)
 sp_sample_random_primitive
 sp_sample_t
 sp_sample_to_unit(a)
+sp_samples_nearly_equal
 sp_samples_random(size, out)
 sp_samples_random_bounded(range, size, out)
 sp_samples_random_bounded_primitive

@@ -1,5 +1,5 @@
 (sc-define-syntax (sp-for-each-index index limit body ...)
-  (for-each-index index size-t limit body ...))
+  (for-each-index index sp-size-t limit body ...))
 
 (sc-define-syntax (sp-include* rate) (begin (pre-include "sph-sp.h") (pre-define _sp-rate rate)))
 

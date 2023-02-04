@@ -1,11 +1,44 @@
 (sc-comment
   "small example that uses the core sound generators."
   "this example depends on gnuplot to be installed."
-  "it should display a gnuplot window with a series of bursts of noise."
+  "it should open a gnuplot window with a series of bursts of noise."
   "see exe/run-example or exe/run-example-sc for how to compile and run with gcc")
 
 (sc-include-once "/usr/share/sph-sp/sc-macros")
 (sp-include* 48000)
+
+(define (plain) int
+  "minimal example to demonstrate the core concept of event processing"
+  (declare amod sp-sample-t*)
+  (define duration sp-time-t 96000)
+  (define event sp-event-t sp-event-null)
+  (sp-event-memory-ensure event 2)
+  (sc-comment "amp(t)")
+  (srq (sp-samples-new duration &amod))
+  (sp-array-set-1)
+  (sp-path-curves-config-declare path-config 3)
+  (array-set* path-config.x 0 (/ duration 2) duration)
+  (array-set* path-config.y 0 1 0)
+  (srq (sp-path-curves-samples-new path-config duration &amod))
+  (sp-event-memory-add _event amod)
+  (sc-comment "allocate sound_event_config and set options")
+  (declare sound-event-config sp-sound-event-config-t*)
+  (srq (sp-sound-event-config-new &sound-event-config))
+  (sp-event-memory-add _event sound-event-config)
+  (set
+    sound-event-config:amod amod
+    event.prepare sp-sound-event-prepare
+    event.config sp-sound-event-config)
+  (sp-render-plot* group)
+
+  )
+
+(sp-samples-set in value duration)
+(sp-samples-set-samples in values duration)
+
+(sp-samples-set-out in value duration)
+
+
 (sc-comment "custom type for event configuration")
 (sp-declare-struct-type s1-c-t (amp sp-sample-t))
 

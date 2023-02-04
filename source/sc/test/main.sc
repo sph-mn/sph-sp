@@ -1,12 +1,11 @@
 (pre-include "./helper.c")
-(sc-include "../main/sc-macros")
+(sc-include "../sph-sp/sc-macros")
 (pre-define _rate 960)
 (define error-margin sp-sample-t 0.1)
 (define test-file-path uint8-t* "/tmp/test-sph-sp-file")
 
 (define (test-base) status-t
   status-declare
-  (declare amps (array sp-sample-t 10))
   (test-helper-assert "input 0.5" (sp-sample-nearly-equal 0.63662 (sp-sinc 0.5) error-margin))
   (test-helper-assert "input 1" (sp-sample-nearly-equal 1.0 (sp-sinc 0) error-margin))
   (test-helper-assert "window-blackman 0 51"
@@ -170,7 +169,6 @@
     out-control sp-sample-t*
     state sp-convolution-filter-state-t*
     state-control sp-convolution-filter-state-t*
-    random-state sp-random-state-t
     size sp-time-t
     block-size sp-time-t
     block-count sp-time-t
@@ -245,7 +243,6 @@
   (declare
     channel-count sp-channel-count-t
     file sp-file-t
-    result-sample-count sp-time-t
     sample-count sp-time-t
     sample-rate sp-time-t)
   (sp-block-declare block-write)
@@ -290,15 +287,15 @@
   (declare a (array sp-sample-t 9 0.1 -0.2 0.1 -0.4 0.3 -0.4 0.2 -0.2 0.1))
   (sp-plot-samples a 9)
   (sp-plot-spectrum a 9)
-  (label exit status-return))
+  status-return)
 
 (define (test-sp-triangle-square) status-t
   status-declare
-  (declare i sp-time-t out-t sp-sample-t* out-s sp-sample-t* size sp-time-t)
+  (declare out-t sp-sample-t* out-s sp-sample-t* size sp-time-t)
   (set size 96000)
   (status-require (sph-helper-calloc (* size (sizeof sp-sample-t*)) &out-t))
   (status-require (sph-helper-calloc (* size (sizeof sp-sample-t*)) &out-s))
-  (for ((set i 0) (< i size) (set+ i 1))
+  (sp-for-each-index i size
     (set
       (array-get out-t i) (sp-triangle i (/ size 2) (/ size 2))
       (array-get out-s i) (sp-square i size)))
@@ -334,10 +331,7 @@
     out sp-block-t
     cutl (array sp-sample-t test-noise-duration)
     cuth (array sp-sample-t test-noise-duration)
-    trnl (array sp-sample-t test-noise-duration)
-    trnh (array sp-sample-t test-noise-duration)
     amod (array sp-sample-t test-noise-duration)
-    i sp-time-t
     config sp-noise-event-config-t*)
   (sp-declare-event event)
   (sp-declare-event-list events)
@@ -348,18 +342,10 @@
   (error-memory-add2 &out sp-block-free)
   (sp-for-each-index i test-noise-duration
     (set (array-get cutl i) 0.01 (array-get cuth i) 0.3 (array-get amod i) 1.0))
-  (struct-set *config
-    cutl-mod cutl
-    cuth-mod cuth
-    amod amod
-    amp 1
-    channel-count 2
-    trnh 0.07
-    trnl 0.07)
+  (struct-set *config cutl-mod cutl cuth-mod cuth amod amod amp 1 channel-count 2)
   (struct-set event start 0 end test-noise-duration prepare sp-noise-event-prepare config config)
   (status-require (sp-event-list-add &events event))
   (status-require (sp-seq 0 test-noise-duration out &events))
-  (declare sum sp-sample-t)
   (test-helper-assert "in range -1..1"
     (>= 1.0 (sp-samples-absolute-max (array-get out.samples 0) test-noise-duration)))
   (sp-block-free &out)
@@ -371,7 +357,6 @@
     state sp-cheap-filter-state-t
     out (array sp-sample-t test-noise-duration)
     in (array sp-sample-t test-noise-duration)
-    i sp-time-t
     s sp-random-state-t)
   (set s (sp-random-state-new 80))
   (sp-samples-random-primitive &s test-noise-duration in)
@@ -447,7 +432,7 @@
 
 (define (test-sp-seq) status-t
   status-declare
-  (declare out sp-block-t i sp-time-t)
+  (declare out sp-block-t)
   (sp-declare-event-list events)
   (status-require (sp-event-list-add &events (test-helper-event 0 40 1)))
   (status-require (sp-event-list-add &events (test-helper-event 41 100 2)))
@@ -605,7 +590,7 @@
   (sp-times-select a indices 3 a)
   (test-helper-assert "select"
     (and (= 4 (array-get a 0)) (= 7 (array-get a 1)) (= 13 (array-get a 2))))
-  (sp-times-set-1 a size 1039 a)
+  (sp-times-set a size 1039)
   (status-require (sp-times-new (* 8 (sizeof sp-time-t)) &bits))
   (sp-times-bits->times a (* 8 (sizeof sp-time-t)) bits)
   (test-helper-assert "bits->times"
@@ -689,36 +674,35 @@
     size sp-time-t
     a (array sp-time-t 4 1 1 1 1)
     b (array sp-time-t 4 2 2 2 2)
-    as (array sp-sample-t 4 1 1 1 1)
-    bs (array sp-sample-t 4 2 2 2 2))
+    as (array sp-sample-t 4 1 1 1 1))
   (set size 4)
   (sc-comment "times")
-  (sp-times-set-1 a size 0 a)
-  (sp-samples-set-1 as size 0 as)
-  (test-helper-assert "times set-1" (sp-times-equal-1 a size 0))
-  (test-helper-assert "samples set-1" (sp-samples-equal-1 as size 0))
-  (sp-times-add-1 a size 1 a)
-  (test-helper-assert "add-1" (sp-times-equal-1 a size 1))
-  (sp-times-subtract-1 a size 10 a)
-  (test-helper-assert "subtract-1" (sp-times-equal-1 a size 0))
-  (sp-times-add-1 a size 4 a)
-  (sp-times-multiply-1 a size 2 a)
-  (test-helper-assert "multiply-1" (sp-times-equal-1 a size 8))
-  (sp-times-divide-1 a size 2 a)
-  (test-helper-assert "divide-1" (sp-times-equal-1 a size 4))
-  (sp-times-set-1 a size 4 a)
-  (sp-times-add a size b a)
-  (test-helper-assert "add" (sp-times-equal-1 a size 6))
-  (sp-times-set-1 a size 4 a)
-  (sp-times-subtract a size b a)
-  (test-helper-assert "subtract" (sp-times-equal-1 a size 2))
-  (sp-times-set-1 a size 4 a)
-  (sp-times-multiply a size b a)
-  (test-helper-assert "multiply" (sp-times-equal-1 a size 8))
-  (sp-times-set-1 a size 4 a)
-  (sp-times-divide a size b a)
-  (test-helper-assert "divide" (sp-times-equal-1 a size 2))
-  (sp-times-set-1 a size 1 a)
+  (sp-times-set a size 0)
+  (sp-samples-set as size 0)
+  (test-helper-assert "times set" (sp-times-equal a size 0))
+  (test-helper-assert "samples set" (sp-samples-equal as size 0))
+  (sp-times-add a size 1)
+  (test-helper-assert "add" (sp-times-equal a size 1))
+  (sp-times-subtract a size 10)
+  (test-helper-assert "subtract" (sp-times-equal a size 0))
+  (sp-times-add a size 4)
+  (sp-times-multiply a size 2)
+  (test-helper-assert "multiply" (sp-times-equal a size 8))
+  (sp-times-divide a size 2)
+  (test-helper-assert "divide" (sp-times-equal a size 4))
+  (sp-times-set a size 4)
+  (sp-times-add-times a size b)
+  (test-helper-assert "add-times" (sp-times-equal a size 6))
+  (sp-times-set a size 4)
+  (sp-times-subtract-times a size b)
+  (test-helper-assert "subtract" (sp-times-equal a size 2))
+  (sp-times-set a size 4)
+  (sp-times-multiply-times a size b)
+  (test-helper-assert "multiply" (sp-times-equal a size 8))
+  (sp-times-set a size 4)
+  (sp-times-divide-times a size b)
+  (test-helper-assert "divide" (sp-times-equal a size 2))
+  (sp-times-set a size 1)
   (label exit status-return))
 
 (define (test-random-discrete) status-t
@@ -746,17 +730,11 @@
   (label exit status-return))
 
 (define (test-permutations) status-t
-  (declare
-    in (array sp-time-t 3 1 2 3)
-    size sp-time-t
-    out-size sp-time-t
-    out sp-time-t**
-    i sp-time-t
-    b sp-time-t*)
   status-declare
-  (set size 3)
+  (declare in (array sp-time-t 3 1 2 3) out-size sp-size-t out sp-time-t**)
+  (define size sp-size-t 3)
   (status-require (sp-times-permutations size in size &out &out-size))
-  (for ((set i 0) (< i out-size) (set+ i 1)) (set b (array-get out i)) (free b))
+  (sp-for-each-index i out-size (free (array-get out i)))
   (free out)
   (label exit status-return))
 
@@ -902,11 +880,11 @@
   (test-helper-test-one test-spectral-inversion-ir)
   (test-helper-test-one test-spectral-reversal-ir)
   (test-helper-test-one test-windowed-sinc)
-  (test-helper-test-one test-times)
-  (test-helper-test-one test-permutations)
   (test-helper-test-one test-compositions)
+  (test-helper-test-one test-times)
   (test-helper-test-one test-simple-mappings)
   (test-helper-test-one test-random-discrete)
-  (test-helper-test-one test-sp-seq-parallel)
   (test-helper-test-one test-file)
+  (test-helper-test-one test-permutations)
+  (test-helper-test-one test-sp-seq-parallel)
   (label exit (test-helper-display-summary) (return status.id)))

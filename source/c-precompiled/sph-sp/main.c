@@ -1,10 +1,16 @@
 
-/* this file contains basics and includes dependencies */
-#define M_PI 3.141592653589793
+#ifndef _XOPEN_SOURCE
+#define _XOPEN_SOURCE
+#endif
+
+#ifndef _POSIX_C_SOURCE
+#define _POSIX_C_SOURCE 199309L
+#endif
+#include <math.h>
 #include <errno.h>
 #include <arpa/inet.h>
 #include <nayuki-fft/fft.c>
-#include "../main/sph-sp.h"
+#include "../sph-sp/sph-sp.h"
 #include <sph-sp/spline-path.c>
 #include <sph-sp/quicksort.c>
 #include <sph-sp/queue.h>
@@ -16,7 +22,6 @@
 #include <sph-sp/futures.c>
 #include <sph-sp/helper.c>
 
-#define sp_status_declare status_declare_group(sp_s_group_sp)
 #define sp_libc_s_id(id) \
   if (id < 0) { \
     status_set_goto(sp_s_group_libc, id); \
@@ -49,7 +54,10 @@
     }; \
   }
 #define sp_memory_error status_set_goto(sp_s_group_sp, sp_s_id_memory)
+
+/** fixed if array is zero, otherwise array value at index */
 #define sp_modvalue(fixed, array, index) (array ? array[index] : fixed)
+#include <sph-sp/arrays.c>
 define_sp_interleave(sp_interleave, sp_sample_t, (b[b_size] = (a[channel])[a_size]))
   define_sp_interleave(sp_deinterleave, sp_sample_t, ((a[channel])[a_size] = b[b_size]))
 
@@ -116,8 +124,7 @@ status_t sp_block_new(sp_channel_count_t channel_count, sp_time_t size, sp_block
   status_declare;
   memreg_init(channel_count);
   sp_sample_t* channel;
-  sp_time_t i;
-  for (i = 0; (i < channel_count); i = (1 + i)) {
+  for (sp_size_t i = 0; (i < channel_count); i += 1) {
     status_require((sph_helper_calloc((size * sizeof(sp_sample_t)), (&channel))));
     memreg_add(channel);
     (out->samples)[i] = channel;
@@ -132,7 +139,7 @@ exit:
 }
 void sp_block_free(sp_block_t* a) {
   if (a->size) {
-    for (size_t i = 0; (i < a->channel_count); i += 1) {
+    for (sp_size_t i = 0; (i < a->channel_count); i += 1) {
       free(((a->samples)[i]));
     };
   };
@@ -140,11 +147,25 @@ void sp_block_free(sp_block_t* a) {
 
 /** return a new block with offset added to all channel sample arrays */
 sp_block_t sp_block_with_offset(sp_block_t a, sp_time_t offset) {
-  sp_time_t i;
-  for (i = 0; (i < a.channel_count); i = (1 + i)) {
-    (a.samples)[i] = (offset + (a.samples)[i]);
+  for (sp_size_t i = 0; (i < a.channel_count); i += 1) {
+    (a.samples)[i] += offset;
   };
   return (a);
+}
+void sp_block_zero(sp_block_t a) {
+  for (sp_size_t i = 0; (i < a.channel_count); i += 1) {
+    sp_samples_zero(((a.samples)[i]), (a.size));
+  };
+}
+
+/** copies all channel-count and samples from $a to $b.
+   $b channel count and size must be equal or greater than $a */
+void sp_block_copy(sp_block_t a, sp_block_t b) {
+  for (sp_size_t ci = 0; (ci < a.channel_count); ci += 1) {
+    for (sp_size_t i = 0; (i < a.size); i += 1) {
+      (b.samples)[ci][i] = (a.samples)[ci][i];
+    };
+  };
 }
 sp_time_t sp_phase(sp_time_t current, sp_time_t change, sp_time_t cycle) {
   sp_time_t a = (current + change);
@@ -158,15 +179,6 @@ sp_time_t sp_phase_float(sp_time_t current, sp_sample_t change, sp_time_t cycle)
   return (((a < cycle) ? a : (a % cycle)));
 }
 
-/** return a sample for a triangular wave with center offsets a left and b right.
-   creates sawtooth waves if either a or b is 0 */
-sp_sample_t sp_triangle(sp_time_t t, sp_time_t a, sp_time_t b) {
-  sp_time_t remainder;
-  remainder = (t % (a + b));
-  return (((remainder < a) ? (remainder * (1 / ((sp_sample_t)(a)))) : ((((sp_sample_t)(b)) - (remainder - ((sp_sample_t)(a)))) * (1 / ((sp_sample_t)(b))))));
-}
-sp_sample_t sp_square(sp_time_t t, sp_time_t size) { return (((((2 * t) % (2 * size)) < size) ? -1 : 1)); }
-
 /** writes one full period of a sine wave into out. the sine has the frequency that makes it fit exactly into size.
    can be used to create lookup tables */
 void sp_sine_period(sp_time_t size, sp_sample_t* out) {
@@ -178,7 +190,7 @@ void sp_sine_period(sp_time_t size, sp_sample_t* out) {
 /** sums to out */
 void sp_wave(sp_time_t size, sp_sample_t* wvf, sp_time_t wvf_size, sp_sample_t amp, sp_sample_t* amod, sp_time_t frq, sp_time_t* fmod, sp_time_t* phs_state, sp_sample_t* out) {
   sp_time_t phs = (phs_state ? *phs_state : 0);
-  for (sp_time_t i = 0; (i < size); i += 1) {
+  for (sp_size_t i = 0; (i < size); i += 1) {
     out[i] += (amp * sp_array_or_fixed(amod, amp, i) * wvf[phs]);
     phs += sp_array_or_fixed(fmod, frq, i);
     if (phs >= wvf_size) {
@@ -190,6 +202,9 @@ void sp_wave(sp_time_t size, sp_sample_t* wvf, sp_time_t wvf_size, sp_sample_t a
   };
 }
 void sp_sine(sp_time_t size, sp_sample_t amp, sp_sample_t* amod, sp_time_t frq, sp_time_t* fmod, sp_time_t* phs_state, sp_sample_t* out) { sp_wave(size, sp_sine_table, sp_rate, amp, amod, frq, fmod, phs_state, out); }
+
+/** supports frequencies below one hertz by using a larger lookup table.
+   frq is (hertz / sp_sine_lfo_factor) */
 void sp_sine_lfo(sp_time_t size, sp_sample_t amp, sp_sample_t* amod, sp_time_t frq, sp_time_t* fmod, sp_time_t* phs_state, sp_sample_t* out) { sp_wave(size, sp_sine_table_lfo, (sp_rate * sp_sine_lfo_factor), amp, amod, frq, fmod, phs_state, out); }
 
 /** the normalised sinc function */
@@ -209,12 +224,11 @@ int sp_ffti(sp_time_t input_len, double* input_or_output_real, double* input_or_
    flips the frequency response top to bottom */
 void sp_spectral_inversion_ir(sp_sample_t* a, sp_time_t a_len) {
   sp_time_t center;
-  sp_time_t i;
-  for (i = 0; (i < a_len); i = (1 + i)) {
-    a[i] = (-1 * a[i]);
+  for (sp_size_t i = 0; (i < a_len); i += 1) {
+    a[i] *= -1;
   };
   center = ((a_len - 1) / 2);
-  a[center] = (1 + a[center]);
+  a[center] += 1;
 }
 
 /** inverts the sign for samples at odd indexes.
@@ -222,8 +236,8 @@ void sp_spectral_inversion_ir(sp_sample_t* a, sp_time_t a_len) {
    flips the frequency response left to right */
 void sp_spectral_reversal_ir(sp_sample_t* a, sp_time_t a_len) {
   while ((a_len > 1)) {
-    a_len = (a_len - 2);
-    a[a_len] = (-1 * a[a_len]);
+    a_len -= 2;
+    a[a_len] *= -1;
   };
 }
 
@@ -231,10 +245,8 @@ void sp_spectral_reversal_ir(sp_sample_t* a, sp_time_t a_len) {
    out must be all zeros, its length must be at least a-len + b-len - 1.
    out is owned and allocated by the caller */
 void sp_convolve_one(sp_sample_t* a, sp_time_t a_len, sp_sample_t* b, sp_time_t b_len, sp_sample_t* out) {
-  sp_time_t a_index;
-  sp_time_t b_index;
-  a_index = 0;
-  b_index = 0;
+  sp_time_t a_index = 0;
+  sp_time_t b_index = 0;
   while ((a_index < a_len)) {
     while ((b_index < b_len)) {
       out[(a_index + b_index)] += (a[a_index] * b[b_index]);
@@ -297,59 +309,11 @@ void sp_convolve(sp_sample_t* a, sp_time_t a_len, sp_sample_t* b, sp_time_t b_le
     };
   };
 }
-sp_time_t sp_time_expt(sp_time_t base, sp_time_t exp) {
-  sp_time_t a = 1;
-  for (;;) {
-    if (exp & 1) {
-      a *= base;
-    };
-    exp = (exp >> 1);
-    if (!exp) {
-      break;
-    };
-    base *= base;
-  };
-  return (a);
-}
-sp_time_t sp_time_factorial(sp_time_t a) {
-  sp_time_t result;
-  result = 1;
-  while ((a > 0)) {
-    result = (result * a);
-    a = (a - 1);
-  };
-  return (result);
-}
-
-/** return the maximum number of possible distinct selections from a set with length "set-size" */
-sp_time_t sp_set_sequence_max(sp_time_t set_size, sp_time_t selection_size) { return (((0 == set_size) ? 0 : sp_time_expt(set_size, selection_size))); }
-sp_time_t sp_permutations_max(sp_time_t set_size, sp_time_t selection_size) { return ((sp_time_factorial(set_size) / (set_size - selection_size))); }
-sp_time_t sp_compositions_max(sp_time_t sum) { return ((sp_time_expt(2, (sum - 1)))); }
-#include "../main/arrays.c"
-void sp_block_zero(sp_block_t a) {
-  sp_channel_count_t i;
-  for (i = 0; (i < a.channel_count); i += 1) {
-    sp_samples_zero(((a.samples)[i]), (a.size));
-  };
-}
-
-/** copies all channel-count and samples from $a to $b.
-   $b channel count and size must be equal or greater than $a */
-void sp_block_copy(sp_block_t a, sp_block_t b) {
-  sp_channel_count_t ci;
-  sp_time_t i;
-  for (ci = 0; (ci < a.channel_count); ci += 1) {
-    for (i = 0; (i < a.size); i += 1) {
-      (b.samples)[ci][i] = (a.samples)[ci][i];
-    };
-  };
-}
-#include "../main/path.c"
-#include "../main/plot.c"
-#include "../main/filter.c"
-#include "../main/sequencer.c"
-#include "../main/statistics.c"
-#include "../main/file.c"
+#include <sph-sp/plot.c>
+#include <sph-sp/filter.c>
+#include <sph-sp/sequencer.c>
+#include <sph-sp/statistics.c>
+#include <sph-sp/file.c>
 sp_render_config_t sp_render_config(sp_channel_count_t channel_count, sp_time_t rate, sp_time_t block_size) {
   sp_render_config_t a;
   a.channel_count = channel_count;
@@ -433,6 +397,42 @@ sp_random_state_t sp_random_state_new(sp_time_t seed) {
   return (result);
 }
 
+/** fills the sine wave lookup table.
+   rate and channel-count are used to set sp_rate and sp_channel-count,
+   which are used as defaults in a few cases */
+status_t sp_initialize(uint16_t cpu_count, sp_channel_count_t channel_count, sp_time_t rate) {
+  status_declare;
+  if (cpu_count) {
+    status.id = sph_future_init(cpu_count);
+    if (status.id) {
+      status_return;
+    };
+  };
+  sp_cpu_count = cpu_count;
+  sp_rate = rate;
+  sp_channel_count = channel_count;
+  sp_random_state = sp_random_state_new(sp_random_seed);
+  sp_sine_lfo_factor = 100;
+  status_require((sp_samples_new(sp_rate, (&sp_sine_table))));
+  status_require((sp_samples_new((sp_rate * sp_sine_lfo_factor), (&sp_sine_table_lfo))));
+  sp_sine_period(sp_rate, sp_sine_table);
+  sp_sine_period((sp_rate * sp_sine_lfo_factor), sp_sine_table_lfo);
+exit:
+  status_return;
+}
+#include <sph-sp/path.c>
+
+/* extra */
+
+/** return a sample for a triangular wave with center offsets a left and b right.
+   creates sawtooth waves if either a or b is 0 */
+sp_sample_t sp_triangle(sp_time_t t, sp_time_t a, sp_time_t b) {
+  sp_time_t remainder;
+  remainder = (t % (a + b));
+  return (((remainder < a) ? (remainder * (1 / ((sp_sample_t)(a)))) : ((((sp_sample_t)(b)) - (remainder - ((sp_sample_t)(a)))) * (1 / ((sp_sample_t)(b))))));
+}
+sp_sample_t sp_square(sp_time_t t, sp_time_t size) { return (((((2 * t) % (2 * size)) < size) ? -1 : 1)); }
+
 /** convert a pan value between 0..channel_count to a volume factor.
    values are interpreted as split between even and odd numbers, from channel..(channel + 1),
    0: second channel muted
@@ -447,7 +447,7 @@ sp_time_t sp_normal_random(sp_time_t min, sp_time_t max) {
   sp_time_t samples[32];
   sp_sample_t result;
   sp_times_random_bounded((max - min), 32, samples);
-  sp_times_add_1(samples, 32, min, samples);
+  sp_times_add(samples, 32, min);
   sp_stat_times_mean(samples, 32, (&result));
   return (((sp_time_t)(result)));
 }
@@ -494,27 +494,30 @@ size_t sp_modulo_match(size_t index, size_t* divisors, size_t divisor_count) {
   };
   return ((divisor_count - 1));
 }
-
-/** fills the sine wave lookup table.
-   rate and channel-count are used to set sp_rate and sp_channel-count,
-   which are used as defaults in a few cases */
-status_t sp_initialize(uint16_t cpu_count, sp_channel_count_t channel_count, sp_time_t rate) {
-  status_declare;
-  if (cpu_count) {
-    status.id = sph_future_init(cpu_count);
-    if (status.id) {
-      status_return;
+sp_time_t sp_time_expt(sp_time_t base, sp_time_t exp) {
+  sp_time_t a = 1;
+  while (1) {
+    if (exp & 1) {
+      a *= base;
     };
+    exp = (exp >> 1);
+    if (!exp) {
+      break;
+    };
+    base *= base;
   };
-  sp_cpu_count = cpu_count;
-  sp_rate = rate;
-  sp_channel_count = channel_count;
-  sp_random_state = sp_random_state_new(sp_random_seed);
-  sp_sine_lfo_factor = 100;
-  status_require((sp_samples_new(sp_rate, (&sp_sine_table))));
-  status_require((sp_samples_new((sp_rate * sp_sine_lfo_factor), (&sp_sine_table_lfo))));
-  sp_sine_period(sp_rate, sp_sine_table);
-  sp_sine_period((sp_rate * sp_sine_lfo_factor), sp_sine_table_lfo);
-exit:
-  status_return;
+  return (a);
 }
+sp_time_t sp_time_factorial(sp_time_t n) {
+  sp_time_t result = 1;
+  while ((n > 0)) {
+    result *= n;
+    n -= 1;
+  };
+  return (result);
+}
+
+/** return the maximum number of possible distinct selections from a set with length "set-size" */
+sp_time_t sp_set_sequence_max(sp_time_t set_size, sp_time_t selection_size) { return (((0 == set_size) ? 0 : sp_time_expt(set_size, selection_size))); }
+sp_time_t sp_permutations_max(sp_time_t set_size, sp_time_t selection_size) { return ((sp_time_factorial(set_size) / (set_size - selection_size))); }
+sp_time_t sp_compositions_max(sp_time_t sum) { return ((sp_time_expt(2, (sum - 1)))); }

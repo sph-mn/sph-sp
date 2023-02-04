@@ -5,7 +5,6 @@ sp_sample_t error_margin = 0.1;
 uint8_t* test_file_path = "/tmp/test-sph-sp-file";
 status_t test_base() {
   status_declare;
-  sp_sample_t amps[10];
   test_helper_assert(("input 0.5"), (sp_sample_nearly_equal((0.63662), (sp_sinc((0.5))), error_margin)));
   test_helper_assert("input 1", (sp_sample_nearly_equal((1.0), (sp_sinc(0)), error_margin)));
   test_helper_assert("window-blackman 0 51", (sp_sample_nearly_equal(0, (sp_window_blackman(0, 51)), error_margin)));
@@ -134,15 +133,15 @@ status_t test_convolve_larger() {
   memreg_add(out_control);
   status_require((sp_samples_new(in_b_length, (&carryover))));
   memreg_add(carryover);
-  for (size_t i = 0; (i < in_a_length); i += 1) {
+  for (sp_size_t i = 0; (i < in_a_length); i += 1) {
     in_a[i] = i;
   };
-  for (size_t i = 0; (i < in_b_length); i += 1) {
+  for (sp_size_t i = 0; (i < in_b_length); i += 1) {
     in_b[i] = (1 + i);
   };
   sp_convolve(in_a, in_a_length, in_b, in_b_length, carryover_length, carryover, out_control);
   sp_samples_zero(carryover, in_b_length);
-  for (size_t i = 0; (i < block_count); i += 1) {
+  for (sp_size_t i = 0; (i < block_count); i += 1) {
     sp_convolve(((i * block_size) + in_a), block_size, in_b, in_b_length, carryover_length, carryover, ((i * block_size) + out));
     carryover_length = in_b_length;
   };
@@ -184,7 +183,6 @@ status_t test_windowed_sinc_continuity() {
   sp_sample_t* out_control;
   sp_convolution_filter_state_t* state;
   sp_convolution_filter_state_t* state_control;
-  sp_random_state_t random_state;
   sp_time_t size;
   sp_time_t block_size;
   sp_time_t block_count;
@@ -208,11 +206,11 @@ status_t test_windowed_sinc_continuity() {
   memreg_add(out);
   status_require((sp_samples_new(size, (&out_control))));
   memreg_add(out_control);
-  for (size_t i = 0; (i < size); i += 1) {
+  for (sp_size_t i = 0; (i < size); i += 1) {
     in[i] = i;
   };
   status_require((sp_windowed_sinc_bp_br(in, size, cutl, cuth, trnl, trnh, 0, (&state_control), out_control)));
-  for (size_t i = 0; (i < block_count); i += 1) {
+  for (sp_size_t i = 0; (i < block_count); i += 1) {
     status_require((sp_windowed_sinc_bp_br(((i * block_size) + in), block_size, cutl, cuth, trnl, trnh, 0, (&state), ((i * block_size) + out))));
   };
   test_helper_assert("equal to block processing result", (sp_samples_nearly_equal(out, size, out_control, size, (0.01))));
@@ -259,7 +257,6 @@ status_t test_file() {
   status_declare;
   sp_channel_count_t channel_count;
   sp_file_t file;
-  sp_time_t result_sample_count;
   sp_time_t sample_count;
   sp_time_t sample_rate;
   sp_block_declare(block_write);
@@ -311,19 +308,17 @@ status_t test_sp_plot() {
   sp_sample_t a[9] = { 0.1, -0.2, 0.1, -0.4, 0.3, -0.4, 0.2, -0.2, 0.1 };
   sp_plot_samples(a, 9);
   sp_plot_spectrum(a, 9);
-exit:
   status_return;
 }
 status_t test_sp_triangle_square() {
   status_declare;
-  sp_time_t i;
   sp_sample_t* out_t;
   sp_sample_t* out_s;
   sp_time_t size;
   size = 96000;
   status_require((sph_helper_calloc((size * sizeof(sp_sample_t*)), (&out_t))));
   status_require((sph_helper_calloc((size * sizeof(sp_sample_t*)), (&out_s))));
-  for (i = 0; (i < size); i += 1) {
+  for (sp_size_t i = 0; (i < size); i += 1) {
     out_t[i] = sp_triangle(i, (size / 2), (size / 2));
     out_s[i] = sp_square(i, size);
   };
@@ -361,10 +356,7 @@ status_t test_sp_noise_event() {
   sp_block_t out;
   sp_sample_t cutl[test_noise_duration];
   sp_sample_t cuth[test_noise_duration];
-  sp_sample_t trnl[test_noise_duration];
-  sp_sample_t trnh[test_noise_duration];
   sp_sample_t amod[test_noise_duration];
-  sp_time_t i;
   sp_noise_event_config_t* config;
   sp_declare_event(event);
   sp_declare_event_list(events);
@@ -373,7 +365,7 @@ status_t test_sp_noise_event() {
   error_memory_add(config);
   status_require((sp_block_new(2, test_noise_duration, (&out))));
   error_memory_add2((&out), sp_block_free);
-  for (size_t i = 0; (i < test_noise_duration); i += 1) {
+  for (sp_size_t i = 0; (i < test_noise_duration); i += 1) {
     cutl[i] = 0.01;
     cuth[i] = 0.3;
     amod[i] = 1.0;
@@ -383,15 +375,12 @@ status_t test_sp_noise_event() {
   (*config).amod = amod;
   (*config).amp = 1;
   (*config).channel_count = 2;
-  (*config).trnh = 0.07;
-  (*config).trnl = 0.07;
   event.start = 0;
   event.end = test_noise_duration;
   event.prepare = sp_noise_event_prepare;
   event.config = config;
   status_require((sp_event_list_add((&events), event)));
   status_require((sp_seq(0, test_noise_duration, out, (&events))));
-  sp_sample_t sum;
   test_helper_assert(("in range -1..1"), (1.0 >= sp_samples_absolute_max(((out.samples)[0]), test_noise_duration)));
   sp_block_free((&out));
 exit:
@@ -405,7 +394,6 @@ status_t test_sp_cheap_filter() {
   sp_cheap_filter_state_t state;
   sp_sample_t out[test_noise_duration];
   sp_sample_t in[test_noise_duration];
-  sp_time_t i;
   sp_random_state_t s;
   s = sp_random_state_new(80);
   sp_samples_random_primitive((&s), test_noise_duration, in);
@@ -495,7 +483,6 @@ exit:
 status_t test_sp_seq() {
   status_declare;
   sp_block_t out;
-  sp_time_t i;
   sp_declare_event_list(events);
   status_require((sp_event_list_add((&events), (test_helper_event(0, 40, 1)))));
   status_require((sp_event_list_add((&events), (test_helper_event(41, 100, 2)))));
@@ -563,7 +550,7 @@ status_t test_sp_wave_event() {
   error_memory_add(config);
   status_require((sp_block_new(2, test_wave_event_duration, (&out))));
   error_memory_add2((&out), sp_block_free);
-  for (size_t i = 0; (i < test_wave_event_duration); i += 1) {
+  for (sp_size_t i = 0; (i < test_wave_event_duration); i += 1) {
     fmod[i] = 2000;
     amod1[i] = 1;
     amod2[i] = 0.5;
@@ -686,7 +673,7 @@ status_t test_times() {
   sp_time_t indices[3] = { 1, 2, 4 };
   sp_times_select(a, indices, 3, a);
   test_helper_assert("select", ((4 == a[0]) && (7 == a[1]) && (13 == a[2])));
-  sp_times_set_1(a, size, 1039, a);
+  sp_times_set(a, size, 1039);
   status_require((sp_times_new((8 * sizeof(sp_time_t)), (&bits))));
   sp_times_bits_to_times(a, (8 * sizeof(sp_time_t)), bits);
   test_helper_assert(("bits->times"), ((1 == bits[0]) && (1 == bits[3]) && (0 == bits[4]) && (1 == bits[10])));
@@ -768,35 +755,34 @@ status_t test_simple_mappings() {
   sp_time_t a[4] = { 1, 1, 1, 1 };
   sp_time_t b[4] = { 2, 2, 2, 2 };
   sp_sample_t as[4] = { 1, 1, 1, 1 };
-  sp_sample_t bs[4] = { 2, 2, 2, 2 };
   size = 4;
   /* times */
-  sp_times_set_1(a, size, 0, a);
-  sp_samples_set_1(as, size, 0, as);
-  test_helper_assert("times set-1", (sp_times_equal_1(a, size, 0)));
-  test_helper_assert("samples set-1", (sp_samples_equal_1(as, size, 0)));
-  sp_times_add_1(a, size, 1, a);
-  test_helper_assert("add-1", (sp_times_equal_1(a, size, 1)));
-  sp_times_subtract_1(a, size, 10, a);
-  test_helper_assert("subtract-1", (sp_times_equal_1(a, size, 0)));
-  sp_times_add_1(a, size, 4, a);
-  sp_times_multiply_1(a, size, 2, a);
-  test_helper_assert("multiply-1", (sp_times_equal_1(a, size, 8)));
-  sp_times_divide_1(a, size, 2, a);
-  test_helper_assert("divide-1", (sp_times_equal_1(a, size, 4)));
-  sp_times_set_1(a, size, 4, a);
-  sp_times_add(a, size, b, a);
-  test_helper_assert("add", (sp_times_equal_1(a, size, 6)));
-  sp_times_set_1(a, size, 4, a);
-  sp_times_subtract(a, size, b, a);
-  test_helper_assert("subtract", (sp_times_equal_1(a, size, 2)));
-  sp_times_set_1(a, size, 4, a);
-  sp_times_multiply(a, size, b, a);
-  test_helper_assert("multiply", (sp_times_equal_1(a, size, 8)));
-  sp_times_set_1(a, size, 4, a);
-  sp_times_divide(a, size, b, a);
-  test_helper_assert("divide", (sp_times_equal_1(a, size, 2)));
-  sp_times_set_1(a, size, 1, a);
+  sp_times_set(a, size, 0);
+  sp_samples_set(as, size, 0);
+  test_helper_assert("times set", (sp_times_equal(a, size, 0)));
+  test_helper_assert("samples set", (sp_samples_equal(as, size, 0)));
+  sp_times_add(a, size, 1);
+  test_helper_assert("add", (sp_times_equal(a, size, 1)));
+  sp_times_subtract(a, size, 10);
+  test_helper_assert("subtract", (sp_times_equal(a, size, 0)));
+  sp_times_add(a, size, 4);
+  sp_times_multiply(a, size, 2);
+  test_helper_assert("multiply", (sp_times_equal(a, size, 8)));
+  sp_times_divide(a, size, 2);
+  test_helper_assert("divide", (sp_times_equal(a, size, 4)));
+  sp_times_set(a, size, 4);
+  sp_times_add_times(a, size, b);
+  test_helper_assert("add-times", (sp_times_equal(a, size, 6)));
+  sp_times_set(a, size, 4);
+  sp_times_subtract_times(a, size, b);
+  test_helper_assert("subtract", (sp_times_equal(a, size, 2)));
+  sp_times_set(a, size, 4);
+  sp_times_multiply_times(a, size, b);
+  test_helper_assert("multiply", (sp_times_equal(a, size, 8)));
+  sp_times_set(a, size, 4);
+  sp_times_divide_times(a, size, b);
+  test_helper_assert("divide", (sp_times_equal(a, size, 2)));
+  sp_times_set(a, size, 1);
 exit:
   status_return;
 }
@@ -835,18 +821,14 @@ exit:
   status_return;
 }
 status_t test_permutations() {
-  sp_time_t in[3] = { 1, 2, 3 };
-  sp_time_t size;
-  sp_time_t out_size;
-  sp_time_t** out;
-  sp_time_t i;
-  sp_time_t* b;
   status_declare;
-  size = 3;
+  sp_time_t in[3] = { 1, 2, 3 };
+  sp_size_t out_size;
+  sp_time_t** out;
+  sp_size_t size = 3;
   status_require((sp_times_permutations(size, in, size, (&out), (&out_size))));
-  for (i = 0; (i < out_size); i += 1) {
-    b = out[i];
-    free(b);
+  for (sp_size_t i = 0; (i < out_size); i += 1) {
+    free((out[i]));
   };
   free(out);
 exit:
@@ -999,13 +981,13 @@ int main() {
   test_helper_test_one(test_spectral_inversion_ir);
   test_helper_test_one(test_spectral_reversal_ir);
   test_helper_test_one(test_windowed_sinc);
-  test_helper_test_one(test_times);
-  test_helper_test_one(test_permutations);
   test_helper_test_one(test_compositions);
+  test_helper_test_one(test_times);
   test_helper_test_one(test_simple_mappings);
   test_helper_test_one(test_random_discrete);
-  test_helper_test_one(test_sp_seq_parallel);
   test_helper_test_one(test_file);
+  test_helper_test_one(test_permutations);
+  test_helper_test_one(test_sp_seq_parallel);
 exit:
   test_helper_display_summary();
   return ((status.id));

@@ -160,7 +160,7 @@ void sp_event_memory_free(sp_event_t* a) {
     return;
   };
   memreg2_t m;
-  for (size_t i = 0; (i < array3_size((a->memory))); i += 1) {
+  for (sp_size_t i = 0; (i < array3_size((a->memory))); i += 1) {
     m = array3_get((a->memory), i);
     (m.handler)((m.address));
   };
@@ -293,19 +293,19 @@ status_t sp_seq_parallel(sp_time_t start, sp_time_t end, sp_block_t out, sp_even
     current = current->next;
   };
   /* merge */
-  for (size_t sf_i = 0; (sf_i < active); sf_i += 1) {
+  for (sp_size_t sf_i = 0; (sf_i < active); sf_i += 1) {
     sf = (sf_array + sf_i);
     sph_future_touch((&(sf->future)));
     status_require((sf->status));
-    for (size_t ci = 0; (ci < out.channel_count); ci += 1) {
-      for (size_t i = 0; (i < sf->out.size); i += 1) {
+    for (sp_size_t ci = 0; (ci < out.channel_count); ci += 1) {
+      for (sp_size_t i = 0; (i < sf->out.size); i += 1) {
         ((out.samples)[ci])[(sf->out_start + i)] += ((sf->out.samples)[ci])[i];
       };
     };
   };
 exit:
   if (sf_array) {
-    for (size_t i = 0; (i < allocated); i += 1) {
+    for (sp_size_t i = 0; (i < allocated); i += 1) {
       sp_block_free((&((sf_array[i]).out)));
     };
     free(sf_array);
@@ -371,7 +371,7 @@ sp_channel_config_t sp_channel_config(sp_bool_t mute, sp_time_t delay, sp_time_t
 }
 void sp_channel_config_reset(sp_channel_config_t* a) {
   sp_channel_config_t channel_config = { 0 };
-  for (size_t i = 0; (i < sp_channel_limit); i += 1) {
+  for (sp_size_t i = 0; (i < sp_channel_limit); i += 1) {
     a[i] = channel_config;
     (a[i]).amp = 1;
   };
@@ -474,7 +474,7 @@ status_t sp_wave_event_prepare(sp_event_t* event) {
   sp_wave_event_config_t config = *((sp_wave_event_config_t*)(event->config));
   event->data = 0;
   event->free = sp_group_free;
-  for (size_t ci = 0; (ci < config.channel_count); ci += 1) {
+  for (sp_size_t ci = 0; (ci < config.channel_count); ci += 1) {
     if (((config.channel_config)[ci]).mute) {
       continue;
     };
@@ -664,7 +664,7 @@ status_t sp_noise_event_prepare(sp_event_t* event) {
   sp_event_memory_add(event, state_noise);
   status_require((sp_malloc_type((config.resolution), sp_sample_t, (&state_temp))));
   sp_event_memory_add(event, state_temp);
-  for (size_t ci = 0; (ci < config.channel_count); ci += 1) {
+  for (sp_size_t ci = 0; (ci < config.channel_count); ci += 1) {
     if (((config.channel_config)[ci]).mute) {
       continue;
     };
@@ -831,7 +831,7 @@ status_t sp_cheap_noise_event_prepare(sp_event_t* event) {
   sp_event_memory_add(event, state_noise);
   status_require((sp_malloc_type((config.resolution), sp_sample_t, (&state_temp))));
   sp_event_memory_add(event, state_temp);
-  for (size_t ci = 0; (ci < config.channel_count); ci += 1) {
+  for (sp_size_t ci = 0; (ci < config.channel_count); ci += 1) {
     if (((config.channel_config)[ci]).mute) {
       continue;
     };
@@ -957,7 +957,7 @@ status_t sp_sound_event_prepare_cheap_noise(sp_event_t* event) {
     sp_event_memory_add(event, cut_mod);
     srq((sp_samples_new(duration, (&q_factor_mod))));
     sp_event_memory_add(event, q_factor_mod);
-    for (size_t i = 0; (i < duration); i += 1) {
+    for (sp_size_t i = 0; (i < duration); i += 1) {
       frq = (config.fmod ? (config.frq + (config.fmod)[i]) : config.frq);
       wdt = (config.wmod ? (config.wdt + (config.wmod)[i]) : config.wdt);
       cut_mod[i] = sp_hz_to_factor((frq - (wdt / 2)));
@@ -975,7 +975,7 @@ status_t sp_sound_event_prepare_cheap_noise(sp_event_t* event) {
   event_config->q_factor = q_factor;
   event_config->q_factor_mod = q_factor_mod;
   event_config->type = sp_state_variable_filter_bp;
-  for (size_t i = 0; (i < sp_channel_limit); i += 1) {
+  for (sp_size_t i = 0; (i < sp_channel_limit); i += 1) {
     (event_config->channel_config)[i] = (config.channel_config)[i];
   };
   event->config = event_config;
@@ -1008,7 +1008,7 @@ status_t sp_sound_event_prepare_noise(sp_event_t* event) {
     sp_event_memory_add(event, cutl_mod);
     srq((sp_samples_new(duration, (&cuth_mod))));
     sp_event_memory_add(event, cuth_mod);
-    for (size_t i = 0; (i < duration); i += 1) {
+    for (sp_size_t i = 0; (i < duration); i += 1) {
       frq = (config.fmod ? (config.frq + (config.fmod)[i]) : config.frq);
       wdt = (config.wmod ? (config.wdt + (config.wmod)[i]) : config.wdt);
       cutl_mod[i] = sp_hz_to_factor(frq);
@@ -1025,7 +1025,7 @@ status_t sp_sound_event_prepare_noise(sp_event_t* event) {
   event_config->cuth_mod = cuth_mod;
   event_config->cutl = cutl;
   event_config->cuth = cuth;
-  for (size_t i = 0; (i < sp_channel_limit); i += 1) {
+  for (sp_size_t i = 0; (i < sp_channel_limit); i += 1) {
     (event_config->channel_config)[i] = (config.channel_config)[i];
   };
   event->config = event_config;
@@ -1046,7 +1046,7 @@ status_t sp_sound_event_prepare_wave_event(sp_event_t* event) {
   event_config->frq = config.frq;
   event_config->fmod = config.fmod;
   event_config->phs = config.phs;
-  for (size_t i = 0; (i < sp_channel_limit); i += 1) {
+  for (sp_size_t i = 0; (i < sp_channel_limit); i += 1) {
     (event_config->channel_config)[i] = (config.channel_config)[i];
   };
   event->config = event_config;

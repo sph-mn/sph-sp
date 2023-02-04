@@ -1,14 +1,14 @@
-(sc-comment "this file contains basics and includes dependencies")
-(pre-define M_PI 3.141592653589793)
+(sc-include-once "./sc-macros")
+(pre-define-if-not-defined _XOPEN_SOURCE)
+(pre-define-if-not-defined _POSIX_C_SOURCE 199309L)
 
-(pre-include "errno.h" "arpa/inet.h"
-  "nayuki-fft/fft.c" "../main/sph-sp.h" "sph-sp/spline-path.c"
-  "sph-sp/quicksort.c" "sph-sp/queue.h" "sph-sp/random.c"
-  "sph-sp/float.c" "sph-sp/thread-pool.h" "sph-sp/thread-pool.c"
-  "sph-sp/futures.h" "sph-sp/futures.c" "sph-sp/helper.c")
+(pre-include "math.h" "errno.h"
+  "arpa/inet.h" "nayuki-fft/fft.c" "../sph-sp/sph-sp.h"
+  "sph-sp/spline-path.c" "sph-sp/quicksort.c" "sph-sp/queue.h"
+  "sph-sp/random.c" "sph-sp/float.c" "sph-sp/thread-pool.h"
+  "sph-sp/thread-pool.c" "sph-sp/futures.h" "sph-sp/futures.c" "sph-sp/helper.c")
 
 (pre-define
-  sp-status-declare (status-declare-group sp-s-group-sp)
   (sp-libc-s-id id) (if (< id 0) (status-set-goto sp-s-group-libc id))
   (sp-libc-s expression)
   (begin
@@ -26,7 +26,12 @@
         (set a-size (- a-size 1) channel channel-count)
         (while channel (set channel (- channel 1) b-size (- b-size 1)) body))))
   sp-memory-error (status-set-goto sp-s-group-sp sp-s-id-memory)
-  (sp-modvalue fixed array index) (if* array (array-get array index) fixed))
+  (sp-modvalue fixed array index)
+  (begin
+    "fixed if array is zero, otherwise array value at index"
+    (if* array (array-get array index) fixed)))
+
+(pre-include "sph-sp/arrays.c")
 
 (define-sp-interleave sp-interleave sp-sample-t
   (set (array-get b b-size) (array-get (array-get a channel) a-size)))
@@ -74,8 +79,8 @@
   "return a newly allocated array for channel-count with data arrays for each channel"
   status-declare
   (memreg-init channel-count)
-  (declare channel sp-sample-t* i sp-time-t)
-  (for ((set i 0) (< i channel-count) (set i (+ 1 i)))
+  (declare channel sp-sample-t*)
+  (sp-for-each-index i channel-count
     (status-require (sph-helper-calloc (* size (sizeof sp-sample-t)) &channel))
     (memreg-add channel)
     (set (array-get out:samples i) channel))
@@ -83,15 +88,21 @@
   (label exit (if status-is-failure memreg-free) status-return))
 
 (define (sp-block-free a) (void sp-block-t*)
-  (if a:size
-    (for ((define i size-t 0) (< i a:channel-count) (set+ i 1)) (free (array-get a:samples i)))))
+  (if a:size (sp-for-each-index i a:channel-count (free (array-get a:samples i)))))
 
 (define (sp-block-with-offset a offset) (sp-block-t sp-block-t sp-time-t)
   "return a new block with offset added to all channel sample arrays"
-  (declare i sp-time-t)
-  (for ((set i 0) (< i a.channel-count) (set i (+ 1 i)))
-    (set (array-get a.samples i) (+ offset (array-get a.samples i))))
+  (sp-for-each-index i a.channel-count (set+ (array-get a.samples i) offset))
   (return a))
+
+(define (sp-block-zero a) (void sp-block-t)
+  (sp-for-each-index i a.channel-count (sp-samples-zero (array-get a.samples i) a.size)))
+
+(define (sp-block-copy a b) (void sp-block-t sp-block-t)
+  "copies all channel-count and samples from $a to $b.
+   $b channel count and size must be equal or greater than $a"
+  (sp-for-each-index ci a.channel-count
+    (sp-for-each-index i a.size (set (array-get b.samples ci i) (array-get a.samples ci i)))))
 
 (define (sp-phase current change cycle) (sp-time-t sp-time-t sp-time-t sp-time-t)
   (define a sp-time-t (+ current change))
@@ -103,19 +114,6 @@
   (define a sp-time-t (+ current (sp-cheap-ceiling-positive change)))
   (return (if* (< a cycle) a (modulo a cycle))))
 
-(define (sp-triangle t a b) (sp-sample-t sp-time-t sp-time-t sp-time-t)
-  "return a sample for a triangular wave with center offsets a left and b right.
-   creates sawtooth waves if either a or b is 0"
-  (declare remainder sp-time-t)
-  (set remainder (modulo t (+ a b)))
-  (return
-    (if* (< remainder a) (* remainder (/ 1 (convert-type a sp-sample-t)))
-      (* (- (convert-type b sp-sample-t) (- remainder (convert-type a sp-sample-t)))
-        (/ 1 (convert-type b sp-sample-t))))))
-
-(define (sp-square t size) (sp-sample-t sp-time-t sp-time-t)
-  (return (if* (< (modulo (* 2 t) (* 2 size)) size) -1 1)))
-
 (define (sp-sine-period size out) (void sp-time-t sp-sample-t*)
   "writes one full period of a sine wave into out. the sine has the frequency that makes it fit exactly into size.
    can be used to create lookup tables"
@@ -126,7 +124,7 @@
   (void sp-time-t sp-sample-t* sp-time-t sp-sample-t sp-sample-t* sp-time-t sp-time-t* sp-time-t* sp-sample-t*)
   "sums to out"
   (define phs sp-time-t (if* phs-state *phs-state 0))
-  (for ((define i sp-time-t 0) (< i size) (set+ i 1))
+  (sp-for-each-index i size
     (set+ (array-get out i) (* amp (sp-array-or-fixed amod amp i) (array-get wvf phs))
       phs (sp-array-or-fixed fmod frq i))
     (if (>= phs wvf-size) (set phs (modulo phs wvf-size))))
@@ -138,6 +136,8 @@
 
 (define (sp-sine-lfo size amp amod frq fmod phs-state out)
   (void sp-time-t sp-sample-t sp-sample-t* sp-time-t sp-time-t* sp-time-t* sp-sample-t*)
+  "supports frequencies below one hertz by using a larger lookup table.
+   frq is (hertz / sp_sine_lfo_factor)"
   (sp-wave size sp-sine-table-lfo (* sp-rate sp-sine-lfo-factor) amp amod frq fmod phs-state out))
 
 (define (sp-sinc a) (sp-sample-t sp-sample-t)
@@ -159,23 +159,24 @@
   "modify an impulse response kernel for spectral inversion.
    a-len must be odd and \"a\" must have left-right symmetry.
    flips the frequency response top to bottom"
-  (declare center sp-time-t i sp-time-t)
-  (for ((set i 0) (< i a-len) (set i (+ 1 i))) (set (array-get a i) (* -1 (array-get a i))))
-  (set center (/ (- a-len 1) 2) (array-get a center) (+ 1 (array-get a center))))
+  (declare center sp-time-t)
+  (sp-for-each-index i a-len (set* (array-get a i) -1))
+  (set center (/ (- a-len 1) 2))
+  (set+ (array-get a center) 1))
 
 (define (sp-spectral-reversal-ir a a-len) (void sp-sample-t* sp-time-t)
   "inverts the sign for samples at odd indexes.
    a-len must be odd and \"a\" must have left-right symmetry.
    flips the frequency response left to right"
-  (while (> a-len 1) (set a-len (- a-len 2) (array-get a a-len) (* -1 (array-get a a-len)))))
+  (while (> a-len 1) (set- a-len 2) (set* (array-get a a-len) -1)))
 
 (define (sp-convolve-one a a-len b b-len out)
   (void sp-sample-t* sp-time-t sp-sample-t* sp-time-t sp-sample-t*)
   "discrete linear convolution.
    out must be all zeros, its length must be at least a-len + b-len - 1.
    out is owned and allocated by the caller"
-  (declare a-index sp-time-t b-index sp-time-t)
-  (set a-index 0 b-index 0)
+  (define a-index sp-time-t 0)
+  (define b-index sp-time-t 0)
   (while (< a-index a-len)
     (while (< b-index b-len)
       (set+ (array-get out (+ a-index b-index)) (* (array-get a a-index) (array-get b b-index))
@@ -226,46 +227,8 @@
           (set c-index (- c-index a-len))
           (set+ (array-get carryover c-index) (* (array-get a a-index) (array-get b b-index))))))))
 
-(define (sp-time-expt base exp) (sp-time-t sp-time-t sp-time-t)
-  (define a sp-time-t 1)
-  (for ((begin) (begin) (begin))
-    (if (bit-and exp 1) (set* a base))
-    (set exp (bit-shift-right exp 1))
-    (if (not exp) break)
-    (set* base base))
-  (return a))
-
-(define (sp-time-factorial a) (sp-time-t sp-time-t)
-  (declare result sp-time-t)
-  (set result 1)
-  (while (> a 0) (set result (* result a) a (- a 1)))
-  (return result))
-
-(define (sp-set-sequence-max set-size selection-size) (sp-time-t sp-time-t sp-time-t)
-  "return the maximum number of possible distinct selections from a set with length \"set-size\""
-  (return (if* (= 0 set-size) 0 (sp-time-expt set-size selection-size))))
-
-(define (sp-permutations-max set-size selection-size) (sp-time-t sp-time-t sp-time-t)
-  (return (/ (sp-time-factorial set-size) (- set-size selection-size))))
-
-(define (sp-compositions-max sum) (sp-time-t sp-time-t) (return (sp-time-expt 2 (- sum 1))))
-(pre-include "../main/arrays.c")
-
-(define (sp-block-zero a) (void sp-block-t)
-  (declare i sp-channel-count-t)
-  (for ((set i 0) (< i a.channel-count) (set+ i 1))
-    (sp-samples-zero (array-get a.samples i) a.size)))
-
-(define (sp-block-copy a b) (void sp-block-t sp-block-t)
-  "copies all channel-count and samples from $a to $b.
-   $b channel count and size must be equal or greater than $a"
-  (declare ci sp-channel-count-t i sp-time-t)
-  (for ((set ci 0) (< ci a.channel-count) (set+ ci 1))
-    (for ((set i 0) (< i a.size) (set+ i 1))
-      (set (array-get b.samples ci i) (array-get a.samples ci i)))))
-
-(pre-include "../main/path.c" "../main/plot.c"
-  "../main/filter.c" "../main/sequencer.c" "../main/statistics.c" "../main/file.c")
+(pre-include "sph-sp/plot.c" "sph-sp/filter.c"
+  "sph-sp/sequencer.c" "sph-sp/statistics.c" "sph-sp/file.c")
 
 (define (sp-render-config channel-count rate block-size)
   (sp-render-config-t sp-channel-count-t sp-time-t sp-time-t)
@@ -333,6 +296,41 @@
   (sp-time-random-primitive &result)
   (return result))
 
+(define (sp-initialize cpu-count channel-count rate)
+  (status-t uint16-t sp-channel-count-t sp-time-t)
+  "fills the sine wave lookup table.
+   rate and channel-count are used to set sp_rate and sp_channel-count,
+   which are used as defaults in a few cases"
+  status-declare
+  (if cpu-count (begin (set status.id (sph-future-init cpu-count)) (if status.id status-return)))
+  (set
+    sp-cpu-count cpu-count
+    sp-rate rate
+    sp-channel-count channel-count
+    sp-random-state (sp-random-state-new sp-random-seed)
+    sp-sine-lfo-factor 100)
+  (status-require (sp-samples-new sp-rate &sp-sine-table))
+  (status-require (sp-samples-new (* sp-rate sp-sine-lfo-factor) &sp-sine-table-lfo))
+  (sp-sine-period sp-rate sp-sine-table)
+  (sp-sine-period (* sp-rate sp-sine-lfo-factor) sp-sine-table-lfo)
+  (label exit status-return))
+
+(pre-include "sph-sp/path.c")
+(sc-comment "extra")
+
+(define (sp-triangle t a b) (sp-sample-t sp-time-t sp-time-t sp-time-t)
+  "return a sample for a triangular wave with center offsets a left and b right.
+   creates sawtooth waves if either a or b is 0"
+  (declare remainder sp-time-t)
+  (set remainder (modulo t (+ a b)))
+  (return
+    (if* (< remainder a) (* remainder (/ 1 (convert-type a sp-sample-t)))
+      (* (- (convert-type b sp-sample-t) (- remainder (convert-type a sp-sample-t)))
+        (/ 1 (convert-type b sp-sample-t))))))
+
+(define (sp-square t size) (sp-sample-t sp-time-t sp-time-t)
+  (return (if* (< (modulo (* 2 t) (* 2 size)) size) -1 1)))
+
 (define (sp-pan->amp value channel) (sp-sample-t sp-sample-t sp-channel-count-t)
   "convert a pan value between 0..channel_count to a volume factor.
    values are interpreted as split between even and odd numbers, from channel..(channel + 1),
@@ -349,7 +347,7 @@
   "untested. return normally distributed numbers in range"
   (declare samples (array sp-time-t 32) result sp-sample-t)
   (sp-times-random-bounded (- max min) 32 samples)
-  (sp-times-add-1 samples 32 min samples)
+  (sp-times-add samples 32 min)
   (sp-stat-times-mean samples 32 &result)
   (return (convert-type result sp-time-t)))
 
@@ -380,21 +378,25 @@
     divisor-count (if (not (modulo index (array-get divisors i))) (return i)))
   (return (- divisor-count 1)))
 
-(define (sp-initialize cpu-count channel-count rate)
-  (status-t uint16-t sp-channel-count-t sp-time-t)
-  "fills the sine wave lookup table.
-   rate and channel-count are used to set sp_rate and sp_channel-count,
-   which are used as defaults in a few cases"
-  status-declare
-  (if cpu-count (begin (set status.id (sph-future-init cpu-count)) (if status.id status-return)))
-  (set
-    sp-cpu-count cpu-count
-    sp-rate rate
-    sp-channel-count channel-count
-    sp-random-state (sp-random-state-new sp-random-seed)
-    sp-sine-lfo-factor 100)
-  (status-require (sp-samples-new sp-rate &sp-sine-table))
-  (status-require (sp-samples-new (* sp-rate sp-sine-lfo-factor) &sp-sine-table-lfo))
-  (sp-sine-period sp-rate sp-sine-table)
-  (sp-sine-period (* sp-rate sp-sine-lfo-factor) sp-sine-table-lfo)
-  (label exit status-return))
+(define (sp-time-expt base exp) (sp-time-t sp-time-t sp-time-t)
+  (define a sp-time-t 1)
+  (while 1
+    (if (bit-and exp 1) (set* a base))
+    (set exp (bit-shift-right exp 1))
+    (if (not exp) break)
+    (set* base base))
+  (return a))
+
+(define (sp-time-factorial n) (sp-time-t sp-time-t)
+  (define result sp-time-t 1)
+  (while (> n 0) (set* result n) (set- n 1))
+  (return result))
+
+(define (sp-set-sequence-max set-size selection-size) (sp-time-t sp-time-t sp-time-t)
+  "return the maximum number of possible distinct selections from a set with length \"set-size\""
+  (return (if* (= 0 set-size) 0 (sp-time-expt set-size selection-size))))
+
+(define (sp-permutations-max set-size selection-size) (sp-time-t sp-time-t sp-time-t)
+  (return (/ (sp-time-factorial set-size) (- set-size selection-size))))
+
+(define (sp-compositions-max sum) (sp-time-t sp-time-t) (return (sp-time-expt 2 (- sum 1))))
