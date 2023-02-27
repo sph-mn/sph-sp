@@ -33,7 +33,7 @@
   (label exit status-return))
 
 (sc-comment
-  "demonstration of the use of event groups, paths and custom types for event configuration")
+  "demonstration of the use of event groups, paths, and custom types for event configuration")
 
 (sp-declare-struct-type s1-c-t (amp sp-sample-t))
 
@@ -83,7 +83,5 @@
   status-declare
   (sc-comment "use one cpu core and two output channels")
   (sp-initialize 1 2 _sp-rate)
-  (sc-comment (simple-event-plot))
-  (sc-comment "renders to /tmp/sp-out.wav")
   (sp-render-file* t1-event)
   (label exit status-i-return))

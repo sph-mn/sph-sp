@@ -71,7 +71,7 @@ example
 ~~~
 sp_block_t block;
 // 2 channels, 48000 samples long
-status_require(sp_block_new(2, 48000, &block));
+srq(sp_block_new(2, 48000, &block));
 ~~~
 
 # interpolated paths
@@ -95,7 +95,7 @@ sp_path_segment_t amod_segments[2];
 amod_segments[0] = sp_path_line(20000, 1.0);
 amod_segments[1] = sp_path_line(80000, 0);
 spline_path_set(&amod_path, amod_segments, 2);
-status_require(sp_path_samples_new(amod_path, 80000, &amod));
+srq(sp_path_samples_new(amod_path, 80000, &amod));
 ~~~
 
 ## sp_path_curves
@@ -129,14 +129,14 @@ example
 ~~~
 sp_convolution_filter_state_t* state = 0;
 // 0.1 cutoff, 0.08 transition band
-status_require(sp_windowed_sinc_lp_hp(input, duration, 0.1, 0.08, 0, &state, output));
+srq(sp_windowed_sinc_lp_hp(input, duration, 0.1, 0.08, 0, &state, output));
 sp_convolution_filter_state_free(state);
 ~~~
 
 ~~~
 sp_cheap_filter_state_t state;
 // 0 is_multipass
-status_require(sp_cheap_filter_state_new(duration, 0, &state));
+srq(sp_cheap_filter_state_new(duration, 0, &state));
 // 0.2 cutoff, 1 pass, 0 q_factor
 sp_cheap_filter_lp(input, duration, 0.2, 1, 0, &state, output);
 sp_cheap_filter_state_free(&state);
@@ -165,33 +165,36 @@ status_i_require(sp_ffti(len, input_output, imaginary_part));
 ~~~
 
 # sequencing with sp_seq
-* based on the concept of events that occur to affect output in a certain period
+* based on a concept of events that occur to affect output in a certain period
 * sp_seq receives an output block, one or more events, and a start and end time to generate for
-* events and event subtrees can be processed in parallel on an unlimited number of system cpu cores. this is a feature of sp_seq_parallel, which has the exact same function type signature
-* sp_seq can be called nested in events and therefore events can be composed in various ways
-* sp_seq manages the list of active events and calls event functions to prepare, generate blocks and eventually free events
-* it works roughly like this: sp_seq(start, end, output_block, events) calls any active event.f(valid_start, valid_end, output_block_at_offset)
+* events and event subtrees can be processed in parallel on an unlimited number of system cpu cores. this is a feature of sp_seq_parallel, which has the exact same function type signature as sp_seq
+* sp_seq can be called nested inside events and therefore events can be composed in various ways
+* sp_seq manages the list of active events and calls event functions to prepare, generate blocks, and eventually free events
+* it works roughly like this: sp_seq(start, end, output_block, events) calls any active event.f(relative_start, relative_end, output_block_for_result)
 
 ## events
-* sp_event_t variables must be declared with sp_declare_event or initialized with sp_event_set_null unless they are overwritten with other events that have been declared in such a way
-* event.prepare, event.generate and event.free are custom functions with the expected type signatures
-* event.state is for custom data that will be available to the functions during the duration of the event
-* event.prepare is called before the event is to be rendered and, with groups, allows to build a nested composition where resources will be allocated on demand
-* event.generate receives part of the block passed to sp_seq, where it is supposed to sum into. that means, events are supposed to add to a given output block instead of overwriting it
-* the core sound events (wave-event, noise-event, etc) accept channel configuration for muting channels, amplitude differences and delays between channels
+* sp_event_t variables must be declared with sp_declare_event or initialized with sp_event_reset unless they are overwritten with other events that have been declared in such a way
+* event.prepare, event.generate and event.free are custom functions
+* event.config and event.data is for custom data that will be available to the functions during the duration of the event
+* event.prepare is called before the event is to be rendered and, together with groups, allows to build a nested composition of event where needed resources will be allocated on demand
+* event.generate receives part of the block passed to sp_seq and is supposed to sum into. that means, events are supposed to add to a given output block instead of overwriting it
+* the core sound events (wave-event, noise-event, etc) accept channel configuration for muting channels, amplitude differences, and delays between channels
 
 ## custom events
-* define a struct for use as the event state if needed
+* define a struct for use as the event configuration if needed
 * define the event function event.f that will generate samples
-* define an event.free function to free the custom state when the event has finished
+* define an event.free function to free the custom event.config or event.data when the event has finished
 * set .start and .end times as needed
 
 ## registering memory with events
 * events can track pointers with handler functions that will be called with the pointer on event.free
-* the use case for this is to free memory, or deinitialize other resource handles, that were introduced when the event was prepared. this could be done manually with a custom event state but this feature makes it generic
+* the use case for this is to free memory, or deinitialize other resources, when the event ends
+* custom free functions need to call sp_event_memory_free(event) if memory has been registered
 
-### usage
-* custom free functions need to call sp_event_memory_free(event) unless no memory has been registered
+~~~
+status_t sp_event_memory_add(sp_event_t*, void*));
+status_t sp_event_memory_add_with_handler(sp_event_t*, void*, void(void*)));
+~~~
 
 ## group-event
 * events can be bundled into a single event. this, for example, could represent one sound of an instrument with many sub-events, or a whole portion of a song, a riff, bar or similar
@@ -200,8 +203,8 @@ status_i_require(sp_ffti(len, input_output, imaginary_part));
 
 ~~~
 status_t sp_group_new(sp_time_t start, sp_group_size_t event_size, sp_group_size_t memory_size, sp_event_t* out);
-sp_group_add(group, event)
-sp_group_append(sp_event_t* group, sp_event_t event)
+status_t sp_group_add(sp_event_t* a, sp_event_t event);
+status_t sp_group_append(sp_event_t* a, sp_event_t event);
 ~~~
 
 ## wave-event
@@ -222,6 +225,13 @@ sp_group_append(sp_event_t* group, sp_event_t event)
 * events usually receive an output block shared by all events. but with the isolate option, sub events receive a dedicated block. then multiple map-events can post-process specifically the output of one event before it is summed with the output of all events
 * use case: filter chains, any other post processing of event output
 
+## sound-event
+* uniform interface to noise-event and wave-event
+
+* sound_event_config_t.noise is 0 for a sine wave, 1 for windowed sinc filtered noise, 2 for state-variable filtered noise
+* sound_event_config_t.frq is the frequency, or low frequency cutoff for filtered noise, in hertz
+* .wdt is the bandwidth for noise, with .frq being the lowest frequency. wmod is a modulation array (wdt(t)) for .wdt
+
 ## rendering events to files or arrays
 * to file, to plot, to array
 
@@ -230,49 +240,27 @@ example
 sp_block_t block;
 sp_render_config_t rc = sp_render_config(sp_channels, sp_rate, sp_rate);
 // 0 start, 48000 duration. block memory is allocated
-status_require(sp_render_block(event, 0, 48000, rc, &block));
+srq(sp_render_block(event, 0, 48000, rc, &block));
 ~~~
 
 ## parallelization
 * is done by setting the generate function of a group to sp_group_prepare_parallel
-* events are distributed over cores. cpu core threads take individual events from a queue when they need new tasks
+* events are distributed over cores. cpu core threads take individual events from a queue when they need new tasks. there is currently no processing of future events outside the currently rendered block
 
-# utility features
+# overview of some included utility features
 * array helpers
   * generating a list of harmonics
-  * generating all sequences of a set
+  * generating all permutations or sequences of a set
   * shuffle
   * scaling values to fit under a limit
   * scaling values to match a sum
-  * counting and analysing subsequences
+  * counting and analyzing subsequences
   * converting intervals to absolute times
-* plotting
-  * samples
-  * times
-  * frequency spectrum
-* random number generation
-  * custom probability functions
+* plotting samples, times or frequency spectra
+* random number generation with custom probability functions
 * statistics
 
 # how to
-## how to customize the sample format
-set the following preprocessor variables before including sph-sp.h
-
-~~~
-sp_sample_t double
-sp_samples_sum f64_sum
-sp_sf_read sf_readf_double
-sp_sf_write sf_writef_double
-sp_samples_random sph_random_f64_array_1to1
-sp_samples_random_bounded sph_random_f64_bounded_array
-sp_sample_random sph_random_f64_1to1
-sp_sample_nearly_equal f64_nearly_equal
-sp_sample_array_nearly_equal f64_array_nearly_equal
-~~~
-
-alternatives for all assigned functions to use 32 bit floats (f32, float) should be available.
-integer formats are not really supported at this point - it would be possible to a large extent but some functions like sp_sine_period are currently defined only for floating point.
-
 ## how could live input data be incorporated
 for example with a long running event that on generate reads user input.
 user input might have to be read in a separate thread and buffered for the time between one block and the next.
@@ -283,11 +271,11 @@ slight changes of frequency over a short period of time by using the fmod freque
 # caveats
 ## stack allocating event config
 event config like sp_wave_event_config_t and similar needs to be available when the event prepare function is called.
-unless the event is prepared in a sub function, it should be heap allocated, for example with sp_wave_event_config_new, and tracked with sp_event_memory_add.
+unless the event is directly prepared in a sub function, it should be heap allocated, for example with sp_wave_event_config_new, and tracked with sp_event_memory_add.
 
 ## not resetting event variables when reusing them
-local sp_event_t variables should be reset with sp_event_reset(event) or with event = other_event.
-otherwise tracked event memory might be duplicated and lead to memory errors when the event is added to a group for example.
+local sp_event_t variables should be reset with sp_event_reset(event) or with by overwriting it with an already reset event.
+otherwise tracked event memory might be duplicated and lead to memory errors when the event is added to a group, for example.
 
 # troubleshooting
 issues, possible causes and solutions.
@@ -296,9 +284,8 @@ issues, possible causes and solutions.
 * has sp_initialize() been called once to initialize sph-sp? it must be called once for some features to work
 
 ## double free or corruption
-* the event memory was not initialized large enough. call sp_event_memory_init(&event, 10); with a large enough number. some sc macros use sp_event_memory_add internally
+* if sp_event_memory_fixed_add has been used, the memory for registering memory to be freed may not have been initialized large enough. call sp_event_memory_ensure with a large enough number
 
 ## segmentation fault
-* event takes config from event.data, which is not set or the wrong data
-* event called beyond its supported duration
+possible causes
 * amod or fmod arrays shorter than event duration

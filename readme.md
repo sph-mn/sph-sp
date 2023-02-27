@@ -39,10 +39,10 @@ c code and shared library for sound synthesis and sequencing. the sound processo
 * linux or compatible (libc)
 * gcc and shell for the provided compile script
 * optional: gnuplot
-* optional: [sph-sc](https://github.com/sph-mn/sph-sc), for development on sph-sp itself or when using sc
+* optional: [sph-sc](https://github.com/sph-mn/sph-sc), for development on sph-sp itself or for writing code in sc
 
 # setup
-* install dependencies
+* install dependencies as needed
 * execute the following from the project directory
 
 ```
