@@ -7,84 +7,83 @@
 (sc-include-once "/usr/share/sph-sp/sc-macros")
 (sp-include* 48000)
 
-(define (plain) int
-  "minimal example to demonstrate the core concept of event processing"
+(define (simple-event-plot) status-t
+  "example for demonstrating fundamental event processing.
+   plots the samples of a 10hz sine wave"
+  status-declare
   (declare amod sp-sample-t*)
-  (define duration sp-time-t 96000)
-  (define event sp-event-t sp-event-null)
-  (sp-event-memory-ensure event 2)
-  (sc-comment "amp(t)")
+  (define duration sp-time-t _sp-rate event sp-event-t sp-event-null)
+  (sc-comment "allocate array for loudness over time")
   (srq (sp-samples-new duration &amod))
-  (sp-array-set-1)
-  (sp-path-curves-config-declare path-config 3)
-  (array-set* path-config.x 0 (/ duration 2) duration)
-  (array-set* path-config.y 0 1 0)
-  (srq (sp-path-curves-samples-new path-config duration &amod))
-  (sp-event-memory-add _event amod)
-  (sc-comment "allocate sound_event_config and set options")
+  (sp-samples-set amod duration 1)
+  (srq (sp-event-memory-add &event amod))
+  (sc-comment "allocate sound_event_config, set options and finish event preparation")
   (declare sound-event-config sp-sound-event-config-t*)
   (srq (sp-sound-event-config-new &sound-event-config))
-  (sp-event-memory-add _event sound-event-config)
+  (srq (sp-event-memory-add &event sound-event-config))
   (set
     sound-event-config:amod amod
+    sound-event-config:frq 10
+    sound-event-config:noise 0
     event.prepare sp-sound-event-prepare
-    event.config sp-sound-event-config)
-  (sp-render-plot* group)
+    event.config sound-event-config
+    event.start 0
+    event.end duration)
+  (sp-render-plot* event)
+  (label exit status-return))
 
-  )
+(sc-comment
+  "demonstration of the use of event groups, paths and custom types for event configuration")
 
-(sp-samples-set in value duration)
-(sp-samples-set-samples in values duration)
-
-(sp-samples-set-out in value duration)
-
-
-(sc-comment "custom type for event configuration")
 (sp-declare-struct-type s1-c-t (amp sp-sample-t))
 
 (sp-define-event* s1
-  (declare c s1-c-t se-c sp-sound-event-config-t* amod sp-sample-t*)
-  (set c (pointer-get (convert-type _event:config s1-c-t*)))
-  (sp-event-memory-ensure _event 2)
-  (sc-comment "envelope")
+  (sc-comment
+    "defines a global event variable (s1-event, sound-1) using an additionally defined event-prepare function with the following content.")
+  (sc-comment "custom configuration passed via the event object")
+  (define c s1-c-t (pointer-get (convert-type _event:config s1-c-t*)))
+  (sc-comment "envelope from an interpolated path")
+  (declare amod sp-sample-t*)
   (sp-path-curves-config-declare amod-path 3)
-  (array-set* amod-path.x 0 (/ _duration 20) _duration)
+  (array-set* amod-path.x 0 (/ _duration 10) _duration)
   (array-set* amod-path.y 0 c.amp 0)
   (srq (sp-path-curves-samples-new amod-path _duration &amod))
-  (sp-event-memory-add _event amod)
-  (sc-comment "sound event")
+  (srq (sp-event-memory-add _event amod))
+  (sc-comment "sound event configuration")
+  (declare se-c sp-sound-event-config-t*)
   (srq (sp-sound-event-config-new &se-c))
-  (sp-event-memory-add _event se-c)
-  (struct-pointer-set se-c amod amod noise 1)
+  (srq (sp-event-memory-add _event se-c))
+  (struct-pointer-set se-c amod amod frq 300)
   (struct-set (array-get se-c:channel-config 0) use 1 amp (* 0.5 c.amp))
   (sp-sound-event _event se-c))
 
-(sp-define-group* (t1 (rts 1 1))
+(sp-define-group* (t1 (rts 3 1))
   (sc-comment
-    "defines a group named t1 with a default duration of (1/1 * sample_rate).
-     srq (alias for status_require) checks return codes and jumps to a label named 'exit' on error")
+    "defines a group named t1 (track 1) with a default duration of 3/1 * _sp_rate.
+     srq (alias for status_require) checks return error codes and jumps to a label named 'exit' on error")
   (declare
+    event sp-event-t
     s1-c s1-c-t*
     tempo sp-time-t
     times-length sp-time-t
-    times (array sp-time-t 4 0 2 4 6)
-    event sp-event-t)
-  (set times-length 4 tempo (/ (rt 1 1) 8))
-  (sp-event-memory-ensure _event times-length)
+    times (array sp-time-t 8 0 2 4 6 8 12 14 16))
+  (sp-event-reset event)
+  (set times-length 8 tempo (/ (rt 1 1) 8))
   (sp-for-each-index i times-length
     (set event s1-event)
     (sp-event-malloc-type &event s1-c-t &s1-c)
-    (set s1-c:amp (if* (modulo i 2) 0.5 1.0))
-    (struct-set event config s1-c start (* tempo (array-get times i)) end (+ event.start (rt 1 6)))
+    (set s1-c:amp (if* (modulo i 2) 0.25 1.0))
+    (struct-set event
+      config s1-c
+      start (+ _sp-rate (* tempo (array-get times i)))
+      end (+ event.start (rt 1 6)))
     (sp-group-add* _event event)))
 
 (define (main) int
-  "use one cpu core and two output channels and add one track to the song at specified offset, duration and volume"
   status-declare
-  (sp-declare-group group)
-  (sp-declare-event event)
+  (sc-comment "use one cpu core and two output channels")
   (sp-initialize 1 2 _sp-rate)
-  (set event t1-event)
-  (sp-group-add* &group event)
-  (sp-render-plot* group)
+  (sc-comment (simple-event-plot))
+  (sc-comment "renders to /tmp/sp-out.wav")
+  (sp-render-file* t1-event)
   (label exit status-i-return))

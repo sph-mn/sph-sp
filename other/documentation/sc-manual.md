@@ -14,11 +14,14 @@ refer to other/example.sc
 (sc-include-once "/usr/share/sph-sp/sc-macros")
 ~~~
 
+* loads all sph-sp sc macros
+* has to be called in each source file that uses macros
+
 # bindings
 
 ## sp-init*
 ~~~
-(sp-init* sample-rate)
+(sp-include* sample-rate)
 ~~~
 
 * includes sph-sp.h
@@ -29,10 +32,10 @@ refer to other/example.sc
 (sp-define* (name parameter ...) (parameter-types ...) body ...)
 ~~~
 
-* defines a function of name name
-* automatically sets status-t as the return type
+* defines a function of name {name}
+* automatically declares status-t as the return type
 * automatically adds (label exit status-return) if no exit label specified in body
-* automatically adds adds local-memory-free or error-memory-free to the exit code if local-memory-init or error-memory-init was used in body
+* automatically calls local-memory-free or error-memory-free after the exit label if local-memory-init or error-memory-init was used in body
 
 ## sp-define-event*
 ~~~
@@ -40,14 +43,14 @@ refer to other/example.sc
 (sp-define-event* (name duration) body ...)
 ~~~
 
-* defines an event prepare function, name-prepare
-* defines a variable, name-event
-* sets name-event.end if duration was given
-* sets name-event.prepare to name-prepare
-* adds the local variable _event available in body
-* _event is the currently prepared event and of type sp-event-t*
-* adds the local variable _duration to body
-* _event:prepare is 0. calls _event:prepare if set in body
+* defines an event prepare function, {name}-prepare
+* defines a variable, {name}-event
+* sets {name}-event.end if duration was given
+* sets {name}-event.prepare to {name}-prepare
+* adds the local variable _event of type sp-event-t* available in body
+* _event is the currently prepared event instance
+* adds the local variable _duration to body, set to (event.end - event.start)
+* _event:prepare will be automatically called if set in body
 * otherwise like sp-define*
 
 ## sp-define-group*

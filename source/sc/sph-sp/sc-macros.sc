@@ -1,5 +1,15 @@
+(sc-define-syntax (srq* a ...) (begin (srq a) ...))
+
 (sc-define-syntax (sp-for-each-index index limit body ...)
   (for-each-index index sp-size-t limit body ...))
+
+(sc-define-syntax* (sp-declare-struct-type name-and-fields ...)
+  "(declare-struct-type name (field/type ...):fields name/fields ...)"
+  (pair (q begin)
+    (map-slice 2
+      (l (name fields)
+        (qq (declare (unquote name) (type (struct (unquote-splicing (map-slice 2 list fields)))))))
+      name-and-fields)))
 
 (sc-define-syntax (sp-include* rate) (begin (pre-include "sph-sp.h") (pre-define _sp-rate rate)))
 
@@ -61,13 +71,3 @@
 (sc-define-syntax (sp-group-add* group event) (srq (sp-group-add group event)))
 (sc-define-syntax (sp-render-file* event) (srq (sp-render event 0)))
 (sc-define-syntax (sp-render-plot* event) (srq (sp-render event 1)))
-
-(sc-define-syntax* (sp-declare-struct-type name-and-fields ...)
-  "(declare-struct-type name (field/type ...):fields name/fields ...)"
-  (pair (q begin)
-    (map-slice 2
-      (l (name fields)
-        (qq (declare (unquote name) (type (struct (unquote-splicing (map-slice 2 list fields)))))))
-      name-and-fields)))
-
-(sc-define-syntax (srq* a ...) (begin (srq a) ...))

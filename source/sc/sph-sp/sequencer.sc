@@ -54,14 +54,14 @@
         (set current current:next)
         (if (<= current:event.start event.start)
           (begin
-            (sc-comment "-- middle")
+            (sc-comment "middle")
             (set
               new:previous current:previous
               new:next current
               current:previous:next new
               current:previous new)
             (goto exit))))
-      (sc-comment "-- last")
+      (sc-comment "last")
       (set new:next 0 new:previous current current:next new)))
   (label exit status-return))
 
@@ -72,6 +72,24 @@
   (set current *events)
   (while current (sp-event-free current:event) (set temp current current current:next) (free temp))
   (set events 0))
+
+(pre-define sp-event-memory-growth-factor 2 sp-event-memory-initial-size 4)
+
+(define (sp-event-memory-add-with-handler a address handler)
+  (status-t sp-event-t* void* sp-memory-free-t)
+  "event memory addition with automatic resizing"
+  status-declare
+  (if a:memory.data
+    (if
+      (and (not (array3-unused-size a:memory))
+        (sp-memory-resize &a:memory (* sp-event-memory-growth-factor (array3-max-size a:memory))))
+      sp-memory-error)
+    (if (sp-memory-new sp-event-memory-initial-size &a:memory) sp-memory-error
+      (if (not a:free) (set a:free sp-event-memory-free))))
+  (declare m memreg2-t)
+  (struct-set m address address handler handler)
+  (sp-memory-add a:memory m)
+  (label exit status-return))
 
 (define (sp-event-memory-ensure a additional-size) (status-t sp-event-t* sp-time-t)
   "ensures that event memory is initialized and can take $additional_size more elements"
@@ -86,7 +104,9 @@
       (if (not a:free) (set a:free sp-event-memory-free))))
   (label exit status-return))
 
-(define (sp-event-memory-add2 a address handler) (void sp-event-t* void* sp-memory-free-t)
+(define (sp-event-memory-fixed-add-with-handler a address handler)
+  (void sp-event-t* void* sp-memory-free-t)
+  "event memory addition without needed return status type and without free space checks"
   (declare m memreg2-t)
   (struct-set m address address handler handler)
   (sp-memory-add a:memory m))
@@ -520,9 +540,9 @@
     (set config.resolution duration))
   (status-require (sp-event-memory-ensure event 2))
   (status-require (sp-malloc-type config.resolution sp-sample-t &state-noise))
-  (sp-event-memory-add event state-noise)
+  (sp-event-memory-fixed-add event state-noise)
   (status-require (sp-malloc-type config.resolution sp-sample-t &state-temp))
-  (sp-event-memory-add event state-temp)
+  (sp-event-memory-fixed-add event state-temp)
   (sp-for-each-index ci config.channel-count
     (if (struct-get (array-get config.channel-config ci) mute) continue)
     (status-require (sp-noise-event-channel duration config ci rs state-noise state-temp &channel))
@@ -676,9 +696,9 @@
     (set config.resolution duration))
   (status-require (sp-event-memory-ensure event 2))
   (status-require (sp-malloc-type config.resolution sp-sample-t &state-noise))
-  (sp-event-memory-add event state-noise)
+  (sp-event-memory-fixed-add event state-noise)
   (status-require (sp-malloc-type config.resolution sp-sample-t &state-temp))
-  (sp-event-memory-add event state-temp)
+  (sp-event-memory-fixed-add event state-temp)
   (sp-for-each-index ci config.channel-count
     (if (struct-get (array-get config.channel-config ci) mute) continue)
     (status-require
@@ -794,9 +814,9 @@
     (begin
       (srq (sp-event-memory-ensure event 3))
       (srq (sp-samples-new duration &cut-mod))
-      (sp-event-memory-add event cut-mod)
+      (sp-event-memory-fixed-add event cut-mod)
       (srq (sp-samples-new duration &q-factor-mod))
-      (sp-event-memory-add event q-factor-mod)
+      (sp-event-memory-fixed-add event q-factor-mod)
       (sp-for-each-index i duration
         (set
           frq (if* config.fmod (+ config.frq (array-get config.fmod i)) config.frq)
@@ -805,7 +825,7 @@
           (array-get q-factor-mod i) (sp-hz->factor wdt))))
     (srq (sp-event-memory-ensure event 1)))
   (srq (sp-cheap-noise-event-config-new &event-config))
-  (sp-event-memory-add event event-config)
+  (sp-event-memory-fixed-add event event-config)
   (struct-pointer-set event-config
     amp config.amp
     amod config.amod
@@ -844,9 +864,9 @@
     (begin
       (sp-event-memory-ensure event 3)
       (srq (sp-samples-new duration &cutl-mod))
-      (sp-event-memory-add event cutl-mod)
+      (sp-event-memory-fixed-add event cutl-mod)
       (srq (sp-samples-new duration &cuth-mod))
-      (sp-event-memory-add event cuth-mod)
+      (sp-event-memory-fixed-add event cuth-mod)
       (sp-for-each-index i duration
         (set
           frq (if* config.fmod (+ config.frq (array-get config.fmod i)) config.frq)
@@ -855,7 +875,7 @@
           (array-get cuth-mod i) (sp-hz->factor (+ frq wdt)))))
     (srq (sp-event-memory-ensure event 1)))
   (srq (sp-noise-event-config-new &event-config))
-  (sp-event-memory-add event event-config)
+  (sp-event-memory-fixed-add event event-config)
   (struct-pointer-set event-config
     amp config.amp
     amod config.amod
@@ -876,7 +896,7 @@
     (pointer-get (convert-type event:config sp-sound-event-config-t*)))
   (srq (sp-wave-event-config-new &event-config))
   (srq (sp-event-memory-ensure event 1))
-  (sp-event-memory-add event event-config)
+  (sp-event-memory-fixed-add event event-config)
   (struct-pointer-set event-config
     amp config.amp
     amod config.amod

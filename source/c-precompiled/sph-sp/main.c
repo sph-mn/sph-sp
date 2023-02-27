@@ -374,16 +374,23 @@ status_t sp_render(sp_event_t event, uint8_t file_or_plot) {
   sp_render_config_t config;
   sp_time_t start;
   sp_time_t end;
+  sp_time_t seconds;
+  uint8_t* path = "/tmp/sp-out.wav";
   config = sp_render_config(sp_channel_count, sp_rate, sp_rate);
   start = event.start;
   end = event.end;
-  printf("rendering %lu seconds to %s\n", (sp_cheap_round_positive(((end - start) / config.rate))), (file_or_plot ? "plot" : "file"));
+  seconds = sp_cheap_round_positive(((end - start) / config.rate));
+  if (file_or_plot) {
+    printf("rendering %lu seconds to plot\n", seconds);
+  } else {
+    printf("rendering %lu seconds to file %s\n", seconds, path);
+  };
   if (end) {
     if (file_or_plot) {
       status_require((sp_render_block(event, 0, end, config, (&block))));
       sp_plot_samples(((block.samples)[0]), end);
     } else {
-      status_require((sp_render_file(event, 0, end, config, ("/tmp/sp-out.wav"))));
+      status_require((sp_render_file(event, 0, end, config, path)));
     };
   };
 exit:

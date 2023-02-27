@@ -26,13 +26,8 @@
   a.end = (start + (a.end - a.start)); \
   a.start = start
 #define sp_group_size_t uint16_t
-#define sp_event_memory_add(event, address) sp_event_memory_add2(event, address, free)
-#define sp_event_memory_add_2(a, data1, data2) \
-  sp_event_memory_add(a, data1); \
-  sp_event_memory_add(a, data2)
-#define sp_event_memory_add_3(a, data1, data2, data3) \
-  sp_event_memory_add_2(a, data1, data2); \
-  sp_event_memory_add(a, data3)
+#define sp_event_memory_add(event, address) sp_event_memory_add_with_handler(event, address, free)
+#define sp_event_memory_fixed_add(event, address) sp_event_memory_fixed_add_with_handler(event, address, free)
 #define sp_sine_config_t sp_wave_event_config_t
 #define sp_memory_add array3_add
 #define sp_seq_events_prepare sp_event_list_reverse
@@ -180,7 +175,8 @@ void sp_event_list_remove_element(sp_event_list_t** a, sp_event_list_t* element)
 status_t sp_event_list_add(sp_event_list_t** a, sp_event_t event);
 void sp_event_list_free(sp_event_list_t** events);
 status_t sp_event_memory_ensure(sp_event_t* a, sp_time_t additional_size);
-void sp_event_memory_add2(sp_event_t* event, void* address, sp_memory_free_t handler);
+status_t sp_event_memory_add_with_handler(sp_event_t* event, void* address, sp_memory_free_t handler);
+void sp_event_memory_fixed_add_with_handler(sp_event_t* event, void* address, sp_memory_free_t handler);
 void sp_event_memory_free(sp_event_t* event);
 status_t sp_seq(sp_time_t start, sp_time_t end, sp_block_t out, sp_event_list_t** events);
 status_t sp_seq_parallel(sp_time_t start, sp_time_t end, sp_block_t out, sp_event_list_t** events);

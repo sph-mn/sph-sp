@@ -277,16 +277,26 @@
   "render the full duration of events with defaults to /tmp/sp-out.wav or plot the result.
    example: sp_render_quick(event, 1)"
   status-declare
-  (declare block sp-block-t config sp-render-config-t start sp-time-t end sp-time-t)
-  (set config (sp-render-config sp-channel-count sp-rate sp-rate) start event.start end event.end)
-  (printf "rendering %lu seconds to %s\n" (sp-cheap-round-positive (/ (- end start) config.rate))
-    (if* file-or-plot "plot" "file"))
+  (declare
+    block sp-block-t
+    config sp-render-config-t
+    start sp-time-t
+    end sp-time-t
+    seconds sp-time-t)
+  (define path uint8-t* "/tmp/sp-out.wav")
+  (set
+    config (sp-render-config sp-channel-count sp-rate sp-rate)
+    start event.start
+    end event.end
+    seconds (sp-cheap-round-positive (/ (- end start) config.rate)))
+  (if file-or-plot (printf "rendering %lu seconds to plot\n" seconds)
+    (printf "rendering %lu seconds to file %s\n" seconds path))
   (if end
     (if file-or-plot
       (begin
         (status-require (sp-render-block event 0 end config &block))
         (sp-plot-samples (array-get block.samples 0) end))
-      (status-require (sp-render-file event 0 end config "/tmp/sp-out.wav"))))
+      (status-require (sp-render-file event 0 end config path))))
   (label exit status-return))
 
 (define (sp-random-state-new seed) (sp-random-state-t sp-time-t)

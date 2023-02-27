@@ -14,11 +14,9 @@
   (sp-event-duration-set a duration) (set a.end (+ a.start duration))
   (sp-event-move a start) (set a.end (+ start (- a.end a.start)) a.start start)
   sp-group-size-t uint16-t
-  (sp-event-memory-add event address) (sp-event-memory-add2 event address free)
-  (sp-event-memory-add-2 a data1 data2)
-  (begin (sp-event-memory-add a data1) (sp-event-memory-add a data2))
-  (sp-event-memory-add-3 a data1 data2 data3)
-  (begin (sp-event-memory-add-2 a data1 data2) (sp-event-memory-add a data3))
+  (sp-event-memory-add event address) (sp-event-memory-add-with-handler event address free)
+  (sp-event-memory-fixed-add event address)
+  (sp-event-memory-fixed-add-with-handler event address free)
   sp-sine-config-t sp-wave-event-config-t
   sp-memory-add array3-add
   sp-seq-events-prepare sp-event-list-reverse
@@ -171,7 +169,10 @@
   (sp-event-list-add a event) (status-t sp-event-list-t** sp-event-t)
   (sp-event-list-free events) (void sp-event-list-t**)
   (sp-event-memory-ensure a additional-size) (status-t sp-event-t* sp-time-t)
-  (sp-event-memory-add2 event address handler) (void sp-event-t* void* sp-memory-free-t)
+  (sp-event-memory-add-with-handler event address handler)
+  (status-t sp-event-t* void* sp-memory-free-t)
+  (sp-event-memory-fixed-add-with-handler event address handler)
+  (void sp-event-t* void* sp-memory-free-t)
   (sp-event-memory-free event) (void sp-event-t*)
   (sp-seq start end out events) (status-t sp-time-t sp-time-t sp-block-t sp-event-list-t**)
   (sp-seq-parallel start end out events) (status-t sp-time-t sp-time-t sp-block-t sp-event-list-t**)
