@@ -21,6 +21,7 @@ compile_sc() {
   do
     mv "$path" "$(dirname $path)/$(basename $path .h.c).h"
   done
+  rm "$c/sph-sp/sc-macros.c"
 }
 
 compile_sc

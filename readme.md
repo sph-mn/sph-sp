@@ -3,32 +3,31 @@ c code and shared library for sound synthesis and sequencing. the sound processo
 
 # features
 * basics
-  * 32 bit float wav file output and input
-  * 64 bit float sample format by default, other formats possible for many processors
   * processing of non-interleaved sample arrays with one array per channel
   * unlimited number of channels and unlimited sample rate
-  * fast fourier transform (fft) and inverse fast fourier transform (ifft)
+  * 64 bit float sample format by default, other formats possible for many processors
+  * 32 bit float wav file output and input
   * plotting of samples and sound spectra using gnuplot
+  * fast fourier transform (fft) and inverse fast fourier transform (ifft)
 * processors that work seamlessly on blocks of continuous data streams
   * windowed-sinc low-pass, high-pass, band-pass and band-reject filters
-  * state-variable high/low/band/all-pass filter
-  * moving average filter
+  * state-variable low/high/band/all-pass filter
   * convolution
+  * moving average filter
 * synthesis
-  * paths created from interpolation between given points. can be used for amplitude evelopes and modulation
-  * lookup-table oscillator for sines and other wave shapes with a stable phase, and time time-dependent frequency and amplitude changes given by arrays
+  * linear and bezier interpolation between points for amplitude envelopes and modulation
+  * lookup-table oscillator for sinusoids and other wave shapes with a stable phase and time-dependent frequency and amplitude changes provided by arrays
   * white noise generator
 * sequencing
   * event renderer for parallel block processing with custom routines
-  * events for filtered noise and wave output
+  * events for sines and filtered noise
   * event groups that compose for instruments, riffs and songs
-  * per channel configuration with optional delay
+  * per channel configuration with optional channel delay
 * array processing
-  * utilities like array arithmetic, shuffle, permutations, compositions, statistics, and more
+  * arithmetic, permutations, statistics, and more
 
 # code example
-* see [other/example.c](other/example.c)
-* or alternatively [other/example.sc](other/example.sc)
+see [other/example.c](other/example.c) or alternatively [other/example.sc](other/example.sc)
 
 # documentation
 * [c manual](other/documentation/c-manual.md)
@@ -54,17 +53,19 @@ the first argument to `exe/install` can be the destination path prefix, for exam
 
 installed files
 * /usr/include/sph-sp.h
+* /usr/include/sph-sp/*
 * /usr/lib/libsph-sp.so
+* /usr/share/sph-sp/sc-macros.sc
 
 # compile-time configuration options
-the `ifndef`s at the top of `source/c-precompiled/main/sph-sp.h` can be customised before compilation. custom preprocessor variables can be set before including the header when embedding the full code, or a customized header must be used when using a shared library which has to be compiled with the same configuration.
+the `ifndef`s at the top of `source/c-precompiled/sph-sp/sph-sp.h` can be customised before compilation. custom preprocessor variables can be set before including the header when embedding the full code, or a customized header must be used when using a shared library that has been compiled with the same configuration.
 
 some options that can be configured:
 
 | name | default | description |
 | --- | --- | --- |
-|sp_channel_limit|2|maximum number of channels|
 |sp_channel_count_t|uint8_t|data type for numbers of channels|
+|sp_channel_limit|2|maximum number of channels|
 |sp_sample_t|double|float data type for samples (quasi continuous)|
 |sp_time_t|uint32_t|integer data type for sample counts (discrete)|
 
