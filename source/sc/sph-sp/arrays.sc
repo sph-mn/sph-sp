@@ -256,25 +256,6 @@
     (memcpy (+ out i) (+ out (- i digits)) (* digits (sizeof sp-time-t)))
     (sp-times-sequence-increment (+ out i) digits base)))
 
-(define (sp-times-deduplicate a size out out-size)
-  (status-t sp-time-t* sp-time-t sp-time-t* sp-time-t*)
-  "writes the unique elements of $a to $out.
-   $out is lend by the owner. size of $out should be equal or greater than size of $a.
-   $out-size will be set to the number of unique elements"
-  status-declare
-  (declare unique sp-time-set-t unique-count sp-size-t)
-  (set unique.size 0)
-  (if (sp-time-set-new size &unique) sp-memory-error)
-  (set unique-count 0)
-  (sp-for-each-index i size
-    (if (not (sp-time-set-get unique (array-get a i)))
-      (begin
-        (if (not (sp-time-set-add unique (array-get a i))) sp-memory-error)
-        (set (array-get out unique-count) (array-get a i))
-        (set+ unique-count 1))))
-  (set *out-size unique-count)
-  (label exit (if unique.size (sp-time-set-free unique)) status-return))
-
 (define (sp-times-blend a b fraction size out)
   (void sp-time-t* sp-time-t* sp-sample-t sp-time-t sp-time-t*)
   "interpolate values between $a and $b with interpolation distance fraction 0..1"
@@ -434,7 +415,7 @@
     (if (> 0 value) (set (array-get out i) (if* (> (* -1 limit) value) (* -1 limit) value))
       (set (array-get out i) (if* (< limit value) limit value)))))
 
-(sc-comment "extra")
+(sc-comment "other")
 
 (define (sp-shuffle swap in count)
   (void (function-pointer void void* sp-size-t sp-size-t) void* sp-size-t)
@@ -467,54 +448,3 @@
           (bit-shift-left (convert-type (pointer-get (convert-type (+ 4 a) uint16-t*)) uint64-t) 32)
           (bit-shift-left (convert-type (array-get a 6) uint64-t) 48))))
     (8 (return (pointer-get (convert-type a uint64-t*))))))
-
-(define (sp-times-counted-sequences-sort-swap a b c) (void void* sp-ssize-t sp-ssize-t)
-  (declare d sp-times-counted-sequences-t)
-  (set
-    d (array-get (convert-type a sp-times-counted-sequences-t*) b)
-    (array-get (convert-type a sp-times-counted-sequences-t*) b)
-    (array-get (convert-type a sp-times-counted-sequences-t*) c)
-    (array-get (convert-type a sp-times-counted-sequences-t*) c) d))
-
-(define (sp-times-counted-sequences-sort-less a b c) (uint8-t void* sp-ssize-t sp-ssize-t)
-  (return
-    (< (struct-get (array-get (convert-type a sp-times-counted-sequences-t*) b) count)
-      (struct-get (array-get (convert-type a sp-times-counted-sequences-t*) c) count))))
-
-(define (sp-times-counted-sequences-sort-greater a b c) (uint8-t void* sp-ssize-t sp-ssize-t)
-  (return
-    (> (struct-get (array-get (convert-type a sp-times-counted-sequences-t*) b) count)
-      (struct-get (array-get (convert-type a sp-times-counted-sequences-t*) c) count))))
-
-(define (sp-times-counted-sequences-add a size width out)
-  (void sp-time-t* sp-time-t sp-time-t sp-sequence-hashtable-t)
-  "associate in hash table $out overlapping sub-sequences of $width with their count in $a.
-   memory for $out is lend and should be allocated with sp_sequence_hashtable_new(size - (width - 1), &out)"
-  (declare key sp-sequence-set-key-t value sp-time-t*)
-  (set key.size width)
-  (sp-for-each-index i (- size (- width 1))
-    (set key.data (convert-type (+ i a) uint8-t*) value (sp-sequence-hashtable-get out key))
-    (sc-comment "full-hashtable-error is ignored")
-    (if value (set+ *value 1) (sp-sequence-hashtable-set out key 1))))
-
-(define (sp-times-counted-sequences-count a width b)
-  (sp-time-t sp-time-t* sp-time-t sp-sequence-hashtable-t)
-  "return the current count of sequence a in hash b"
-  (declare key sp-sequence-set-key-t value sp-time-t*)
-  (set key.size width key.data (convert-type a uint8-t*) value (sp-sequence-hashtable-get b key))
-  (return (if* value *value 0)))
-
-(define (sp-times-counted-sequences-values known min out out-size)
-  (void sp-sequence-hashtable-t sp-time-t sp-times-counted-sequences-t* sp-time-t*)
-  "extract counts from a counted-sequences-hash and return as an array of structs"
-  (declare count sp-time-t)
-  (set count 0)
-  (sp-for-each-index i known.size
-    (if (and (array-get known.flags i) (< min (array-get known.values i)))
-      (begin
-        (set
-          (struct-get (array-get out count) count) (array-get known.values i)
-          (struct-get (array-get out count) sequence)
-          (convert-type (struct-get (array-get known.keys i) data) sp-time-t*))
-        (set+ count 1))))
-  (set *out-size count))

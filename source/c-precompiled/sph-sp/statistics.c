@@ -163,70 +163,7 @@ uint8_t sp_stat_times_center(sp_time_t* a, sp_time_t size, sp_sample_t* out) {
   return (0);
 }
 define_sp_stat_range(sp_stat_times_range, sp_time_t)
-
-  /** return in $out the number of repetitions of subsequences of widths 1 to $size.
-     examples
-       high: 11111 121212
-       low: 12345 112212 */
-  uint8_t sp_stat_times_repetition_all(sp_time_t* a, sp_time_t size, sp_sample_t* out) {
-  sp_time_t count;
-  sp_time_t i;
-  sp_sequence_set_key_t key;
-  sp_sequence_set_t known;
-  sp_sequence_set_key_t* value;
-  if (sp_sequence_set_new(size, (&known))) {
-    return (1);
-  };
-  count = 0;
-  for (key.size = 1; (key.size < size); key.size += 1) {
-    for (i = 0; (i < (size - (key.size - 1))); i += 1) {
-      key.data = ((uint8_t*)((i + a)));
-      value = sp_sequence_set_get(known, key);
-      if (value) {
-        count += 1;
-      } else {
-        if (!sp_sequence_set_add(known, key)) {
-          sp_sequence_set_free(known);
-          return (1);
-        };
-      };
-    };
-    sp_sequence_set_clear(known);
-  };
-  *out = count;
-  sp_sequence_set_free(known);
-  return (0);
-}
-
-/** return in $out the number of repetitions of subsequences of $width */
-uint8_t sp_stat_times_repetition(sp_time_t* a, sp_time_t size, sp_time_t width, sp_sample_t* out) {
-  sp_time_t count;
-  sp_time_t i;
-  sp_sequence_set_key_t key;
-  sp_sequence_set_t known;
-  sp_sequence_set_key_t* value;
-  if (sp_sequence_set_new((sp_stat_unique_max(size, width)), (&known))) {
-    return (1);
-  };
-  count = 0;
-  key.size = width;
-  for (i = 0; (i < (size - (width - 1))); i += 1) {
-    key.data = ((uint8_t*)((i + a)));
-    value = sp_sequence_set_get(known, key);
-    if (value) {
-      count += 1;
-    } else {
-      if (!sp_sequence_set_add(known, key)) {
-        sp_sequence_set_free(known);
-        return (1);
-      };
-    };
-  };
-  *out = count;
-  sp_sequence_set_free(known);
-  return (0);
-}
-uint8_t sp_stat_times_mean(sp_time_t* a, sp_time_t size, sp_sample_t* out) {
+  uint8_t sp_stat_times_mean(sp_time_t* a, sp_time_t size, sp_sample_t* out) {
   sp_time_t i;
   sp_time_t sum;
   sum = 0;
@@ -271,16 +208,6 @@ define_sp_stat_range(sp_stat_samples_range, sp_sample_t)
   for (i = 0; (i < size); i += 1) {
     out[i] = sp_cheap_round_positive(((a[i] + addition) * (max / range[2])));
   };
-}
-uint8_t sp_stat_samples_repetition_all(sp_sample_t* a, sp_time_t size, sp_sample_t* out) {
-  sp_time_t* b;
-  status_declare;
-  status_require((sp_times_new(size, (&b))));
-  sp_samples_scale_to_times(a, size, 1000, b);
-  sp_stat_times_repetition_all(b, size, out);
-  free(b);
-exit:
-  return ((status.id));
 }
 uint8_t sp_stat_samples_mean(sp_sample_t* a, sp_time_t size, sp_sample_t* out) {
   *out = (sp_samples_sum(a, size) / size);

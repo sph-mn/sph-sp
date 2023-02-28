@@ -360,35 +360,6 @@ void sp_times_sequences(sp_time_t base, sp_time_t digits, sp_time_t size, sp_tim
   };
 }
 
-/** writes the unique elements of $a to $out.
-   $out is lend by the owner. size of $out should be equal or greater than size of $a.
-   $out-size will be set to the number of unique elements */
-status_t sp_times_deduplicate(sp_time_t* a, sp_time_t size, sp_time_t* out, sp_time_t* out_size) {
-  status_declare;
-  sp_time_set_t unique;
-  sp_size_t unique_count;
-  unique.size = 0;
-  if (sp_time_set_new(size, (&unique))) {
-    sp_memory_error;
-  };
-  unique_count = 0;
-  for (sp_size_t i = 0; (i < size); i += 1) {
-    if (!sp_time_set_get(unique, (a[i]))) {
-      if (!sp_time_set_add(unique, (a[i]))) {
-        sp_memory_error;
-      };
-      out[unique_count] = a[i];
-      unique_count += 1;
-    };
-  };
-  *out_size = unique_count;
-exit:
-  if (unique.size) {
-    sp_time_set_free(unique);
-  };
-  status_return;
-}
-
 /** interpolate values between $a and $b with interpolation distance fraction 0..1 */
 void sp_times_blend(sp_time_t* a, sp_time_t* b, sp_sample_t fraction, sp_time_t size, sp_time_t* out) {
   for (sp_size_t i = 0; (i < size); i += 1) {
@@ -587,7 +558,7 @@ void sp_samples_limit_abs(sp_sample_t* in, sp_time_t count, sp_sample_t limit, s
   };
 }
 
-/* extra */
+/* other */
 
 /** generic shuffle that works on any array type. fisher-yates algorithm */
 void sp_shuffle(void (*swap)(void*, sp_size_t, sp_size_t), void* in, sp_size_t count) {
@@ -618,54 +589,4 @@ uint64_t sp_u64_from_array(uint8_t* a, sp_time_t count) {
   } else if (8 == count) {
     return ((*((uint64_t*)(a))));
   };
-}
-void sp_times_counted_sequences_sort_swap(void* a, sp_ssize_t b, sp_ssize_t c) {
-  sp_times_counted_sequences_t d;
-  d = ((sp_times_counted_sequences_t*)(a))[b];
-  ((sp_times_counted_sequences_t*)(a))[b] = ((sp_times_counted_sequences_t*)(a))[c];
-  ((sp_times_counted_sequences_t*)(a))[c] = d;
-}
-uint8_t sp_times_counted_sequences_sort_less(void* a, sp_ssize_t b, sp_ssize_t c) { return (((((sp_times_counted_sequences_t*)(a))[b]).count < (((sp_times_counted_sequences_t*)(a))[c]).count)); }
-uint8_t sp_times_counted_sequences_sort_greater(void* a, sp_ssize_t b, sp_ssize_t c) { return (((((sp_times_counted_sequences_t*)(a))[b]).count > (((sp_times_counted_sequences_t*)(a))[c]).count)); }
-
-/** associate in hash table $out overlapping sub-sequences of $width with their count in $a.
-   memory for $out is lend and should be allocated with sp_sequence_hashtable_new(size - (width - 1), &out) */
-void sp_times_counted_sequences_add(sp_time_t* a, sp_time_t size, sp_time_t width, sp_sequence_hashtable_t out) {
-  sp_sequence_set_key_t key;
-  sp_time_t* value;
-  key.size = width;
-  for (sp_size_t i = 0; (i < (size - (width - 1))); i += 1) {
-    key.data = ((uint8_t*)((i + a)));
-    value = sp_sequence_hashtable_get(out, key);
-    /* full-hashtable-error is ignored */
-    if (value) {
-      *value += 1;
-    } else {
-      sp_sequence_hashtable_set(out, key, 1);
-    };
-  };
-}
-
-/** return the current count of sequence a in hash b */
-sp_time_t sp_times_counted_sequences_count(sp_time_t* a, sp_time_t width, sp_sequence_hashtable_t b) {
-  sp_sequence_set_key_t key;
-  sp_time_t* value;
-  key.size = width;
-  key.data = ((uint8_t*)(a));
-  value = sp_sequence_hashtable_get(b, key);
-  return ((value ? *value : 0));
-}
-
-/** extract counts from a counted-sequences-hash and return as an array of structs */
-void sp_times_counted_sequences_values(sp_sequence_hashtable_t known, sp_time_t min, sp_times_counted_sequences_t* out, sp_time_t* out_size) {
-  sp_time_t count;
-  count = 0;
-  for (sp_size_t i = 0; (i < known.size); i += 1) {
-    if ((known.flags)[i] && (min < (known.values)[i])) {
-      (out[count]).count = (known.values)[i];
-      (out[count]).sequence = ((sp_time_t*)(((known.keys)[i]).data));
-      count += 1;
-    };
-  };
-  *out_size = count;
 }

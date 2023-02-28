@@ -70,21 +70,15 @@ sp_path_curves_config_new :: sp_time_t:segment_count sp_path_curves_config_t*:ou
 sp_path_curves_new :: sp_path_curves_config_t:config sp_path_t*:out -> status_t
 sp_path_curves_samples_new :: sp_path_curves_config_t:config sp_time_t:length sp_sample_t**:out -> status_t
 sp_path_curves_times_new :: sp_path_curves_config_t:config sp_time_t:length sp_time_t**:out -> status_t
-sp_path_derivation :: sp_path_t:path sp_sample_t**:x_changes sp_sample_t**:y_changes sp_time_t:index sp_path_t*:out -> status_t
-sp_path_derivations_normalized :: sp_path_t:base sp_time_t:count sp_sample_t**:x_changes sp_sample_t**:y_changes sp_path_t**:out -> status_t
-sp_path_multiply :: sp_path_t:path sp_sample_t:x_factor sp_sample_t:y_factor -> void
 sp_path_samples_1 :: sp_sample_t**:out sp_time_t:size sp_path_segment_t:s1 -> status_t
 sp_path_samples_2 :: sp_sample_t**:out sp_time_t:size sp_path_segment_t:s1 sp_path_segment_t:s2 -> status_t
 sp_path_samples_3 :: sp_sample_t**:out sp_time_t:size sp_path_segment_t:s1 sp_path_segment_t:s2 sp_path_segment_t:s3 -> status_t
 sp_path_samples_4 :: sp_sample_t**:out sp_time_t:size sp_path_segment_t:s1 sp_path_segment_t:s2 sp_path_segment_t:s3 sp_path_segment_t:s4 -> status_t
-sp_path_samples_derivation :: sp_path_t:path sp_sample_t**:x_changes sp_sample_t**:y_changes sp_time_t:index sp_sample_t**:out sp_time_t*:out_size -> status_t
-sp_path_samples_derivations_normalized :: sp_path_t:path sp_time_t:count sp_sample_t**:x_changes sp_sample_t**:y_changes sp_sample_t***:out sp_time_t**:out_sizes -> status_t
 sp_path_samples_new :: sp_path_t:path sp_time_t:size sp_sample_t**:out -> status_t
 sp_path_times_1 :: sp_time_t**:out sp_time_t:size sp_path_segment_t:s1 -> status_t
 sp_path_times_2 :: sp_time_t**:out sp_time_t:size sp_path_segment_t:s1 sp_path_segment_t:s2 -> status_t
 sp_path_times_3 :: sp_time_t**:out sp_time_t:size sp_path_segment_t:s1 sp_path_segment_t:s2 sp_path_segment_t:s3 -> status_t
 sp_path_times_4 :: sp_time_t**:out sp_time_t:size sp_path_segment_t:s1 sp_path_segment_t:s2 sp_path_segment_t:s3 sp_path_segment_t:s4 -> status_t
-sp_path_times_derivation :: sp_path_t:path sp_sample_t**:x_changes sp_sample_t**:y_changes sp_time_t:index sp_time_t**:out sp_time_t*:out_size -> status_t
 sp_path_times_new :: sp_path_t:path sp_time_t:size sp_time_t**:out -> status_t
 sp_permutations_max :: sp_time_t:set_size sp_time_t:selection_size -> sp_time_t
 sp_permutations_max :: sp_time_t:set_size sp_time_t:selection_size -> sp_time_t
@@ -118,7 +112,6 @@ sp_samples_set_unity_gain :: sp_sample_t*:in_out sp_sample_t*:reference sp_size_
 sp_seq :: sp_time_t:start sp_time_t:end sp_block_t:out sp_event_list_t**:events -> status_t
 sp_seq_parallel :: sp_time_t:start sp_time_t:end sp_block_t:out sp_event_list_t**:events -> status_t
 sp_sequence_max :: sp_time_t:size sp_time_t:min_size -> sp_time_t
-sp_sequence_set_hash :: sp_sequence_set_key_t:a sp_time_t:memory_size -> uint64_t
 sp_set_sequence_max :: sp_time_t:set_size sp_time_t:selection_size -> sp_time_t
 sp_shuffle :: function_pointer void void* sp_size_t sp_size_t:swap void*:in sp_size_t:count -> void
 sp_sinc :: sp_sample_t:a -> sp_sample_t
@@ -139,7 +132,6 @@ sp_stat_samples_kurtosis :: sp_sample_t*:a sp_time_t:size sp_sample_t*:out -> ui
 sp_stat_samples_mean :: sp_sample_t*:a sp_time_t:size sp_sample_t*:out -> uint8_t
 sp_stat_samples_median :: sp_sample_t*:a sp_time_t:size sp_sample_t*:out -> uint8_t
 sp_stat_samples_range :: sp_sample_t*:a sp_time_t:size sp_sample_t*:out -> uint8_t
-sp_stat_samples_repetition_all :: sp_sample_t*:a sp_time_t:size sp_sample_t*:out -> uint8_t
 sp_stat_samples_skewness :: sp_sample_t*:a sp_time_t:size sp_sample_t*:out -> uint8_t
 sp_stat_times_center :: sp_time_t*:a sp_time_t:size sp_sample_t*:out -> uint8_t
 sp_stat_times_deviation :: sp_time_t*:a sp_time_t:size sp_sample_t*:out -> uint8_t
@@ -148,9 +140,6 @@ sp_stat_times_kurtosis :: sp_time_t*:a sp_time_t:size sp_sample_t*:out -> uint8_
 sp_stat_times_mean :: sp_time_t*:a sp_time_t:size sp_sample_t*:out -> uint8_t
 sp_stat_times_median :: sp_time_t*:a sp_time_t:size sp_sample_t*:out -> uint8_t
 sp_stat_times_range :: sp_time_t*:a sp_time_t:size sp_sample_t*:out -> uint8_t
-sp_stat_times_repetition :: sp_time_t*:a sp_time_t:size sp_time_t:width sp_sample_t*:out -> uint8_t
-sp_stat_times_repetition :: sp_time_t*:a sp_time_t:size sp_time_t:width sp_sample_t*:out -> uint8_t
-sp_stat_times_repetition_all :: sp_time_t*:a sp_time_t:size sp_sample_t*:out -> uint8_t
 sp_stat_times_skewness :: sp_time_t*:a sp_time_t:size sp_sample_t*:out -> uint8_t
 sp_stat_unique_all_max :: sp_time_t:size -> sp_time_t
 sp_stat_unique_max :: sp_time_t:size sp_time_t:width -> sp_time_t
@@ -175,13 +164,6 @@ sp_times_blend :: sp_time_t*:a sp_time_t*:b sp_sample_t:fraction sp_time_t:size 
 sp_times_compositions :: sp_time_t:sum sp_time_t***:out sp_time_t*:out_size sp_time_t**:out_sizes -> status_t
 sp_times_constant :: sp_size_t:count sp_time_t:value sp_time_t**:out -> status_t
 sp_times_contains :: sp_time_t*:in sp_size_t:count sp_time_t:value -> uint8_t
-sp_times_counted_sequences_add :: sp_time_t*:a sp_time_t:size sp_time_t:width sp_sequence_hashtable_t:out -> void
-sp_times_counted_sequences_count :: sp_time_t*:a sp_time_t:width sp_sequence_hashtable_t:b -> sp_time_t
-sp_times_counted_sequences_sort_greater :: void*:a sp_ssize_t:b sp_ssize_t:c -> uint8_t
-sp_times_counted_sequences_sort_less :: void*:a sp_ssize_t:b sp_ssize_t:c -> uint8_t
-sp_times_counted_sequences_sort_swap :: void*:a sp_ssize_t:b sp_ssize_t:c -> void
-sp_times_counted_sequences_values :: sp_sequence_hashtable_t:known sp_time_t:min sp_times_counted_sequences_t*:out sp_time_t*:out_size -> void
-sp_times_deduplicate :: sp_time_t*:a sp_time_t:size sp_time_t*:out sp_time_t*:out_size -> status_t
 sp_times_display :: sp_time_t*:in sp_size_t:count -> void
 sp_times_extract_in_range :: sp_time_t*:a sp_time_t:size sp_time_t:min sp_time_t:max sp_time_t*:out sp_time_t*:out_size -> void
 sp_times_gt_indices :: sp_time_t*:a sp_time_t:size sp_time_t:n sp_time_t*:out sp_time_t*:out_size -> void
@@ -366,7 +348,6 @@ sp_samples_sum
 sp_samples_to_hz(x)
 sp_samples_zero(a, size)
 sp_seq_events_prepare
-sp_sequence_set_equal(a, b)
 sp_sine_config_t
 sp_size_t
 sp_sound_event(event_pointer, _config)
@@ -405,7 +386,6 @@ sp_event_t sp_event_null
 sp_random_state_t sp_random_state
 sp_sample_t* sp_sine_table
 sp_sample_t* sp_sine_table_lfo
-sp_sequence_set_key_t sp_sequence_set_null
 sp_time_t sp_rate
 sp_time_t sp_sine_lfo_factor
 status_t(*)(sp_event_t*) sp_event_prepare_t
@@ -519,9 +499,6 @@ sp_samples_t: struct
   data: void*
   size: size_t
   used: size_t
-sp_sequence_set_key_t: struct
-  size: sp_time_t
-  data: uint8_t*
 sp_sound_event_config_t: struct
   noise: sp_bool_t
   amp: sp_sample_t
@@ -533,9 +510,6 @@ sp_sound_event_config_t: struct
   wmod: sp_time_t*
   channel_count: sp_channel_count_t
   channel_config: array sp_channel_config_t sp_channel_limit
-sp_times_counted_sequences_t: struct
-  count: sp_time_t
-  sequence: sp_time_t*
 sp_times_t: struct
   data: void*
   size: size_t

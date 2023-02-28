@@ -1,6 +1,35 @@
-(pre-include "./helper.c")
+(pre-include "sph-sp/sph-sp.h" "sph-sp/string.h" "sph-sp/filesystem.h")
+
+(pre-define
+  (test-helper-test-one func) (begin (printf "%s\n" (pre-stringify func)) (status-require (func)))
+  (test-helper-assert description expression)
+  (if (not expression) (begin (printf "%s failed\n" description) (status-set-goto "sph-sp" 1)))
+  (test-helper-display-summary)
+  (if status-is-success (printf "--\ntests finished successfully.\n")
+    (printf "\ntests failed. %d %s\n" status.id (sp-status-description status)))
+  _sp-rate 960
+  test-noise-duration _sp-rate)
+
+(define (test-helper-event-generate start end out event)
+  (status-t sp-time-t sp-time-t sp-block-t sp-event-t*)
+  status-declare
+  (declare i sp-time-t ci sp-channel-count-t value uint64-t)
+  (set value (convert-type (convert-type event:data uint64-t) sp-time-t))
+  (for ((set i start) (< i end) (set+ i 1))
+    (for ((set ci 0) (< ci out.channel-count) (set+ ci 1))
+      (set (array-get out.samples ci (- i start)) value)))
+  status-return)
+
+(define (test-helper-event start end number) (sp-event-t sp-time-t sp-time-t sp-time-t)
+  (sp-declare-event e)
+  (set
+    e.start start
+    e.end end
+    e.generate test-helper-event-generate
+    e.data (convert-type (convert-type number uint64-t) void*))
+  (return e))
+
 (sc-include "../sph-sp/sc-macros")
-(pre-define _rate 960)
 (define error-margin sp-sample-t 0.1)
 (define test-file-path uint8-t* "/tmp/test-sph-sp-file")
 
@@ -322,9 +351,6 @@
     (sp-sample-nearly-equal -0.553401 (array-get out 19) error-margin))
   (label exit status-return))
 
-(pre-define (max a b) (if* (> a b) a b) (min a b) (if* (< a b) a b))
-(pre-define test-noise-duration 960)
-
 (define (test-sp-noise-event) status-t
   status-declare
   (declare
@@ -562,7 +588,6 @@
   (label exit status-return))
 
 (pre-define (feq a b) (sp-sample-nearly-equal a b 0.01))
-(declare rs sp-random-state-t)
 
 (define (u64-from-array-test size) (uint8-t sp-time-t)
   (declare bits-in uint64-t bits-out uint64-t)
@@ -614,8 +639,6 @@
     size sp-time-t
     a (array sp-time-t test-stats-a-size 1 2 3 4 5 6 7 8)
     as (array sp-sample-t test-stats-a-size 1 2 3 4 5 6 7 8)
-    repetition-1 (array sp-time-t test-stats-a-size 1 1 1 1 1 1 1 1)
-    repetition-2 (array sp-time-t test-stats-a-size 1 2 3 4 5 6 7 8)
     inhar-1 (array sp-time-t test-stats-a-size 2 4 6 8 10 12 14 16)
     inhar-2 (array sp-time-t test-stats-a-size 2 4 6 8 10 12 13 16)
     inhar-3 (array sp-time-t test-stats-a-size 2 3 6 8 10 12 13 16)
@@ -646,17 +669,6 @@
   (test-helper-assert "samples skewness" (feq 0.0 stat-out))
   (sp-stat-samples-kurtosis as size &stat-out)
   (test-helper-assert "samples kurtosis" (feq 1.76 stat-out))
-  (sc-comment "repetition-all")
-  (sp-stat-times-repetition-all repetition-1 size &stat-out)
-  (test-helper-assert "repetition-1 all" (feq 28.0 stat-out))
-  (test-helper-assert "repetition-1 all max" (feq (sp-stat-repetition-all-max size) stat-out))
-  (sp-stat-times-repetition repetition-1 size 2 &stat-out)
-  (test-helper-assert "repetition-1" (feq 6 stat-out))
-  (test-helper-assert "repetition-1 max" (feq (sp-stat-repetition-max size 2) stat-out))
-  (sp-stat-times-repetition-all repetition-2 size &stat-out)
-  (test-helper-assert "repetition-2 all" (feq 0.0 stat-out))
-  (sp-stat-samples-repetition-all as size &stat-out)
-  (test-helper-assert "samples repetition-all" (feq 0.0 stat-out))
   (sc-comment "inharmonicity")
   (sp-stat-times-inharmonicity inhar-1 size (+ inhar-results 0))
   (sp-stat-times-inharmonicity inhar-2 size (+ inhar-results 1))
@@ -806,7 +818,7 @@
   (error-memory-add config)
   (status-require (sp-map-event-config-new &map-event-config))
   (error-memory-add map-event-config)
-  (set size (* 10 _rate))
+  (set size (* 10 _sp-rate))
   (status-require (sp-path-samples-2 &amod size (sp-path-move 0 1.0) (sp-path-constant)))
   (struct-set *config
     wvf sp-sine-table
@@ -855,8 +867,7 @@
 (define (main) int
   "\"goto exit\" can skip events"
   status-declare
-  (set rs (sp-random-state-new 3))
-  (sp-initialize 3 2 _rate)
+  (sp-initialize 3 2 _sp-rate)
   (test-helper-test-one test-base)
   (test-helper-test-one test-path)
   (test-helper-test-one test-sp-sound-event)

@@ -7,10 +7,11 @@
   (sp-cheap-round-positive
     (+ (* (- 1 (convert-type t sp-sample-t)) (convert-type a sp-sample-t))
       (* t (convert-type b sp-sample-t))))
-  (sp-sample-interpolate-linear a b t) (+ (* (- 1 t) a) (* t b))
-  (sp-sequence-set-equal a b)
-  (and (= a.size b.size)
-    (or (and (= 0 a.size) (= 0 b.size)) (= 0 (memcmp a.data b.data (* a.size (sizeof sp-time-t)))))))
+  (sp-sample-interpolate-linear a b t) (+ (* (- 1 t) a) (* t b)))
+
+(declare
+  (sp-shuffle swap in count) (void (function-pointer void void* sp-size-t sp-size-t) void* sp-size-t)
+  (sp-u64-from-array a count) (uint64-t uint8-t* sp-time-t))
 
 (sc-comment "times")
 (arrays-template-h sp-time-t time times)
@@ -43,7 +44,6 @@
   (sp-times-random-discrete-unique cudist cudist-size size out)
   (void sp-time-t* sp-time-t sp-time-t sp-time-t*)
   (sp-times-sequences base digits size out) (void sp-time-t sp-time-t sp-time-t sp-time-t*)
-  (sp-times-deduplicate a size out out-size) (status-t sp-time-t* sp-time-t sp-time-t* sp-time-t*)
   (sp-times-blend a b fraction size out)
   (void sp-time-t* sp-time-t* sp-sample-t sp-time-t sp-time-t*)
   (sp-times-mask a b coefficients size out)
@@ -80,35 +80,3 @@
   (sp-samples-blend a b fraction size out)
   (void sp-sample-t* sp-sample-t* sp-sample-t sp-time-t sp-sample-t*)
   (sp-samples-limit-abs in count limit out) (void sp-sample-t* sp-time-t sp-sample-t sp-sample-t*))
-
-(sc-comment "extra")
-
-(declare
-  sp-sequence-set-key-t (type (struct (size sp-time-t) (data uint8-t*)))
-  (sp-u64-from-array a count) (uint64-t uint8-t* sp-time-t))
-
-(define (sp-sequence-set-hash a memory-size) (uint64-t sp-sequence-set-key-t sp-time-t)
-  (return (modulo (sp-u64-from-array a.data a.size) memory-size)))
-
-(sph-hashtable-declare-type sp-sequence-hashtable sp-sequence-set-key-t
-  sp-time-t sp-sequence-set-hash sp-sequence-set-equal 2)
-
-(define sp-sequence-set-null sp-sequence-set-key-t (struct-literal 0 0))
-
-(sph-set-declare-type-nonull sp-sequence-set sp-sequence-set-key-t
-  sp-sequence-set-hash sp-sequence-set-equal sp-sequence-set-null 2)
-
-(sph-set-declare-type sp-time-set sp-time-t sph-set-hash-integer sph-set-equal-integer 0 1 2)
-
-(declare
-  sp-times-counted-sequences-t (type (struct (count sp-time-t) (sequence sp-time-t*)))
-  (sp-shuffle swap in count) (void (function-pointer void void* sp-size-t sp-size-t) void* sp-size-t)
-  (sp-times-counted-sequences-sort-swap a b c) (void void* sp-ssize-t sp-ssize-t)
-  (sp-times-counted-sequences-sort-less a b c) (uint8-t void* sp-ssize-t sp-ssize-t)
-  (sp-times-counted-sequences-sort-greater a b c) (uint8-t void* sp-ssize-t sp-ssize-t)
-  (sp-times-counted-sequences-add a size width out)
-  (void sp-time-t* sp-time-t sp-time-t sp-sequence-hashtable-t)
-  (sp-times-counted-sequences-count a width b)
-  (sp-time-t sp-time-t* sp-time-t sp-sequence-hashtable-t)
-  (sp-times-counted-sequences-values known min out out-size)
-  (void sp-sequence-hashtable-t sp-time-t sp-times-counted-sequences-t* sp-time-t*))

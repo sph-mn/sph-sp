@@ -7,7 +7,8 @@
     "out: min, max, range"
     (declare i sp-time-t min value-t max value-t b value-t)
     (set min (array-get a 0) max min)
-    (for-each-index i size (set b (array-get a i)) (if (> b max) (set max b) (if (< b min) (set min b))))
+    (for-each-index i size
+      (set b (array-get a i)) (if (> b max) (set max b) (if (< b min) (set min b))))
     (set (array-get out 0) min (array-get out 1) max (array-get out 2) (- max min))
     (return 0))
   (define-sp-stat-deviation name stat-mean value-t)
@@ -103,48 +104,6 @@
 
 (define-sp-stat-range sp-stat-times-range sp-time-t)
 
-(define (sp-stat-times-repetition-all a size out) (uint8-t sp-time-t* sp-time-t sp-sample-t*)
-  "return in $out the number of repetitions of subsequences of widths 1 to $size.
-   examples
-     high: 11111 121212
-     low: 12345 112212"
-  (declare
-    count sp-time-t
-    i sp-time-t
-    key sp-sequence-set-key-t
-    known sp-sequence-set-t
-    value sp-sequence-set-key-t*)
-  (if (sp-sequence-set-new size &known) (return 1))
-  (set count 0)
-  (for ((set key.size 1) (< key.size size) (set+ key.size 1))
-    (for-each-index i (- size (- key.size 1))
-      (set key.data (convert-type (+ i a) uint8-t*) value (sp-sequence-set-get known key))
-      (if value (set+ count 1)
-        (if (not (sp-sequence-set-add known key)) (begin (sp-sequence-set-free known) (return 1)))))
-    (sp-sequence-set-clear known))
-  (set *out count)
-  (sp-sequence-set-free known)
-  (return 0))
-
-(define (sp-stat-times-repetition a size width out)
-  (uint8-t sp-time-t* sp-time-t sp-time-t sp-sample-t*)
-  "return in $out the number of repetitions of subsequences of $width"
-  (declare
-    count sp-time-t
-    i sp-time-t
-    key sp-sequence-set-key-t
-    known sp-sequence-set-t
-    value sp-sequence-set-key-t*)
-  (if (sp-sequence-set-new (sp-stat-unique-max size width) &known) (return 1))
-  (set count 0 key.size width)
-  (for-each-index i (- size (- width 1))
-    (set key.data (convert-type (+ i a) uint8-t*) value (sp-sequence-set-get known key))
-    (if value (set+ count 1)
-      (if (not (sp-sequence-set-add known key)) (begin (sp-sequence-set-free known) (return 1)))))
-  (set *out count)
-  (sp-sequence-set-free known)
-  (return 0))
-
 (define (sp-stat-times-mean a size out) (uint8-t sp-time-t* sp-time-t sp-sample-t*)
   (declare i sp-time-t sum sp-time-t)
   (set sum 0)
@@ -180,15 +139,6 @@
   (for-each-index i size
     (set (array-get out i)
       (sp-cheap-round-positive (* (+ (array-get a i) addition) (/ max (array-get range 2)))))))
-
-(define (sp-stat-samples-repetition-all a size out) (uint8-t sp-sample-t* sp-time-t sp-sample-t*)
-  (declare b sp-time-t*)
-  status-declare
-  (status-require (sp-times-new size &b))
-  (sp-samples-scale->times a size 1000 b)
-  (sp-stat-times-repetition-all b size out)
-  (free b)
-  (label exit (return status.id)))
 
 (define (sp-stat-samples-mean a size out) (uint8-t sp-sample-t* sp-time-t sp-sample-t*)
   (set *out (/ (sp-samples-sum a size) size))

@@ -1,6 +1,45 @@
 
-#include "./helper.c"
-#define _rate 960
+#include <sph-sp/sph-sp.h>
+#include <sph-sp/string.h>
+#include <sph-sp/filesystem.h>
+
+#define test_helper_test_one(func) \
+  printf("%s\n", #func); \
+  status_require((func()))
+#define test_helper_assert(description, expression) \
+  if (!expression) { \
+    printf("%s failed\n", description); \
+    status_set_goto("sph-sp", 1); \
+  }
+#define test_helper_display_summary() \
+  if (status_is_success) { \
+    printf(("--\ntests finished successfully.\n")); \
+  } else { \
+    printf(("\ntests failed. %d %s\n"), (status.id), (sp_status_description(status))); \
+  }
+#define _sp_rate 960
+#define test_noise_duration _sp_rate
+status_t test_helper_event_generate(sp_time_t start, sp_time_t end, sp_block_t out, sp_event_t* event) {
+  status_declare;
+  sp_time_t i;
+  sp_channel_count_t ci;
+  uint64_t value;
+  value = ((sp_time_t)(((uint64_t)(event->data))));
+  for (i = start; (i < end); i += 1) {
+    for (ci = 0; (ci < out.channel_count); ci += 1) {
+      (out.samples)[ci][(i - start)] = value;
+    };
+  };
+  status_return;
+}
+sp_event_t test_helper_event(sp_time_t start, sp_time_t end, sp_time_t number) {
+  sp_declare_event(e);
+  e.start = start;
+  e.end = end;
+  e.generate = test_helper_event_generate;
+  e.data = ((void*)(((uint64_t)(number))));
+  return (e);
+}
 sp_sample_t error_margin = 0.1;
 uint8_t* test_file_path = "/tmp/test-sph-sp-file";
 status_t test_base() {
@@ -347,10 +386,6 @@ status_t test_sp_random() {
 exit:
   status_return;
 }
-
-#define max(a, b) ((a > b) ? a : b)
-#define min(a, b) ((a < b) ? a : b)
-#define test_noise_duration 960
 status_t test_sp_noise_event() {
   status_declare;
   sp_block_t out;
@@ -646,7 +681,6 @@ exit:
   status_return;
 }
 #define feq(a, b) sp_sample_nearly_equal(a, b, (0.01))
-sp_random_state_t rs;
 uint8_t u64_from_array_test(sp_time_t size) {
   uint64_t bits_in;
   uint64_t bits_out;
@@ -695,8 +729,6 @@ status_t test_statistics() {
   sp_time_t size;
   sp_time_t a[test_stats_a_size] = { 1, 2, 3, 4, 5, 6, 7, 8 };
   sp_sample_t as[test_stats_a_size] = { 1, 2, 3, 4, 5, 6, 7, 8 };
-  sp_time_t repetition_1[test_stats_a_size] = { 1, 1, 1, 1, 1, 1, 1, 1 };
-  sp_time_t repetition_2[test_stats_a_size] = { 1, 2, 3, 4, 5, 6, 7, 8 };
   sp_time_t inhar_1[test_stats_a_size] = { 2, 4, 6, 8, 10, 12, 14, 16 };
   sp_time_t inhar_2[test_stats_a_size] = { 2, 4, 6, 8, 10, 12, 13, 16 };
   sp_time_t inhar_3[test_stats_a_size] = { 2, 3, 6, 8, 10, 12, 13, 16 };
@@ -727,17 +759,6 @@ status_t test_statistics() {
   test_helper_assert("samples skewness", (feq((0.0), stat_out)));
   sp_stat_samples_kurtosis(as, size, (&stat_out));
   test_helper_assert("samples kurtosis", (feq((1.76), stat_out)));
-  /* repetition-all */
-  sp_stat_times_repetition_all(repetition_1, size, (&stat_out));
-  test_helper_assert("repetition-1 all", (feq((28.0), stat_out)));
-  test_helper_assert("repetition-1 all max", (feq((sp_stat_repetition_all_max(size)), stat_out)));
-  sp_stat_times_repetition(repetition_1, size, 2, (&stat_out));
-  test_helper_assert("repetition-1", (feq(6, stat_out)));
-  test_helper_assert("repetition-1 max", (feq((sp_stat_repetition_max(size, 2)), stat_out)));
-  sp_stat_times_repetition_all(repetition_2, size, (&stat_out));
-  test_helper_assert("repetition-2 all", (feq((0.0), stat_out)));
-  sp_stat_samples_repetition_all(as, size, (&stat_out));
-  test_helper_assert("samples repetition-all", (feq((0.0), stat_out)));
   /* inharmonicity */
   sp_stat_times_inharmonicity(inhar_1, size, (inhar_results + 0));
   sp_stat_times_inharmonicity(inhar_2, size, (inhar_results + 1));
@@ -906,7 +927,7 @@ status_t test_sp_map_event() {
   error_memory_add(config);
   status_require((sp_map_event_config_new((&map_event_config))));
   error_memory_add(map_event_config);
-  size = (10 * _rate);
+  size = (10 * _sp_rate);
   status_require((sp_path_samples_2((&amod), size, (sp_path_move(0, (1.0))), (sp_path_constant()))));
   (*config).wvf = sp_sine_table;
   (*config).wvf_size = sp_rate;
@@ -956,8 +977,7 @@ exit:
 /** "goto exit" can skip events */
 int main() {
   status_declare;
-  rs = sp_random_state_new(3);
-  sp_initialize(3, 2, _rate);
+  sp_initialize(3, 2, _sp_rate);
   test_helper_test_one(test_base);
   test_helper_test_one(test_path);
   test_helper_test_one(test_sp_sound_event);

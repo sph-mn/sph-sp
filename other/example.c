@@ -34,7 +34,7 @@ exit:
   status_return;
 }
 
-/* demonstration of the use of event groups, paths and custom types for event configuration */
+/* demonstration of the use of event groups, paths, and custom types for event configuration */
 typedef struct {
   sp_sample_t amp;
 } s1_c_t;
@@ -106,9 +106,6 @@ int main() {
   status_declare;
   /* use one cpu core and two output channels */
   sp_initialize(1, 2, _sp_rate);
-  /* (simple-event-plot) */
-
-  /* renders to /tmp/sp-out.wav */
   srq((sp_render(t1_event, 0)));
 exit:
   status_i_return;
