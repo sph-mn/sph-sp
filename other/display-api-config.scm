@@ -1,5 +1,4 @@
-; config to be used by exe/list-bindings.
-; for generated bindings
+; configuration used by exe/display-api.
 
 (add
   ; additional expressions to include. for example for preprocessor generated identifiers

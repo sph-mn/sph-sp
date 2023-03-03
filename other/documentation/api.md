@@ -93,10 +93,11 @@ sp_plot_spectrum_file :: uint8_t*:path -> void
 sp_plot_times :: sp_time_t*:a sp_time_t:a_size -> void
 sp_plot_times_to_file :: sp_time_t*:a sp_time_t:a_size uint8_t*:path -> void
 sp_random_state_new :: sp_time_t:seed -> sp_random_state_t
-sp_render :: sp_event_t:event uint8_t:file_or_plot -> status_t
-sp_render_block :: sp_event_t:event sp_time_t:start sp_time_t:end sp_render_config_t:config sp_block_t*:out -> status_t
 sp_render_config :: sp_channel_count_t:channel_count sp_time_t:rate sp_time_t:block_size -> sp_render_config_t
-sp_render_file :: sp_event_t:event sp_time_t:start sp_time_t:end sp_render_config_t:config uint8_t*:path -> status_t
+sp_render_file :: sp_event_t:event uint8_t*:path -> status_t
+sp_render_plot :: sp_event_t:event -> status_t
+sp_render_range_block :: sp_event_t:event sp_time_t:start sp_time_t:end sp_render_config_t:config sp_block_t*:out -> status_t
+sp_render_range_file :: sp_event_t:event sp_time_t:start sp_time_t:end sp_render_config_t:config uint8_t*:path -> status_t
 sp_samples_to_times :: sp_sample_t*:in sp_size_t:count sp_time_t*:out -> void
 sp_samples_to_units :: sp_sample_t*:in_out sp_size_t:count -> void
 sp_samples_blend :: sp_sample_t*:a sp_sample_t*:b sp_sample_t:fraction sp_time_t:size sp_sample_t*:out -> void
