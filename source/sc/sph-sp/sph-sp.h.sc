@@ -28,11 +28,9 @@
   sp-unit-t double)
 
 (pre-include "string.h" "stdio.h"
-  "sph-sp/status.h" "sph-sp/array3.c" "sph-sp/hashtable.c"
-  "sph-sp/helper.h" "sph-sp/memreg.c" "sph-sp/set.c" "sph-sp/spline-path.h")
-
-(pre-include "sph-sp/main.h" "sph-sp/arrays.h"
-  "sph-sp/path.h" "sph-sp/filter.h" "sph-sp/sequencer.h"
-  "sph-sp/statistics.h" "sph-sp/plot.h" "sph-sp/main2.h")
+  "stdlib.h" "sph-sp/status.h" "sph-sp/array3.h"
+  "sph-sp/helper.h" "sph-sp/memreg.h" "sph-sp/spline-path.h"
+  "sph-sp/main.h" "sph-sp/arrays.h" "sph-sp/path.h"
+  "sph-sp/filter.h" "sph-sp/sequencer.h" "sph-sp/statistics.h" "sph-sp/plot.h" "sph-sp/main2.h")
 
 (pre-include-guard-end)

@@ -12,7 +12,7 @@
 #include <nayuki-fft/fft.c>
 #include "../sph-sp/sph-sp.h"
 #include <sph-sp/spline-path.c>
-#include <sph-sp/quicksort.c>
+#include <sph-sp/quicksort.h>
 #include <sph-sp/queue.h>
 #include <sph-sp/random.c>
 #include <sph-sp/float.c>

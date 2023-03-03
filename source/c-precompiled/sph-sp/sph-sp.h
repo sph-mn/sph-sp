@@ -81,12 +81,11 @@
 #endif
 #include <string.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <sph-sp/status.h>
-#include <sph-sp/array3.c>
-#include <sph-sp/hashtable.c>
+#include <sph-sp/array3.h>
 #include <sph-sp/helper.h>
-#include <sph-sp/memreg.c>
-#include <sph-sp/set.c>
+#include <sph-sp/memreg.h>
 #include <sph-sp/spline-path.h>
 #include <sph-sp/main.h>
 #include <sph-sp/arrays.h>

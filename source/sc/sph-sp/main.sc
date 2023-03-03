@@ -4,7 +4,7 @@
 
 (pre-include "math.h" "errno.h"
   "arpa/inet.h" "nayuki-fft/fft.c" "../sph-sp/sph-sp.h"
-  "sph-sp/spline-path.c" "sph-sp/quicksort.c" "sph-sp/queue.h"
+  "sph-sp/spline-path.c" "sph-sp/quicksort.h" "sph-sp/queue.h"
   "sph-sp/random.c" "sph-sp/float.c" "sph-sp/thread-pool.h"
   "sph-sp/thread-pool.c" "sph-sp/futures.h" "sph-sp/futures.c" "sph-sp/helper.c")
 

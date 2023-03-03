@@ -3,8 +3,16 @@
 sph_sc_root="$1"
 destination="$PWD/source/c/foreign/sph-sc-lib/sph-sp"
 
-mkdir -p "$destination"
+if test -d "$destination"
+then
+  rm "$destination"/*
+else
+  mkdir -p "$destination"
+fi
+
 cd "$sph_sc_root/source/c-precompiled/sph"
 cp -t "$destination" status.h spline-path.h spline-path.c quicksort.h queue.h \
    thread-pool.h thread-pool.c futures.h futures.c float.h float.c array3.h \
-   random.h random.c set.h hashtable.h memreg.h helper.h helper.c string.h filesystem.h
+   random.h random.c memreg.h helper.h helper.c
+# only for testing
+cp -t "$destination" string.h filesystem.h

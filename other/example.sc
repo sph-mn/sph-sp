@@ -30,7 +30,7 @@
     event.config sound-event-config
     event.start 0
     event.end duration)
-  (sp-render-plot event)
+  (srq (sp-render-plot event))
   (label exit status-return))
 
 (sc-comment
@@ -84,5 +84,5 @@
   status-declare
   (sc-comment "use one cpu core and two output channels")
   (sp-initialize 1 2 _sp-rate)
-  (sp-render-file t1-event "/tmp/sp-example.wav")
+  (srq (sp-render-file t1-event "/tmp/sp-example.wav"))
   (label exit status-i-return))

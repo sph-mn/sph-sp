@@ -28,7 +28,7 @@ status_t simple_event_plot() {
   event.config = sound_event_config;
   event.start = 0;
   event.end = duration;
-  sp_render_plot(event);
+  srq((sp_render_plot(event)));
 exit:
   status_return;
 }
@@ -105,7 +105,7 @@ int main() {
   status_declare;
   /* use one cpu core and two output channels */
   sp_initialize(1, 2, _sp_rate);
-  sp_render_file(t1_event, ("/tmp/sp-example.wav"));
+  srq((sp_render_file(t1_event, ("/tmp/sp-example.wav"))));
 exit:
   status_i_return;
 }
