@@ -3,7 +3,6 @@
 this example depends on gnuplot to be installed.
 it should open a gnuplot window with a series of bursts of noise.
 see exe/run-example or exe/run-example-sc for how to compile and run with gcc */
-
 #include <sph-sp.h>
 #define _sp_rate 48000
 
@@ -29,7 +28,7 @@ status_t simple_event_plot() {
   event.config = sound_event_config;
   event.start = 0;
   event.end = duration;
-  srq((sp_render(event, 1)));
+  sp_render_plot(event);
 exit:
   status_return;
 }
@@ -106,7 +105,7 @@ int main() {
   status_declare;
   /* use one cpu core and two output channels */
   sp_initialize(1, 2, _sp_rate);
-  srq((sp_render(t1_event, 0)));
+  sp_render_file(t1_event, ("/tmp/sp-example.wav"));
 exit:
   status_i_return;
 }

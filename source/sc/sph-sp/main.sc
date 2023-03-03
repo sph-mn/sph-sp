@@ -236,7 +236,7 @@
   (struct-set a channel-count channel-count rate rate block-size block-size)
   (return a))
 
-(define (sp-render-file event start end config path)
+(define (sp-render-range-file event start end config path)
   (status-t sp-event-t sp-time-t sp-time-t sp-render-config-t uint8-t*)
   "render an event with sp_seq to a file. the file is created or overwritten"
   status-declare
@@ -259,7 +259,7 @@
       (status-require (sp-file-write &file block.samples remainder))))
   (label exit (sp-block-free &block) (sp-file-close-write &file) status-return))
 
-(define (sp-render-block event start end config out)
+(define (sp-render-range-block event start end config out)
   (status-t sp-event-t sp-time-t sp-time-t sp-render-config-t sp-block-t*)
   "render a single event with sp_seq to sample arrays in sp_block_t.
    events should have been prepared with sp-seq-events-prepare.
@@ -273,30 +273,24 @@
   (set *out block)
   (label exit status-return))
 
-(define (sp-render event file-or-plot) (status-t sp-event-t uint8-t)
-  "render the full duration of events with defaults to /tmp/sp-out.wav or plot the result.
-   example: sp_render_quick(event, 1)"
+(define (sp-render-file event path) (status-t sp-event-t uint8-t*)
+  "render the full duration of event to file at path and write information to standard output.
+   uses channel count from global variable sp_channel_count and block size sp_rate"
+  (printf "rendering %lu seconds to file %s\n" (/ event.end sp-rate) path)
+  (return
+    (sp-render-range-file event 0
+      event.end (sp-render-config sp-channel-count sp-rate sp-rate) path)))
+
+(define (sp-render-plot event) (status-t sp-event-t)
+  "render the full duration of event to file at path and write information to standard output.
+   uses channel count from global variable sp_channel_count and block size sp_rate"
   status-declare
-  (declare
-    block sp-block-t
-    config sp-render-config-t
-    start sp-time-t
-    end sp-time-t
-    seconds sp-time-t)
-  (define path uint8-t* "/tmp/sp-out.wav")
-  (set
-    config (sp-render-config sp-channel-count sp-rate sp-rate)
-    start event.start
-    end event.end
-    seconds (sp-cheap-round-positive (/ (- end start) config.rate)))
-  (if file-or-plot (printf "rendering %lu seconds to plot\n" seconds)
-    (printf "rendering %lu seconds to file %s\n" seconds path))
-  (if end
-    (if file-or-plot
-      (begin
-        (status-require (sp-render-block event 0 end config &block))
-        (sp-plot-samples (array-get block.samples 0) end))
-      (status-require (sp-render-file event 0 end config path))))
+  (declare block sp-block-t)
+  (printf "rendering %lu seconds to plot\n" (/ event.end sp-rate))
+  (status-require
+    (sp-render-range-block event 0
+      event.end (sp-render-config sp-channel-count sp-rate sp-rate) &block))
+  (sp-plot-samples (array-get block.samples 0) event.end)
   (label exit status-return))
 
 (define (sp-random-state-new seed) (sp-random-state-t sp-time-t)

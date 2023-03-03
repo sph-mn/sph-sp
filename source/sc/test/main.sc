@@ -541,7 +541,7 @@
   (sp-block-free &out)
   (label exit (if status-is-failure error-memory-free) status-return))
 
-(define (test-render-block) status-t
+(define (test-render-range-block) status-t
   status-declare
   (declare
     out sp-block-t
@@ -565,8 +565,8 @@
     end test-wave-event-duration
     config config
     prepare sp-wave-event-prepare)
-  (sc-comment (sp-render-file event test-wave-event-duration rc "/tmp/test.wav"))
-  (sp-render-block event 0 test-wave-event-duration rc &out)
+  (sc-comment (sp-render-range-file event test-wave-event-duration rc "/tmp/sp-test.wav"))
+  (sp-render-range-block event 0 test-wave-event-duration rc &out)
   (sc-comment (sp-block-plot-1 out))
   (sp-block-free &out)
   (label exit (if status-is-failure error-memory-free) status-return))
@@ -881,7 +881,7 @@
   (test-helper-test-one test-sp-map-event)
   (test-helper-test-one test-sp-group)
   (test-helper-test-one test-sp-seq)
-  (test-helper-test-one test-render-block)
+  (test-helper-test-one test-render-range-block)
   (test-helper-test-one test-moving-average)
   (test-helper-test-one test-statistics)
   (test-helper-test-one test-sp-cheap-filter)

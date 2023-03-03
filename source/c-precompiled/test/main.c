@@ -612,7 +612,7 @@ exit:
   };
   status_return;
 }
-status_t test_render_block() {
+status_t test_render_range_block() {
   status_declare;
   sp_block_t out;
   sp_time_t frq[test_wave_event_duration];
@@ -642,8 +642,8 @@ status_t test_render_block() {
   event.end = test_wave_event_duration;
   event.config = config;
   event.prepare = sp_wave_event_prepare;
-  /* (sp-render-file event test-wave-event-duration rc /tmp/test.wav) */
-  sp_render_block(event, 0, test_wave_event_duration, rc, (&out));
+  /* (sp-render-range-file event test-wave-event-duration rc /tmp/sp-test.wav) */
+  sp_render_range_block(event, 0, test_wave_event_duration, rc, (&out));
   /* (sp-block-plot-1 out) */
   sp_block_free((&out));
 exit:
@@ -991,7 +991,7 @@ int main() {
   test_helper_test_one(test_sp_map_event);
   test_helper_test_one(test_sp_group);
   test_helper_test_one(test_sp_seq);
-  test_helper_test_one(test_render_block);
+  test_helper_test_one(test_render_range_block);
   test_helper_test_one(test_moving_average);
   test_helper_test_one(test_statistics);
   test_helper_test_one(test_sp_cheap_filter);

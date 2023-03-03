@@ -5,7 +5,8 @@
   "see exe/run-example or exe/run-example-sc for how to compile and run with gcc")
 
 (sc-include-once "/usr/share/sph-sp/sc-macros")
-(sp-include* 48000)
+(pre-include "sph-sp.h")
+(pre-define _sp-rate 48000)
 
 (define (simple-event-plot) status-t
   "example for demonstrating fundamental event processing.
@@ -29,7 +30,7 @@
     event.config sound-event-config
     event.start 0
     event.end duration)
-  (sp-render-plot* event)
+  (sp-render-plot event)
   (label exit status-return))
 
 (sc-comment
@@ -77,11 +78,11 @@
       config s1-c
       start (+ _sp-rate (* tempo (array-get times i)))
       end (+ event.start (rt 1 6)))
-    (sp-group-add* _event event)))
+    (srq (sp-group-add _event event))))
 
 (define (main) int
   status-declare
   (sc-comment "use one cpu core and two output channels")
   (sp-initialize 1 2 _sp-rate)
-  (sp-render-file* t1-event)
+  (sp-render-file t1-event "/tmp/sp-example.wav")
   (label exit status-i-return))

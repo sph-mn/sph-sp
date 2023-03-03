@@ -323,7 +323,7 @@ sp_render_config_t sp_render_config(sp_channel_count_t channel_count, sp_time_t 
 }
 
 /** render an event with sp_seq to a file. the file is created or overwritten */
-status_t sp_render_file(sp_event_t event, sp_time_t start, sp_time_t end, sp_render_config_t config, uint8_t* path) {
+status_t sp_render_range_file(sp_event_t event, sp_time_t start, sp_time_t end, sp_render_config_t config, uint8_t* path) {
   status_declare;
   sp_time_t block_end;
   sp_time_t remainder;
@@ -354,7 +354,7 @@ exit:
 /** render a single event with sp_seq to sample arrays in sp_block_t.
    events should have been prepared with sp-seq-events-prepare.
    block will be allocated */
-status_t sp_render_block(sp_event_t event, sp_time_t start, sp_time_t end, sp_render_config_t config, sp_block_t* out) {
+status_t sp_render_range_block(sp_event_t event, sp_time_t start, sp_time_t end, sp_render_config_t config, sp_block_t* out) {
   status_declare;
   sp_block_t block;
   sp_declare_event_list(events);
@@ -366,33 +366,21 @@ exit:
   status_return;
 }
 
-/** render the full duration of events with defaults to /tmp/sp-out.wav or plot the result.
-   example: sp_render_quick(event, 1) */
-status_t sp_render(sp_event_t event, uint8_t file_or_plot) {
+/** render the full duration of event to file at path and write information to standard output.
+   uses channel count from global variable sp_channel_count and block size sp_rate */
+status_t sp_render_file(sp_event_t event, uint8_t* path) {
+  printf("rendering %lu seconds to file %s\n", (event.end / sp_rate), path);
+  return ((sp_render_range_file(event, 0, (event.end), (sp_render_config(sp_channel_count, sp_rate, sp_rate)), path)));
+}
+
+/** render the full duration of event to file at path and write information to standard output.
+   uses channel count from global variable sp_channel_count and block size sp_rate */
+status_t sp_render_plot(sp_event_t event) {
   status_declare;
   sp_block_t block;
-  sp_render_config_t config;
-  sp_time_t start;
-  sp_time_t end;
-  sp_time_t seconds;
-  uint8_t* path = "/tmp/sp-out.wav";
-  config = sp_render_config(sp_channel_count, sp_rate, sp_rate);
-  start = event.start;
-  end = event.end;
-  seconds = sp_cheap_round_positive(((end - start) / config.rate));
-  if (file_or_plot) {
-    printf("rendering %lu seconds to plot\n", seconds);
-  } else {
-    printf("rendering %lu seconds to file %s\n", seconds, path);
-  };
-  if (end) {
-    if (file_or_plot) {
-      status_require((sp_render_block(event, 0, end, config, (&block))));
-      sp_plot_samples(((block.samples)[0]), end);
-    } else {
-      status_require((sp_render_file(event, 0, end, config, path)));
-    };
-  };
+  printf("rendering %lu seconds to plot\n", (event.end / sp_rate));
+  status_require((sp_render_range_block(event, 0, (event.end), (sp_render_config(sp_channel_count, sp_rate, sp_rate)), (&block))));
+  sp_plot_samples(((block.samples)[0]), (event.end));
 exit:
   status_return;
 }
