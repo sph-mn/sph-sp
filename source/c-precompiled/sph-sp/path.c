@@ -105,16 +105,19 @@ status_t sp_path_curves_new(sp_path_curves_config_t config, sp_path_t* out) {
   sp_sample_t y;
   sp_sample_t c;
   srq((sp_malloc_type((config.segment_count), sp_path_segment_t, (&ss))));
-  x = (config.x)[0];
-  y = (config.y)[0];
-  ss[0] = sp_path_move(x, y);
+  ss[0] = sp_path_move(((config.x)[0]), ((config.y)[0]));
+  sp_time_t ss_index = 1;
   for (sp_time_t i = 1; (i < config.segment_count); i += 1) {
     x = (config.x)[i];
+    if (x == (config.x)[(i - 1)]) {
+      continue;
+    };
     y = (config.y)[i];
     c = (config.c)[i];
-    ss[i] = ((c < 1.0e-5) ? sp_path_line(x, y) : sp_path_bezier_arc(c, x, y));
+    ss[ss_index] = ((c < 1.0e-5) ? sp_path_line(x, y) : sp_path_bezier_arc(c, x, y));
+    ss_index += 1;
   };
-  spline_path_set(out, ss, (config.segment_count));
+  spline_path_set(out, ss, ss_index);
 exit:
   status_return;
 }

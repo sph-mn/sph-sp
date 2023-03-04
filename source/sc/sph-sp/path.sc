@@ -87,14 +87,17 @@
   status-declare
   (declare ss sp-path-segment-t* x sp-time-t y sp-sample-t c sp-sample-t)
   (srq (sp-malloc-type config.segment-count sp-path-segment-t &ss))
-  (set x (array-get config.x 0) y (array-get config.y 0) (array-get ss 0) (sp-path-move x y))
+  (set (array-get ss 0) (sp-path-move (array-get config.x 0) (array-get config.y 0)))
+  (define ss-index sp-time-t 1)
   (for ((define i sp-time-t 1) (< i config.segment-count) (set+ i 1))
+    (set x (array-get config.x i))
+    (if (= x (array-get config.x (- i 1))) continue)
     (set
-      x (array-get config.x i)
       y (array-get config.y i)
       c (array-get config.c i)
-      (array-get ss i) (if* (< c 1.0e-5) (sp-path-line x y) (sp-path-bezier-arc c x y))))
-  (spline-path-set out ss config.segment-count)
+      (array-get ss ss-index) (if* (< c 1.0e-5) (sp-path-line x y) (sp-path-bezier-arc c x y)))
+    (set+ ss-index 1))
+  (spline-path-set out ss ss-index)
   (label exit status-return))
 
 (define (sp-path-curves-times-new config length out)

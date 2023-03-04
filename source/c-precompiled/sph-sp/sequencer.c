@@ -484,8 +484,8 @@ exit:
    event end will be longer if channel config delay is used.
    expects sp_wave_event_config_t at event.config.
    config:
-   * frq (frequency): fixed frequency, only used if fmod is null
-   * fmod (frequency): array with hertz values
+   * frq (frequency): fixed base frequency
+   * fmod (frequency): array with hertz values that will add to frq
    * wvf (waveform): array with waveform samples
    * wvf-size: count of waveform samples
    * phs (phase): initial phase offset

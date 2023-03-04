@@ -9,7 +9,7 @@
 (pre-define _sp-rate 48000)
 
 (define (simple-event-plot) status-t
-  "example for demonstrating fundamental event processing.
+  "example demonstrating fundamental event processing.
    plots the samples of a 10hz sine wave"
   status-declare
   (declare amod sp-sample-t*)
