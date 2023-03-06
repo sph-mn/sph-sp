@@ -276,16 +276,20 @@
 (define (sp-render-file event path) (status-t sp-event-t uint8-t*)
   "render the full duration of event to file at path and write information to standard output.
    uses channel count from global variable sp_channel_count and block size sp_rate"
+  status-declare
+  (if (not event.end) (sp-event-prepare event))
   (printf "rendering %lu seconds to file %s\n" (/ event.end sp-rate) path)
   (return
     (sp-render-range-file event 0
-      event.end (sp-render-config sp-channel-count sp-rate sp-rate) path)))
+      event.end (sp-render-config sp-channel-count sp-rate sp-rate) path))
+  (label exit status-return))
 
 (define (sp-render-plot event) (status-t sp-event-t)
   "render the full duration of event to file at path and write information to standard output.
    uses channel count from global variable sp_channel_count and block size sp_rate"
   status-declare
   (declare block sp-block-t)
+  (if (not event.end) (sp-event-prepare event))
   (printf "rendering %lu seconds to plot\n" (/ event.end sp-rate))
   (status-require
     (sp-render-range-block event 0

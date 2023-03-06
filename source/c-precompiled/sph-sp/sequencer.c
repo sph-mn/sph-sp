@@ -1,4 +1,4 @@
-void sp_event_list_display_element(sp_event_list_t* a) { printf("%lu %lu %lu %lu %lu\n", (a->previous), a, (a->next), (a->event.start), (a->event.end)); }
+void sp_event_list_display_element(sp_event_list_t* a) { printf("%lu %lu %lu event %lu %lu\n", (a->previous), a, (a->next), (a->event.start), (a->event.end)); }
 void sp_event_list_display(sp_event_list_t* a) {
   while (a) {
     sp_event_list_display_element(a);
@@ -23,7 +23,7 @@ uint8_t sp_event_list_find_duplicate(sp_event_list_t* a, sp_event_list_t* b) {
   while (a) {
     if (a == b) {
       if (1 == count) {
-        printf("duplicate list entry i%lu %lu\n", i, a);
+        printf("duplicate list entry %lu at index %lu\n", a, i);
         exit(1);
       } else {
         count += 1;
@@ -115,9 +115,8 @@ exit:
 /** free all list elements and the associated events. update the list head so it becomes the empty list.
    needed if sp_seq will not further process and thereby free further past events */
 void sp_event_list_free(sp_event_list_t** events) {
-  sp_event_list_t* current;
   sp_event_list_t* temp;
-  current = *events;
+  sp_event_list_t* current = *events;
   while (current) {
     sp_event_free((current->event));
     temp = current;
@@ -209,9 +208,8 @@ status_t sp_seq(sp_time_t start, sp_time_t end, sp_block_t out, sp_event_list_t*
   status_declare;
   sp_event_t e;
   sp_event_t* ep;
-  sp_event_list_t* current;
   sp_event_list_t* next;
-  current = *events;
+  sp_event_list_t* current = *events;
   while (current) {
     ep = &(current->event);
     e = *ep;
@@ -369,6 +367,9 @@ status_t sp_group_prepare_parallel(sp_event_t* a) {
 }
 status_t sp_group_add(sp_event_t* a, sp_event_t event) {
   status_declare;
+  if (!event.end) {
+    sp_event_prepare(event);
+  };
   status_require((sp_event_list_add(((sp_event_list_t**)(&(a->data))), event)));
   if (a->end < event.end) {
     a->end = event.end;
@@ -384,9 +385,15 @@ status_t sp_group_add_set(sp_event_t* group, sp_time_t start, sp_time_t duration
   return ((sp_group_add(group, event)));
 }
 status_t sp_group_append(sp_event_t* a, sp_event_t event) {
+  status_declare;
+  if (!event.end) {
+    sp_event_prepare(event);
+  };
   event.start += a->end;
   event.end += a->end;
-  return ((sp_group_add(a, event)));
+  status_require((sp_group_add(a, event)));
+exit:
+  status_return;
 }
 sp_channel_config_t sp_channel_config(sp_bool_t mute, sp_time_t delay, sp_time_t phs, sp_sample_t amp, sp_sample_t* amod) {
   sp_channel_config_t a;

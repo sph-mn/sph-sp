@@ -65,6 +65,9 @@
   event_pointer->prepare = sp_cheap_noise_event_prepare; \
   event_pointer->config = _config
 #define sp_group_event(event_pointer) event_pointer->prepare = sp_group_prepare
+#define sp_event_prepare(a) \
+  status_require(((a.prepare)((&a)))); \
+  a.prepare = 0
 array3_declare_type(sp_memory, memreg2_t);
 typedef void (*sp_memory_free_t)(void*);
 struct sp_event_t;

@@ -47,7 +47,8 @@
   (struct-pointer-set event-pointer prepare sp-noise-event-prepare config _config)
   (sp-cheap-noise-event event-pointer _config)
   (struct-pointer-set event-pointer prepare sp-cheap-noise-event-prepare config _config)
-  (sp-group-event event-pointer) (struct-pointer-set event-pointer prepare sp-group-prepare))
+  (sp-group-event event-pointer) (struct-pointer-set event-pointer prepare sp-group-prepare)
+  (sp-event-prepare a) (begin (status-require (a.prepare &a)) (set a.prepare 0)))
 
 (array3-declare-type sp-memory memreg2-t)
 

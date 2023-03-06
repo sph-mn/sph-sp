@@ -1,7 +1,7 @@
 (sc-include-once "./sc-macros")
 
 (define (sp-event-list-display-element a) (void sp-event-list-t*)
-  (printf "%lu %lu %lu %lu %lu\n" a:previous a a:next a:event.start a:event.end))
+  (printf "%lu %lu %lu event %lu %lu\n" a:previous a a:next a:event.start a:event.end))
 
 (define (sp-event-list-display a) (void sp-event-list-t*)
   (while a (sp-event-list-display-element a) (set a a:next)))
@@ -16,7 +16,7 @@
   (define i sp-time-t 0 count sp-time-t 0)
   (while a
     (if (= a b)
-      (if (= 1 count) (begin (printf "duplicate list entry i%lu %lu\n" i a) (exit 1))
+      (if (= 1 count) (begin (printf "duplicate list entry %lu at index %lu\n" a i) (exit 1))
         (set+ count 1)))
     (set+ i 1)
     (set a a:next)))
@@ -68,8 +68,8 @@
 (define (sp-event-list-free events) (void sp-event-list-t**)
   "free all list elements and the associated events. update the list head so it becomes the empty list.
    needed if sp_seq will not further process and thereby free further past events"
-  (declare current sp-event-list-t* temp sp-event-list-t*)
-  (set current *events)
+  (declare temp sp-event-list-t*)
+  (define current sp-event-list-t* *events)
   (while current (sp-event-free current:event) (set temp current current current:next) (free temp))
   (set events 0))
 
@@ -130,8 +130,8 @@
    past events including the event list elements are freed when processing the following block.
    on error, all events and the event list are freed"
   status-declare
-  (declare e sp-event-t ep sp-event-t* current sp-event-list-t* next sp-event-list-t*)
-  (set current *events)
+  (declare e sp-event-t ep sp-event-t* next sp-event-list-t*)
+  (define current sp-event-list-t* *events)
   (while current
     (set ep &current:event e *ep)
     (cond
@@ -252,6 +252,7 @@
 
 (define (sp-group-add a event) (status-t sp-event-t* sp-event-t)
   status-declare
+  (if (not event.end) (sp-event-prepare event))
   (status-require (sp-event-list-add (convert-type &a:data sp-event-list-t**) event))
   (if (< a:end event.end) (set a:end event.end))
   (label exit status-return))
@@ -263,8 +264,11 @@
   (return (sp-group-add group event)))
 
 (define (sp-group-append a event) (status-t sp-event-t* sp-event-t)
+  status-declare
+  (if (not event.end) (sp-event-prepare event))
   (set+ event.start a:end event.end a:end)
-  (return (sp-group-add a event)))
+  (status-require (sp-group-add a event))
+  (label exit status-return))
 
 (define (sp-channel-config mute delay phs amp amod)
   (sp-channel-config-t sp-bool-t sp-time-t sp-time-t sp-sample-t sp-sample-t*)

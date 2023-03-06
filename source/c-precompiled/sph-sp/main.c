@@ -369,8 +369,14 @@ exit:
 /** render the full duration of event to file at path and write information to standard output.
    uses channel count from global variable sp_channel_count and block size sp_rate */
 status_t sp_render_file(sp_event_t event, uint8_t* path) {
+  status_declare;
+  if (!event.end) {
+    sp_event_prepare(event);
+  };
   printf("rendering %lu seconds to file %s\n", (event.end / sp_rate), path);
   return ((sp_render_range_file(event, 0, (event.end), (sp_render_config(sp_channel_count, sp_rate, sp_rate)), path)));
+exit:
+  status_return;
 }
 
 /** render the full duration of event to file at path and write information to standard output.
@@ -378,6 +384,9 @@ status_t sp_render_file(sp_event_t event, uint8_t* path) {
 status_t sp_render_plot(sp_event_t event) {
   status_declare;
   sp_block_t block;
+  if (!event.end) {
+    sp_event_prepare(event);
+  };
   printf("rendering %lu seconds to plot\n", (event.end / sp_rate));
   status_require((sp_render_range_block(event, 0, (event.end), (sp_render_config(sp_channel_count, sp_rate, sp_rate)), (&block))));
   sp_plot_samples(((block.samples)[0]), (event.end));
