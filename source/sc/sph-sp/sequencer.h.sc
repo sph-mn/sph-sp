@@ -48,7 +48,29 @@
   (sp-cheap-noise-event event-pointer _config)
   (struct-pointer-set event-pointer prepare sp-cheap-noise-event-prepare config _config)
   (sp-group-event event-pointer) (struct-pointer-set event-pointer prepare sp-group-prepare)
-  (sp-event-prepare a) (begin (status-require (a.prepare &a)) (set a.prepare 0)))
+  (sp-event-prepare a) (if a.prepare (begin (status-require (a.prepare &a)) (set a.prepare 0)))
+  (sp-event-alloc event-pointer allocator pointer-address)
+  (begin
+    (status-require (allocator pointer-address))
+    (sp-event-memory-add event-pointer (pointer-get pointer-address)))
+  (sp-event-alloc1 event-pointer allocator size pointer-address)
+  (begin
+    (status-require (allocator size pointer-address))
+    (sp-event-memory-add event-pointer (pointer-get pointer-address)))
+  (sp-event-malloc event-pointer size pointer-address)
+  (begin
+    (status-require (sph-helper-malloc size pointer-address))
+    (sp-event-memory-add event-pointer (pointer-get pointer-address)))
+  (sp-event-malloc-type-n* event-pointer count type pointer-address)
+  (sp-event-malloc event-pointer (* count (sizeof type)) pointer-address)
+  (sp-event-malloc-type event-pointer type pointer-address)
+  (sp-event-malloc event-pointer (sizeof type) pointer-address)
+  (sp-event-samples event-pointer size pointer-address)
+  (sp-event-alloc1 event-pointer sp-samples-new size pointer-address)
+  (sp-event-times event-pointer size pointer-address)
+  (sp-event-alloc event-pointer sp-times-new size pointer-address)
+  (sp-event-units event-pointer size pointer-address)
+  (sp-event-alloc event-pointer sp-units-new size pointer-address))
 
 (array3-declare-type sp-memory memreg2-t)
 

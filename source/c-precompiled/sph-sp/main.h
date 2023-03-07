@@ -82,20 +82,6 @@
 #define sp_local_units(size, pointer_address) sp_local_alloc(sp_units_new, size, pointer_address)
 #define sp_local_times(size, pointer_address) sp_local_alloc(sp_times_new, size, pointer_address)
 #define sp_local_samples(size, pointer_address) sp_local_alloc(sp_samples_new, size, pointer_address)
-#define sp_event_alloc(event_pointer, allocator, pointer_address) \
-  srq((allocator(pointer_address))); \
-  sp_event_memory_add(event_pointer, (*pointer_address))
-#define sp_event_alloc1(event_pointer, allocator, size, pointer_address) \
-  srq((allocator(size, pointer_address))); \
-  sp_event_memory_add(event_pointer, (*pointer_address))
-#define sp_event_malloc(event_pointer, size, pointer_address) \
-  srq((sph_helper_malloc(size, pointer_address))); \
-  sp_event_memory_add(event_pointer, (*pointer_address))
-#define sp_event_malloc_type_n *(event_pointer, count, type, pointer_address)sp_event_malloc(event_pointer, (count * sizeof(type)), pointer_address)
-#define sp_event_malloc_type(event_pointer, type, pointer_address) sp_event_malloc(event_pointer, (sizeof(type)), pointer_address)
-#define sp_event_samples(event_pointer, size, pointer_address) sp_event_alloc(event_pointer, sp_samples_new, size, pointer_address)
-#define sp_event_times(event_pointer, size, pointer_address) sp_event_alloc(event_pointer, sp_times_new, size, pointer_address)
-#define sp_event_units(event_pointer, size, pointer_address) sp_event_alloc(event_pointer, sp_units_new, size, pointer_address)
 
 /** return a sample count relative to the current default sample rate sp_rate.
      (rate / d * n)

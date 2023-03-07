@@ -1,4 +1,3 @@
-(sc-include-once "./sc-macros")
 (sc-comment "functions that work the same for sp-sample-t and sp-time-t")
 
 (pre-define (arrays-template value-t value-type-name type-name subtract abs)

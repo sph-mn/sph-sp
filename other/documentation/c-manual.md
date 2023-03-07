@@ -196,6 +196,10 @@ status_t sp_event_memory_add(sp_event_t*, void*));
 status_t sp_event_memory_add_with_handler(sp_event_t*, void*, void(void*)));
 ~~~
 
+## calculated event durations
+* events whose prepare function defines their duration have to be prepared before being used with sp_seq. see also the binding sp_event_prepare
+* for events where end is zero are automatically copied and prepared when added to groups or when passed to sp_render_file or sp_render_plot. this feature eases usage of group events of variable length because no fixed times have to be known and specified when composing them
+
 ## group-event
 * events can be bundled into a single event. this, for example, could represent one sound of an instrument with many sub-events, or a whole portion of a song, a riff, bar or similar
 * sp_group_add automatically extends the group end time for events that are added to it

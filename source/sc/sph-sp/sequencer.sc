@@ -1,5 +1,3 @@
-(sc-include-once "./sc-macros")
-
 (define (sp-event-list-display-element a) (void sp-event-list-t*)
   (printf "%lu %lu %lu event %lu %lu\n" a:previous a a:next a:event.start a:event.end))
 

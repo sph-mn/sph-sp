@@ -1,41 +1,41 @@
-(sc-define-syntax (for-each-index index limit body ...)
-  (for ((set index 0) (< index limit) (set+ index 1)) body ...))
-
 (pre-define
   (define-sp-stat-range name value-t)
   (define (name a size out) (uint8-t value-t* sp-time-t sp-sample-t*)
     "out: min, max, range"
-    (declare i sp-time-t min value-t max value-t b value-t)
+    (declare min value-t max value-t b value-t)
     (set min (array-get a 0) max min)
-    (for-each-index i size
-      (set b (array-get a i)) (if (> b max) (set max b) (if (< b min) (set min b))))
+    (sp-for-each-index i size
+      (set b (array-get a i))
+      (if (> b max) (set max b) (if (< b min) (set min b))))
     (set (array-get out 0) min (array-get out 1) max (array-get out 2) (- max min))
     (return 0))
   (define-sp-stat-deviation name stat-mean value-t)
   (define (name a size out) (uint8-t value-t* sp-time-t sp-sample-t*)
     "standard deviation"
-    (declare i sp-time-t sum sp-sample-t dev sp-sample-t mean sp-sample-t)
+    (declare sum sp-sample-t dev sp-sample-t mean sp-sample-t)
     (stat-mean a size &mean)
     (set sum 0)
-    (for-each-index i size (set dev (- (array-get a i) mean) sum (+ sum (* dev dev))))
+    (sp-for-each-index i size (set dev (- (array-get a i) mean) sum (+ sum (* dev dev))))
     (set *out (sqrt (/ sum size)))
     (return 0))
   (define-sp-stat-skewness name stat-mean value-t)
   (define (name a size out) (uint8-t value-t* sp-time-t sp-sample-t*)
     "mean((x - mean(data)) ** 3) / (mean((x - mean(data)) ** 2) ** 3/2)"
-    (declare i sp-time-t mean sp-sample-t m3 sp-sample-t m2 sp-sample-t b sp-sample-t)
+    (declare mean sp-sample-t m3 sp-sample-t m2 sp-sample-t b sp-sample-t)
     (set m2 0 m3 0)
     (stat-mean a size &mean)
-    (for-each-index i size (set b (- (array-get a i) mean) m2 (+ m2 (* b b)) m3 (+ m3 (* b b b))))
+    (sp-for-each-index i size
+      (set b (- (array-get a i) mean) m2 (+ m2 (* b b)) m3 (+ m3 (* b b b))))
     (set m3 (/ m3 size) m2 (/ m2 size) *out (/ m3 (sqrt (* m2 m2 m2))))
     (return 0))
   (define-sp-stat-kurtosis name stat-mean value-t)
   (define (name a size out) (uint8-t value-t* sp-time-t sp-sample-t*)
     "mean((x - mean(data)) ** 4) / (mean((x - mean(data)) ** 2) ** 2)"
-    (declare b sp-sample-t i sp-time-t mean sp-sample-t m2 sp-sample-t m4 sp-sample-t)
+    (declare b sp-sample-t mean sp-sample-t m2 sp-sample-t m4 sp-sample-t)
     (set m2 0 m4 0)
     (stat-mean a size &mean)
-    (for-each-index i size (set b (- (array-get a i) mean) m2 (+ m2 (* b b)) m4 (+ m4 (* b b b b))))
+    (sp-for-each-index i size
+      (set b (- (array-get a i) mean) m2 (+ m2 (* b b)) m4 (+ m4 (* b b b b))))
     (set m4 (/ m4 size) m2 (/ m2 size) *out (/ m4 (* m2 m2)))
     (return 0))
   (define-sp-stat-median name sort-less sort-swap value-t)
@@ -56,11 +56,11 @@
      # formula
      n1: 0..n; n2: 0..n; half_offset(x) = 0.5 >= x ? x : x - 1;
      min(map(n1, mean(map(n2, half_offset(x(n2) / x(n1))))))"
-    (declare i sp-time-t i2 sp-time-t b sp-sample-t sum sp-sample-t min sp-sample-t)
+    (declare b sp-sample-t sum sp-sample-t min sp-sample-t)
     (set sum 0 min size)
-    (for ((set i 0) (< i size) (set+ i 1))
+    (sp-for-each-index i size
       (set sum 0)
-      (for-each-index i2 size
+      (sp-for-each-index i2 size
         (set
           b (/ (array-get a i2) (convert-type (array-get a i) sp-sample-t))
           b (- b (sp-cheap-floor-positive b))
@@ -96,18 +96,18 @@
   "center of mass. the distribution of mass is balanced around the center of mass, and the average of
    the weighted position coordinates of the distributed mass defines its coordinates.
    sum(n * x(n)) / sum(x(n))"
-  (declare i sp-time-t sum sp-time-t index-sum sp-time-t)
+  (declare sum sp-time-t index-sum sp-time-t)
   (set index-sum 0 sum (array-get a 0))
-  (for-each-index i size (set+ sum (array-get a i) index-sum (* i (array-get a i))))
+  (sp-for-each-index i size (set+ sum (array-get a i) index-sum (* i (array-get a i))))
   (set *out (/ index-sum (convert-type sum sp-sample-t)))
   (return 0))
 
 (define-sp-stat-range sp-stat-times-range sp-time-t)
 
 (define (sp-stat-times-mean a size out) (uint8-t sp-time-t* sp-time-t sp-sample-t*)
-  (declare i sp-time-t sum sp-time-t)
+  (declare sum sp-time-t)
   (set sum 0)
-  (for-each-index i size (set+ sum (array-get a i)))
+  (sp-for-each-index i size (set+ sum (array-get a i)))
   (set *out (/ sum (convert-type size sp-sample-t)))
   (return 0))
 
@@ -118,9 +118,9 @@
 (sc-comment "samples")
 
 (define (sp-stat-samples-center a size out) (uint8-t sp-sample-t* sp-time-t sp-sample-t*)
-  (declare i sp-time-t sum sp-sample-t index-sum sp-sample-t)
+  (declare sum sp-sample-t index-sum sp-sample-t)
   (set index-sum 0 sum (sp-samples-sum a size))
-  (for-each-index i size (set+ index-sum (* i (array-get a i))))
+  (sp-for-each-index i size (set+ index-sum (* i (array-get a i))))
   (set *out (/ index-sum sum))
   (return 0))
 
@@ -132,11 +132,11 @@
    makes all values positive by adding the absolute minimum
    then scales with multiplication so that the largest value is max
    then rounds to sp-time-t"
-  (declare i sp-time-t range (array sp-sample-t 3) addition sp-sample-t)
+  (declare range (array sp-sample-t 3) addition sp-sample-t)
   (sc-comment "returns min, max, range")
   (sp-stat-samples-range a size range)
   (set addition (if* (> 0 (array-get range 0)) (fabs (array-get range 0)) 0))
-  (for-each-index i size
+  (sp-for-each-index i size
     (set (array-get out i)
       (sp-cheap-round-positive (* (+ (array-get a i) addition) (/ max (array-get range 2)))))))
 

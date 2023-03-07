@@ -79,28 +79,6 @@
   (sp-local-units size pointer-address) (sp-local-alloc sp-units-new size pointer-address)
   (sp-local-times size pointer-address) (sp-local-alloc sp-times-new size pointer-address)
   (sp-local-samples size pointer-address) (sp-local-alloc sp-samples-new size pointer-address)
-  (sp-event-alloc event-pointer allocator pointer-address)
-  (begin
-    (srq (allocator pointer-address))
-    (sp-event-memory-add event-pointer (pointer-get pointer-address)))
-  (sp-event-alloc1 event-pointer allocator size pointer-address)
-  (begin
-    (srq (allocator size pointer-address))
-    (sp-event-memory-add event-pointer (pointer-get pointer-address)))
-  (sp-event-malloc event-pointer size pointer-address)
-  (begin
-    (srq (sph-helper-malloc size pointer-address))
-    (sp-event-memory-add event-pointer (pointer-get pointer-address)))
-  (sp-event-malloc-type-n* event-pointer count type pointer-address)
-  (sp-event-malloc event-pointer (* count (sizeof type)) pointer-address)
-  (sp-event-malloc-type event-pointer type pointer-address)
-  (sp-event-malloc event-pointer (sizeof type) pointer-address)
-  (sp-event-samples event-pointer size pointer-address)
-  (sp-event-alloc event-pointer sp-samples-new size pointer-address)
-  (sp-event-times event-pointer size pointer-address)
-  (sp-event-alloc event-pointer sp-times-new size pointer-address)
-  (sp-event-units event-pointer size pointer-address)
-  (sp-event-alloc event-pointer sp-units-new size pointer-address)
   (rt n d)
   (begin
     "return a sample count relative to the current default sample rate sp_rate.

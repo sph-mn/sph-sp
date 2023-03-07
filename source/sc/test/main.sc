@@ -29,7 +29,6 @@
     e.data (convert-type (convert-type number uint64-t) void*))
   (return e))
 
-(sc-include "../sph-sp/sc-macros")
 (define error-margin sp-sample-t 0.1)
 (define test-file-path uint8-t* "/tmp/test-sph-sp-file")
 

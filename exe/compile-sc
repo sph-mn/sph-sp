@@ -14,7 +14,7 @@ compile_sc() {
   # create the c source code
   mkdir -p "$c" &&
   cd "$sc" &&
-  find -type f -name "*.sc" -exec sc --parents '{}' "$root/$c" \;
+  find -type f -name "*.sc" | sc --stdin-input-paths --parents --includes="sph-sp/sc-macros.sc" "$root/$c"
   cd "$root" &&
   find "$c" -type f -exec ./exe/format-c -i '{}' \; &&
   for path in "$c/sph-sp"/*.h.c

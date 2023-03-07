@@ -1,4 +1,3 @@
-(sc-include-once "./sc-macros")
 (pre-define-if-not-defined _XOPEN_SOURCE)
 (pre-define-if-not-defined _POSIX_C_SOURCE 199309L)
 

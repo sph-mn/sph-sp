@@ -6,7 +6,7 @@ see exe/run-example or exe/run-example-sc for how to compile and run with gcc */
 #include <sph-sp.h>
 #define _sp_rate 48000
 
-/** example for demonstrating fundamental event processing.
+/** example demonstrating fundamental event processing.
    plots the samples of a 10hz sine wave */
 status_t simple_event_plot() {
   status_declare;

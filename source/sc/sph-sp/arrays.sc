@@ -1,4 +1,3 @@
-(sc-include-once "./sc-macros")
 (pre-include "sph-sp/arrays-template.c")
 (sc-comment "times")
 (arrays-template sp-time-t time times sp-no-underflow-subtract sp-abs)
