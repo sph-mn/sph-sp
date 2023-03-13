@@ -20,14 +20,17 @@
   sp-s-id-file-read 3
   sp-s-id-file-not-implemented 4
   sp-s-id-file-eof 5
-  sp-s-id-eof 7
-  sp-s-id-input-type 8
-  sp-s-id-memory 9
-  sp-s-id-invalid-argument 10
-  sp-s-id-not-implemented 11
+  sp-s-id-eof 6
+  sp-s-id-input-type 7
+  sp-s-id-memory 8
+  sp-s-id-invalid-argument 9
+  sp-s-id-not-implemented 10
   sp-status-declare (status-declare-group sp-s-group-sp)
   sp-random-state-t sph-random-state-t
   sp-noise sp-samples-random
+  sp-memory-error (status-set-goto sp-s-group-sp sp-s-id-memory)
+  sp-sample->time sp-cheap-round-positive
+  srq status-require
   (sp-subtract a b) (- a b)
   (sp-block-declare a) (begin (declare a sp-block-t) (set a.size 0))
   (sp-cheap-round-positive a) (convert-type (+ 0.5 a) sp-time-t)
@@ -88,8 +91,7 @@
   (rts n d)
   (begin
     "like rt but works before sp_initialize has been called"
-    (convert-type (* (/ _sp-rate d) n) sp-time-t))
-  srq status-require)
+    (convert-type (* (/ _sp-rate d) n) sp-time-t)))
 
 (declare
   sp-block-t

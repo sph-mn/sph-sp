@@ -1,149 +1,189 @@
 
-/** out memory is allocated */
-status_t sp_path_samples_new(sp_path_t path, sp_time_t size, sp_sample_t** out) {
+/** x length is point_count minus two.
+   x contains only intermediate point x values x(0 + 1) to x(n - 1)
+   the path will start at x 0 and end at x length.
+   point_count must be greater one.
+   y length is point_count.
+   c length is point_count minus one.
+   c is for curvature and values are between -1.0 and 1.0.
+   c can be 0 in which case it is ignored */
+status_t sp_path_samples(sp_sample_t** out, sp_time_t length, sp_path_point_count_t point_count, sp_sample_t* x, sp_sample_t* y, sp_sample_t* c) {
   status_declare;
-  sp_sample_t* out_temp;
-  if (0 == size) {
-    size = sp_path_size(path);
+  spline_path_t path;
+  spline_path_segment_t segments[sp_path_point_count_limit];
+  sp_path_point_count_t last_point_index = (point_count - 1);
+  sp_sample_t xn = length;
+  sp_sample_t yn = y[last_point_index];
+  sp_sample_t cn = (c ? c[(last_point_index - 1)] : 0);
+  segments[0] = spline_path_move(0, (y[0]));
+  segments[last_point_index] = ((cn < 1.0e-5) ? spline_path_line(xn, yn) : spline_path_bezier_arc(xn, yn, cn));
+  for (sp_path_point_count_t i = 1; (i < last_point_index); i += 1) {
+    xn = x[(i - 1)];
+    yn = y[i];
+    cn = (c ? c[(i - 1)] : 0);
+    segments[i] = ((cn < 1.0e-5) ? spline_path_line(xn, yn) : spline_path_bezier_arc(xn, yn, cn));
   };
-  status_require((sp_samples_new(size, (&out_temp))));
-  spline_path_get((&path), 0, size, out_temp);
-  *out = out_temp;
+  spline_path_set((&path), segments, point_count);
+  status_require((sp_samples_new(length, out)));
+  spline_path_get((&path), 0, length, (*out));
 exit:
   status_return;
 }
 
-/** return a sp_time_t array from path.
-   memory is allocated and ownership transferred to the caller */
-status_t sp_path_times_new(sp_path_t path, sp_time_t size, sp_time_t** out) {
+/** c is for curvature and values are between -1.0 and 1.0 */
+status_t sp_path_times(sp_time_t** out, sp_time_t length, sp_path_point_count_t point_count, sp_sample_t* x, sp_sample_t* y, sp_sample_t* c) {
   status_declare;
-  sp_time_t* out_temp;
   sp_sample_t* temp;
-  temp = 0;
-  if (0 == size) {
-    size = sp_path_size(path);
-  };
-  status_require((sp_path_samples_new(path, size, (&temp))));
-  status_require((sp_times_new(size, (&out_temp))));
-  sp_samples_to_times(temp, size, out_temp);
-  *out = out_temp;
+  status_require((sp_path_samples((&temp), length, point_count, x, y, c)));
+  status_require((sp_samples_to_times_replace(temp, length, out)));
 exit:
-  free(temp);
   status_return;
 }
+#define sp_define_path_n(type_name, type) \
+  status_t sp_path_##type_name##2(type * *out, sp_time_t length, sp_sample_t y1, sp_sample_t y2) { \
+    sp_sample_t y[2]; \
+    y[0] = y1; \
+    y[1] = y2; \
+    sp_path_##type_name(out, length, 2, 0, y, 0); \
+  } \
+  status_t sp_path_##type_name##3(type * *out, sp_time_t length, sp_sample_t x1, sp_sample_t y1, sp_sample_t y2, sp_sample_t y3) { \
+    sp_sample_t y[3]; \
+    y[0] = y1; \
+    y[1] = y2; \
+    y[2] = y3; \
+    sp_path_##type_name(out, length, 3, (&x1), y, 0); \
+  } \
+  status_t sp_path_##type_name##4(type * *out, sp_time_t length, sp_sample_t x1, sp_sample_t x2, sp_sample_t y1, sp_sample_t y2, sp_sample_t y3, sp_sample_t y4) { \
+    sp_sample_t x[2]; \
+    sp_sample_t y[4]; \
+    x[0] = x1; \
+    x[1] = x2; \
+    y[0] = y1; \
+    y[1] = y2; \
+    y[2] = y3; \
+    y[3] = y4; \
+    sp_path_##type_name(out, length, 4, x, y, 0); \
+  } \
+  status_t sp_path_##type_name##5(type * *out, sp_time_t length, sp_sample_t x1, sp_sample_t x2, sp_sample_t x3, sp_sample_t y1, sp_sample_t y2, sp_sample_t y3, sp_sample_t y4, sp_sample_t y5) { \
+    sp_sample_t x[3]; \
+    sp_sample_t y[5]; \
+    x[0] = x1; \
+    x[1] = x2; \
+    x[2] = x3; \
+    y[0] = y1; \
+    y[1] = y2; \
+    y[2] = y3; \
+    y[3] = y4; \
+    y[4] = y5; \
+    sp_path_##type_name(out, length, 5, x, y, 0); \
+  } \
+  status_t sp_path_##type_name##_c##2(type * *out, sp_time_t length, sp_sample_t y1, sp_sample_t y2, sp_sample_t c1) { \
+    sp_sample_t y[2]; \
+    y[0] = y1; \
+    y[1] = y2; \
+    sp_path_##type_name(out, length, 2, 0, y, (&c1)); \
+  } \
+  status_t sp_path_##type_name##_c##3(type * *out, sp_time_t length, sp_sample_t x1, sp_sample_t y1, sp_sample_t y2, sp_sample_t y3, sp_sample_t c1, sp_sample_t c2) { \
+    sp_sample_t y[3]; \
+    sp_sample_t c[2]; \
+    y[0] = y1; \
+    y[1] = y2; \
+    y[2] = y3; \
+    c[0] = c1; \
+    c[1] = c2; \
+    sp_path_##type_name(out, length, 3, (&x1), y, c); \
+  } \
+  status_t sp_path_##type_name##_c##4(type * *out, sp_time_t length, sp_sample_t x1, sp_sample_t x2, sp_sample_t y1, sp_sample_t y2, sp_sample_t y3, sp_sample_t y4, sp_sample_t c1, sp_sample_t c2, sp_sample_t c3) { \
+    sp_sample_t x[2]; \
+    sp_sample_t y[4]; \
+    sp_sample_t c[3]; \
+    x[0] = x1; \
+    x[1] = x2; \
+    y[0] = y1; \
+    y[1] = y2; \
+    y[2] = y3; \
+    y[3] = y4; \
+    c[0] = c1; \
+    c[1] = c2; \
+    c[2] = c3; \
+    sp_path_##type_name(out, length, 4, x, y, c); \
+  } \
+  status_t sp_path_##type_name##_c##5(type * *out, sp_time_t length, sp_sample_t x1, sp_sample_t x2, sp_sample_t x3, sp_sample_t y1, sp_sample_t y2, sp_sample_t y3, sp_sample_t y4, sp_sample_t y5, sp_sample_t c1, sp_sample_t c2, sp_sample_t c3, sp_sample_t c4) { \
+    sp_sample_t x[3]; \
+    sp_sample_t y[5]; \
+    sp_sample_t c[4]; \
+    x[0] = x1; \
+    x[1] = x2; \
+    x[2] = x3; \
+    y[0] = y1; \
+    y[1] = y2; \
+    y[2] = y3; \
+    y[3] = y4; \
+    y[4] = y5; \
+    c[0] = c1; \
+    c[1] = c2; \
+    c[2] = c3; \
+    c[3] = c4; \
+    sp_path_##type_name(out, length, 5, x, y, c); \
+  }
+sp_define_path_n(samples, sp_sample_t)
+  sp_define_path_n(times, sp_time_t)
 
-/** return a newly allocated sp_time_t array for a path with one segment */
-status_t sp_path_times_1(sp_time_t** out, sp_time_t size, sp_path_segment_t s1) {
-  sp_path_segment_t s[1] = { s1 };
-  sp_path_t path;
-  spline_path_set((&path), s, 1);
-  return ((sp_path_times_new(path, size, out)));
+  /** x, y and c length is point_count minus two.
+     x values will be cumulative (0.1, 0.2) -> 0.3.
+     x values will be multiplied by length */
+  status_t sp_envelope_zero(sp_sample_t** out, sp_time_t length, sp_path_point_count_t point_count, sp_sample_t* x, sp_sample_t* y, sp_sample_t* c) {
+  sp_sample_t path_y[sp_path_point_count_limit];
+  x[1] *= length;
+  path_y[0] = 0;
+  path_y[(point_count - 1)] = 0;
+  for (sp_path_point_count_t i = 2; (i < (point_count - 1)); i += 1) {
+    x[i] = (x[(i - 1)] + (x[i] * length));
+    path_y[i] = y[i];
+  };
+  return ((sp_path_samples(out, length, point_count, x, path_y, c)));
 }
-status_t sp_path_times_2(sp_time_t** out, sp_time_t size, sp_path_segment_t s1, sp_path_segment_t s2) {
-  sp_path_segment_t s[2] = { s1, s2 };
-  sp_path_t path;
-  spline_path_set((&path), s, 2);
-  return ((sp_path_times_new(path, size, out)));
-}
-status_t sp_path_times_3(sp_time_t** out, sp_time_t size, sp_path_segment_t s1, sp_path_segment_t s2, sp_path_segment_t s3) {
-  sp_path_segment_t s[3] = { s1, s2, s3 };
-  sp_path_t path;
-  spline_path_set((&path), s, 3);
-  return ((sp_path_times_new(path, size, out)));
-}
-status_t sp_path_times_4(sp_time_t** out, sp_time_t size, sp_path_segment_t s1, sp_path_segment_t s2, sp_path_segment_t s3, sp_path_segment_t s4) {
-  sp_path_segment_t s[4] = { s1, s2, s3, s4 };
-  sp_path_t path;
-  spline_path_set((&path), s, 4);
-  return ((sp_path_times_new(path, size, out)));
-}
-status_t sp_path_samples_1(sp_sample_t** out, sp_time_t size, sp_path_segment_t s1) {
-  sp_path_segment_t s[1] = { s1 };
-  sp_path_t path;
-  spline_path_set((&path), s, 1);
-  return ((sp_path_samples_new(path, size, out)));
-}
-status_t sp_path_samples_2(sp_sample_t** out, sp_time_t size, sp_path_segment_t s1, sp_path_segment_t s2) {
-  sp_path_segment_t s[2] = { s1, s2 };
-  sp_path_t path;
-  spline_path_set((&path), s, 2);
-  return ((sp_path_samples_new(path, size, out)));
-}
-status_t sp_path_samples_3(sp_sample_t** out, sp_time_t size, sp_path_segment_t s1, sp_path_segment_t s2, sp_path_segment_t s3) {
-  sp_path_segment_t s[3] = { s1, s2, s3 };
-  sp_path_t path;
-  spline_path_set((&path), s, 3);
-  return ((sp_path_samples_new(path, size, out)));
-}
-status_t sp_path_samples_4(sp_sample_t** out, sp_time_t size, sp_path_segment_t s1, sp_path_segment_t s2, sp_path_segment_t s3, sp_path_segment_t s4) {
-  sp_path_segment_t s[4] = { s1, s2, s3, s4 };
-  sp_path_t path;
-  spline_path_set((&path), s, 4);
-  return ((sp_path_samples_new(path, size, out)));
-}
-status_t sp_path_curves_config_new(sp_time_t segment_count, sp_path_curves_config_t* out) {
-  status_declare;
-  srq((sp_samples_new(segment_count, (&(out->x)))));
-  srq((sp_samples_new(segment_count, (&(out->y)))));
-  srq((sp_samples_new(segment_count, (&(out->c)))));
-  out->segment_count = segment_count;
-exit:
-  status_return;
-}
-void sp_path_curves_config_free(sp_path_curves_config_t a) {
-  free((a.x));
-  free((a.y));
-  free((a.c));
-}
+#define sp_define_envelope_zero_n(prefix, type_name, type) \
+  status_t prefix##3(type * *out, sp_time_t length, sp_sample_t x1, sp_sample_t y1) { return ((sp_path_##type_name##3(out, length, (x1 * length), 0, y1, 0))); } \
+  status_t prefix##4(type * *out, sp_time_t length, sp_sample_t x1, sp_sample_t x2, sp_sample_t y1, sp_sample_t y2) { return ((sp_path_##type_name##4(out, length, (x1 * length), ((x1 * length) + (x2 * length)), 0, y1, y2, 0))); } \
+  status_t prefix##5(type * *out, sp_time_t length, sp_sample_t x1, sp_sample_t x2, sp_sample_t x3, sp_sample_t y1, sp_sample_t y2, sp_sample_t y3) { \
+    x1 *= length; \
+    x2 = (x1 + (x2 * length)); \
+    x3 = (x2 + (x3 * length)); \
+    return ((sp_path_##type_name##5(out, length, x1, x2, x3, 0, y1, y2, y3, 0))); \
+  } \
+  status_t prefix##_c##3(type * *out, sp_time_t length, sp_sample_t x1, sp_sample_t y1, sp_sample_t c1, sp_sample_t c2) { return ((sp_path_##type_name##_c##3(out, length, (x1 * length), 0, y1, 0, c1, c2))); } \
+  status_t prefix##_c##4(type * *out, sp_time_t length, sp_sample_t x1, sp_sample_t x2, sp_sample_t y1, sp_sample_t y2, sp_sample_t c1, sp_sample_t c2, sp_sample_t c3) { return ((sp_path_##type_name##_c##4(out, length, (x1 * length), ((x1 * length) + (x2 * length)), 0, y1, y2, 0, c1, c2, c3))); } \
+  status_t prefix##_c##5(type * *out, sp_time_t length, sp_sample_t x1, sp_sample_t x2, sp_sample_t x3, sp_sample_t y1, sp_sample_t y2, sp_sample_t y3, sp_sample_t c1, sp_sample_t c2, sp_sample_t c3, sp_sample_t c4) { \
+    x1 *= length; \
+    x2 = (x1 + (x2 * length)); \
+    x3 = (x2 + (x3 * length)); \
+    return ((sp_path_##type_name##_c##5(out, length, x1, x2, x3, 0, y1, y2, y3, 0, c1, c2, c3, c4))); \
+  }
+sp_define_envelope_zero_n(sp_envelope_zero, samples, sp_sample_t)
 
-/** a path that uses linear or circular interpolation depending on the values of the config.c.
-   config.c 0 is linear and other values between -1.0 and 1.0 add curvature */
-status_t sp_path_curves_new(sp_path_curves_config_t config, sp_path_t* out) {
-  status_declare;
-  sp_path_segment_t* ss;
-  sp_time_t x;
-  sp_sample_t y;
-  sp_sample_t c;
-  srq((sp_malloc_type((config.segment_count), sp_path_segment_t, (&ss))));
-  ss[0] = sp_path_move(((config.x)[0]), ((config.y)[0]));
-  sp_time_t ss_index = 1;
-  for (sp_time_t i = 1; (i < config.segment_count); i += 1) {
-    x = (config.x)[i];
-    if (x == (config.x)[(i - 1)]) {
-      continue;
-    };
-    y = (config.y)[i];
-    c = (config.c)[i];
-    ss[ss_index] = ((c < 1.0e-5) ? sp_path_line(x, y) : sp_path_bezier_arc(c, x, y));
-    ss_index += 1;
+  /** y and c length is point_count.
+     x length is point_count minus two.
+     x values will be cumulative (0.1, 0.2) -> 0.3.
+     x values will be multiplied by length */
+  status_t sp_envelope_scaled(sp_time_t** out, sp_time_t length, sp_path_point_count_t point_count, sp_sample_t y_scalar, sp_sample_t* x, sp_sample_t* y, sp_sample_t* c) {
+  sp_sample_t path_y[sp_path_point_count_limit];
+  x[1] *= length;
+  path_y[0] = (y_scalar * y[0]);
+  path_y[(point_count - 1)] = (y_scalar * y[(point_count - 1)]);
+  for (sp_path_point_count_t i = 2; (i < (point_count - 1)); i += 1) {
+    x[i] = (x[(i - 1)] + (x[i] * length));
+    path_y[i] = (y_scalar * y[i]);
   };
-  spline_path_set(out, ss, ss_index);
-exit:
-  status_return;
+  return ((sp_path_times(out, length, point_count, x, path_y, c)));
 }
-status_t sp_path_curves_times_new(sp_path_curves_config_t config, sp_time_t length, sp_time_t** out) {
-  status_declare;
-  sp_path_t path;
-  error_memory_init(1);
-  srq((sp_path_curves_new(config, (&path))));
-  error_memory_add((path.segments));
-  srq((sp_path_times_new(path, length, out)));
-exit:
-  if (status_is_failure) {
-    error_memory_free;
-  };
-  status_return;
-}
-status_t sp_path_curves_samples_new(sp_path_curves_config_t config, sp_time_t length, sp_sample_t** out) {
-  status_declare;
-  sp_path_t path;
-  error_memory_init(1);
-  srq((sp_path_curves_new(config, (&path))));
-  error_memory_add((path.segments));
-  srq((sp_path_samples_new(path, length, out)));
-exit:
-  if (status_is_failure) {
-    error_memory_free;
-  };
-  status_return;
-}
+#define sp_define_envelope_scaled_n(prefix, type_name, type) \
+  status_t prefix##3(type * *out, sp_time_t length, sp_sample_t y_scalar, sp_sample_t x1, sp_sample_t y1, sp_sample_t y2, sp_sample_t y3) { return ((sp_path_##type_name##3(out, length, (x1 * length), (y1 * y_scalar), (y2 * y_scalar), (y3 * y_scalar)))); } \
+  status_t prefix##4(type * *out, sp_time_t length, sp_sample_t y_scalar, sp_sample_t x1, sp_sample_t x2, sp_sample_t y1, sp_sample_t y2, sp_sample_t y3, sp_sample_t y4) { return ((sp_path_##type_name##4(out, length, (x1 * length), ((x1 * length) + (x2 * length)), (y_scalar * y1), (y_scalar * y2), (y_scalar * y3), (y_scalar * y4)))); } \
+  status_t prefix##5(type * *out, sp_time_t length, sp_sample_t y_scalar, sp_sample_t x1, sp_sample_t x2, sp_sample_t x3, sp_sample_t y1, sp_sample_t y2, sp_sample_t y3, sp_sample_t y4, sp_sample_t y5) { \
+    x1 *= length; \
+    x2 = (x1 + (x2 * length)); \
+    x3 = (x2 + (x3 * length)); \
+    return ((sp_path_##type_name##5(out, length, x1, x2, x3, (y_scalar * y1), (y_scalar * y2), (y_scalar * y3), (y_scalar * y4), (y_scalar * y5)))); \
+  }
+sp_define_envelope_scaled_n(sp_envelope_scaled, times, sp_time_t)

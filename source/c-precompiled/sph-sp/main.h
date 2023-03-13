@@ -19,14 +19,17 @@
 #define sp_s_id_file_read 3
 #define sp_s_id_file_not_implemented 4
 #define sp_s_id_file_eof 5
-#define sp_s_id_eof 7
-#define sp_s_id_input_type 8
-#define sp_s_id_memory 9
-#define sp_s_id_invalid_argument 10
-#define sp_s_id_not_implemented 11
+#define sp_s_id_eof 6
+#define sp_s_id_input_type 7
+#define sp_s_id_memory 8
+#define sp_s_id_invalid_argument 9
+#define sp_s_id_not_implemented 10
 #define sp_status_declare status_declare_group(sp_s_group_sp)
 #define sp_random_state_t sph_random_state_t
 #define sp_noise sp_samples_random
+#define sp_memory_error status_set_goto(sp_s_group_sp, sp_s_id_memory)
+#define sp_sample_to_time sp_cheap_round_positive
+#define srq status_require
 #define sp_subtract(a, b) (a - b)
 #define sp_block_declare(a) \
   sp_block_t a; \
@@ -90,7 +93,6 @@
 
 /** like rt but works before sp_initialize has been called */
 #define rts(n, d) ((sp_time_t)(((_sp_rate / d) * n)))
-#define srq status_require
 typedef struct {
   sp_channel_count_t channel_count;
   sp_time_t size;

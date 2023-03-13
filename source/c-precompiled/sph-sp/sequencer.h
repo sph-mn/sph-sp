@@ -84,6 +84,90 @@
 #define sp_event_samples(event_pointer, size, pointer_address) sp_event_alloc1(event_pointer, sp_samples_new, size, pointer_address)
 #define sp_event_times(event_pointer, size, pointer_address) sp_event_alloc(event_pointer, sp_times_new, size, pointer_address)
 #define sp_event_units(event_pointer, size, pointer_address) sp_event_alloc(event_pointer, sp_units_new, size, pointer_address)
+#define sp_event_path_samples_srq(event_pointer, out, ...) \
+  status_require((sp_path_samples(out, __VA_ARGS__))); \
+  status_require((sp_event_memory_add(event_pointer, (*out))))
+#define sp_event_path_samples3_srq(event_pointer, out, ...) \
+  status_require((sp_path_samples3(out, __VA_ARGS__))); \
+  status_require((sp_event_memory_add(event_pointer, (*out))))
+#define sp_event_path_samples4_srq(event_pointer, out, ...) \
+  status_require((sp_path_samples4(out, __VA_ARGS__))); \
+  status_require((sp_event_memory_add(event_pointer, (*out))))
+#define sp_event_path_samples5_srq(event_pointer, out, ...) \
+  status_require((sp_path_samples5(out, __VA_ARGS__))); \
+  status_require((sp_event_memory_add(event_pointer, (*out))))
+#define sp_event_path_samples_c3_srq(event_pointer, out, ...) \
+  status_require((sp_path_samples_c3(out, __VA_ARGS__))); \
+  status_require((sp_event_memory_add(event_pointer, (*out))))
+#define sp_event_path_samples_c4_srq(event_pointer, out, ...) \
+  status_require((sp_path_samples_c4(out, __VA_ARGS__))); \
+  status_require((sp_event_memory_add(event_pointer, (*out))))
+#define sp_event_path_samples_c5_srq(event_pointer, out, ...) \
+  status_require((sp_path_samples_c5(out, __VA_ARGS__))); \
+  status_require((sp_event_memory_add(event_pointer, (*out))))
+#define sp_event_path_times_srq(event_pointer, out, ...) \
+  status_require((sp_path_times(out, __VA_ARGS__))); \
+  status_require((sp_event_memory_add(event_pointer, (*out))))
+#define sp_event_path_times3_srq(event_pointer, out, ...) \
+  status_require((sp_path_times3(out, __VA_ARGS__))); \
+  status_require((sp_event_memory_add(event_pointer, (*out))))
+#define sp_event_path_times4_srq(event_pointer, out, ...) \
+  status_require((sp_path_times4(out, __VA_ARGS__))); \
+  status_require((sp_event_memory_add(event_pointer, (*out))))
+#define sp_event_path_times5_srq(event_pointer, out, ...) \
+  status_require((sp_path_times5(out, __VA_ARGS__))); \
+  status_require((sp_event_memory_add(event_pointer, (*out))))
+#define sp_event_path_times_c3_srq(event_pointer, out, ...) \
+  status_require((sp_path_times_c3(out, __VA_ARGS__))); \
+  status_require((sp_event_memory_add(event_pointer, (*out))))
+#define sp_event_path_times_c4_srq(event_pointer, out, ...) \
+  status_require((sp_path_times_c4(out, __VA_ARGS__))); \
+  status_require((sp_event_memory_add(event_pointer, (*out))))
+#define sp_event_path_times_c5_srq(event_pointer, out, ...) \
+  status_require((sp_path_times_c5(out, __VA_ARGS__))); \
+  status_require((sp_event_memory_add(event_pointer, (*out))))
+#define sp_event_envelope_zero_srq(event_pointer, out, ...) \
+  status_require((sp_envelope_zero(out, __VA_ARGS__))); \
+  status_require((sp_event_memory_add(event_pointer, (*out))))
+#define sp_event_envelope_zero3_srq(event_pointer, out, ...) \
+  status_require((sp_envelope_zero3(out, __VA_ARGS__))); \
+  status_require((sp_event_memory_add(event_pointer, (*out))))
+#define sp_event_envelope_zero4_srq(event_pointer, out, ...) \
+  status_require((sp_envelope_zero4(out, __VA_ARGS__))); \
+  status_require((sp_event_memory_add(event_pointer, (*out))))
+#define sp_event_envelope_zero5_srq(event_pointer, out, ...) \
+  status_require((sp_envelope_zero5(out, __VA_ARGS__))); \
+  status_require((sp_event_memory_add(event_pointer, (*out))))
+#define sp_event_envelope_zero_c3_srq(event_pointer, out, ...) \
+  status_require((sp_envelope_zero_c3(out, __VA_ARGS__))); \
+  status_require((sp_event_memory_add(event_pointer, (*out))))
+#define sp_event_envelope_zero_c4_srq(event_pointer, out, ...) \
+  status_require((sp_envelope_zero_c4(out, __VA_ARGS__))); \
+  status_require((sp_event_memory_add(event_pointer, (*out))))
+#define sp_event_envelope_zero_c5_srq(event_pointer, out, ...) \
+  status_require((sp_envelope_zero_c5(out, __VA_ARGS__))); \
+  status_require((sp_event_memory_add(event_pointer, (*out))))
+#define sp_event_envelope_scaled_srq(event_pointer, out, ...) \
+  status_require((sp_envelope_scaled(out, __VA_ARGS__))); \
+  status_require((sp_event_memory_add(event_pointer, (*out))))
+#define sp_event_envelope_scaled3_srq(event_pointer, out, ...) \
+  status_require((sp_envelope_scaled3(out, __VA_ARGS__))); \
+  status_require((sp_event_memory_add(event_pointer, (*out))))
+#define sp_event_envelope_scaled4_srq(event_pointer, out, ...) \
+  status_require((sp_envelope_scaled4(out, __VA_ARGS__))); \
+  status_require((sp_event_memory_add(event_pointer, (*out))))
+#define sp_event_envelope_scaled5_srq(event_pointer, out, ...) \
+  status_require((sp_envelope_scaled5(out, __VA_ARGS__))); \
+  status_require((sp_event_memory_add(event_pointer, (*out))))
+#define sp_event_envelope_scaled_c3_srq(event_pointer, out, ...) \
+  status_require((sp_envelope_scaled_c3(out, __VA_ARGS__))); \
+  status_require((sp_event_memory_add(event_pointer, (*out))))
+#define sp_event_envelope_scaled_c4_srq(event_pointer, out, ...) \
+  status_require((sp_envelope_scaled_c4(out, __VA_ARGS__))); \
+  status_require((sp_event_memory_add(event_pointer, (*out))))
+#define sp_event_envelope_scaled_c5_srq(event_pointer, out, ...) \
+  status_require((sp_envelope_scaled_c5(out, __VA_ARGS__))); \
+  status_require((sp_event_memory_add(event_pointer, (*out))))
 array3_declare_type(sp_memory, memreg2_t);
 typedef void (*sp_memory_free_t)(void*);
 struct sp_event_t;

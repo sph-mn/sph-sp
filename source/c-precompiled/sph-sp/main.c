@@ -53,7 +53,6 @@
       }; \
     }; \
   }
-#define sp_memory_error status_set_goto(sp_s_group_sp, sp_s_id_memory)
 
 /** fixed if array is zero, otherwise array value at index */
 #define sp_modvalue(fixed, array, index) (array ? array[index] : fixed)
@@ -314,11 +313,12 @@ void sp_convolve(sp_sample_t* a, sp_time_t a_len, sp_sample_t* b, sp_time_t b_le
 #include <sph-sp/sequencer.c>
 #include <sph-sp/statistics.c>
 #include <sph-sp/file.c>
-sp_render_config_t sp_render_config(sp_channel_count_t channel_count, sp_time_t rate, sp_time_t block_size) {
+sp_render_config_t sp_render_config(sp_channel_count_t channel_count, sp_time_t rate, sp_time_t block_size, sp_bool_t display_progress) {
   sp_render_config_t a;
   a.channel_count = channel_count;
   a.rate = rate;
   a.block_size = block_size;
+  a.display_progress = display_progress;
   return (a);
 }
 
@@ -337,6 +337,9 @@ status_t sp_render_range_file(sp_event_t event, sp_time_t start, sp_time_t end, 
   remainder = ((end - start) % config.block_size);
   block_end = (config.block_size * ((end - start) / config.block_size));
   for (i = 0; (i < block_end); i += config.block_size) {
+    if (config.display_progress) {
+      printf(("%.1f%\n"), (100 * (i / ((sp_sample_t)(block_end)))));
+    };
     status_require((sp_seq(i, (i + config.block_size), block, (&events))));
     status_require((sp_file_write((&file), (block.samples), (config.block_size))));
     sp_block_zero(block);
@@ -374,7 +377,7 @@ status_t sp_render_file(sp_event_t event, uint8_t* path) {
     sp_event_prepare(event);
   };
   printf("rendering %lu seconds to file %s\n", (event.end / sp_rate), path);
-  return ((sp_render_range_file(event, 0, (event.end), (sp_render_config(sp_channel_count, sp_rate, sp_rate)), path)));
+  return ((sp_render_range_file(event, 0, (event.end), (sp_render_config(sp_channel_count, sp_rate, (10 * sp_rate), 1)), path)));
 exit:
   status_return;
 }
@@ -388,7 +391,7 @@ status_t sp_render_plot(sp_event_t event) {
     sp_event_prepare(event);
   };
   printf("rendering %lu seconds to plot\n", (event.end / sp_rate));
-  status_require((sp_render_range_block(event, 0, (event.end), (sp_render_config(sp_channel_count, sp_rate, sp_rate)), (&block))));
+  status_require((sp_render_range_block(event, 0, (event.end), (sp_render_config(sp_channel_count, sp_rate, sp_rate, 1)), (&block))));
   sp_plot_samples(((block.samples)[0]), (event.end));
 exit:
   status_return;

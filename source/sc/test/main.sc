@@ -167,7 +167,7 @@
   (declare in sp-sample-t* out sp-sample-t* radius sp-time-t size sp-time-t)
   (memreg-init 2)
   (set size 11 radius 4)
-  (status-require (sp-path-samples-2 &in size (sp-path-line 5 10.0) (sp-path-line (- size 1) 0)))
+  (status-require (sp-path-samples3 &in (- size 1) 5 0 10 0))
   (memreg-add in)
   (status-require (sp-samples-new size &out))
   (memreg-add out)
@@ -551,7 +551,7 @@
     config sp-wave-event-config-t*)
   (sp-declare-event event)
   (error-memory-init 2)
-  (set rc (sp-render-config sp-channel-count sp-rate sp-rate) rc.block-size 40)
+  (set rc (sp-render-config sp-channel-count sp-rate sp-rate #f) rc.block-size 40)
   (for ((set i 0) (< i test-wave-event-duration) (set+ i 1))
     (set (array-get frq i) 1500 (array-get amod i) 1))
   (status-require (sp-wave-event-config-new &config))
@@ -571,19 +571,16 @@
   (label exit (if status-is-failure error-memory-free) status-return))
 
 (define (test-path) status-t
-  (declare
-    samples sp-sample-t*
-    times sp-time-t*
-    curves-config sp-path-curves-config-t
-    out sp-sample-t*)
+  (declare samples sp-sample-t* times sp-time-t* event sp-event-t)
   status-declare
-  (status-require (sp-path-samples-2 &samples 100 (sp-path-line 10 1) (sp-path-line 100 0)))
-  (status-require (sp-path-times-2 &times 100 (sp-path-line 10 1) (sp-path-line 100 0)))
-  (srq (sp-path-curves-config-new 5 &curves-config))
-  (array-set* curves-config.x 20 40 50 55 100)
-  (array-set* curves-config.y 10 20 30 40 70)
-  (array-set* curves-config.c -1 1 0.1 0.7 -0.1)
-  (sp-path-curves-samples-new curves-config 100 &out)
+  (status-require (sp-path-samples3 &samples 100 10 0 1 10))
+  (status-require (sp-path-times3 &times 100 10 0 1 10))
+  (declare x (array sp-sample-t 2 10 20) y (array sp-sample-t 2 3 4) c (array sp-sample-t 2 0 0.1))
+  (status-require (sp-envelope-zero &samples 100 2 x y c))
+  (status-require (sp-envelope-zero3 &samples 100 10 1))
+  (status-require (sp-envelope-scaled &times 100 5 2 x y c))
+  (status-require (sp-envelope-scaled3 &times 100 5 10 1 2 3))
+  (sp-event-path-samples3-srq &event &samples 100 10 0 1 10)
   (label exit status-return))
 
 (pre-define (feq a b) (sp-sample-nearly-equal a b 0.01))
@@ -766,9 +763,9 @@
   (error-memory-init 4)
   (status-require (sp-wave-event-config-new &config))
   (error-memory-add config)
-  (status-require (sp-path-samples-2 &amod size (sp-path-move 0 1.0) (sp-path-constant)))
+  (status-require (sp-path-samples2 &amod size 1.0 1.0))
   (error-memory-add amod)
-  (status-require (sp-path-times-2 &fmod size (sp-path-move 0 250) (sp-path-constant)))
+  (status-require (sp-path-times2 &fmod size 250 250))
   (error-memory-add fmod)
   (struct-set *config wvf sp-sine-table wvf-size sp-rate fmod fmod amp 1 amod amod channel-count 2)
   (for ((set i 0) (< i 10) (set+ i 1))
@@ -818,7 +815,7 @@
   (status-require (sp-map-event-config-new &map-event-config))
   (error-memory-add map-event-config)
   (set size (* 10 _sp-rate))
-  (status-require (sp-path-samples-2 &amod size (sp-path-move 0 1.0) (sp-path-constant)))
+  (status-require (sp-path-samples2 &amod size 1.0 1.0))
   (struct-set *config
     wvf sp-sine-table
     wvf-size sp-rate

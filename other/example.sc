@@ -45,11 +45,7 @@
   (define c s1-c-t (pointer-get (convert-type _event:config s1-c-t*)))
   (sc-comment "envelope from an interpolated path")
   (declare amod sp-sample-t*)
-  (sp-path-curves-config-declare amod-path 3)
-  (array-set* amod-path.x 0 (/ _duration 10) _duration)
-  (array-set* amod-path.y 0 c.amp 0)
-  (srq (sp-path-curves-samples-new amod-path _duration &amod))
-  (srq (sp-event-memory-add _event amod))
+  (sp-event-envelope-zero3-srq _event &amod _duration 0.1 c.amp)
   (sc-comment "sound event configuration")
   (declare se-c sp-sound-event-config-t*)
   (srq (sp-sound-event-config-new &se-c))
@@ -73,7 +69,7 @@
   (sp-for-each-index i times-length
     (set event s1-event)
     (sp-event-malloc-type &event s1-c-t &s1-c)
-    (set s1-c:amp (if* (modulo i 2) 0.25 1.0))
+    (set s1-c:amp (if* (modulo i 2) 0.25 0.9))
     (struct-set event
       config s1-c
       start (+ _sp-rate (* tempo (array-get times i)))

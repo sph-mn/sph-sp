@@ -27,8 +27,10 @@
 
 (sc-define-syntax (sp-define-event-prepare* name body ...)
   (sp-define* (name _event) sp-event-t*
-    (define _duration sp-time-t (- _event:end _event:start)) body
-    ... (if _event:prepare (status-require (_event:prepare _event)))))
+    (define _duration sp-time-t (- _event:end _event:start))
+    body
+    ...
+    (if _event:prepare (status-require (_event:prepare _event)))))
 
 (sc-define-syntax* (sp-define-event* name-and-options body ...)
   (let*

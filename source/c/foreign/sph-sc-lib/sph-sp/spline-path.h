@@ -73,5 +73,5 @@ size_t spline_path_size(spline_path_t path);
 void spline_path_free(spline_path_t path);
 spline_path_point_t spline_path_perpendicular_point(spline_path_point_t p1, spline_path_point_t p2, spline_path_value_t distance_factor);
 void spline_path_i_bezier_arc(size_t start, size_t end, spline_path_point_t p_start, spline_path_point_t* p_rest, void** data, spline_path_value_t* out);
-spline_path_segment_t spline_path_bezier_arc(spline_path_value_t curvature, spline_path_value_t x, spline_path_value_t y);
+spline_path_segment_t spline_path_bezier_arc(spline_path_value_t x, spline_path_value_t y, spline_path_value_t curvature);
 #endif

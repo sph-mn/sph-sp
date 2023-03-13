@@ -28,7 +28,8 @@
   (sp-define-event name _prepare duration)
   (begin
     "use case: event variables defined at the top-level"
-    (define name sp-event-t
+    (define
+      name sp-event-t
       (struct-literal (prepare _prepare) (start 0)
         (end duration) (data 0) (memory (struct-literal 0)))))
   (sp-event-memory-malloc event count type pointer-address)
@@ -70,7 +71,119 @@
   (sp-event-times event-pointer size pointer-address)
   (sp-event-alloc event-pointer sp-times-new size pointer-address)
   (sp-event-units event-pointer size pointer-address)
-  (sp-event-alloc event-pointer sp-units-new size pointer-address))
+  (sp-event-alloc event-pointer sp-units-new size pointer-address)
+  (sp-event-path-samples-srq event-pointer out ...)
+  (begin
+    (status-require (sp-path-samples out __VA_ARGS__))
+    (status-require (sp-event-memory-add event-pointer *out)))
+  (sp-event-path-samples3-srq event-pointer out ...)
+  (begin
+    (status-require (sp-path-samples3 out __VA_ARGS__))
+    (status-require (sp-event-memory-add event-pointer *out)))
+  (sp-event-path-samples4-srq event-pointer out ...)
+  (begin
+    (status-require (sp-path-samples4 out __VA_ARGS__))
+    (status-require (sp-event-memory-add event-pointer *out)))
+  (sp-event-path-samples5-srq event-pointer out ...)
+  (begin
+    (status-require (sp-path-samples5 out __VA_ARGS__))
+    (status-require (sp-event-memory-add event-pointer *out)))
+  (sp-event-path-samples-c3-srq event-pointer out ...)
+  (begin
+    (status-require (sp-path-samples-c3 out __VA_ARGS__))
+    (status-require (sp-event-memory-add event-pointer *out)))
+  (sp-event-path-samples-c4-srq event-pointer out ...)
+  (begin
+    (status-require (sp-path-samples-c4 out __VA_ARGS__))
+    (status-require (sp-event-memory-add event-pointer *out)))
+  (sp-event-path-samples-c5-srq event-pointer out ...)
+  (begin
+    (status-require (sp-path-samples-c5 out __VA_ARGS__))
+    (status-require (sp-event-memory-add event-pointer *out)))
+  (sp-event-path-times-srq event-pointer out ...)
+  (begin
+    (status-require (sp-path-times out __VA_ARGS__))
+    (status-require (sp-event-memory-add event-pointer *out)))
+  (sp-event-path-times3-srq event-pointer out ...)
+  (begin
+    (status-require (sp-path-times3 out __VA_ARGS__))
+    (status-require (sp-event-memory-add event-pointer *out)))
+  (sp-event-path-times4-srq event-pointer out ...)
+  (begin
+    (status-require (sp-path-times4 out __VA_ARGS__))
+    (status-require (sp-event-memory-add event-pointer *out)))
+  (sp-event-path-times5-srq event-pointer out ...)
+  (begin
+    (status-require (sp-path-times5 out __VA_ARGS__))
+    (status-require (sp-event-memory-add event-pointer *out)))
+  (sp-event-path-times-c3-srq event-pointer out ...)
+  (begin
+    (status-require (sp-path-times-c3 out __VA_ARGS__))
+    (status-require (sp-event-memory-add event-pointer *out)))
+  (sp-event-path-times-c4-srq event-pointer out ...)
+  (begin
+    (status-require (sp-path-times-c4 out __VA_ARGS__))
+    (status-require (sp-event-memory-add event-pointer *out)))
+  (sp-event-path-times-c5-srq event-pointer out ...)
+  (begin
+    (status-require (sp-path-times-c5 out __VA_ARGS__))
+    (status-require (sp-event-memory-add event-pointer *out)))
+  (sp-event-envelope-zero-srq event-pointer out ...)
+  (begin
+    (status-require (sp-envelope-zero out __VA_ARGS__))
+    (status-require (sp-event-memory-add event-pointer *out)))
+  (sp-event-envelope-zero3-srq event-pointer out ...)
+  (begin
+    (status-require (sp-envelope-zero3 out __VA_ARGS__))
+    (status-require (sp-event-memory-add event-pointer *out)))
+  (sp-event-envelope-zero4-srq event-pointer out ...)
+  (begin
+    (status-require (sp-envelope-zero4 out __VA_ARGS__))
+    (status-require (sp-event-memory-add event-pointer *out)))
+  (sp-event-envelope-zero5-srq event-pointer out ...)
+  (begin
+    (status-require (sp-envelope-zero5 out __VA_ARGS__))
+    (status-require (sp-event-memory-add event-pointer *out)))
+  (sp-event-envelope-zero-c3-srq event-pointer out ...)
+  (begin
+    (status-require (sp-envelope-zero-c3 out __VA_ARGS__))
+    (status-require (sp-event-memory-add event-pointer *out)))
+  (sp-event-envelope-zero-c4-srq event-pointer out ...)
+  (begin
+    (status-require (sp-envelope-zero-c4 out __VA_ARGS__))
+    (status-require (sp-event-memory-add event-pointer *out)))
+  (sp-event-envelope-zero-c5-srq event-pointer out ...)
+  (begin
+    (status-require (sp-envelope-zero-c5 out __VA_ARGS__))
+    (status-require (sp-event-memory-add event-pointer *out)))
+  (sp-event-envelope-scaled-srq event-pointer out ...)
+  (begin
+    (status-require (sp-envelope-scaled out __VA_ARGS__))
+    (status-require (sp-event-memory-add event-pointer *out)))
+  (sp-event-envelope-scaled3-srq event-pointer out ...)
+  (begin
+    (status-require (sp-envelope-scaled3 out __VA_ARGS__))
+    (status-require (sp-event-memory-add event-pointer *out)))
+  (sp-event-envelope-scaled4-srq event-pointer out ...)
+  (begin
+    (status-require (sp-envelope-scaled4 out __VA_ARGS__))
+    (status-require (sp-event-memory-add event-pointer *out)))
+  (sp-event-envelope-scaled5-srq event-pointer out ...)
+  (begin
+    (status-require (sp-envelope-scaled5 out __VA_ARGS__))
+    (status-require (sp-event-memory-add event-pointer *out)))
+  (sp-event-envelope-scaled-c3-srq event-pointer out ...)
+  (begin
+    (status-require (sp-envelope-scaled-c3 out __VA_ARGS__))
+    (status-require (sp-event-memory-add event-pointer *out)))
+  (sp-event-envelope-scaled-c4-srq event-pointer out ...)
+  (begin
+    (status-require (sp-envelope-scaled-c4 out __VA_ARGS__))
+    (status-require (sp-event-memory-add event-pointer *out)))
+  (sp-event-envelope-scaled-c5-srq event-pointer out ...)
+  (begin
+    (status-require (sp-envelope-scaled-c5 out __VA_ARGS__))
+    (status-require (sp-event-memory-add event-pointer *out))))
 
 (array3-declare-type sp-memory memreg2-t)
 

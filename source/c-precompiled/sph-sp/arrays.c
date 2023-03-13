@@ -467,6 +467,22 @@ void sp_times_subdivide_difference(sp_time_t* a, sp_time_t size, sp_time_t index
     out[i] = (out[(i - 1)] + value);
   };
 }
+void sp_times_to_samples(sp_time_t* in, sp_size_t count, sp_sample_t* out) {
+  for (sp_size_t i = 0; (i < count); i += 1) {
+    out[i] = in[i];
+  };
+}
+status_t sp_times_to_samples_replace(sp_time_t* in, sp_size_t count, sp_sample_t** out) {
+  status_declare;
+  sp_define_samples_srq(temp, count);
+  for (sp_size_t i = 0; (i < count); i += 1) {
+    temp[i] = in[i];
+  };
+  free(in);
+  *out = temp;
+exit:
+  status_return;
+}
 
 /* samples */
 arrays_template(sp_sample_t, sample, samples, sp_subtract, fabs);
@@ -480,13 +496,24 @@ void sp_samples_display(sp_sample_t* in, sp_size_t count) {
 }
 void sp_samples_to_times(sp_sample_t* in, sp_size_t count, sp_time_t* out) {
   for (sp_size_t i = 0; (i < count); i += 1) {
-    out[i] = sp_cheap_round_positive((in[i]));
+    out[i] = sp_sample_to_time((in[i]));
   };
 }
 void sp_samples_to_units(sp_sample_t* in_out, sp_size_t count) {
   for (sp_size_t i = 0; (i < count); i += 1) {
     in_out[i] = ((in_out[i] + 1) / 2);
   };
+}
+status_t sp_samples_to_times_replace(sp_sample_t* in, sp_size_t count, sp_time_t** out) {
+  status_declare;
+  sp_define_times_srq(temp, count);
+  for (sp_size_t i = 0; (i < count); i += 1) {
+    temp[i] = sp_sample_to_time((in[i]));
+  };
+  free(in);
+  *out = temp;
+exit:
+  status_return;
 }
 void sp_samples_set_gain(sp_sample_t* in_out, sp_size_t count, sp_sample_t amp) {
   sp_sample_t in_max;

@@ -1,121 +1,179 @@
-(define (sp-path-samples-new path size out) (status-t sp-path-t sp-time-t sp-sample-t**)
-  "out memory is allocated"
+(define (sp-path-samples out length point-count x y c)
+  (status-t sp-sample-t** sp-time-t sp-path-point-count-t sp-sample-t* sp-sample-t* sp-sample-t*)
+  "x length is point_count minus two.
+   x contains only intermediate point x values x(0 + 1) to x(n - 1)
+   the path will start at x 0 and end at x length.
+   point_count must be greater one.
+   y length is point_count.
+   c length is point_count minus one.
+   c is for curvature and values are between -1.0 and 1.0.
+   c can be 0 in which case it is ignored"
   status-declare
-  (declare out-temp sp-sample-t*)
-  (if (= 0 size) (set size (sp-path-size path)))
-  (status-require (sp-samples-new size &out-temp))
-  (spline-path-get &path 0 size out-temp)
-  (set *out out-temp)
-  (label exit status-return))
-
-(define (sp-path-times-new path size out) (status-t sp-path-t sp-time-t sp-time-t**)
-  "return a sp_time_t array from path.
-   memory is allocated and ownership transferred to the caller"
-  status-declare
-  (declare out-temp sp-time-t* temp sp-sample-t*)
-  (set temp 0)
-  (if (= 0 size) (set size (sp-path-size path)))
-  (status-require (sp-path-samples-new path size &temp))
-  (status-require (sp-times-new size &out-temp))
-  (sp-samples->times temp size out-temp)
-  (set *out out-temp)
-  (label exit (free temp) status-return))
-
-(define (sp-path-times-1 out size s1) (status-t sp-time-t** sp-time-t sp-path-segment-t)
-  "return a newly allocated sp_time_t array for a path with one segment"
-  (declare s (array sp-path-segment-t 1 s1) path sp-path-t)
-  (spline-path-set &path s 1)
-  (return (sp-path-times-new path size out)))
-
-(define (sp-path-times-2 out size s1 s2)
-  (status-t sp-time-t** sp-time-t sp-path-segment-t sp-path-segment-t)
-  (declare s (array sp-path-segment-t 2 s1 s2) path sp-path-t)
-  (spline-path-set &path s 2)
-  (return (sp-path-times-new path size out)))
-
-(define (sp-path-times-3 out size s1 s2 s3)
-  (status-t sp-time-t** sp-time-t sp-path-segment-t sp-path-segment-t sp-path-segment-t)
-  (declare s (array sp-path-segment-t 3 s1 s2 s3) path sp-path-t)
-  (spline-path-set &path s 3)
-  (return (sp-path-times-new path size out)))
-
-(define (sp-path-times-4 out size s1 s2 s3 s4)
-  (status-t sp-time-t** sp-time-t sp-path-segment-t sp-path-segment-t sp-path-segment-t sp-path-segment-t)
-  (declare s (array sp-path-segment-t 4 s1 s2 s3 s4) path sp-path-t)
-  (spline-path-set &path s 4)
-  (return (sp-path-times-new path size out)))
-
-(define (sp-path-samples-1 out size s1) (status-t sp-sample-t** sp-time-t sp-path-segment-t)
-  (declare s (array sp-path-segment-t 1 s1) path sp-path-t)
-  (spline-path-set &path s 1)
-  (return (sp-path-samples-new path size out)))
-
-(define (sp-path-samples-2 out size s1 s2)
-  (status-t sp-sample-t** sp-time-t sp-path-segment-t sp-path-segment-t)
-  (declare s (array sp-path-segment-t 2 s1 s2) path sp-path-t)
-  (spline-path-set &path s 2)
-  (return (sp-path-samples-new path size out)))
-
-(define (sp-path-samples-3 out size s1 s2 s3)
-  (status-t sp-sample-t** sp-time-t sp-path-segment-t sp-path-segment-t sp-path-segment-t)
-  (declare s (array sp-path-segment-t 3 s1 s2 s3) path sp-path-t)
-  (spline-path-set &path s 3)
-  (return (sp-path-samples-new path size out)))
-
-(define (sp-path-samples-4 out size s1 s2 s3 s4)
-  (status-t sp-sample-t** sp-time-t sp-path-segment-t sp-path-segment-t sp-path-segment-t sp-path-segment-t)
-  (declare s (array sp-path-segment-t 4 s1 s2 s3 s4) path sp-path-t)
-  (spline-path-set &path s 4)
-  (return (sp-path-samples-new path size out)))
-
-(define (sp-path-curves-config-new segment-count out) (status-t sp-time-t sp-path-curves-config-t*)
-  status-declare
-  (srq (sp-samples-new segment-count &out:x))
-  (srq (sp-samples-new segment-count &out:y))
-  (srq (sp-samples-new segment-count &out:c))
-  (set out:segment-count segment-count)
-  (label exit status-return))
-
-(define (sp-path-curves-config-free a) (void sp-path-curves-config-t)
-  (free a.x)
-  (free a.y)
-  (free a.c))
-
-(define (sp-path-curves-new config out) (status-t sp-path-curves-config-t sp-path-t*)
-  "a path that uses linear or circular interpolation depending on the values of the config.c.
-   config.c 0 is linear and other values between -1.0 and 1.0 add curvature"
-  status-declare
-  (declare ss sp-path-segment-t* x sp-time-t y sp-sample-t c sp-sample-t)
-  (srq (sp-malloc-type config.segment-count sp-path-segment-t &ss))
-  (set (array-get ss 0) (sp-path-move (array-get config.x 0) (array-get config.y 0)))
-  (define ss-index sp-time-t 1)
-  (for ((define i sp-time-t 1) (< i config.segment-count) (set+ i 1))
-    (set x (array-get config.x i))
-    (if (= x (array-get config.x (- i 1))) continue)
+  (declare path spline-path-t segments (array spline-path-segment-t sp-path-point-count-limit))
+  (define
+    last-point-index sp-path-point-count-t (- point-count 1)
+    xn sp-sample-t length
+    yn sp-sample-t (array-get y last-point-index)
+    cn sp-sample-t (if* c (array-get c (- last-point-index 1)) 0))
+  (set
+    (array-get segments 0) (spline-path-move 0 (array-get y 0))
+    (array-get segments last-point-index)
+    (if* (< cn 1.0e-5) (spline-path-line xn yn) (spline-path-bezier-arc xn yn cn)))
+  (for ((define i sp-path-point-count-t 1) (< i last-point-index) (set+ i 1))
     (set
-      y (array-get config.y i)
-      c (array-get config.c i)
-      (array-get ss ss-index) (if* (< c 1.0e-5) (sp-path-line x y) (sp-path-bezier-arc c x y)))
-    (set+ ss-index 1))
-  (spline-path-set out ss ss-index)
+      xn (array-get x (- i 1))
+      yn (array-get y i)
+      cn (if* c (array-get c (- i 1)) 0)
+      (array-get segments i)
+      (if* (< cn 1.0e-5) (spline-path-line xn yn) (spline-path-bezier-arc xn yn cn))))
+  (spline-path-set &path segments point-count)
+  (status-require (sp-samples-new length out))
+  (spline-path-get &path 0 length *out)
   (label exit status-return))
 
-(define (sp-path-curves-times-new config length out)
-  (status-t sp-path-curves-config-t sp-time-t sp-time-t**)
+(define (sp-path-times out length point-count x y c)
+  (status-t sp-time-t** sp-time-t sp-path-point-count-t sp-sample-t* sp-sample-t* sp-sample-t*)
+  "c is for curvature and values are between -1.0 and 1.0"
   status-declare
-  (declare path sp-path-t)
-  (error-memory-init 1)
-  (srq (sp-path-curves-new config &path))
-  (error-memory-add path.segments)
-  (srq (sp-path-times-new path length out))
-  (label exit (if status-is-failure error-memory-free) status-return))
+  (declare temp sp-sample-t*)
+  (status-require (sp-path-samples &temp length point-count x y c))
+  (status-require (sp-samples->times-replace temp length out))
+  (label exit status-return))
 
-(define (sp-path-curves-samples-new config length out)
-  (status-t sp-path-curves-config-t sp-time-t sp-sample-t**)
-  status-declare
-  (declare path sp-path-t)
-  (error-memory-init 1)
-  (srq (sp-path-curves-new config &path))
-  (error-memory-add path.segments)
-  (srq (sp-path-samples-new path length out))
-  (label exit (if status-is-failure error-memory-free) status-return))
+(pre-define (sp-define-path-n type-name type)
+  (begin
+    (define ((pre-concat sp-path- type-name 2) out length y1 y2)
+      (status-t type** sp-time-t sp-sample-t sp-sample-t)
+      (declare y (array sp-sample-t 2))
+      (array-set* y y1 y2)
+      ((pre-concat sp-path- type-name) out length 2 0 y 0))
+    (define ((pre-concat sp-path- type-name 3) out length x1 y1 y2 y3)
+      (status-t type** sp-time-t sp-sample-t sp-sample-t sp-sample-t sp-sample-t)
+      (declare y (array sp-sample-t 3))
+      (array-set* y y1 y2 y3)
+      ((pre-concat sp-path- type-name) out length 3 &x1 y 0))
+    (define ((pre-concat sp-path- type-name 4) out length x1 x2 y1 y2 y3 y4)
+      (status-t type** sp-time-t sp-sample-t sp-sample-t sp-sample-t sp-sample-t sp-sample-t sp-sample-t)
+      (declare x (array sp-sample-t 2) y (array sp-sample-t 4))
+      (array-set* x x1 x2)
+      (array-set* y y1 y2 y3 y4)
+      ((pre-concat sp-path- type-name) out length 4 x y 0))
+    (define ((pre-concat sp-path- type-name 5) out length x1 x2 x3 y1 y2 y3 y4 y5)
+      (status-t type** sp-time-t sp-sample-t sp-sample-t sp-sample-t sp-sample-t sp-sample-t sp-sample-t sp-sample-t sp-sample-t)
+      (declare x (array sp-sample-t 3) y (array sp-sample-t 5))
+      (array-set* x x1 x2 x3)
+      (array-set* y y1 y2 y3 y4 y5)
+      ((pre-concat sp-path- type-name) out length 5 x y 0))
+    (define ((pre-concat sp-path- type-name _c 2) out length y1 y2 c1)
+      (status-t type** sp-time-t sp-sample-t sp-sample-t sp-sample-t)
+      (declare y (array sp-sample-t 2))
+      (array-set* y y1 y2)
+      ((pre-concat sp-path- type-name) out length 2 0 y &c1))
+    (define ((pre-concat sp-path- type-name _c 3) out length x1 y1 y2 y3 c1 c2)
+      (status-t type** sp-time-t sp-sample-t sp-sample-t sp-sample-t sp-sample-t sp-sample-t sp-sample-t)
+      (declare y (array sp-sample-t 3) c (array sp-sample-t 2))
+      (array-set* y y1 y2 y3)
+      (array-set* c c1 c2)
+      ((pre-concat sp-path- type-name) out length 3 &x1 y c))
+    (define ((pre-concat sp-path- type-name _c 4) out length x1 x2 y1 y2 y3 y4 c1 c2 c3)
+      (status-t type** sp-time-t sp-sample-t sp-sample-t sp-sample-t sp-sample-t sp-sample-t sp-sample-t sp-sample-t sp-sample-t sp-sample-t)
+      (declare x (array sp-sample-t 2) y (array sp-sample-t 4) c (array sp-sample-t 3))
+      (array-set* x x1 x2)
+      (array-set* y y1 y2 y3 y4)
+      (array-set* c c1 c2 c3)
+      ((pre-concat sp-path- type-name) out length 4 x y c))
+    (define ((pre-concat sp-path- type-name _c 5) out length x1 x2 x3 y1 y2 y3 y4 y5 c1 c2 c3 c4)
+      (status-t type** sp-time-t sp-sample-t sp-sample-t sp-sample-t sp-sample-t sp-sample-t sp-sample-t sp-sample-t sp-sample-t sp-sample-t sp-sample-t sp-sample-t sp-sample-t)
+      (declare x (array sp-sample-t 3) y (array sp-sample-t 5) c (array sp-sample-t 4))
+      (array-set* x x1 x2 x3)
+      (array-set* y y1 y2 y3 y4 y5)
+      (array-set* c c1 c2 c3 c4)
+      ((pre-concat sp-path- type-name) out length 5 x y c))))
+
+(sp-define-path-n samples sp-sample-t)
+(sp-define-path-n times sp-time-t)
+
+(define (sp-envelope-zero out length point-count x y c)
+  (status-t sp-sample-t** sp-time-t sp-path-point-count-t sp-sample-t* sp-sample-t* sp-sample-t*)
+  "x, y and c length is point_count minus two.
+   x values will be cumulative (0.1, 0.2) -> 0.3.
+   x values will be multiplied by length"
+  (declare path-y (array sp-sample-t sp-path-point-count-limit))
+  (set* (array-get x 1) length)
+  (set (array-get path-y 0) 0 (array-get path-y (- point-count 1)) 0)
+  (for ((define i sp-path-point-count-t 2) (< i (- point-count 1)) (set+ i 1))
+    (set
+      (array-get x i) (+ (array-get x (- i 1)) (* (array-get x i) length))
+      (array-get path-y i) (array-get y i)))
+  (return (sp-path-samples out length point-count x path-y c)))
+
+(pre-define (sp-define-envelope-zero-n prefix type-name type)
+  (begin
+    (define ((pre-concat prefix 3) out length x1 y1)
+      (status-t type** sp-time-t sp-sample-t sp-sample-t)
+      (return ((pre-concat sp-path- type-name 3) out length (* x1 length) 0 y1 0)))
+    (define ((pre-concat prefix 4) out length x1 x2 y1 y2)
+      (status-t type** sp-time-t sp-sample-t sp-sample-t sp-sample-t sp-sample-t)
+      (return
+        ( (pre-concat sp-path- type-name 4) out length
+          (* x1 length) (+ (* x1 length) (* x2 length)) 0 y1 y2 0)))
+    (define ((pre-concat prefix 5) out length x1 x2 x3 y1 y2 y3)
+      (status-t type** sp-time-t sp-sample-t sp-sample-t sp-sample-t sp-sample-t sp-sample-t sp-sample-t)
+      (set* x1 length)
+      (set x2 (+ x1 (* x2 length)) x3 (+ x2 (* x3 length)))
+      (return ((pre-concat sp-path- type-name 5) out length x1 x2 x3 0 y1 y2 y3 0)))
+    (define ((pre-concat prefix _c 3) out length x1 y1 c1 c2)
+      (status-t type** sp-time-t sp-sample-t sp-sample-t sp-sample-t sp-sample-t)
+      (return ((pre-concat sp-path- type-name _c 3) out length (* x1 length) 0 y1 0 c1 c2)))
+    (define ((pre-concat prefix _c 4) out length x1 x2 y1 y2 c1 c2 c3)
+      (status-t type** sp-time-t sp-sample-t sp-sample-t sp-sample-t sp-sample-t sp-sample-t sp-sample-t sp-sample-t)
+      (return
+        ( (pre-concat sp-path- type-name _c 4) out length
+          (* x1 length) (+ (* x1 length) (* x2 length)) 0 y1 y2 0 c1 c2 c3)))
+    (define ((pre-concat prefix _c 5) out length x1 x2 x3 y1 y2 y3 c1 c2 c3 c4)
+      (status-t type** sp-time-t sp-sample-t sp-sample-t sp-sample-t sp-sample-t sp-sample-t sp-sample-t sp-sample-t sp-sample-t sp-sample-t sp-sample-t)
+      (set* x1 length)
+      (set x2 (+ x1 (* x2 length)) x3 (+ x2 (* x3 length)))
+      (return ((pre-concat sp-path- type-name _c 5) out length x1 x2 x3 0 y1 y2 y3 0 c1 c2 c3 c4)))))
+
+(sp-define-envelope-zero-n sp-envelope-zero samples sp-sample-t)
+
+(define (sp-envelope-scaled out length point-count y-scalar x y c)
+  (status-t sp-time-t** sp-time-t sp-path-point-count-t sp-sample-t sp-sample-t* sp-sample-t* sp-sample-t*)
+  "y and c length is point_count.
+   x length is point_count minus two.
+   x values will be cumulative (0.1, 0.2) -> 0.3.
+   x values will be multiplied by length"
+  (declare path-y (array sp-sample-t sp-path-point-count-limit))
+  (set* (array-get x 1) length)
+  (set
+    (array-get path-y 0) (* y-scalar (array-get y 0))
+    (array-get path-y (- point-count 1)) (* y-scalar (array-get y (- point-count 1))))
+  (for ((define i sp-path-point-count-t 2) (< i (- point-count 1)) (set+ i 1))
+    (set
+      (array-get x i) (+ (array-get x (- i 1)) (* (array-get x i) length))
+      (array-get path-y i) (* y-scalar (array-get y i))))
+  (return (sp-path-times out length point-count x path-y c)))
+
+(pre-define (sp-define-envelope-scaled-n prefix type-name type)
+  (begin
+    (define ((pre-concat prefix 3) out length y-scalar x1 y1 y2 y3)
+      (status-t type** sp-time-t sp-sample-t sp-sample-t sp-sample-t sp-sample-t sp-sample-t)
+      (return
+        ( (pre-concat sp-path- type-name 3) out length
+          (* x1 length) (* y1 y-scalar) (* y2 y-scalar) (* y3 y-scalar))))
+    (define ((pre-concat prefix 4) out length y-scalar x1 x2 y1 y2 y3 y4)
+      (status-t type** sp-time-t sp-sample-t sp-sample-t sp-sample-t sp-sample-t sp-sample-t sp-sample-t sp-sample-t)
+      (return
+        ( (pre-concat sp-path- type-name 4) out length
+          (* x1 length) (+ (* x1 length) (* x2 length)) (* y-scalar y1)
+          (* y-scalar y2) (* y-scalar y3) (* y-scalar y4))))
+    (define ((pre-concat prefix 5) out length y-scalar x1 x2 x3 y1 y2 y3 y4 y5)
+      (status-t type** sp-time-t sp-sample-t sp-sample-t sp-sample-t sp-sample-t sp-sample-t sp-sample-t sp-sample-t sp-sample-t sp-sample-t)
+      (set* x1 length)
+      (set x2 (+ x1 (* x2 length)) x3 (+ x2 (* x3 length)))
+      (return
+        ( (pre-concat sp-path- type-name 5) out length
+          x1 x2 x3 (* y-scalar y1) (* y-scalar y2) (* y-scalar y3) (* y-scalar y4) (* y-scalar y5))))))
+
+(sp-define-envelope-scaled-n sp-envelope-scaled times sp-time-t)

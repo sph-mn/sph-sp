@@ -7,7 +7,13 @@
   (sp-cheap-round-positive
     (+ (* (- 1 (convert-type t sp-sample-t)) (convert-type a sp-sample-t))
       (* t (convert-type b sp-sample-t))))
-  (sp-sample-interpolate-linear a b t) (+ (* (- 1 t) a) (* t b)))
+  (sp-sample-interpolate-linear a b t) (+ (* (- 1 t) a) (* t b))
+  (sp-define-samples id value) (define id sp-sample-t* value)
+  (sp-define-times id value) (define id sp-time-t* value)
+  (sp-define-samples-srq id count)
+  (begin (declare id sp-sample-t*) (status-require (sp-samples-new count &id)))
+  (sp-define-times-srq id count)
+  (begin (declare id sp-time-t*) (status-require (sp-times-new count &id))))
 
 (declare
   (sp-shuffle swap in count) (void (function-pointer void void* sp-size-t sp-size-t) void* sp-size-t)
@@ -61,7 +67,9 @@
   (sp-times-insert-space in size index count out)
   (void sp-time-t* sp-time-t sp-time-t sp-time-t sp-time-t*)
   (sp-times-subdivide-difference a size index count out)
-  (void sp-time-t* sp-time-t sp-time-t sp-time-t sp-time-t*))
+  (void sp-time-t* sp-time-t sp-time-t sp-time-t sp-time-t*)
+  (sp-times->samples in count out) (void sp-time-t* sp-size-t sp-sample-t*)
+  (sp-times->samples-replace in count out) (status-t sp-time-t* sp-size-t sp-sample-t**))
 
 (sc-comment "samples")
 (arrays-template-h sp-sample-t sample samples)
@@ -69,6 +77,7 @@
 (declare
   (sp-samples-display in count) (void sp-sample-t* sp-size-t)
   (sp-samples->times in count out) (void sp-sample-t* sp-size-t sp-time-t*)
+  (sp-samples->times-replace in count out) (status-t sp-sample-t* sp-size-t sp-time-t**)
   (sp-samples->units in-out count) (void sp-sample-t* sp-size-t)
   (sp-samples-set-gain in-out count amp) (void sp-sample-t* sp-size-t sp-sample-t)
   (sp-samples-set-gain in-out count amp) (void sp-sample-t* sp-size-t sp-sample-t)

@@ -15,7 +15,7 @@ c code and shared library for sound synthesis and sequencing. the sound processo
   * convolution
   * moving average filter
 * synthesis
-  * linear and bezier interpolation between points for amplitude envelopes and modulation
+  * linear and bezier interpolation between points for envelopes and other control data
   * lookup-table oscillator for sinusoids and other wave shapes with a stable phase and time-dependent frequency and amplitude changes provided by arrays
   * white noise generator
 * sequencing
@@ -38,7 +38,7 @@ see [other/example.c](other/example.c) or alternatively [other/example.sc](other
 * linux or compatible (libc)
 * gcc and shell for the provided compile script
 * optional: gnuplot
-* optional: [sph-sc](https://github.com/sph-mn/sph-sc), for development on sph-sp itself or for writing code in sc
+* optional: [sph-sc](https://github.com/sph-mn/sph-sc), for development on sph-sp itself or for using the sc macros
 
 # setup
 * install dependencies as needed

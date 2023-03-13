@@ -198,7 +198,7 @@ status_t test_moving_average() {
   memreg_init(2);
   size = 11;
   radius = 4;
-  status_require((sp_path_samples_2((&in), size, (sp_path_line(5, (10.0))), (sp_path_line((size - 1), 0)))));
+  status_require((sp_path_samples3((&in), (size - 1), 5, 0, 10, 0)));
   memreg_add(in);
   status_require((sp_samples_new(size, (&out))));
   memreg_add(out);
@@ -622,7 +622,7 @@ status_t test_render_range_block() {
   sp_wave_event_config_t* config;
   sp_declare_event(event);
   error_memory_init(2);
-  rc = sp_render_config(sp_channel_count, sp_rate, sp_rate);
+  rc = sp_render_config(sp_channel_count, sp_rate, sp_rate, 0);
   rc.block_size = 40;
   for (i = 0; (i < test_wave_event_duration); i += 1) {
     frq[i] = 1500;
@@ -655,28 +655,18 @@ exit:
 status_t test_path() {
   sp_sample_t* samples;
   sp_time_t* times;
-  sp_path_curves_config_t curves_config;
-  sp_sample_t* out;
+  sp_event_t event;
   status_declare;
-  status_require((sp_path_samples_2((&samples), 100, (sp_path_line(10, 1)), (sp_path_line(100, 0)))));
-  status_require((sp_path_times_2((&times), 100, (sp_path_line(10, 1)), (sp_path_line(100, 0)))));
-  srq((sp_path_curves_config_new(5, (&curves_config))));
-  (curves_config.x)[0] = 20;
-  (curves_config.x)[1] = 40;
-  (curves_config.x)[2] = 50;
-  (curves_config.x)[3] = 55;
-  (curves_config.x)[4] = 100;
-  (curves_config.y)[0] = 10;
-  (curves_config.y)[1] = 20;
-  (curves_config.y)[2] = 30;
-  (curves_config.y)[3] = 40;
-  (curves_config.y)[4] = 70;
-  (curves_config.c)[0] = -1;
-  (curves_config.c)[1] = 1;
-  (curves_config.c)[2] = 0.1;
-  (curves_config.c)[3] = 0.7;
-  (curves_config.c)[4] = -0.1;
-  sp_path_curves_samples_new(curves_config, 100, (&out));
+  status_require((sp_path_samples3((&samples), 100, 10, 0, 1, 10)));
+  status_require((sp_path_times3((&times), 100, 10, 0, 1, 10)));
+  sp_sample_t x[2] = { 10, 20 };
+  sp_sample_t y[2] = { 3, 4 };
+  sp_sample_t c[2] = { 0, 0.1 };
+  status_require((sp_envelope_zero((&samples), 100, 2, x, y, c)));
+  status_require((sp_envelope_zero3((&samples), 100, 10, 1)));
+  status_require((sp_envelope_scaled((&times), 100, 5, 2, x, y, c)));
+  status_require((sp_envelope_scaled3((&times), 100, 5, 10, 1, 2, 3)));
+  sp_event_path_samples3_srq((&event), (&samples), 100, 10, 0, 1, 10);
 exit:
   status_return;
 }
@@ -872,9 +862,9 @@ status_t test_sp_seq_parallel() {
   error_memory_init(4);
   status_require((sp_wave_event_config_new((&config))));
   error_memory_add(config);
-  status_require((sp_path_samples_2((&amod), size, (sp_path_move(0, (1.0))), (sp_path_constant()))));
+  status_require((sp_path_samples2((&amod), size, (1.0), (1.0))));
   error_memory_add(amod);
-  status_require((sp_path_times_2((&fmod), size, (sp_path_move(0, 250)), (sp_path_constant()))));
+  status_require((sp_path_times2((&fmod), size, 250, 250)));
   error_memory_add(fmod);
   (*config).wvf = sp_sine_table;
   (*config).wvf_size = sp_rate;
@@ -928,7 +918,7 @@ status_t test_sp_map_event() {
   status_require((sp_map_event_config_new((&map_event_config))));
   error_memory_add(map_event_config);
   size = (10 * _sp_rate);
-  status_require((sp_path_samples_2((&amod), size, (sp_path_move(0, (1.0))), (sp_path_constant()))));
+  status_require((sp_path_samples2((&amod), size, (1.0), (1.0))));
   (*config).wvf = sp_sine_table;
   (*config).wvf_size = sp_rate;
   (*config).frq = 300;

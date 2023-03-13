@@ -340,6 +340,17 @@
   (for ((set i (+ index 1)) (< i (+ index (+ count 1))) (set+ i 1))
     (set (array-get out i) (+ (array-get out (- i 1)) value))))
 
+(define (sp-times->samples in count out) (void sp-time-t* sp-size-t sp-sample-t*)
+  (sp-for-each-index i count (set (array-get out i) (array-get in i))))
+
+(define (sp-times->samples-replace in count out) (status-t sp-time-t* sp-size-t sp-sample-t**)
+  status-declare
+  (sp-define-samples-srq temp count)
+  (sp-for-each-index i count (set (array-get temp i) (array-get in i)))
+  (free in)
+  (set *out temp)
+  (label exit status-return))
+
 (sc-comment "samples")
 (arrays-template sp-sample-t sample samples sp-subtract fabs)
 
@@ -350,10 +361,18 @@
   (printf "\n"))
 
 (define (sp-samples->times in count out) (void sp-sample-t* sp-size-t sp-time-t*)
-  (sp-for-each-index i count (set (array-get out i) (sp-cheap-round-positive (array-get in i)))))
+  (sp-for-each-index i count (set (array-get out i) (sp-sample->time (array-get in i)))))
 
 (define (sp-samples->units in-out count) (void sp-sample-t* sp-size-t)
   (sp-for-each-index i count (set (array-get in-out i) (/ (+ (array-get in-out i) 1) 2))))
+
+(define (sp-samples->times-replace in count out) (status-t sp-sample-t* sp-size-t sp-time-t**)
+  status-declare
+  (sp-define-times-srq temp count)
+  (sp-for-each-index i count (set (array-get temp i) (sp-sample->time (array-get in i))))
+  (free in)
+  (set *out temp)
+  (label exit status-return))
 
 (define (sp-samples-set-gain in-out count amp) (void sp-sample-t* sp-size-t sp-sample-t)
   (declare in-max sp-sample-t difference sp-sample-t correction sp-sample-t)

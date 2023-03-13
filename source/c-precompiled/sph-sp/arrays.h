@@ -5,6 +5,14 @@
 #define sp_times_zero(a, size) memset(a, 0, (size * sizeof(sp_time_t)))
 #define sp_time_interpolate_linear(a, b, t) sp_cheap_round_positive((((1 - ((sp_sample_t)(t))) * ((sp_sample_t)(a))) + (t * ((sp_sample_t)(b)))))
 #define sp_sample_interpolate_linear(a, b, t) (((1 - t) * a) + (t * b))
+#define sp_define_samples(id, value) sp_sample_t* id = value
+#define sp_define_times(id, value) sp_time_t* id = value
+#define sp_define_samples_srq(id, count) \
+  sp_sample_t* id; \
+  status_require((sp_samples_new(count, (&id))))
+#define sp_define_times_srq(id, count) \
+  sp_time_t* id; \
+  status_require((sp_times_new(count, (&id))))
 void sp_shuffle(void (*swap)(void*, sp_size_t, sp_size_t), void* in, sp_size_t count);
 uint64_t sp_u64_from_array(uint8_t* a, sp_time_t count);
 /* times */
@@ -41,10 +49,13 @@ void sp_times_scale_y(sp_time_t* in, sp_size_t count, sp_time_t target_y, sp_tim
 void sp_times_remove(sp_time_t* in, sp_time_t size, sp_time_t index, sp_time_t count, sp_time_t* out);
 void sp_times_insert_space(sp_time_t* in, sp_time_t size, sp_time_t index, sp_time_t count, sp_time_t* out);
 void sp_times_subdivide_difference(sp_time_t* a, sp_time_t size, sp_time_t index, sp_time_t count, sp_time_t* out);
+void sp_times_to_samples(sp_time_t* in, sp_size_t count, sp_sample_t* out);
+status_t sp_times_to_samples_replace(sp_time_t* in, sp_size_t count, sp_sample_t** out);
 /* samples */
 arrays_template_h(sp_sample_t, sample, samples);
 void sp_samples_display(sp_sample_t* in, sp_size_t count);
 void sp_samples_to_times(sp_sample_t* in, sp_size_t count, sp_time_t* out);
+status_t sp_samples_to_times_replace(sp_sample_t* in, sp_size_t count, sp_time_t** out);
 void sp_samples_to_units(sp_sample_t* in_out, sp_size_t count);
 void sp_samples_set_gain(sp_sample_t* in_out, sp_size_t count, sp_sample_t amp);
 void sp_samples_set_gain(sp_sample_t* in_out, sp_size_t count, sp_sample_t amp);

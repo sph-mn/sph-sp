@@ -24,7 +24,6 @@
       (while a-size
         (set a-size (- a-size 1) channel channel-count)
         (while channel (set channel (- channel 1) b-size (- b-size 1)) body))))
-  sp-memory-error (status-set-goto sp-s-group-sp sp-s-id-memory)
   (sp-modvalue fixed array index)
   (begin
     "fixed if array is zero, otherwise array value at index"
@@ -229,10 +228,14 @@
 (pre-include "sph-sp/plot.c" "sph-sp/filter.c"
   "sph-sp/sequencer.c" "sph-sp/statistics.c" "sph-sp/file.c")
 
-(define (sp-render-config channel-count rate block-size)
-  (sp-render-config-t sp-channel-count-t sp-time-t sp-time-t)
+(define (sp-render-config channel-count rate block-size display-progress)
+  (sp-render-config-t sp-channel-count-t sp-time-t sp-time-t sp-bool-t)
   (declare a sp-render-config-t)
-  (struct-set a channel-count channel-count rate rate block-size block-size)
+  (struct-set a
+    channel-count channel-count
+    rate rate
+    block-size block-size
+    display-progress display-progress)
   (return a))
 
 (define (sp-render-range-file event start end config path)
@@ -249,6 +252,8 @@
     remainder (modulo (- end start) config.block-size)
     block-end (* config.block-size (/ (- end start) config.block-size)))
   (for ((set i 0) (< i block-end) (set+ i config.block-size))
+    (if config.display-progress
+      (printf "%.1f%\n" (* 100 (/ i (convert-type block-end sp-sample-t)))))
     (status-require (sp-seq i (+ i config.block-size) block &events))
     (status-require (sp-file-write &file block.samples config.block-size))
     (sp-block-zero block))
@@ -280,7 +285,7 @@
   (printf "rendering %lu seconds to file %s\n" (/ event.end sp-rate) path)
   (return
     (sp-render-range-file event 0
-      event.end (sp-render-config sp-channel-count sp-rate sp-rate) path))
+      event.end (sp-render-config sp-channel-count sp-rate (* 10 sp-rate) #t) path))
   (label exit status-return))
 
 (define (sp-render-plot event) (status-t sp-event-t)
@@ -292,7 +297,7 @@
   (printf "rendering %lu seconds to plot\n" (/ event.end sp-rate))
   (status-require
     (sp-render-range-block event 0
-      event.end (sp-render-config sp-channel-count sp-rate sp-rate) &block))
+      event.end (sp-render-config sp-channel-count sp-rate sp-rate #t) &block))
   (sp-plot-samples (array-get block.samples 0) event.end)
   (label exit status-return))
 

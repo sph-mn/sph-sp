@@ -66,17 +66,17 @@ void spline_path_set_missing_points(spline_path_value_t* out, size_t start, size
   };
 }
 
-/** p-rest length 1 */
+/** p_rest length 1 */
 void spline_path_i_move(size_t start, size_t end, spline_path_point_t p_start, spline_path_point_t* p_rest, void** data, spline_path_value_t* out) { memset(out, 0, (sizeof(spline_path_value_t) * (end - start))); }
 
-/** p-rest length 0 */
+/** p_rest length 0 */
 void spline_path_i_constant(size_t start, size_t end, spline_path_point_t p_start, spline_path_point_t* p_rest, void** data, spline_path_value_t* out) {
   for (size_t i = 0; (i < (end - start)); i += 1) {
     out[i] = p_start.y;
   };
 }
 
-/** p-rest length 1 */
+/** p_rest length 1 */
 void spline_path_i_line(size_t start, size_t end, spline_path_point_t p_start, spline_path_point_t* p_rest, void** data, spline_path_value_t* out) {
   spline_path_point_t p_end;
   spline_path_value_t t;
@@ -93,7 +93,7 @@ void spline_path_i_line(size_t start, size_t end, spline_path_point_t p_start, s
   };
 }
 
-/** p-rest length 3 */
+/** p_rest length 3 */
 void spline_path_i_bezier(size_t start, size_t end, spline_path_point_t p_start, spline_path_point_t* p_rest, void** data, spline_path_value_t* out) {
   size_t b_size;
   size_t i;
@@ -193,7 +193,7 @@ void spline_path_get(spline_path_t* path, size_t start, size_t end, spline_path_
   };
 }
 
-/** p-rest length 0. data is one spline-path-t */
+/** p_rest length 0. data is one spline_path_t */
 void spline_path_i_path(size_t start, size_t end, spline_path_point_t p_start, spline_path_point_t* p_rest, void** data, spline_path_value_t* out) { spline_path_get((*data), (start - p_start.x), (end - p_start.x), out); }
 spline_path_point_t spline_path_start(spline_path_t path) {
   spline_path_point_t p;
@@ -247,7 +247,7 @@ void spline_path_prepare_segments(spline_path_segment_t* segments, spline_path_s
   };
 }
 
-/** set segments for a path and initialise it */
+/** set segments for a path and initialize it */
 void spline_path_set(spline_path_t* path, spline_path_segment_t* segments, spline_path_segment_count_t segments_count) {
   spline_path_prepare_segments(segments, segments_count);
   path->segments = segments;
@@ -255,7 +255,7 @@ void spline_path_set(spline_path_t* path, spline_path_segment_t* segments, splin
   path->current_segment = 0;
 }
 
-/** like spline-path-set but copies segments to new memory in .segments that has to be freed
+/** like spline_path_set but copies segments to new memory in .segments that has to be freed
    when not needed anymore */
 uint8_t spline_path_set_copy(spline_path_t* path, spline_path_segment_t* segments, spline_path_segment_count_t segments_count) {
   spline_path_segment_t* s = malloc((segments_count * sizeof(spline_path_segment_t)));
@@ -308,7 +308,7 @@ spline_path_segment_t spline_path_bezier(spline_path_value_t x1, spline_path_val
 }
 
 /** curvature is a real between -1..1, with the maximum being the edge of the segment */
-spline_path_segment_t spline_path_bezier_arc(spline_path_value_t curvature, spline_path_value_t x, spline_path_value_t y) {
+spline_path_segment_t spline_path_bezier_arc(spline_path_value_t x, spline_path_value_t y, spline_path_value_t curvature) {
   spline_path_segment_t s;
   s.free = 0;
   s.data = 0;

@@ -46,15 +46,7 @@ status_t s1_prepare(sp_event_t* _event) {
   s1_c_t c = *((s1_c_t*)(_event->config));
   /* envelope from an interpolated path */
   sp_sample_t* amod;
-  sp_path_curves_config_declare(amod_path, 3);
-  (amod_path.x)[0] = 0;
-  (amod_path.x)[1] = (_duration / 10);
-  (amod_path.x)[2] = _duration;
-  (amod_path.y)[0] = 0;
-  (amod_path.y)[1] = c.amp;
-  (amod_path.y)[2] = 0;
-  srq((sp_path_curves_samples_new(amod_path, _duration, (&amod))));
-  srq((sp_event_memory_add(_event, amod)));
+  sp_event_envelope_zero3_srq(_event, (&amod), _duration, (0.1), (c.amp));
   /* sound event configuration */
   sp_sound_event_config_t* se_c;
   srq((sp_sound_event_config_new((&se_c))));
@@ -88,7 +80,7 @@ status_t t1_prepare(sp_event_t* _event) {
   for (sp_size_t i = 0; (i < times_length); i += 1) {
     event = s1_event;
     sp_event_malloc_type((&event), s1_c_t, (&s1_c));
-    s1_c->amp = ((i % 2) ? 0.25 : 1.0);
+    s1_c->amp = ((i % 2) ? 0.25 : 0.9);
     event.config = s1_c;
     event.start = (_sp_rate + (tempo * times[i]));
     event.end = (event.start + rt(1, 6));
