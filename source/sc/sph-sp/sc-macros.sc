@@ -5,8 +5,8 @@
 
 (sc-define-syntax* (sp-define* name-and-parameters types body ...)
   (let*
-    ( (local-memory-used (sc-contains-expression (q local-memory-init) body))
-      (error-memory-used (sc-contains-expression (q error-memory-init) body))
+    ( (local-memory-used (sc-contains-prefix body (q local-memory-init)))
+      (error-memory-used (sc-contains-prefix body (q error-memory-init)))
       (free-memory
         (if (or local-memory-used error-memory-used)
           (list
@@ -25,12 +25,16 @@
         status-declare
         (unquote-splicing body)))))
 
-(sc-define-syntax (sp-define-event-prepare* name body ...)
-  (sp-define* (name _event) sp-event-t*
-    (define _duration sp-time-t (- _event:end _event:start))
-    body
-    ...
-    (if _event:prepare (status-require (_event:prepare _event)))))
+(sc-define-syntax* (sp-define-event-prepare* name body ...)
+  (let
+    ( (body
+        (if (sc-contains body (q _duration))
+          (pair (q (define _duration sp-time-t (- _event:end _event:start))) body)
+          body)))
+    (qq
+      (sp-define* ((unquote name) _event) sp-event-t*
+        (unquote-splicing body)
+        (if _event:prepare (status-require (_event:prepare _event)))))))
 
 (sc-define-syntax* (sp-define-event* name-and-options body ...)
   (let*

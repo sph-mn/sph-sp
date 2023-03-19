@@ -30,6 +30,7 @@
   sp-noise sp-samples-random
   sp-memory-error (status-set-goto sp-s-group-sp sp-s-id-memory)
   sp-sample->time sp-cheap-round-positive
+  (sp-time->sample x) (convert-type x sp-sample-t)
   srq status-require
   (sp-subtract a b) (- a b)
   (sp-block-declare a) (begin (declare a sp-block-t) (set a.size 0))

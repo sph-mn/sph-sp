@@ -29,6 +29,7 @@
 #define sp_noise sp_samples_random
 #define sp_memory_error status_set_goto(sp_s_group_sp, sp_s_id_memory)
 #define sp_sample_to_time sp_cheap_round_positive
+#define sp_time_to_sample(x) ((sp_sample_t)(x))
 #define srq status_require
 #define sp_subtract(a, b) (a - b)
 #define sp_block_declare(a) \
