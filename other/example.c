@@ -65,7 +65,6 @@ exit:
 sp_define_event(s1_event, s1_prepare, 0);
 status_t t1_prepare(sp_event_t* _event) {
   status_declare;
-  sp_time_t _duration = (_event->end - _event->start);
   _event->prepare = sp_group_prepare;
   /* defines a group named t1 (track 1) with a default duration of 3/1 * _sp_rate.
        srq (alias for status_require) checks return error codes and jumps to a label named 'exit' on error */
@@ -97,7 +96,9 @@ int main() {
   status_declare;
   /* use one cpu core and two output channels */
   sp_initialize(1, 2, _sp_rate);
+  /* (srq (simple-event-plot)) */
   srq((sp_render_file(t1_event, ("/tmp/sp-example.wav"))));
 exit:
+  sp_deinitialize();
   status_i_return;
 }

@@ -999,6 +999,7 @@ int main() {
   test_helper_test_one(test_permutations);
   test_helper_test_one(test_sp_seq_parallel);
 exit:
+  sp_deinitialize();
   test_helper_display_summary();
   return ((status.id));
 }

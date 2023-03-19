@@ -49,7 +49,7 @@
   (sp-cheap-noise-event event-pointer _config)
   (struct-pointer-set event-pointer prepare sp-cheap-noise-event-prepare config _config)
   (sp-group-event event-pointer) (struct-pointer-set event-pointer prepare sp-group-prepare)
-  (sp-event-prepare a) (if a.prepare (begin (status-require (a.prepare &a)) (set a.prepare 0)))
+  (sp-event-prepare-srq a) (if a.prepare (begin (status-require (a.prepare &a)) (set a.prepare 0)))
   (sp-event-alloc event-pointer allocator pointer-address)
   (begin
     (status-require (allocator pointer-address))

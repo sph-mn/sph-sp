@@ -348,6 +348,7 @@ status_t sp_render_range_file(sp_event_t event, sp_time_t start, sp_time_t end, 
     status_require((sp_seq(i, (i + remainder), block, (&events))));
     status_require((sp_file_write((&file), (block.samples), remainder)));
   };
+  sp_event_list_free((&events));
 exit:
   sp_block_free((&block));
   sp_file_close_write((&file));
@@ -364,6 +365,7 @@ status_t sp_render_range_block(sp_event_t event, sp_time_t start, sp_time_t end,
   status_require((sp_event_list_add((&events), event)));
   status_require((sp_block_new((config.channel_count), (end - start), (&block))));
   status_require((sp_seq(start, end, block, (&events))));
+  sp_event_list_free((&events));
   *out = block;
 exit:
   status_return;
@@ -374,10 +376,10 @@ exit:
 status_t sp_render_file(sp_event_t event, uint8_t* path) {
   status_declare;
   if (!event.end) {
-    sp_event_prepare(event);
+    sp_event_prepare_srq(event);
   };
   printf("rendering %lu seconds to file %s\n", (event.end / sp_rate), path);
-  return ((sp_render_range_file(event, 0, (event.end), (sp_render_config(sp_channel_count, sp_rate, (10 * sp_rate), 1)), path)));
+  status_require((sp_render_range_file(event, 0, (event.end), (sp_render_config(sp_channel_count, sp_rate, (10 * sp_rate), 1)), path)));
 exit:
   status_return;
 }
@@ -388,7 +390,7 @@ status_t sp_render_plot(sp_event_t event) {
   status_declare;
   sp_block_t block;
   if (!event.end) {
-    sp_event_prepare(event);
+    sp_event_prepare_srq(event);
   };
   printf("rendering %lu seconds to plot\n", (event.end / sp_rate));
   status_require((sp_render_range_block(event, 0, (event.end), (sp_render_config(sp_channel_count, sp_rate, sp_rate, 1)), (&block))));
@@ -415,6 +417,8 @@ status_t sp_initialize(uint16_t cpu_count, sp_channel_count_t channel_count, sp_
       status_return;
     };
   };
+  sp_sine_table = 0;
+  sp_sine_table_lfo = 0;
   sp_cpu_count = cpu_count;
   sp_rate = rate;
   sp_channel_count = channel_count;
@@ -426,6 +430,13 @@ status_t sp_initialize(uint16_t cpu_count, sp_channel_count_t channel_count, sp_
   sp_sine_period((sp_rate * sp_sine_lfo_factor), sp_sine_table_lfo);
 exit:
   status_return;
+}
+void sp_deinitialize() {
+  if (sp_cpu_count) {
+    sph_future_deinit();
+  };
+  free(sp_sine_table);
+  free(sp_sine_table_lfo);
 }
 #include <sph-sp/path.c>
 

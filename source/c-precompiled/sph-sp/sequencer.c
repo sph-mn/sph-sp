@@ -113,7 +113,7 @@ exit:
 }
 
 /** free all list elements and the associated events. update the list head so it becomes the empty list.
-   needed if sp_seq will not further process and thereby free further past events */
+   needed if sp_seq will not further process and free currently incomplete events */
 void sp_event_list_free(sp_event_list_t** events) {
   sp_event_list_t* temp;
   sp_event_list_t* current = *events;
@@ -368,7 +368,7 @@ status_t sp_group_prepare_parallel(sp_event_t* a) {
 status_t sp_group_add(sp_event_t* a, sp_event_t event) {
   status_declare;
   if (!event.end) {
-    sp_event_prepare(event);
+    sp_event_prepare_srq(event);
   };
   status_require((sp_event_list_add(((sp_event_list_t**)(&(a->data))), event)));
   if (a->end < event.end) {
@@ -387,7 +387,7 @@ status_t sp_group_add_set(sp_event_t* group, sp_time_t start, sp_time_t duration
 status_t sp_group_append(sp_event_t* a, sp_event_t event) {
   status_declare;
   if (!event.end) {
-    sp_event_prepare(event);
+    sp_event_prepare_srq(event);
   };
   event.start += a->end;
   event.end += a->end;
@@ -437,6 +437,7 @@ exit:
 void sp_wave_event_channel_free(sp_event_t* a) {
   a->free = 0;
   free((a->config));
+  free((a->data));
 }
 status_t sp_wave_event_generate(sp_time_t start, sp_time_t end, sp_block_t out, sp_event_t* event) {
   status_declare;
@@ -480,9 +481,7 @@ status_t sp_wave_event_channel(sp_time_t duration, sp_wave_event_config_t config
   *out = event;
 exit:
   if (status_is_failure) {
-    if (data) {
-      free(data);
-    };
+    free(data);
   };
   status_return;
 }

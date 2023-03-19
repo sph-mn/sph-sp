@@ -80,5 +80,6 @@
   status-declare
   (sc-comment "use one cpu core and two output channels")
   (sp-initialize 1 2 _sp-rate)
+  (sc-comment (srq (simple-event-plot)))
   (srq (sp-render-file t1-event "/tmp/sp-example.wav"))
-  (label exit status-i-return))
+  (label exit (sp-deinitialize) status-i-return))

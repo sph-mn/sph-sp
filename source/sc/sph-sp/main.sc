@@ -261,6 +261,7 @@
     (begin
       (status-require (sp-seq i (+ i remainder) block &events))
       (status-require (sp-file-write &file block.samples remainder))))
+  (sp-event-list-free &events)
   (label exit (sp-block-free &block) (sp-file-close-write &file) status-return))
 
 (define (sp-render-range-block event start end config out)
@@ -274,6 +275,7 @@
   (status-require (sp-event-list-add &events event))
   (status-require (sp-block-new config.channel-count (- end start) &block))
   (status-require (sp-seq start end block &events))
+  (sp-event-list-free &events)
   (set *out block)
   (label exit status-return))
 
@@ -281,9 +283,9 @@
   "render the full duration of event to file at path and write information to standard output.
    uses channel count from global variable sp_channel_count and block size sp_rate"
   status-declare
-  (if (not event.end) (sp-event-prepare event))
+  (if (not event.end) (sp-event-prepare-srq event))
   (printf "rendering %lu seconds to file %s\n" (/ event.end sp-rate) path)
-  (return
+  (status-require
     (sp-render-range-file event 0
       event.end (sp-render-config sp-channel-count sp-rate (* 10 sp-rate) #t) path))
   (label exit status-return))
@@ -293,7 +295,7 @@
    uses channel count from global variable sp_channel_count and block size sp_rate"
   status-declare
   (declare block sp-block-t)
-  (if (not event.end) (sp-event-prepare event))
+  (if (not event.end) (sp-event-prepare-srq event))
   (printf "rendering %lu seconds to plot\n" (/ event.end sp-rate))
   (status-require
     (sp-render-range-block event 0
@@ -316,6 +318,8 @@
   status-declare
   (if cpu-count (begin (set status.id (sph-future-init cpu-count)) (if status.id status-return)))
   (set
+    sp-sine-table 0
+    sp-sine-table-lfo 0
     sp-cpu-count cpu-count
     sp-rate rate
     sp-channel-count channel-count
@@ -326,6 +330,11 @@
   (sp-sine-period sp-rate sp-sine-table)
   (sp-sine-period (* sp-rate sp-sine-lfo-factor) sp-sine-table-lfo)
   (label exit status-return))
+
+(define (sp-deinitialize) void
+  (if sp-cpu-count (sph-future-deinit))
+  (free sp-sine-table)
+  (free sp-sine-table-lfo))
 
 (pre-include "sph-sp/path.c")
 (sc-comment "extra")

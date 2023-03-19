@@ -65,7 +65,7 @@
 
 (define (sp-event-list-free events) (void sp-event-list-t**)
   "free all list elements and the associated events. update the list head so it becomes the empty list.
-   needed if sp_seq will not further process and thereby free further past events"
+   needed if sp_seq will not further process and free currently incomplete events"
   (declare temp sp-event-list-t*)
   (define current sp-event-list-t* *events)
   (while current (sp-event-free current:event) (set temp current current current:next) (free temp))
@@ -250,7 +250,7 @@
 
 (define (sp-group-add a event) (status-t sp-event-t* sp-event-t)
   status-declare
-  (if (not event.end) (sp-event-prepare event))
+  (if (not event.end) (sp-event-prepare-srq event))
   (status-require (sp-event-list-add (convert-type &a:data sp-event-list-t**) event))
   (if (< a:end event.end) (set a:end event.end))
   (label exit status-return))
@@ -263,7 +263,7 @@
 
 (define (sp-group-append a event) (status-t sp-event-t* sp-event-t)
   status-declare
-  (if (not event.end) (sp-event-prepare event))
+  (if (not event.end) (sp-event-prepare-srq event))
   (set+ event.start a:end event.end a:end)
   (status-require (sp-group-add a event))
   (label exit status-return))
@@ -300,7 +300,10 @@
   (set **out (sp-wave-event-config))
   (label exit status-return))
 
-(define (sp-wave-event-channel-free a) (void sp-event-t*) (set a:free 0) (free a:config))
+(define (sp-wave-event-channel-free a) (void sp-event-t*)
+  (set a:free 0)
+  (free a:config)
+  (free a:data))
 
 (define (sp-wave-event-generate start end out event)
   (status-t sp-time-t sp-time-t sp-block-t sp-event-t*)
@@ -339,7 +342,7 @@
     generate sp-wave-event-generate
     free sp-wave-event-channel-free)
   (set *out event)
-  (label exit (if status-is-failure (if data (free data))) status-return))
+  (label exit (if status-is-failure (free data)) status-return))
 
 (define (sp-wave-event-prepare event) (status-t sp-event-t*)
   "prepare an event playing waveforms from an array.
@@ -361,8 +364,8 @@
    * amp: multiplied with amod"
   status-declare
   (sp-declare-event channel)
-  (define config sp-wave-event-config-t
-    (pointer-get (convert-type event:config sp-wave-event-config-t*)))
+  (define
+    config sp-wave-event-config-t (pointer-get (convert-type event:config sp-wave-event-config-t*)))
   (set event:data 0 event:free sp-group-free)
   (sp-for-each-index ci config.channel-count
     (if (struct-get (array-get config.channel-config ci) mute) continue)
@@ -528,8 +531,8 @@
   status-declare
   (declare duration sp-time-t rs sp-random-state-t state-noise sp-sample-t* state-temp sp-sample-t*)
   (sp-declare-event channel)
-  (define config sp-noise-event-config-t
-    (pointer-get (convert-type event:config sp-noise-event-config-t*)))
+  (define
+    config sp-noise-event-config-t (pointer-get (convert-type event:config sp-noise-event-config-t*)))
   (set
     event:data 0
     event:free sp-group-free
@@ -683,7 +686,8 @@
   status-declare
   (declare rs sp-random-state-t state-noise sp-sample-t* state-temp sp-sample-t* duration sp-time-t)
   (sp-declare-event channel)
-  (define config sp-cheap-noise-event-config-t
+  (define
+    config sp-cheap-noise-event-config-t
     (pointer-get (convert-type event:config sp-cheap-noise-event-config-t*)))
   (set
     event:data 0
@@ -756,8 +760,8 @@
   status-declare
   (declare state sp-map-event-state-t*)
   (error-memory-init 1)
-  (define config sp-map-event-config-t
-    (pointer-get (convert-type event:config sp-map-event-config-t*)))
+  (define
+    config sp-map-event-config-t (pointer-get (convert-type event:config sp-map-event-config-t*)))
   (status-require (sp-malloc-type 1 sp-map-event-state-t &state))
   (error-memory-add state)
   (status-require (config.event.prepare &config.event))
@@ -804,8 +808,8 @@
     wdt sp-time-t
     duration sp-time-t
     event-config sp-cheap-noise-event-config-t*)
-  (define config sp-sound-event-config-t
-    (pointer-get (convert-type event:config sp-sound-event-config-t*)))
+  (define
+    config sp-sound-event-config-t (pointer-get (convert-type event:config sp-sound-event-config-t*)))
   (set
     duration (- event:end event:start)
     cut (sp-hz->factor config.frq)
@@ -854,8 +858,8 @@
     frq sp-time-t
     wdt sp-time-t
     event-config sp-noise-event-config-t*)
-  (define config sp-sound-event-config-t
-    (pointer-get (convert-type event:config sp-sound-event-config-t*)))
+  (define
+    config sp-sound-event-config-t (pointer-get (convert-type event:config sp-sound-event-config-t*)))
   (set
     duration (- event:end event:start)
     cutl (sp-hz->factor config.frq)
@@ -894,8 +898,8 @@
 (define (sp-sound-event-prepare-wave-event event) (status-t sp-event-t*)
   status-declare
   (declare event-config sp-wave-event-config-t*)
-  (define config sp-sound-event-config-t
-    (pointer-get (convert-type event:config sp-sound-event-config-t*)))
+  (define
+    config sp-sound-event-config-t (pointer-get (convert-type event:config sp-sound-event-config-t*)))
   (srq (sp-wave-event-config-new &event-config))
   (srq (sp-event-memory-ensure event 1))
   (sp-event-memory-fixed-add event event-config)
@@ -914,8 +918,8 @@
 (define (sp-sound-event-prepare event) (status-t sp-event-t*)
   "generic event for waves and filtered noise. all frequency values (frq, fmod, wdt, wmod) are in hertz, even for filtered noise"
   status-declare
-  (define config sp-sound-event-config-t
-    (pointer-get (convert-type event:config sp-sound-event-config-t*)))
+  (define
+    config sp-sound-event-config-t (pointer-get (convert-type event:config sp-sound-event-config-t*)))
   (cond ((= 1 config.noise) (srq (sp-sound-event-prepare-noise event)))
     ((= 2 config.noise) (srq (sp-sound-event-prepare-cheap-noise event)))
     (else (srq (sp-sound-event-prepare-wave-event event))))

@@ -894,4 +894,4 @@
   (test-helper-test-one test-file)
   (test-helper-test-one test-permutations)
   (test-helper-test-one test-sp-seq-parallel)
-  (label exit (test-helper-display-summary) (return status.id)))
+  (label exit (sp-deinitialize) (test-helper-display-summary) (return status.id)))

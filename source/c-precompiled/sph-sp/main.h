@@ -139,6 +139,7 @@ sp_block_t sp_block_with_offset(sp_block_t a, sp_time_t offset);
 status_t sp_null_ir(sp_sample_t** out_ir, sp_time_t* out_len);
 status_t sp_passthrough_ir(sp_sample_t** out_ir, sp_time_t* out_len);
 status_t sp_initialize(uint16_t cpu_count, sp_channel_count_t channel_count, sp_time_t rate);
+void sp_deinitialize();
 void sp_sine_period(sp_time_t size, sp_sample_t* out);
 sp_time_t sp_phase(sp_time_t current, sp_time_t change, sp_time_t cycle);
 sp_time_t sp_phase_float(sp_time_t current, double change, sp_time_t cycle);

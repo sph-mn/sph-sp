@@ -1,5 +1,5 @@
 #!/bin/sh -e
 
-gcc -lsph-sp other/example.c -o temp/example.exe
-chmod +x temp/example.exe
-./temp/example.exe
+gcc -lsph-sp other/example.c -o temp/example
+chmod +x temp/example
+./temp/example

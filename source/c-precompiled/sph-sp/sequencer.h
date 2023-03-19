@@ -65,7 +65,7 @@
   event_pointer->prepare = sp_cheap_noise_event_prepare; \
   event_pointer->config = _config
 #define sp_group_event(event_pointer) event_pointer->prepare = sp_group_prepare
-#define sp_event_prepare(a) \
+#define sp_event_prepare_srq(a) \
   if (a.prepare) { \
     status_require(((a.prepare)((&a)))); \
     a.prepare = 0; \

@@ -144,6 +144,7 @@
   (sp-null-ir out-ir out-len) (status-t sp-sample-t** sp-time-t*)
   (sp-passthrough-ir out-ir out-len) (status-t sp-sample-t** sp-time-t*)
   (sp-initialize cpu-count channel-count rate) (status-t uint16-t sp-channel-count-t sp-time-t)
+  (sp-deinitialize) void
   (sp-sine-period size out) (void sp-time-t sp-sample-t*)
   (sp-phase current change cycle) (sp-time-t sp-time-t sp-time-t sp-time-t)
   (sp-phase-float current change cycle) (sp-time-t sp-time-t double sp-time-t)

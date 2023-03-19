@@ -169,7 +169,7 @@ void spline_path_get(spline_path_t* path, size_t start, size_t end, spline_path_
       if (second_search || (0 == i)) {
         break;
       } else {
-        /* to allow randomly ordered access */
+        /* to allow random access */
         i = 0;
         second_search = 1;
         continue;
@@ -272,6 +272,7 @@ uint8_t spline_path_segments_get(spline_path_segment_t* segments, spline_path_se
   spline_path_t path;
   spline_path_set((&path), segments, segments_count);
   spline_path_get((&path), start, end, out);
+  spline_path_free(path);
   return (0);
 }
 
