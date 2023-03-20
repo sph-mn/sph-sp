@@ -10,7 +10,7 @@
   (sp-sample-interpolate-linear a b t) (+ (* (- 1 t) a) (* t b))
   (sp-define-samples id value) (define id sp-sample-t* value)
   (sp-define-times id value) (define id sp-time-t* value)
-  (sp-define-samples-srq id count)
+  (sp-define-samples-new-srq id count)
   (begin (declare id sp-sample-t*) (status-require (sp-samples-new count &id)))
   (sp-define-times-srq id count)
   (begin (declare id sp-time-t*) (status-require (sp-times-new count &id))))

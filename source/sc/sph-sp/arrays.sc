@@ -1,6 +1,6 @@
 (pre-include "sph-sp/arrays-template.c")
 (sc-comment "times")
-(arrays-template sp-time-t time times sp-no-underflow-subtract sp-abs)
+(arrays-template sp-time-t time times sp-inline-no-underflow-subtract sp-inline-abs)
 
 (define (sp-time-sum in size) (sp-time-t sp-time-t* sp-time-t)
   (define sum sp-time-t 0)
@@ -239,7 +239,7 @@
    size must not be greater than the maximum possible count of unique discrete random values
    (non-null values in the probability distribution)"
   (declare a sp-time-t remaining sp-time-t)
-  (set remaining (sp-min size cudist-size))
+  (set remaining (sp-inline-min size cudist-size))
   (while remaining
     (set a (sp-time-random-discrete cudist cudist-size))
     (if (sp-times-contains out (- size remaining) a) continue)
@@ -284,7 +284,7 @@
   "untested. interpolate (b-count / 2) elements at the end of $a progressively more and more towards their mirrored correspondents in $b.
    example: (1 2 3) (4 5 6), interpolates 1 to 6 at 1/6 distance, then 2 to 6 at 2/6 distance, then 3 to 4 at 3/6 istance (3.5)"
   (declare start sp-time-t count sp-size-t)
-  (set count (sp-min a-count (/ b-count 2)) start (- a-count count))
+  (set count (sp-inline-min a-count (/ b-count 2)) start (- a-count count))
   (sp-for-each-index i start (set (array-get out i) (array-get a i)))
   (sp-for-each-index i count
     (set (array-get out (+ i start))
@@ -295,7 +295,7 @@
   (void sp-time-t* sp-time-t sp-time-t* sp-time-t sp-time-t*)
   "untested. like sp_times_make_seamless_right but changing the first elements of $b to match the end of $a"
   (declare start sp-time-t count sp-time-t i sp-time-t)
-  (set count (sp-min b-count (/ a-count 2)) start (- a-count count))
+  (set count (sp-inline-min b-count (/ a-count 2)) start (- a-count count))
   (sp-for-each-index i count
     (set (array-get out i)
       (sp-time-interpolate-linear (array-get b i) (array-get a (- a-count i)) (/ (+ 1 i) count))))
@@ -345,7 +345,7 @@
 
 (define (sp-times->samples-replace in count out) (status-t sp-time-t* sp-size-t sp-sample-t**)
   status-declare
-  (sp-define-samples-srq temp count)
+  (sp-define-samples-new-srq temp count)
   (sp-for-each-index i count (set (array-get temp i) (array-get in i)))
   (free in)
   (set *out temp)

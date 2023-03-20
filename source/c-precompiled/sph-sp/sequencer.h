@@ -70,6 +70,11 @@
     status_require(((a.prepare)((&a)))); \
     a.prepare = 0; \
   }
+#define sp_event_pointer_prepare_srq(a) \
+  if (a->prepare) { \
+    status_require(((a->prepare)(a))); \
+    a->prepare = 0; \
+  }
 #define sp_event_alloc(event_pointer, allocator, pointer_address) \
   status_require((allocator(pointer_address))); \
   sp_event_memory_add(event_pointer, (*pointer_address))
@@ -79,7 +84,7 @@
 #define sp_event_malloc(event_pointer, size, pointer_address) \
   status_require((sph_helper_malloc(size, pointer_address))); \
   sp_event_memory_add(event_pointer, (*pointer_address))
-#define sp_event_malloc_type_n *(event_pointer, count, type, pointer_address)sp_event_malloc(event_pointer, (count * sizeof(type)), pointer_address)
+#define sp_event_malloc_type_n(event_pointer, count, type, pointer_address) sp_event_malloc(event_pointer, (count * sizeof(type)), pointer_address)
 #define sp_event_malloc_type(event_pointer, type, pointer_address) sp_event_malloc(event_pointer, (sizeof(type)), pointer_address)
 #define sp_event_samples(event_pointer, size, pointer_address) sp_event_alloc1(event_pointer, sp_samples_new, size, pointer_address)
 #define sp_event_times(event_pointer, size, pointer_address) sp_event_alloc(event_pointer, sp_times_new, size, pointer_address)
@@ -286,6 +291,8 @@ status_t sp_seq_parallel(sp_time_t start, sp_time_t end, sp_block_t out, sp_even
 status_t sp_wave_event_prepare(sp_event_t* event);
 status_t sp_noise_event_prepare(sp_event_t* event);
 status_t sp_cheap_noise_event_prepare(sp_event_t* event);
+status_t sp_group_generate(sp_time_t start, sp_time_t end, sp_block_t out, sp_event_t* a);
+status_t sp_group_generate_parallel(sp_time_t start, sp_time_t end, sp_block_t out, sp_event_t* a);
 status_t sp_group_prepare(sp_event_t* event);
 status_t sp_group_prepare_parallel(sp_event_t* a);
 status_t sp_group_add(sp_event_t* a, sp_event_t event);

@@ -209,7 +209,8 @@ status_t sp_seq(sp_time_t start, sp_time_t end, sp_block_t out, sp_event_list_t*
   sp_event_t e;
   sp_event_t* ep;
   sp_event_list_t* next;
-  sp_event_list_t* current = *events;
+  sp_event_list_t* current;
+  current = *events;
   while (current) {
     ep = &(current->event);
     e = *ep;
@@ -221,12 +222,9 @@ status_t sp_seq(sp_time_t start, sp_time_t end, sp_block_t out, sp_event_list_t*
     } else if (end <= e.start) {
       break;
     } else if (e.end > start) {
-      if (e.prepare) {
-        status_require(((e.prepare)(ep)));
-        ep->prepare = 0;
-        e = *ep;
-      };
-      status_require(((e.generate)(((start > e.start) ? (start - e.start) : 0), (sp_min(end, (e.end)) - e.start), ((e.start > start) ? sp_block_with_offset(out, (e.start - start)) : out), ep)));
+      sp_event_prepare_srq(e);
+      *ep = e;
+      status_require(((e.generate)(((start > e.start) ? (start - e.start) : 0), (sp_inline_min(end, (e.end)) - e.start), ((e.start > start) ? sp_block_with_offset(out, (e.start - start)) : out), ep)));
     };
     current = current->next;
   };
@@ -251,10 +249,7 @@ void* sp_seq_parallel_future_f(void* data) {
   sp_event_t* ep;
   a = data;
   ep = a->event;
-  if (ep->prepare) {
-    status_require(((ep->prepare)(ep)));
-    ep->prepare = 0;
-  };
+  sp_event_pointer_prepare_srq(ep);
   status_require(((ep->generate)((a->start), (a->end), (a->out), ep)));
 exit:
   a->status = status;
@@ -307,7 +302,7 @@ status_t sp_seq_parallel(sp_time_t start, sp_time_t end, sp_block_t out, sp_even
     } else if (e.end > start) {
       sf = (sf_array + allocated);
       e_start = ((start > e.start) ? (start - e.start) : 0);
-      e_end = (sp_min(end, (e.end)) - e.start);
+      e_end = (sp_inline_min(end, (e.end)) - e.start);
       sf->start = e_start;
       sf->end = e_end;
       sf->out_start = ((e.start > start) ? (e.start - start) : 0);
@@ -578,32 +573,31 @@ status_t sp_noise_event_generate(sp_time_t start, sp_time_t end, sp_block_t out,
   sp_time_t block_rest;
   sp_time_t duration;
   sp_time_t resolution;
-  sp_time_t i;
   sp_noise_event_state_t s;
   sp_noise_event_state_t* sp;
   sp_time_t t;
   sp = event->data;
   s = *sp;
   duration = (end - start);
-  resolution = sp_min((s.resolution), duration);
+  resolution = sp_inline_min((s.resolution), duration);
   block_count = sp_cheap_floor_positive((duration / resolution));
   block_rest = (duration % resolution);
-  for (block_i = 0; (block_i < block_count); block_i += 1) {
+  for (sp_size_t block_i = 0; (block_i < block_count); block_i += 1) {
     block_offset = (resolution * block_i);
     t = (start + block_offset);
     sp_samples_random_primitive((&(s.random_state)), resolution, (s.noise));
-    sp_windowed_sinc_bp_br((s.noise), resolution, (sp_array_or_fixed((s.cutl_mod), (s.cutl), t)), (sp_array_or_fixed((s.cuth_mod), (s.cuth), t)), (s.trnl), (s.trnh), (s.is_reject), (&(s.filter_state)), (s.temp));
-    for (i = 0; (i < resolution); i += 1) {
-      (out.samples)[s.channel][(block_offset + i)] += sp_limit((s.amp * (s.amod)[(t + i)] * (s.temp)[i]), -1, 1);
+    sp_windowed_sinc_bp_br((s.noise), resolution, (sp_optional_array_get((s.cutl_mod), (s.cutl), t)), (sp_optional_array_get((s.cuth_mod), (s.cuth), t)), (s.trnl), (s.trnh), (s.is_reject), (&(s.filter_state)), (s.temp));
+    for (sp_size_t i = 0; (i < resolution); i += 1) {
+      (out.samples)[s.channel][(block_offset + i)] += sp_inline_limit((s.amp * (s.amod)[(t + i)] * (s.temp)[i]), -1, 1);
     };
   };
   if (block_rest) {
     block_offset = (block_rest + (resolution * (block_i - 1)));
     t = (start + block_offset);
     sp_samples_random_primitive((&(s.random_state)), resolution, (s.noise));
-    sp_windowed_sinc_bp_br((s.noise), block_rest, (sp_array_or_fixed((s.cutl_mod), (s.cutl), t)), (sp_array_or_fixed((s.cuth_mod), (s.cuth), t)), (s.trnl), (s.trnh), (s.is_reject), (&(s.filter_state)), (s.temp));
-    for (i = 0; (i < block_rest); i += 1) {
-      (out.samples)[s.channel][(block_offset + i)] += sp_limit((s.amp * (s.amod)[(t + i)] * (s.temp)[i]), -1, 1);
+    sp_windowed_sinc_bp_br((s.noise), block_rest, (sp_optional_array_get((s.cutl_mod), (s.cutl), t)), (sp_optional_array_get((s.cuth_mod), (s.cuth), t)), (s.trnl), (s.trnh), (s.is_reject), (&(s.filter_state)), (s.temp));
+    for (sp_size_t i = 0; (i < block_rest); i += 1) {
+      (out.samples)[s.channel][(block_offset + i)] += sp_inline_limit((s.amp * (s.amod)[(t + i)] * (s.temp)[i]), -1, 1);
     };
   };
   sp->random_state = s.random_state;
@@ -619,7 +613,7 @@ status_t sp_noise_event_filter_state(sp_sample_t cutl, sp_sample_t cuth, sp_samp
   sp_sample_t* temp;
   sp_sample_t* noise;
   memreg_init(2);
-  ir_len = sp_windowed_sinc_lp_hp_ir_length((sp_min(trnl, trnh)));
+  ir_len = sp_windowed_sinc_lp_hp_ir_length((sp_inline_min(trnl, trnh)));
   sp_malloc_type(ir_len, sp_sample_t, (&noise));
   memreg_add(noise);
   sp_malloc_type(ir_len, sp_sample_t, (&temp));
@@ -638,7 +632,7 @@ status_t sp_noise_event_channel(sp_time_t duration, sp_noise_event_config_t conf
   state = 0;
   filter_state = 0;
   channel_config = (config.channel_config)[channel];
-  status_require((sp_noise_event_filter_state((sp_array_or_fixed((config.cutl_mod), (config.cutl), 0)), (sp_array_or_fixed((config.cuth_mod), (config.cuth), 0)), (config.trnl), (config.trnh), (config.is_reject), (&rs), (&filter_state))));
+  status_require((sp_noise_event_filter_state((sp_optional_array_get((config.cutl_mod), (config.cutl), 0)), (sp_optional_array_get((config.cuth_mod), (config.cuth), 0)), (config.trnl), (config.trnh), (config.is_reject), (&rs), (&filter_state))));
   status_require((sp_malloc_type(1, sp_noise_event_state_t, (&state))));
   state->amp = (channel_config.use ? (config.amp * channel_config.amp) : config.amp);
   state->amod = ((channel_config.use && channel_config.amod) ? channel_config.amod : config.amod);
@@ -690,7 +684,7 @@ status_t sp_noise_event_prepare(sp_event_t* event) {
   rs = sp_random_state_new((sp_time_random_primitive((&sp_random_state))));
   if ((config.cutl_mod || config.cuth_mod) && !(duration == config.resolution)) {
     config.resolution = (config.resolution ? config.resolution : 96);
-    config.resolution = sp_min((config.resolution), duration);
+    config.resolution = sp_inline_min((config.resolution), duration);
   } else {
     config.resolution = duration;
   };
@@ -758,11 +752,9 @@ void sp_cheap_noise_event_free(sp_event_t* a) {
 status_t sp_cheap_noise_event_generate(sp_time_t start, sp_time_t end, sp_block_t out, sp_event_t* event) {
   status_declare;
   sp_time_t block_count;
-  sp_time_t block_i;
   sp_time_t block_offset;
   sp_time_t block_rest;
   sp_time_t duration;
-  sp_time_t i;
   sp_cheap_noise_event_state_t s;
   sp_cheap_noise_event_state_t* sp;
   sp_time_t t;
@@ -773,13 +765,13 @@ status_t sp_cheap_noise_event_generate(sp_time_t start, sp_time_t end, sp_block_
   block_count = sp_cheap_floor_positive((duration / s.resolution));
   block_rest = (duration % s.resolution);
   /* total block count is block-count plus rest-block */
-  for (block_i = 0; (block_i < block_count); block_i += 1) {
+  for (sp_size_t block_i = 0; (block_i < block_count); block_i += 1) {
     block_offset = (s.resolution * block_i);
     t = (start + block_offset);
     duration = s.resolution;
     sp_samples_random_primitive((&(s.random_state)), duration, (s.noise));
-    sp_cheap_filter((s.type), (s.noise), duration, (sp_array_or_fixed((s.cut_mod), (s.cut), t)), (s.passes), (sp_array_or_fixed((s.q_factor_mod), (s.q_factor), t)), (&(s.filter_state)), (s.temp));
-    for (i = 0; (i < duration); i += 1) {
+    sp_cheap_filter((s.type), (s.noise), duration, (sp_optional_array_get((s.cut_mod), (s.cut), t)), (s.passes), (sp_optional_array_get((s.q_factor_mod), (s.q_factor), t)), (&(s.filter_state)), (s.temp));
+    for (sp_size_t i = 0; (i < duration); i += 1) {
       (out.samples)[s.channel][(block_offset + i)] += (s.amp * (s.amod)[(t + i)] * (s.temp)[i]);
     };
   };
@@ -788,8 +780,8 @@ status_t sp_cheap_noise_event_generate(sp_time_t start, sp_time_t end, sp_block_
     t = (start + block_offset);
     duration = block_rest;
     sp_samples_random_primitive((&(s.random_state)), duration, (s.noise));
-    sp_cheap_filter((s.type), (s.noise), duration, (sp_array_or_fixed((s.cut_mod), (s.cut), t)), (s.passes), (sp_array_or_fixed((s.q_factor_mod), (s.q_factor), t)), (&(s.filter_state)), (s.temp));
-    for (i = 0; (i < duration); i += 1) {
+    sp_cheap_filter((s.type), (s.noise), duration, (sp_optional_array_get((s.cut_mod), (s.cut), t)), (s.passes), (sp_optional_array_get((s.q_factor_mod), (s.q_factor), t)), (&(s.filter_state)), (s.temp));
+    for (sp_size_t i = 0; (i < duration); i += 1) {
       (out.samples)[s.channel][(block_offset + i)] += (s.amp * (s.amod)[(t + i)] * (s.temp)[i]);
     };
   };
@@ -857,7 +849,7 @@ status_t sp_cheap_noise_event_prepare(sp_event_t* event) {
   rs = sp_random_state_new((sp_time_random_primitive((&sp_random_state))));
   if (config.cut_mod && !(duration == config.resolution)) {
     config.resolution = (config.resolution ? config.resolution : 96);
-    config.resolution = sp_min((config.resolution), duration);
+    config.resolution = sp_inline_min((config.resolution), duration);
   } else {
     config.resolution = duration;
   };
@@ -932,7 +924,7 @@ status_t sp_map_event_prepare(sp_event_t* event) {
   sp_map_event_config_t config = *((sp_map_event_config_t*)(event->config));
   status_require((sp_malloc_type(1, sp_map_event_state_t, (&state))));
   error_memory_add(state);
-  status_require(((config.event.prepare)((&(config.event)))));
+  sp_event_prepare_srq((config.event));
   state->event = config.event;
   state->state = config.state;
   state->map_generate = config.map_generate;

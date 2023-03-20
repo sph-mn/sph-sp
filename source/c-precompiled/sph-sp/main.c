@@ -59,9 +59,13 @@
 #include <sph-sp/arrays.c>
 define_sp_interleave(sp_interleave, sp_sample_t, (b[b_size] = (a[channel])[a_size]))
   define_sp_interleave(sp_deinterleave, sp_sample_t, ((a[channel])[a_size] = b[b_size]))
+    sp_sample_t sp_sample_max(sp_sample_t a, sp_sample_t b) { return (((a > b) ? a : b)); }
+sp_time_t sp_time_max(sp_time_t a, sp_time_t b) { return (((a > b) ? a : b)); }
+sp_sample_t sp_sample_min(sp_sample_t a, sp_sample_t b) { return (((a > b) ? b : a)); }
+sp_time_t sp_time_min(sp_time_t a, sp_time_t b) { return (((a > b) ? b : a)); }
 
-  /** get a string description for a status id in a status_t */
-  uint8_t* sp_status_description(status_t a) {
+/** get a string description for a status id in a status_t */
+uint8_t* sp_status_description(status_t a) {
   uint8_t* b;
   if (!strcmp(sp_s_group_sp, (a.group))) {
     if (sp_s_id_eof == a.id) {
@@ -190,8 +194,8 @@ void sp_sine_period(sp_time_t size, sp_sample_t* out) {
 void sp_wave(sp_time_t size, sp_sample_t* wvf, sp_time_t wvf_size, sp_sample_t amp, sp_sample_t* amod, sp_time_t frq, sp_time_t* fmod, sp_time_t* phs_state, sp_sample_t* out) {
   sp_time_t phs = (phs_state ? *phs_state : 0);
   for (sp_size_t i = 0; (i < size); i += 1) {
-    out[i] += (amp * sp_array_or_fixed(amod, amp, i) * wvf[phs]);
-    phs += sp_array_or_fixed(fmod, frq, i);
+    out[i] += (amp * sp_optional_array_get(amod, amp, i) * wvf[phs]);
+    phs += sp_optional_array_get(fmod, frq, i);
     if (phs >= wvf_size) {
       phs = (phs % wvf_size);
     };
@@ -379,7 +383,7 @@ status_t sp_render_file(sp_event_t event, uint8_t* path) {
     sp_event_prepare_srq(event);
   };
   printf("rendering %lu seconds to file %s\n", (event.end / sp_rate), path);
-  status_require((sp_render_range_file(event, 0, (event.end), (sp_render_config(sp_channel_count, sp_rate, (10 * sp_rate), 1)), path)));
+  status_require((sp_render_range_file(event, 0, (event.end), (sp_render_config(sp_channel_count, sp_rate, (4 * sp_rate), 1)), path)));
 exit:
   status_return;
 }
@@ -458,7 +462,7 @@ sp_sample_t sp_square(sp_time_t t, sp_time_t size) { return (((((2 * t) % (2 * s
    1: first channel muted
    0.75: first channel 50%
    0.25: second channel 50% */
-sp_sample_t sp_pan_to_amp(sp_sample_t value, sp_channel_count_t channel) { return (((1 & channel) ? (sp_limit(value, (channel - 1), (channel - 0.5)) / 0.5) : (1 - ((sp_limit(value, (channel + 0.5), (channel + 1)) - 0.5) / 0.5)))); }
+sp_sample_t sp_pan_to_amp(sp_sample_t value, sp_channel_count_t channel) { return (((1 & channel) ? (sp_inline_limit(value, (channel - 1), (channel - 0.5)) / 0.5) : (1 - ((sp_inline_limit(value, (channel + 0.5), (channel + 1)) - 0.5) / 0.5)))); }
 
 /** untested. return normally distributed numbers in range */
 sp_time_t sp_normal_random(sp_time_t min, sp_time_t max) {
@@ -483,7 +487,7 @@ sp_time_t sp_time_deharmonize(sp_time_t a, sp_time_t base, sp_sample_t amount) {
   sp_time_t nearest;
   sp_sample_t distance_ratio;
   nearest = ((((a + base) - 1) / base) * base);
-  distance_ratio = ((base - sp_absolute_difference(a, nearest)) / ((sp_sample_t)(base)));
+  distance_ratio = ((base - sp_inline_absolute_difference(a, nearest)) / ((sp_sample_t)(base)));
   amount = (amount * distance_ratio * (1 + sp_time_random_bounded((base / 2))));
   if ((a > nearest) || (a < amount)) {
     return ((a + amount));

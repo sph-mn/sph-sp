@@ -18,7 +18,7 @@
     sp_time_t max; \
     max = 0; \
     for (sp_size_t i = 0; (i < count); i += 1) { \
-      temp = sp_abs((in[i])); \
+      temp = sp_inline_abs((in[i])); \
       if (temp > max) { \
         max = temp; \
       }; \

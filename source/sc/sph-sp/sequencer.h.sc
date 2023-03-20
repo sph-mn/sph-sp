@@ -50,6 +50,8 @@
   (struct-pointer-set event-pointer prepare sp-cheap-noise-event-prepare config _config)
   (sp-group-event event-pointer) (struct-pointer-set event-pointer prepare sp-group-prepare)
   (sp-event-prepare-srq a) (if a.prepare (begin (status-require (a.prepare &a)) (set a.prepare 0)))
+  (sp-event-pointer-prepare-srq a)
+  (if a:prepare (begin (status-require (a:prepare a)) (set a:prepare 0)))
   (sp-event-alloc event-pointer allocator pointer-address)
   (begin
     (status-require (allocator pointer-address))
@@ -62,7 +64,7 @@
   (begin
     (status-require (sph-helper-malloc size pointer-address))
     (sp-event-memory-add event-pointer (pointer-get pointer-address)))
-  (sp-event-malloc-type-n* event-pointer count type pointer-address)
+  (sp-event-malloc-type-n event-pointer count type pointer-address)
   (sp-event-malloc event-pointer (* count (sizeof type)) pointer-address)
   (sp-event-malloc-type event-pointer type pointer-address)
   (sp-event-malloc event-pointer (sizeof type) pointer-address)
@@ -315,6 +317,8 @@
   (sp-wave-event-prepare event) (status-t sp-event-t*)
   (sp-noise-event-prepare event) (status-t sp-event-t*)
   (sp-cheap-noise-event-prepare event) (status-t sp-event-t*)
+  (sp-group-generate start end out a) (status-t sp-time-t sp-time-t sp-block-t sp-event-t*)
+  (sp-group-generate-parallel start end out a) (status-t sp-time-t sp-time-t sp-block-t sp-event-t*)
   (sp-group-prepare event) (status-t sp-event-t*)
   (sp-group-prepare-parallel a) (status-t sp-event-t*)
   (sp-group-add a event) (status-t sp-event-t* sp-event-t)

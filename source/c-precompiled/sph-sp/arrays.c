@@ -2,7 +2,7 @@
 #include <sph-sp/arrays-template.c>
 
 /* times */
-arrays_template(sp_time_t, time, times, sp_no_underflow_subtract, sp_abs);
+arrays_template(sp_time_t, time, times, sp_inline_no_underflow_subtract, sp_inline_abs);
 sp_time_t sp_time_sum(sp_time_t* in, sp_time_t size) {
   sp_time_t sum = 0;
   for (sp_size_t i = 0; (i < size); i += 1) {
@@ -338,7 +338,7 @@ uint8_t sp_times_contains(sp_time_t* in, sp_size_t count, sp_time_t value) {
 void sp_times_random_discrete_unique(sp_time_t* cudist, sp_time_t cudist_size, sp_time_t size, sp_time_t* out) {
   sp_time_t a;
   sp_time_t remaining;
-  remaining = sp_min(size, cudist_size);
+  remaining = sp_inline_min(size, cudist_size);
   while (remaining) {
     a = sp_time_random_discrete(cudist, cudist_size);
     if (sp_times_contains(out, (size - remaining), a)) {
@@ -390,7 +390,7 @@ void sp_times_extract_in_range(sp_time_t* a, sp_time_t size, sp_time_t min, sp_t
 void sp_times_make_seamless_right(sp_time_t* a, sp_time_t a_count, sp_time_t* b, sp_time_t b_count, sp_time_t* out) {
   sp_time_t start;
   sp_size_t count;
-  count = sp_min(a_count, (b_count / 2));
+  count = sp_inline_min(a_count, (b_count / 2));
   start = (a_count - count);
   for (sp_size_t i = 0; (i < start); i += 1) {
     out[i] = a[i];
@@ -405,7 +405,7 @@ void sp_times_make_seamless_left(sp_time_t* a, sp_time_t a_count, sp_time_t* b, 
   sp_time_t start;
   sp_time_t count;
   sp_time_t i;
-  count = sp_min(b_count, (a_count / 2));
+  count = sp_inline_min(b_count, (a_count / 2));
   start = (a_count - count);
   for (sp_size_t i = 0; (i < count); i += 1) {
     out[i] = sp_time_interpolate_linear((b[i]), (a[(a_count - i)]), ((1 + i) / count));
@@ -474,7 +474,7 @@ void sp_times_to_samples(sp_time_t* in, sp_size_t count, sp_sample_t* out) {
 }
 status_t sp_times_to_samples_replace(sp_time_t* in, sp_size_t count, sp_sample_t** out) {
   status_declare;
-  sp_define_samples_srq(temp, count);
+  sp_define_samples_new_srq(temp, count);
   for (sp_size_t i = 0; (i < count); i += 1) {
     temp[i] = in[i];
   };

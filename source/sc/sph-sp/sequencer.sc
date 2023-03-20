@@ -128,18 +128,18 @@
    past events including the event list elements are freed when processing the following block.
    on error, all events and the event list are freed"
   status-declare
-  (declare e sp-event-t ep sp-event-t* next sp-event-list-t*)
-  (define current sp-event-list-t* *events)
+  (declare e sp-event-t ep sp-event-t* next sp-event-list-t* current sp-event-list-t*)
+  (set current *events)
   (while current
     (set ep &current:event e *ep)
     (cond
       ( (<= e.end start) (set next current:next) (sp-event-list-remove events current)
         (set current next) continue)
       ((<= end e.start) break)
-      ( (> e.end start)
-        (if e.prepare (begin (status-require (e.prepare ep)) (set ep:prepare 0 e *ep)))
+      ( (> e.end start) (sp-event-prepare-srq e) (set *ep e)
         (status-require
-          (e.generate (if* (> start e.start) (- start e.start) 0) (- (sp-min end e.end) e.start)
+          (e.generate (if* (> start e.start) (- start e.start) 0)
+            (- (sp-inline-min end e.end) e.start)
             (if* (> e.start start) (sp-block-with-offset out (- e.start start)) out) ep))))
     (set current current:next))
   (label exit (if status-is-failure (sp-event-list-free events)) status-return))
@@ -159,7 +159,7 @@
   status-declare
   (declare a sp-seq-future-t* ep sp-event-t*)
   (set a data ep a:event)
-  (if ep:prepare (begin (status-require (ep:prepare ep)) (set ep:prepare 0)))
+  (sp-event-pointer-prepare-srq ep)
   (status-require (ep:generate a:start a:end a:out ep))
   (label exit (set a:status status) (if status-is-failure (sp-event-pointer-free ep)) (return 0)))
 
@@ -197,7 +197,7 @@
         (set
           sf (+ sf-array allocated)
           e-start (if* (> start e.start) (- start e.start) 0)
-          e-end (- (sp-min end e.end) e.start)
+          e-end (- (sp-inline-min end e.end) e.start)
           sf:start e-start
           sf:end e-end
           sf:out-start (if* (> e.start start) (- e.start start) 0)
@@ -432,7 +432,6 @@
     block-rest sp-time-t
     duration sp-time-t
     resolution sp-time-t
-    i sp-time-t
     s sp-noise-event-state-t
     sp sp-noise-event-state-t*
     t sp-time-t)
@@ -440,28 +439,28 @@
     sp event:data
     s *sp
     duration (- end start)
-    resolution (sp-min s.resolution duration)
+    resolution (sp-inline-min s.resolution duration)
     block-count (sp-cheap-floor-positive (/ duration resolution))
     block-rest (modulo duration resolution))
-  (for ((set block-i 0) (< block-i block-count) (set+ block-i 1))
+  (sp-for-each-index block-i block-count
     (set block-offset (* resolution block-i) t (+ start block-offset))
     (sp-samples-random-primitive &s.random-state resolution s.noise)
     (sp-windowed-sinc-bp-br s.noise resolution
-      (sp-array-or-fixed s.cutl-mod s.cutl t) (sp-array-or-fixed s.cuth-mod s.cuth t) s.trnl
+      (sp-optional-array-get s.cutl-mod s.cutl t) (sp-optional-array-get s.cuth-mod s.cuth t) s.trnl
       s.trnh s.is-reject &s.filter-state s.temp)
-    (for ((set i 0) (< i resolution) (set+ i 1))
+    (sp-for-each-index i resolution
       (set+ (array-get out.samples s.channel (+ block-offset i))
-        (sp-limit (* s.amp (array-get s.amod (+ t i)) (array-get s.temp i)) -1 1))))
+        (sp-inline-limit (* s.amp (array-get s.amod (+ t i)) (array-get s.temp i)) -1 1))))
   (if block-rest
     (begin
       (set block-offset (+ block-rest (* resolution (- block-i 1))) t (+ start block-offset))
       (sp-samples-random-primitive &s.random-state resolution s.noise)
       (sp-windowed-sinc-bp-br s.noise block-rest
-        (sp-array-or-fixed s.cutl-mod s.cutl t) (sp-array-or-fixed s.cuth-mod s.cuth t) s.trnl
-        s.trnh s.is-reject &s.filter-state s.temp)
-      (for ((set i 0) (< i block-rest) (set+ i 1))
+        (sp-optional-array-get s.cutl-mod s.cutl t) (sp-optional-array-get s.cuth-mod s.cuth t)
+        s.trnl s.trnh s.is-reject &s.filter-state s.temp)
+      (sp-for-each-index i block-rest
         (set+ (array-get out.samples s.channel (+ block-offset i))
-          (sp-limit (* s.amp (array-get s.amod (+ t i)) (array-get s.temp i)) -1 1)))))
+          (sp-inline-limit (* s.amp (array-get s.amod (+ t i)) (array-get s.temp i)) -1 1)))))
   (set sp:random-state s.random-state sp:filter-state s.filter-state)
   status-return)
 
@@ -472,7 +471,7 @@
   status-declare
   (declare ir-len sp-time-t temp sp-sample-t* noise sp-sample-t*)
   (memreg-init 2)
-  (set ir-len (sp-windowed-sinc-lp-hp-ir-length (sp-min trnl trnh)))
+  (set ir-len (sp-windowed-sinc-lp-hp-ir-length (sp-inline-min trnl trnh)))
   (sp-malloc-type ir-len sp-sample-t &noise)
   (memreg-add noise)
   (sp-malloc-type ir-len sp-sample-t &temp)
@@ -490,8 +489,8 @@
     filter-state sp-convolution-filter-state-t*)
   (set state 0 filter-state 0 channel-config (array-get config.channel-config channel))
   (status-require
-    (sp-noise-event-filter-state (sp-array-or-fixed config.cutl-mod config.cutl 0)
-      (sp-array-or-fixed config.cuth-mod config.cuth 0) config.trnl config.trnh
+    (sp-noise-event-filter-state (sp-optional-array-get config.cutl-mod config.cutl 0)
+      (sp-optional-array-get config.cuth-mod config.cuth 0) config.trnl config.trnh
       config.is-reject &rs &filter-state))
   (status-require (sp-malloc-type 1 sp-noise-event-state-t &state))
   (struct-pointer-set state
@@ -541,7 +540,7 @@
   (if (and (or config.cutl-mod config.cuth-mod) (not (= duration config.resolution)))
     (set
       config.resolution (if* config.resolution config.resolution 96)
-      config.resolution (sp-min config.resolution duration))
+      config.resolution (sp-inline-min config.resolution duration))
     (set config.resolution duration))
   (status-require (sp-event-memory-ensure event 2))
   (status-require (sp-malloc-type config.resolution sp-sample-t &state-noise))
@@ -604,11 +603,9 @@
   status-declare
   (declare
     block-count sp-time-t
-    block-i sp-time-t
     block-offset sp-time-t
     block-rest sp-time-t
     duration sp-time-t
-    i sp-time-t
     s sp-cheap-noise-event-state-t
     sp sp-cheap-noise-event-state-t*
     t sp-time-t)
@@ -620,13 +617,13 @@
     block-count (sp-cheap-floor-positive (/ duration s.resolution))
     block-rest (modulo duration s.resolution))
   (sc-comment "total block count is block-count plus rest-block")
-  (for ((set block-i 0) (< block-i block-count) (set+ block-i 1))
+  (sp-for-each-index block-i block-count
     (set block-offset (* s.resolution block-i) t (+ start block-offset) duration s.resolution)
     (sp-samples-random-primitive &s.random-state duration s.noise)
     (sp-cheap-filter s.type s.noise
-      duration (sp-array-or-fixed s.cut-mod s.cut t) s.passes
-      (sp-array-or-fixed s.q-factor-mod s.q-factor t) &s.filter-state s.temp)
-    (for ((set i 0) (< i duration) (set+ i 1))
+      duration (sp-optional-array-get s.cut-mod s.cut t) s.passes
+      (sp-optional-array-get s.q-factor-mod s.q-factor t) &s.filter-state s.temp)
+    (sp-for-each-index i duration
       (set+ (array-get out.samples s.channel (+ block-offset i))
         (* s.amp (array-get s.amod (+ t i)) (array-get s.temp i)))))
   (if block-rest
@@ -634,9 +631,9 @@
       (set block-offset (* s.resolution block-count) t (+ start block-offset) duration block-rest)
       (sp-samples-random-primitive &s.random-state duration s.noise)
       (sp-cheap-filter s.type s.noise
-        duration (sp-array-or-fixed s.cut-mod s.cut t) s.passes
-        (sp-array-or-fixed s.q-factor-mod s.q-factor t) &s.filter-state s.temp)
-      (for ((set i 0) (< i duration) (set+ i 1))
+        duration (sp-optional-array-get s.cut-mod s.cut t) s.passes
+        (sp-optional-array-get s.q-factor-mod s.q-factor t) &s.filter-state s.temp)
+      (sp-for-each-index i duration
         (set+ (array-get out.samples s.channel (+ block-offset i))
           (* s.amp (array-get s.amod (+ t i)) (array-get s.temp i))))))
   (set sp:random-state s.random-state sp:filter-state s.filter-state)
@@ -698,7 +695,7 @@
   (if (and config.cut-mod (not (= duration config.resolution)))
     (set
       config.resolution (if* config.resolution config.resolution 96)
-      config.resolution (sp-min config.resolution duration))
+      config.resolution (sp-inline-min config.resolution duration))
     (set config.resolution duration))
   (status-require (sp-event-memory-ensure event 2))
   (status-require (sp-malloc-type config.resolution sp-sample-t &state-noise))
@@ -764,7 +761,7 @@
     config sp-map-event-config-t (pointer-get (convert-type event:config sp-map-event-config-t*)))
   (status-require (sp-malloc-type 1 sp-map-event-state-t &state))
   (error-memory-add state)
-  (status-require (config.event.prepare &config.event))
+  (sp-event-prepare-srq config.event)
   (set
     state:event config.event
     state:state config.state

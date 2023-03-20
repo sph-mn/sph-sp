@@ -40,20 +40,20 @@
 /** only works for non-negative values */
 #define sp_cheap_floor_positive(a) ((sp_time_t)(a))
 #define sp_cheap_ceiling_positive(a) (((sp_time_t)(a)) + (((sp_time_t)(a)) < a))
-#define sp_max(a, b) ((a > b) ? a : b)
-#define sp_min(a, b) ((a < b) ? a : b)
-#define sp_limit(x, min_value, max_value) sp_max(min_value, (sp_min(max_value, x)))
+#define sp_inline_max(a, b) ((a > b) ? a : b)
+#define sp_inline_min(a, b) ((a < b) ? a : b)
+#define sp_inline_limit(x, min_value, max_value) sp_inline_max(min_value, (sp_inline_min(max_value, x)))
 
 /** subtract the smaller number from the greater number,
      regardless of if the smallest is the first or the second argument */
-#define sp_absolute_difference(a, b) ((a > b) ? (a - b) : (b - a))
-#define sp_abs(a) ((0 > a) ? (-1 * a) : a)
+#define sp_inline_absolute_difference(a, b) ((a > b) ? (a - b) : (b - a))
+#define sp_inline_abs(a) ((0 > a) ? (-1 * a) : a)
 
 /** subtract b from a but return 0 for negative results */
-#define sp_no_underflow_subtract(a, b) ((a > b) ? (a - b) : 0)
+#define sp_inline_no_underflow_subtract(a, b) ((a > b) ? (a - b) : 0)
 
 /** divide a by b (a / b) but return 0 if b is zero */
-#define sp_no_zero_divide(a, b) ((0 == b) ? 0 : (a / b))
+#define sp_inline_no_zero_divide(a, b) ((0 == b) ? 0 : (a / b))
 #define sp_status_set(_id) \
   status.group = sp_s_group_sp; \
   status.id = _id
@@ -67,7 +67,7 @@
 #define sp_samples_to_hz(x) ((sp_time_t)((sp_rate / x)))
 #define sp_hz_to_factor(x) (((sp_sample_t)(x)) / ((sp_sample_t)(sp_rate)))
 #define sp_factor_to_hz(x) ((sp_time_t)((x * sp_rate)))
-#define sp_array_or_fixed(array, fixed, index) (array ? array[index] : fixed)
+#define sp_optional_array_get(array, fixed, index) (array ? array[index] : fixed)
 #define sp_sample_to_unit(a) ((1 + a) / 2.0)
 #define sp_time_random() sp_time_random_primitive((&sp_random_state))
 #define sp_times_random(size, out) sp_times_random_primitive((&sp_random_state), size, out)
@@ -80,12 +80,12 @@
 #define sp_sample_random() sp_sample_random_primitive((&sp_random_state))
 #define sp_sample_random_bounded(range) sp_sample_random_bounded_primitive((&sp_random_state), range)
 #define sp_unit_random() sp_unit_random_primitive((&sp_random_state))
-#define sp_local_alloc(allocator, size, pointer_address) \
+#define sp_local_alloc_srq(allocator, size, pointer_address) \
   srq((allocator(size, pointer_address))); \
   local_memory_add((*pointer_address))
-#define sp_local_units(size, pointer_address) sp_local_alloc(sp_units_new, size, pointer_address)
-#define sp_local_times(size, pointer_address) sp_local_alloc(sp_times_new, size, pointer_address)
-#define sp_local_samples(size, pointer_address) sp_local_alloc(sp_samples_new, size, pointer_address)
+#define sp_local_units_srq(size, pointer_address) sp_local_alloc_srq(sp_units_new, size, pointer_address)
+#define sp_local_times_srq(size, pointer_address) sp_local_alloc_srq(sp_times_new, size, pointer_address)
+#define sp_local_samples_srq(size, pointer_address) sp_local_alloc_srq(sp_samples_new, size, pointer_address)
 
 /** return a sample count relative to the current default sample rate sp_rate.
      (rate / d * n)
@@ -146,6 +146,10 @@ sp_time_t sp_phase_float(sp_time_t current, double change, sp_time_t cycle);
 sp_time_t sp_time_factorial(sp_time_t a);
 sp_sample_t sp_pan_to_amp(sp_sample_t value, sp_channel_count_t channel);
 void sp_sine_lfo(sp_time_t size, sp_sample_t amp, sp_sample_t* amod, sp_time_t frq, sp_time_t* fmod, sp_time_t* phs_state, sp_sample_t* out);
+sp_sample_t sp_sample_max(sp_sample_t a, sp_sample_t b);
+sp_time_t sp_time_max(sp_time_t a, sp_time_t b);
+sp_sample_t sp_sample_min(sp_sample_t a, sp_sample_t b);
+sp_time_t sp_time_min(sp_time_t a, sp_time_t b);
 /* extra */
 sp_sample_t sp_triangle(sp_time_t t, sp_time_t a, sp_time_t b);
 sp_sample_t sp_square(sp_time_t t, sp_time_t size);

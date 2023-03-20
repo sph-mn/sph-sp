@@ -19,7 +19,7 @@
       (declare temp sp-time-t max sp-time-t)
       (set max 0)
       (sp-for-each-index i count
-        (set temp (sp-abs (array-get in i)))
+        (set temp (sp-inline-abs (array-get in i)))
         (if (> temp max) (set max temp)))
       (return max))
     (define ((pre-concat sp_ type-name _reverse) in count out) (void value-t* sp-size-t value-t*)

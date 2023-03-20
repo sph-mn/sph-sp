@@ -37,6 +37,11 @@
 (define-sp-interleave sp-deinterleave sp-sample-t
   (set (array-get (array-get a channel) a-size) (array-get b b-size)))
 
+(define (sp-sample-max a b) (sp-sample-t sp-sample-t sp-sample-t) (return (if* (> a b) a b)))
+(define (sp-time-max a b) (sp-time-t sp-time-t sp-time-t) (return (if* (> a b) a b)))
+(define (sp-sample-min a b) (sp-sample-t sp-sample-t sp-sample-t) (return (if* (> a b) b a)))
+(define (sp-time-min a b) (sp-time-t sp-time-t sp-time-t) (return (if* (> a b) b a)))
+
 (define (sp-status-description a) (uint8-t* status-t)
   "get a string description for a status id in a status_t"
   (declare b uint8-t*)
@@ -123,8 +128,8 @@
   "sums to out"
   (define phs sp-time-t (if* phs-state *phs-state 0))
   (sp-for-each-index i size
-    (set+ (array-get out i) (* amp (sp-array-or-fixed amod amp i) (array-get wvf phs))
-      phs (sp-array-or-fixed fmod frq i))
+    (set+ (array-get out i) (* amp (sp-optional-array-get amod amp i) (array-get wvf phs))
+      phs (sp-optional-array-get fmod frq i))
     (if (>= phs wvf-size) (set phs (modulo phs wvf-size))))
   (if phs-state (set *phs-state phs)))
 
@@ -287,7 +292,7 @@
   (printf "rendering %lu seconds to file %s\n" (/ event.end sp-rate) path)
   (status-require
     (sp-render-range-file event 0
-      event.end (sp-render-config sp-channel-count sp-rate (* 10 sp-rate) #t) path))
+      event.end (sp-render-config sp-channel-count sp-rate (* 4 sp-rate) #t) path))
   (label exit status-return))
 
 (define (sp-render-plot event) (status-t sp-event-t)
@@ -361,8 +366,8 @@
    0.75: first channel 50%
    0.25: second channel 50%"
   (return
-    (if* (bit-and 1 channel) (/ (sp-limit value (- channel 1) (- channel 0.5)) 0.5)
-      (- 1 (/ (- (sp-limit value (+ channel 0.5) (+ channel 1)) 0.5) 0.5)))))
+    (if* (bit-and 1 channel) (/ (sp-inline-limit value (- channel 1) (- channel 0.5)) 0.5)
+      (- 1 (/ (- (sp-inline-limit value (+ channel 0.5) (+ channel 1)) 0.5) 0.5)))))
 
 (define (sp-normal-random min max) (sp-time-t sp-time-t sp-time-t)
   "untested. return normally distributed numbers in range"
@@ -384,7 +389,8 @@
   (declare nearest sp-time-t distance-ratio sp-sample-t)
   (set
     nearest (* (/ (- (+ a base) 1) base) base)
-    distance-ratio (/ (- base (sp-absolute-difference a nearest)) (convert-type base sp-sample-t))
+    distance-ratio
+    (/ (- base (sp-inline-absolute-difference a nearest)) (convert-type base sp-sample-t))
     amount (* amount distance-ratio (+ 1 (sp-time-random-bounded (/ base 2)))))
   (if (or (> a nearest) (< a amount)) (return (+ a amount))
     (if (< a nearest) (return (- a amount))

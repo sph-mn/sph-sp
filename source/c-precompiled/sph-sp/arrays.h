@@ -7,7 +7,7 @@
 #define sp_sample_interpolate_linear(a, b, t) (((1 - t) * a) + (t * b))
 #define sp_define_samples(id, value) sp_sample_t* id = value
 #define sp_define_times(id, value) sp_time_t* id = value
-#define sp_define_samples_srq(id, count) \
+#define sp_define_samples_new_srq(id, count) \
   sp_sample_t* id; \
   status_require((sp_samples_new(count, (&id))))
 #define sp_define_times_srq(id, count) \
