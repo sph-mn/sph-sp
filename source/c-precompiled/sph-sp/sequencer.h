@@ -87,8 +87,8 @@
 #define sp_event_malloc_type_n(event_pointer, count, type, pointer_address) sp_event_malloc(event_pointer, (count * sizeof(type)), pointer_address)
 #define sp_event_malloc_type(event_pointer, type, pointer_address) sp_event_malloc(event_pointer, (sizeof(type)), pointer_address)
 #define sp_event_samples(event_pointer, size, pointer_address) sp_event_alloc1(event_pointer, sp_samples_new, size, pointer_address)
-#define sp_event_times(event_pointer, size, pointer_address) sp_event_alloc(event_pointer, sp_times_new, size, pointer_address)
-#define sp_event_units(event_pointer, size, pointer_address) sp_event_alloc(event_pointer, sp_units_new, size, pointer_address)
+#define sp_event_times(event_pointer, size, pointer_address) sp_event_alloc1(event_pointer, sp_times_new, size, pointer_address)
+#define sp_event_units(event_pointer, size, pointer_address) sp_event_alloc1(event_pointer, sp_units_new, size, pointer_address)
 #define sp_event_path_samples_srq(event_pointer, out, ...) \
   status_require((sp_path_samples(out, __VA_ARGS__))); \
   status_require((sp_event_memory_add(event_pointer, (*out))))
@@ -275,6 +275,7 @@ typedef struct {
   sp_bool_t isolate;
 } sp_map_event_config_t;
 void sp_channel_config_zero(sp_channel_config_t* a);
+typedef status_t (*sp_event_block_generate_t)(sp_time_t, sp_time_t, sp_time_t, sp_block_t, sp_event_t*);
 sp_event_t sp_event_null = { 0 };
 void sp_event_list_display(sp_event_list_t* a);
 void sp_event_list_reverse(sp_event_list_t** a);
@@ -315,3 +316,4 @@ status_t sp_map_event_config_new(sp_map_event_config_t** out);
 void sp_wave_event_config_defaults(sp_wave_event_config_t* config);
 status_t sp_sound_event_prepare(sp_event_t* event);
 status_t sp_sound_event_config_new(sp_sound_event_config_t** out);
+status_t sp_sound_event_config_new_n(sp_size_t count, sp_sound_event_config_t** out);

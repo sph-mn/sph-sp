@@ -56,9 +56,7 @@ status_t s1_prepare(sp_event_t* _event) {
   ((se_c->channel_config)[0]).use = 1;
   ((se_c->channel_config)[0]).amp = (0.5 * c.amp);
   sp_sound_event(_event, se_c);
-  if (_event->prepare) {
-    status_require(((_event->prepare)(_event)));
-  };
+  sp_event_pointer_prepare_srq(_event);
 exit:
   status_return;
 }
@@ -66,6 +64,7 @@ sp_define_event(s1_event, s1_prepare, 0);
 status_t t1_prepare(sp_event_t* _event) {
   status_declare;
   _event->prepare = sp_group_prepare;
+  _event->generate = sp_group_generate;
   /* defines a group named t1 (track 1) with a default duration of 3/1 * _sp_rate.
        srq (alias for status_require) checks return error codes and jumps to a label named 'exit' on error */
   sp_event_t event;
@@ -85,9 +84,7 @@ status_t t1_prepare(sp_event_t* _event) {
     event.end = (event.start + rt(1, 6));
     srq((sp_group_add(_event, event)));
   };
-  if (_event->prepare) {
-    status_require(((_event->prepare)(_event)));
-  };
+  sp_event_pointer_prepare_srq(_event);
 exit:
   status_return;
 }

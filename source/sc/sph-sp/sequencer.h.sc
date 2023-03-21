@@ -71,9 +71,9 @@
   (sp-event-samples event-pointer size pointer-address)
   (sp-event-alloc1 event-pointer sp-samples-new size pointer-address)
   (sp-event-times event-pointer size pointer-address)
-  (sp-event-alloc event-pointer sp-times-new size pointer-address)
+  (sp-event-alloc1 event-pointer sp-times-new size pointer-address)
   (sp-event-units event-pointer size pointer-address)
-  (sp-event-alloc event-pointer sp-units-new size pointer-address)
+  (sp-event-alloc1 event-pointer sp-units-new size pointer-address)
   (sp-event-path-samples-srq event-pointer out ...)
   (begin
     (status-require (sp-path-samples out __VA_ARGS__))
@@ -295,7 +295,9 @@
   sp-map-event-config-t
   (type
     (struct (event sp-event-t) (map-generate sp-map-generate-t) (state void*) (isolate sp-bool-t)))
-  (sp-channel-config-zero a) (void sp-channel-config-t*))
+  (sp-channel-config-zero a) (void sp-channel-config-t*)
+  sp-event-block-generate-t
+  (type (function-pointer status-t sp-time-t sp-time-t sp-time-t sp-block-t sp-event-t*)))
 
 (define sp-event-null sp-event-t (struct-literal 0))
 
@@ -341,4 +343,5 @@
   (sp-map-event-config-new out) (status-t sp-map-event-config-t**)
   (sp-wave-event-config-defaults config) (void sp-wave-event-config-t*)
   (sp-sound-event-prepare event) (status-t sp-event-t*)
-  (sp-sound-event-config-new out) (status-t sp-sound-event-config-t**))
+  (sp-sound-event-config-new out) (status-t sp-sound-event-config-t**)
+  (sp-sound-event-config-new-n count out) (status-t sp-size-t sp-sound-event-config-t**))

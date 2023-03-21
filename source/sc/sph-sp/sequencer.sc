@@ -66,8 +66,8 @@
 (define (sp-event-list-free events) (void sp-event-list-t**)
   "free all list elements and the associated events. update the list head so it becomes the empty list.
    needed if sp_seq will not further process and free currently incomplete events"
-  (declare temp sp-event-list-t*)
-  (define current sp-event-list-t* *events)
+  (declare temp sp-event-list-t* current sp-event-list-t*)
+  (set current *events)
   (while current (sp-event-free current:event) (set temp current current current:next) (free temp))
   (set events 0))
 
@@ -117,6 +117,26 @@
   (sp-for-each-index i (array3-size a:memory) (set m (array3-get a:memory i)) (m.handler m.address))
   (array3-free a:memory)
   (set a:memory.data 0))
+
+(define (sp-event-block-generate resolution generate start end out event)
+  (status-t sp-time-t sp-event-block-generate-t sp-time-t sp-time-t sp-block-t sp-event-t*)
+  status-declare
+  (declare
+    block-count sp-time-t
+    block-initial sp-time-t
+    block-rest sp-time-t
+    duration sp-time-t
+    i sp-time-t)
+  (set duration (- end start))
+  (if (< duration resolution) (set resolution duration))
+  (set
+    block-count (sp-cheap-floor-positive (/ duration resolution))
+    block-initial (* block-count resolution)
+    block-rest (modulo duration resolution))
+  (for ((set i 0) (< i block-initial) (set+ i resolution))
+    (status-require (generate resolution i (+ i start) out event)))
+  (if block-rest (status-require (generate block-rest i (+ i start) out event)))
+  (label exit status-return))
 
 (define (sp-seq start end out events) (status-t sp-time-t sp-time-t sp-block-t sp-event-list-t**)
   "event arrays must have been prepared/sorted once with sp_seq_event_prepare for seq to work correctly.
@@ -420,49 +440,29 @@
   (free s)
   (sp-event-memory-free a))
 
+(define (sp-noise-event-generate-block duration block-i event-i out event)
+  (status-t sp-time-t sp-time-t sp-time-t sp-block-t sp-event-t*)
+  status-declare
+  (declare s sp-noise-event-state-t ampn sp-sample-t)
+  (set s (pointer-get (convert-type event:data sp-noise-event-state-t*)))
+  (sp-samples-random-primitive &s.random-state duration s.noise)
+  (status-require
+    (sp-windowed-sinc-bp-br s.noise duration
+      (sp-optional-array-get s.cutl-mod s.cutl event-i)
+      (sp-optional-array-get s.cuth-mod s.cuth event-i) s.trnl s.trnh
+      s.is-reject &s.filter-state s.temp))
+  (sp-for-each-index i duration
+    (set ampn (* s.amp (array-get s.amod (+ event-i i)) (array-get s.temp i)))
+    (set+ (array-get out.samples s.channel (+ block-i i)) (sp-inline-limit ampn -1 1)))
+  (set (pointer-get (convert-type event:data sp-noise-event-state-t*)) s)
+  (label exit status-return))
+
 (define (sp-noise-event-generate start end out event)
   (status-t sp-time-t sp-time-t sp-block-t sp-event-t*)
-  "updates filter arguments only every resolution number of samples,
-   but at least once for each call of generate"
-  status-declare
-  (declare
-    block-count sp-time-t
-    block-i sp-time-t
-    block-offset sp-time-t
-    block-rest sp-time-t
-    duration sp-time-t
-    resolution sp-time-t
-    s sp-noise-event-state-t
-    sp sp-noise-event-state-t*
-    t sp-time-t)
-  (set
-    sp event:data
-    s *sp
-    duration (- end start)
-    resolution (sp-inline-min s.resolution duration)
-    block-count (sp-cheap-floor-positive (/ duration resolution))
-    block-rest (modulo duration resolution))
-  (sp-for-each-index block-i block-count
-    (set block-offset (* resolution block-i) t (+ start block-offset))
-    (sp-samples-random-primitive &s.random-state resolution s.noise)
-    (sp-windowed-sinc-bp-br s.noise resolution
-      (sp-optional-array-get s.cutl-mod s.cutl t) (sp-optional-array-get s.cuth-mod s.cuth t) s.trnl
-      s.trnh s.is-reject &s.filter-state s.temp)
-    (sp-for-each-index i resolution
-      (set+ (array-get out.samples s.channel (+ block-offset i))
-        (sp-inline-limit (* s.amp (array-get s.amod (+ t i)) (array-get s.temp i)) -1 1))))
-  (if block-rest
-    (begin
-      (set block-offset (+ block-rest (* resolution (- block-i 1))) t (+ start block-offset))
-      (sp-samples-random-primitive &s.random-state resolution s.noise)
-      (sp-windowed-sinc-bp-br s.noise block-rest
-        (sp-optional-array-get s.cutl-mod s.cutl t) (sp-optional-array-get s.cuth-mod s.cuth t)
-        s.trnl s.trnh s.is-reject &s.filter-state s.temp)
-      (sp-for-each-index i block-rest
-        (set+ (array-get out.samples s.channel (+ block-offset i))
-          (sp-inline-limit (* s.amp (array-get s.amod (+ t i)) (array-get s.temp i)) -1 1)))))
-  (set sp:random-state s.random-state sp:filter-state s.filter-state)
-  status-return)
+  (return
+    (sp-event-block-generate
+      (struct-pointer-get (convert-type event:data sp-noise-event-state-t*) resolution)
+      sp-noise-event-generate-block start end out event)))
 
 (define (sp-noise-event-filter-state cutl cuth trnl trnh is-reject rs out)
   (status-t sp-sample-t sp-sample-t sp-sample-t sp-sample-t sp-bool-t sp-random-state-t* sp-convolution-filter-state-t**)
@@ -472,9 +472,9 @@
   (declare ir-len sp-time-t temp sp-sample-t* noise sp-sample-t*)
   (memreg-init 2)
   (set ir-len (sp-windowed-sinc-lp-hp-ir-length (sp-inline-min trnl trnh)))
-  (sp-malloc-type ir-len sp-sample-t &noise)
+  (status-require (sp-malloc-type ir-len sp-sample-t &noise))
   (memreg-add noise)
-  (sp-malloc-type ir-len sp-sample-t &temp)
+  (status-require (sp-malloc-type ir-len sp-sample-t &temp))
   (memreg-add temp)
   (sp-samples-random-primitive rs ir-len noise)
   (status-require (sp-windowed-sinc-bp-br noise ir-len cutl cuth trnl trnh is-reject out temp))
@@ -598,46 +598,27 @@
   (free s)
   (sp-event-memory-free a))
 
+(define (sp-cheap-noise-event-generate-block duration block-i event-i out event)
+  (status-t sp-time-t sp-time-t sp-time-t sp-block-t sp-event-t*)
+  status-declare
+  (declare s sp-cheap-noise-event-state-t ampn sp-sample-t)
+  (set s (pointer-get (convert-type event:data sp-cheap-noise-event-state-t*)))
+  (sp-samples-random-primitive &s.random-state duration s.noise)
+  (sp-cheap-filter s.type s.noise
+    duration (sp-optional-array-get s.cut-mod s.cut event-i) s.passes
+    (sp-optional-array-get s.q-factor-mod s.q-factor event-i) &s.filter-state s.temp)
+  (sp-for-each-index i duration
+    (set ampn (* s.amp (array-get s.amod (+ event-i i)) (array-get s.temp i)))
+    (set+ (array-get out.samples s.channel (+ block-i i)) (sp-inline-limit ampn -1 1)))
+  (set (pointer-get (convert-type event:data sp-cheap-noise-event-state-t*)) s)
+  status-return)
+
 (define (sp-cheap-noise-event-generate start end out event)
   (status-t sp-time-t sp-time-t sp-block-t sp-event-t*)
-  status-declare
-  (declare
-    block-count sp-time-t
-    block-offset sp-time-t
-    block-rest sp-time-t
-    duration sp-time-t
-    s sp-cheap-noise-event-state-t
-    sp sp-cheap-noise-event-state-t*
-    t sp-time-t)
-  (sc-comment "update filter arguments only every resolution number of samples")
-  (set
-    sp event:data
-    s *sp
-    duration (- end start)
-    block-count (sp-cheap-floor-positive (/ duration s.resolution))
-    block-rest (modulo duration s.resolution))
-  (sc-comment "total block count is block-count plus rest-block")
-  (sp-for-each-index block-i block-count
-    (set block-offset (* s.resolution block-i) t (+ start block-offset) duration s.resolution)
-    (sp-samples-random-primitive &s.random-state duration s.noise)
-    (sp-cheap-filter s.type s.noise
-      duration (sp-optional-array-get s.cut-mod s.cut t) s.passes
-      (sp-optional-array-get s.q-factor-mod s.q-factor t) &s.filter-state s.temp)
-    (sp-for-each-index i duration
-      (set+ (array-get out.samples s.channel (+ block-offset i))
-        (* s.amp (array-get s.amod (+ t i)) (array-get s.temp i)))))
-  (if block-rest
-    (begin
-      (set block-offset (* s.resolution block-count) t (+ start block-offset) duration block-rest)
-      (sp-samples-random-primitive &s.random-state duration s.noise)
-      (sp-cheap-filter s.type s.noise
-        duration (sp-optional-array-get s.cut-mod s.cut t) s.passes
-        (sp-optional-array-get s.q-factor-mod s.q-factor t) &s.filter-state s.temp)
-      (sp-for-each-index i duration
-        (set+ (array-get out.samples s.channel (+ block-offset i))
-          (* s.amp (array-get s.amod (+ t i)) (array-get s.temp i))))))
-  (set sp:random-state s.random-state sp:filter-state s.filter-state)
-  status-return)
+  (return
+    (sp-event-block-generate
+      (struct-pointer-get (convert-type event:data sp-cheap-noise-event-state-t*) resolution)
+      sp-cheap-noise-event-generate-block start end out event)))
 
 (define (sp-cheap-noise-event-channel duration config channel rs state-noise state-temp out)
   (status-t sp-time-t sp-cheap-noise-event-config-t sp-channel-count-t sp-random-state-t sp-sample-t* sp-sample-t* sp-event-t*)
@@ -792,6 +773,14 @@
   status-declare
   (status-require (sp-malloc-type 1 sp-sound-event-config-t out))
   (set **out (sp-sound-event-config))
+  (label exit status-return))
+
+(define (sp-sound-event-config-new-n count out) (status-t sp-size-t sp-sound-event-config-t**)
+  status-declare
+  (declare default-value sp-sound-event-config-t)
+  (status-require (sp-malloc-type count sp-sound-event-config-t out))
+  (set default-value (sp-sound-event-config))
+  (sp-for-each-index i count (set (array-get *out i) default-value))
   (label exit status-return))
 
 (define (sp-sound-event-prepare-cheap-noise event) (status-t sp-event-t*)

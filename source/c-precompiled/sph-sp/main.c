@@ -433,6 +433,9 @@ status_t sp_initialize(uint16_t cpu_count, sp_channel_count_t channel_count, sp_
   sp_sine_period(sp_rate, sp_sine_table);
   sp_sine_period((sp_rate * sp_sine_lfo_factor), sp_sine_table_lfo);
 exit:
+  if (status_is_failure) {
+    sp_deinitialize();
+  };
   status_return;
 }
 void sp_deinitialize() {

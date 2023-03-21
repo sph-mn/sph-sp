@@ -334,7 +334,7 @@
   (status-require (sp-samples-new (* sp-rate sp-sine-lfo-factor) &sp-sine-table-lfo))
   (sp-sine-period sp-rate sp-sine-table)
   (sp-sine-period (* sp-rate sp-sine-lfo-factor) sp-sine-table-lfo)
-  (label exit status-return))
+  (label exit (if status-is-failure (sp-deinitialize)) status-return))
 
 (define (sp-deinitialize) void
   (if sp-cpu-count (sph-future-deinit))

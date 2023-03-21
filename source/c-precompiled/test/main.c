@@ -18,7 +18,9 @@
     printf(("\ntests failed. %d %s\n"), (status.id), (sp_status_description(status))); \
   }
 #define _sp_rate 960
-#define test_noise_duration _sp_rate
+
+/* previous segfault when noise-event duration was unequal sp-rate */
+#define test_noise_duration (_sp_rate + 20)
 status_t test_helper_event_generate(sp_time_t start, sp_time_t end, sp_block_t out, sp_event_t* event) {
   status_declare;
   sp_time_t i;
@@ -968,6 +970,7 @@ exit:
 int main() {
   status_declare;
   sp_initialize(3, 2, _sp_rate);
+  test_helper_test_one(test_sp_noise_event);
   test_helper_test_one(test_base);
   test_helper_test_one(test_path);
   test_helper_test_one(test_sp_sound_event);
@@ -975,7 +978,6 @@ int main() {
   test_helper_test_one(test_windowed_sinc_continuity);
   test_helper_test_one(test_convolve_smaller);
   test_helper_test_one(test_convolve_larger);
-  test_helper_test_one(test_sp_noise_event);
   test_helper_test_one(test_sp_wave_event);
   test_helper_test_one(test_sp_cheap_noise_event);
   test_helper_test_one(test_sp_map_event);

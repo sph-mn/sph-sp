@@ -7,8 +7,10 @@
   (test-helper-display-summary)
   (if status-is-success (printf "--\ntests finished successfully.\n")
     (printf "\ntests failed. %d %s\n" status.id (sp-status-description status)))
-  _sp-rate 960
-  test-noise-duration _sp-rate)
+  _sp-rate 960)
+
+(sc-comment "previous segfault when noise-event duration was unequal sp-rate")
+(pre-define test-noise-duration (+ _sp-rate 20))
 
 (define (test-helper-event-generate start end out event)
   (status-t sp-time-t sp-time-t sp-block-t sp-event-t*)
@@ -864,6 +866,7 @@
   "\"goto exit\" can skip events"
   status-declare
   (sp-initialize 3 2 _sp-rate)
+  (test-helper-test-one test-sp-noise-event)
   (test-helper-test-one test-base)
   (test-helper-test-one test-path)
   (test-helper-test-one test-sp-sound-event)
@@ -871,7 +874,6 @@
   (test-helper-test-one test-windowed-sinc-continuity)
   (test-helper-test-one test-convolve-smaller)
   (test-helper-test-one test-convolve-larger)
-  (test-helper-test-one test-sp-noise-event)
   (test-helper-test-one test-sp-wave-event)
   (test-helper-test-one test-sp-cheap-noise-event)
   (test-helper-test-one test-sp-map-event)
