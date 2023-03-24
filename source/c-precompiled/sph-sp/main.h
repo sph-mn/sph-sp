@@ -1,13 +1,4 @@
 
-#define error_memory_init(register_size) memreg2_init_named(error, register_size)
-#define local_memory_init(register_size) memreg2_init_named(exit, register_size)
-#define error_memory_free memreg2_free_named(error)
-#define local_memory_free memreg2_free_named(exit)
-#define error_memory_add2(address, handler) memreg2_add_named(error, address, handler)
-#define local_memory_add2(address, handler) memreg2_add_named(exit, address, handler)
-#define error_memory_add(address) error_memory_add2(address, free)
-#define local_memory_add(address) local_memory_add2(address, free)
-
 #define sp_bool_t uint8_t
 #define f64 double
 #define f128 long double
@@ -80,6 +71,15 @@
 #define sp_sample_random() sp_sample_random_primitive((&sp_random_state))
 #define sp_sample_random_bounded(range) sp_sample_random_bounded_primitive((&sp_random_state), range)
 #define sp_unit_random() sp_unit_random_primitive((&sp_random_state))
+#define error_memory_init(register_size) memreg2_init_named(error, register_size)
+#define local_memory_init(register_size) memreg2_init_named(exit, register_size)
+#define error_memory_free memreg2_free_named(error)
+#define local_memory_free memreg2_free_named(exit)
+#define error_memory_add2(address, handler) memreg2_add_named(error, address, handler)
+#define local_memory_add2(address, handler) memreg2_add_named(exit, address, handler)
+#define error_memory_add(address) error_memory_add2(address, free)
+#define local_memory_add(address) local_memory_add2(address, free)
+#define sp_time_odd_p(a) (a & 1)
 #define sp_local_alloc_srq(allocator, size, pointer_address) \
   srq((allocator(size, pointer_address))); \
   local_memory_add((*pointer_address))
@@ -89,11 +89,13 @@
 
 /** return a sample count relative to the current default sample rate sp_rate.
      (rate / d * n)
-     example (rt 1 2) returns half of sp_rate */
-#define rt(n, d) ((sp_time_t)(((sp_rate / d) * n)))
+     example (rt 1 2) returns the count of samples for half a second of sound */
+#define sp_rate_duration(n, d) ((sp_time_t)(((sp_rate / d) * n)))
 
-/** like rt but works before sp_initialize has been called */
-#define rts(n, d) ((sp_time_t)(((_sp_rate / d) * n)))
+/** like rt but works in places where variables are not allowed (ex: array initializers) and before sp_initialize has been called */
+#define sp_duration(n, d) ((sp_time_t)(((_sp_rate / d) * n)))
+#define spd sp_duration
+#define sprd sp_rate_duration
 typedef struct {
   sp_channel_count_t channel_count;
   sp_time_t size;

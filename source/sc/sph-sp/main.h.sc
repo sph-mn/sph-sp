@@ -1,14 +1,4 @@
 (pre-define
-  (error-memory-init register-size) (memreg2-init-named error register-size)
-  (local-memory-init register-size) (memreg2-init-named exit register-size)
-  error-memory-free (memreg2-free-named error)
-  local-memory-free (memreg2-free-named exit)
-  (error-memory-add2 address handler) (memreg2-add-named error address handler)
-  (local-memory-add2 address handler) (memreg2-add-named exit address handler)
-  (error-memory-add address) (error-memory-add2 address free)
-  (local-memory-add address) (local-memory-add2 address free))
-
-(pre-define
   sp-bool-t uint8-t
   f64 double
   f128 (sc-insert "long double")
@@ -78,22 +68,33 @@
   (sp-sample-random) (sp-sample-random-primitive &sp-random-state)
   (sp-sample-random-bounded range) (sp-sample-random-bounded-primitive &sp-random-state range)
   (sp-unit-random) (sp-unit-random-primitive &sp-random-state)
+  (error-memory-init register-size) (memreg2-init-named error register-size)
+  (local-memory-init register-size) (memreg2-init-named exit register-size)
+  error-memory-free (memreg2-free-named error)
+  local-memory-free (memreg2-free-named exit)
+  (error-memory-add2 address handler) (memreg2-add-named error address handler)
+  (local-memory-add2 address handler) (memreg2-add-named exit address handler)
+  (error-memory-add address) (error-memory-add2 address free)
+  (local-memory-add address) (local-memory-add2 address free)
+  (sp-time-odd? a) (bit-and a 1)
   (sp-local-alloc-srq allocator size pointer-address)
   (begin (srq (allocator size pointer-address)) (local-memory-add (pointer-get pointer-address)))
   (sp-local-units-srq size pointer-address) (sp-local-alloc-srq sp-units-new size pointer-address)
   (sp-local-times-srq size pointer-address) (sp-local-alloc-srq sp-times-new size pointer-address)
   (sp-local-samples-srq size pointer-address)
   (sp-local-alloc-srq sp-samples-new size pointer-address)
-  (rt n d)
+  (sp-rate-duration n d)
   (begin
     "return a sample count relative to the current default sample rate sp_rate.
      (rate / d * n)
-     example (rt 1 2) returns half of sp_rate"
+     example (rt 1 2) returns the count of samples for half a second of sound"
     (convert-type (* (/ sp-rate d) n) sp-time-t))
-  (rts n d)
+  (sp-duration n d)
   (begin
-    "like rt but works before sp_initialize has been called"
-    (convert-type (* (/ _sp-rate d) n) sp-time-t)))
+    "like rt but works in places where variables are not allowed (ex: array initializers) and before sp_initialize has been called"
+    (convert-type (* (/ _sp-rate d) n) sp-time-t))
+  spd sp-duration
+  sprd sp-rate-duration)
 
 (declare
   sp-block-t

@@ -433,6 +433,9 @@
     (if (> 0 value) (set (array-get out i) (if* (> (* -1 limit) value) (* -1 limit) value))
       (set (array-get out i) (if* (< limit value) limit value)))))
 
+(define (sp-samples-limit in-out count limit) (void sp-sample-t* sp-time-t sp-sample-t)
+ (sp-for-each-index i count (if (< limit (array-get in-out i)) (set (array-get in-out i) limit))))
+
 (sc-comment "other")
 
 (define (sp-shuffle swap in count)

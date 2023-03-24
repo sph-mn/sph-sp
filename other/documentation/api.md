@@ -21,6 +21,21 @@ sp_convolution_filter_state_free :: sp_convolution_filter_state_t*:state -> void
 sp_convolution_filter_state_set :: sp_convolution_filter_ir_f_t:ir_f void*:ir_f_arguments uint8_t:ir_f_arguments_len sp_convolution_filter_state_t**:out_state -> status_t
 sp_convolve :: sp_sample_t*:a sp_time_t:a_len sp_sample_t*:b sp_time_t:b_len sp_time_t:result_carryover_len sp_sample_t*:result_carryover sp_sample_t*:result_samples -> void
 sp_convolve_one :: sp_sample_t*:a sp_time_t:a_len sp_sample_t*:b sp_time_t:b_len sp_sample_t*:result_samples -> void
+sp_deinitialize :: -> void
+sp_envelope_scaled :: sp_time_t**:out sp_time_t:length sp_path_point_count_t:point_count sp_sample_t:y_scalar sp_sample_t*:x sp_sample_t*:y sp_sample_t*:c -> status_t
+sp_envelope_scaled_c3 :: sp_time_t**:out sp_time_t:length sp_sample_t:y_scalar sp_sample_t:x1 sp_sample_t:y1 sp_sample_t:y2 sp_sample_t:y3 sp_sample_t:c1 sp_sample_t:c2 -> status_t
+sp_envelope_scaled_c4 :: sp_time_t**:out sp_time_t:length sp_sample_t:y_scalar sp_sample_t:x1 sp_sample_t:x2 sp_sample_t:y1 sp_sample_t:y2 sp_sample_t:y3 sp_sample_t:y4 sp_sample_t:c1 sp_sample_t:c2 sp_sample_t:c3 -> status_t
+sp_envelope_scaled_c5 :: sp_time_t**:out sp_time_t:length sp_sample_t:y_scalar sp_sample_t:x1 sp_sample_t:x2 sp_sample_t:x3 sp_sample_t:y1 sp_sample_t:y2 sp_sample_t:y3 sp_sample_t:y4 sp_sample_t:y5 sp_sample_t:c1 sp_sample_t:c2 sp_sample_t:c3 sp_sample_t:c4 -> status_t
+sp_envelope_scaled3 :: sp_time_t**:out sp_time_t:length sp_sample_t:y_scalar sp_sample_t:x1 sp_sample_t:y1 sp_sample_t:y2 sp_sample_t:y3 -> status_t
+sp_envelope_scaled4 :: sp_time_t**:out sp_time_t:length sp_sample_t:y_scalar sp_sample_t:x1 sp_sample_t:x2 sp_sample_t:y1 sp_sample_t:y2 sp_sample_t:y3 sp_sample_t:y4 -> status_t
+sp_envelope_scaled5 :: sp_time_t**:out sp_time_t:length sp_sample_t:y_scalar sp_sample_t:x1 sp_sample_t:x2 sp_sample_t:x3 sp_sample_t:y1 sp_sample_t:y2 sp_sample_t:y3 sp_sample_t:y4 sp_sample_t:y5 -> status_t
+sp_envelope_zero :: sp_sample_t**:out sp_time_t:length sp_path_point_count_t:point_count sp_sample_t*:x sp_sample_t*:y sp_sample_t*:c -> status_t
+sp_envelope_zero_c3 :: sp_sample_t**:out sp_time_t:length sp_sample_t:x1 sp_sample_t:y1 sp_sample_t:c1 sp_sample_t:c2 -> status_t
+sp_envelope_zero_c4 :: sp_sample_t**:out sp_time_t:length sp_sample_t:x1 sp_sample_t:x2 sp_sample_t:y1 sp_sample_t:y2 sp_sample_t:c1 sp_sample_t:c2 sp_sample_t:c3 -> status_t
+sp_envelope_zero_c5 :: sp_sample_t**:out sp_time_t:length sp_sample_t:x1 sp_sample_t:x2 sp_sample_t:x3 sp_sample_t:y1 sp_sample_t:y2 sp_sample_t:y3 sp_sample_t:c1 sp_sample_t:c2 sp_sample_t:c3 sp_sample_t:c4 -> status_t
+sp_envelope_zero3 :: sp_sample_t**:out sp_time_t:length sp_sample_t:x1 sp_sample_t:y1 -> status_t
+sp_envelope_zero4 :: sp_sample_t**:out sp_time_t:length sp_sample_t:x1 sp_sample_t:x2 sp_sample_t:y1 sp_sample_t:y2 -> status_t
+sp_envelope_zero5 :: sp_sample_t**:out sp_time_t:length sp_sample_t:x1 sp_sample_t:x2 sp_sample_t:x3 sp_sample_t:y1 sp_sample_t:y2 sp_sample_t:y3 -> status_t
 sp_event_list_add :: sp_event_list_t**:a sp_event_t:event -> status_t
 sp_event_list_display :: sp_event_list_t*:a -> void
 sp_event_list_free :: sp_event_list_t**:events -> void
@@ -49,6 +64,8 @@ sp_group_event_f :: sp_time_t:start sp_time_t:end sp_block_t:out sp_event_t*:eve
 sp_group_event_free :: sp_event_t*:a -> void
 sp_group_event_parallel_f :: sp_time_t:start sp_time_t:end sp_block_t:out sp_event_t*:event -> void
 sp_group_free :: -> void
+sp_group_generate :: sp_time_t:start sp_time_t:end sp_block_t:out sp_event_t*:a -> status_t
+sp_group_generate_parallel :: sp_time_t:start sp_time_t:end sp_block_t:out sp_event_t*:a -> status_t
 sp_group_prepare :: sp_event_t*:event -> status_t
 sp_group_prepare_parallel :: sp_event_t*:a -> status_t
 sp_initialize :: uint16_t:cpu_count sp_channel_count_t:channel_count sp_time_t:rate -> status_t
@@ -65,21 +82,24 @@ sp_null_ir :: sp_sample_t**:out_ir sp_time_t*:out_len -> status_t
 sp_pan_to_amp :: sp_sample_t:value sp_channel_count_t:channel -> sp_sample_t
 sp_pan_to_amp :: sp_sample_t:value sp_channel_count_t:channel -> sp_sample_t
 sp_passthrough_ir :: sp_sample_t**:out_ir sp_time_t*:out_len -> status_t
-sp_path_curves_config_free :: sp_path_curves_config_t:a -> void
-sp_path_curves_config_new :: sp_time_t:segment_count sp_path_curves_config_t*:out -> status_t
-sp_path_curves_new :: sp_path_curves_config_t:config sp_path_t*:out -> status_t
-sp_path_curves_samples_new :: sp_path_curves_config_t:config sp_time_t:length sp_sample_t**:out -> status_t
-sp_path_curves_times_new :: sp_path_curves_config_t:config sp_time_t:length sp_time_t**:out -> status_t
-sp_path_samples_1 :: sp_sample_t**:out sp_time_t:size sp_path_segment_t:s1 -> status_t
-sp_path_samples_2 :: sp_sample_t**:out sp_time_t:size sp_path_segment_t:s1 sp_path_segment_t:s2 -> status_t
-sp_path_samples_3 :: sp_sample_t**:out sp_time_t:size sp_path_segment_t:s1 sp_path_segment_t:s2 sp_path_segment_t:s3 -> status_t
-sp_path_samples_4 :: sp_sample_t**:out sp_time_t:size sp_path_segment_t:s1 sp_path_segment_t:s2 sp_path_segment_t:s3 sp_path_segment_t:s4 -> status_t
-sp_path_samples_new :: sp_path_t:path sp_time_t:size sp_sample_t**:out -> status_t
-sp_path_times_1 :: sp_time_t**:out sp_time_t:size sp_path_segment_t:s1 -> status_t
-sp_path_times_2 :: sp_time_t**:out sp_time_t:size sp_path_segment_t:s1 sp_path_segment_t:s2 -> status_t
-sp_path_times_3 :: sp_time_t**:out sp_time_t:size sp_path_segment_t:s1 sp_path_segment_t:s2 sp_path_segment_t:s3 -> status_t
-sp_path_times_4 :: sp_time_t**:out sp_time_t:size sp_path_segment_t:s1 sp_path_segment_t:s2 sp_path_segment_t:s3 sp_path_segment_t:s4 -> status_t
-sp_path_times_new :: sp_path_t:path sp_time_t:size sp_time_t**:out -> status_t
+sp_path_samples :: sp_sample_t**:out sp_time_t:length sp_path_point_count_t:point_count sp_sample_t*:x sp_sample_t*:y sp_sample_t*:c -> status_t
+sp_path_samples_c2 :: sp_sample_t**:out sp_time_t:length sp_sample_t:y1 sp_sample_t:y2 sp_sample_t:c1 -> status_t
+sp_path_samples_c3 :: sp_sample_t**:out sp_time_t:length sp_sample_t:x1 sp_sample_t:y1 sp_sample_t:y2 sp_sample_t:y3 sp_sample_t:c1 sp_sample_t:c2 -> status_t
+sp_path_samples_c4 :: sp_sample_t**:out sp_time_t:length sp_sample_t:x1 sp_sample_t:x2 sp_sample_t:y1 sp_sample_t:y2 sp_sample_t:y3 sp_sample_t:y4 sp_sample_t:c1 sp_sample_t:c2 sp_sample_t:c3 -> status_t
+sp_path_samples_c5 :: sp_sample_t**:out sp_time_t:length sp_sample_t:x1 sp_sample_t:x2 sp_sample_t:x3 sp_sample_t:y1 sp_sample_t:y2 sp_sample_t:y3 sp_sample_t:y4 sp_sample_t:y5 sp_sample_t:c1 sp_sample_t:c2 sp_sample_t:c3 sp_sample_t:c4 -> status_t
+sp_path_samples2 :: sp_sample_t**:out sp_time_t:length sp_sample_t:y1 sp_sample_t:y2 -> status_t
+sp_path_samples3 :: sp_sample_t**:out sp_time_t:length sp_sample_t:x1 sp_sample_t:y1 sp_sample_t:y2 sp_sample_t:y3 -> status_t
+sp_path_samples4 :: sp_sample_t**:out sp_time_t:length sp_sample_t:x1 sp_sample_t:x2 sp_sample_t:y1 sp_sample_t:y2 sp_sample_t:y3 sp_sample_t:y4 -> status_t
+sp_path_samples5 :: sp_sample_t**:out sp_time_t:length sp_sample_t:x1 sp_sample_t:x2 sp_sample_t:x3 sp_sample_t:y1 sp_sample_t:y2 sp_sample_t:y3 sp_sample_t:y4 sp_sample_t:y5 -> status_t
+sp_path_times :: sp_time_t**:out sp_time_t:length sp_path_point_count_t:point_count sp_sample_t*:x sp_sample_t*:y sp_sample_t*:c -> status_t
+sp_path_times_c2 :: sp_time_t**:out sp_time_t:length sp_sample_t:y1 sp_sample_t:y2 sp_sample_t:c1 -> status_t
+sp_path_times_c3 :: sp_time_t**:out sp_time_t:length sp_sample_t:x1 sp_sample_t:y1 sp_sample_t:y2 sp_sample_t:y3 sp_sample_t:c1 sp_sample_t:c2 -> status_t
+sp_path_times_c4 :: sp_time_t**:out sp_time_t:length sp_sample_t:x1 sp_sample_t:x2 sp_sample_t:y1 sp_sample_t:y2 sp_sample_t:y3 sp_sample_t:y4 sp_sample_t:c1 sp_sample_t:c2 sp_sample_t:c3 -> status_t
+sp_path_times_c5 :: sp_time_t**:out sp_time_t:length sp_sample_t:x1 sp_sample_t:x2 sp_sample_t:x3 sp_sample_t:y1 sp_sample_t:y2 sp_sample_t:y3 sp_sample_t:y4 sp_sample_t:y5 sp_sample_t:c1 sp_sample_t:c2 sp_sample_t:c3 sp_sample_t:c4 -> status_t
+sp_path_times2 :: sp_time_t**:out sp_time_t:length sp_sample_t:y1 sp_sample_t:y2 -> status_t
+sp_path_times3 :: sp_time_t**:out sp_time_t:length sp_sample_t:x1 sp_sample_t:y1 sp_sample_t:y2 sp_sample_t:y3 -> status_t
+sp_path_times4 :: sp_time_t**:out sp_time_t:length sp_sample_t:x1 sp_sample_t:x2 sp_sample_t:y1 sp_sample_t:y2 sp_sample_t:y3 sp_sample_t:y4 -> status_t
+sp_path_times5 :: sp_time_t**:out sp_time_t:length sp_sample_t:x1 sp_sample_t:x2 sp_sample_t:x3 sp_sample_t:y1 sp_sample_t:y2 sp_sample_t:y3 sp_sample_t:y4 sp_sample_t:y5 -> status_t
 sp_permutations_max :: sp_time_t:set_size sp_time_t:selection_size -> sp_time_t
 sp_permutations_max :: sp_time_t:set_size sp_time_t:selection_size -> sp_time_t
 sp_phase :: sp_time_t:current sp_time_t:change sp_time_t:cycle -> sp_time_t
@@ -93,12 +113,15 @@ sp_plot_spectrum_file :: uint8_t*:path -> void
 sp_plot_times :: sp_time_t*:a sp_time_t:a_size -> void
 sp_plot_times_to_file :: sp_time_t*:a sp_time_t:a_size uint8_t*:path -> void
 sp_random_state_new :: sp_time_t:seed -> sp_random_state_t
-sp_render_config :: sp_channel_count_t:channel_count sp_time_t:rate sp_time_t:block_size -> sp_render_config_t
+sp_render_config :: sp_channel_count_t:channel_count sp_time_t:rate sp_time_t:block_size sp_bool_t:display_progress -> sp_render_config_t
 sp_render_file :: sp_event_t:event uint8_t*:path -> status_t
 sp_render_plot :: sp_event_t:event -> status_t
 sp_render_range_block :: sp_event_t:event sp_time_t:start sp_time_t:end sp_render_config_t:config sp_block_t*:out -> status_t
 sp_render_range_file :: sp_event_t:event sp_time_t:start sp_time_t:end sp_render_config_t:config uint8_t*:path -> status_t
+sp_sample_max :: sp_sample_t:a sp_sample_t:b -> sp_sample_t
+sp_sample_min :: sp_sample_t:a sp_sample_t:b -> sp_sample_t
 sp_samples_to_times :: sp_sample_t*:in sp_size_t:count sp_time_t*:out -> void
+sp_samples_to_times_replace :: sp_sample_t*:in sp_size_t:count sp_time_t**:out -> status_t
 sp_samples_to_units :: sp_sample_t*:in_out sp_size_t:count -> void
 sp_samples_blend :: sp_sample_t*:a sp_sample_t*:b sp_sample_t:fraction sp_time_t:size sp_sample_t*:out -> void
 sp_samples_display :: sp_sample_t*:in sp_size_t:count -> void
@@ -120,6 +143,7 @@ sp_sine :: sp_time_t:size sp_sample_t:amp sp_sample_t*:amod sp_time_t:frq sp_tim
 sp_sine_lfo :: sp_time_t:size sp_sample_t:amp sp_sample_t*:amod sp_time_t:frq sp_time_t*:fmod sp_time_t*:phs_state sp_sample_t*:out -> void
 sp_sine_period :: sp_time_t:size sp_sample_t*:out -> void
 sp_sound_event_config_new :: sp_sound_event_config_t**:out -> status_t
+sp_sound_event_config_new_n :: sp_size_t:count sp_sound_event_config_t**:out -> status_t
 sp_sound_event_prepare :: sp_event_t*:event -> status_t
 sp_spectral_inversion_ir :: sp_sample_t*:a sp_time_t:a_len -> void
 sp_spectral_reversal_ir :: sp_sample_t*:a sp_time_t:a_len -> void
@@ -157,9 +181,13 @@ sp_time_expt :: sp_time_t:base sp_time_t:exp -> sp_time_t
 sp_time_factorial :: sp_time_t:a -> sp_time_t
 sp_time_harmonize :: sp_time_t:a sp_time_t:base sp_sample_t:amount -> sp_time_t
 sp_time_harmonize :: sp_time_t:a sp_time_t:base sp_sample_t:amount -> sp_time_t
+sp_time_max :: sp_time_t:a sp_time_t:b -> sp_time_t
+sp_time_min :: sp_time_t:a sp_time_t:b -> sp_time_t
 sp_time_random_custom :: sp_time_t*:cudist sp_time_t:cudist_size sp_time_t:range -> sp_time_t
 sp_time_random_discrete :: sp_time_t*:cudist sp_time_t:cudist_size -> sp_time_t
 sp_time_sum :: sp_time_t*:in sp_time_t:size -> sp_time_t
+sp_times_to_samples :: sp_time_t*:in sp_size_t:count sp_sample_t*:out -> void
+sp_times_to_samples_replace :: sp_time_t*:in sp_size_t:count sp_sample_t**:out -> status_t
 sp_times_bits_to_times :: sp_time_t*:a sp_time_t:size sp_time_t*:out -> void
 sp_times_blend :: sp_time_t*:a sp_time_t*:b sp_sample_t:fraction sp_time_t:size sp_time_t*:out -> void
 sp_times_compositions :: sp_time_t:sum sp_time_t***:out sp_time_t*:out_size sp_time_t**:out_sizes -> status_t
@@ -223,11 +251,6 @@ local_memory_add(address)
 local_memory_add2(address, handler)
 local_memory_free
 local_memory_init(register_size)
-rt(n, d)
-rts(n, d)
-sp_abs(a)
-sp_absolute_difference(a, b)
-sp_array_or_fixed(array, fixed, index)
 sp_block_declare(a)
 sp_block_plot_1(a)
 sp_bool_t
@@ -252,24 +275,59 @@ sp_declare_event_list(id)
 sp_declare_group(id)
 sp_declare_group_parallel(id)
 sp_define_event(name, _prepare, duration)
-sp_event_alloc(event_pointer, allocator, pointer_address)
-sp_event_alloc1(event_pointer, allocator, size, pointer_address)
+sp_define_samples(id, value)
+sp_define_samples_new_srq(id, count)
+sp_define_times(id, value)
+sp_define_times_srq(id, count)
+sp_duration(n, d)
+sp_event_alloc1_srq(event_pointer, allocator, size, pointer_address)
+sp_event_alloc_srq(event_pointer, allocator, pointer_address)
 sp_event_config_load(variable_name, type, event)
 sp_event_duration(a)
 sp_event_duration_set(a, duration)
+sp_event_envelope_scaled3_srq(event_pointer, out, ...)
+sp_event_envelope_scaled4_srq(event_pointer, out, ...)
+sp_event_envelope_scaled5_srq(event_pointer, out, ...)
+sp_event_envelope_scaled_c3_srq(event_pointer, out, ...)
+sp_event_envelope_scaled_c4_srq(event_pointer, out, ...)
+sp_event_envelope_scaled_c5_srq(event_pointer, out, ...)
+sp_event_envelope_scaled_srq(event_pointer, out, ...)
+sp_event_envelope_zero3_srq(event_pointer, out, ...)
+sp_event_envelope_zero4_srq(event_pointer, out, ...)
+sp_event_envelope_zero5_srq(event_pointer, out, ...)
+sp_event_envelope_zero_c3_srq(event_pointer, out, ...)
+sp_event_envelope_zero_c4_srq(event_pointer, out, ...)
+sp_event_envelope_zero_c5_srq(event_pointer, out, ...)
+sp_event_envelope_zero_srq(event_pointer, out, ...)
 sp_event_free(a)
-sp_event_malloc(event_pointer, size, pointer_address)
-sp_event_malloc_type(event_pointer, type, pointer_address)
-sp_event_malloc_type_n*(event_pointer, count, type, pointer_address)
+sp_event_malloc_srq(event_pointer, size, pointer_address)
+sp_event_malloc_type_n_srq(event_pointer, count, type, pointer_address)
+sp_event_malloc_type_srq(event_pointer, type, pointer_address)
 sp_event_memory_add(event, address)
 sp_event_memory_fixed_add(event, address)
 sp_event_memory_malloc(event, count, type, pointer_address)
 sp_event_move(a, start)
+sp_event_path_samples3_srq(event_pointer, out, ...)
+sp_event_path_samples4_srq(event_pointer, out, ...)
+sp_event_path_samples5_srq(event_pointer, out, ...)
+sp_event_path_samples_c3_srq(event_pointer, out, ...)
+sp_event_path_samples_c4_srq(event_pointer, out, ...)
+sp_event_path_samples_c5_srq(event_pointer, out, ...)
+sp_event_path_samples_srq(event_pointer, out, ...)
+sp_event_path_times3_srq(event_pointer, out, ...)
+sp_event_path_times4_srq(event_pointer, out, ...)
+sp_event_path_times5_srq(event_pointer, out, ...)
+sp_event_path_times_c3_srq(event_pointer, out, ...)
+sp_event_path_times_c4_srq(event_pointer, out, ...)
+sp_event_path_times_c5_srq(event_pointer, out, ...)
+sp_event_path_times_srq(event_pointer, out, ...)
 sp_event_pointer_free(a)
+sp_event_pointer_prepare_srq(a)
+sp_event_prepare_srq(a)
 sp_event_reset(x)
-sp_event_samples(event_pointer, size, pointer_address)
-sp_event_times(event_pointer, size, pointer_address)
-sp_event_units(event_pointer, size, pointer_address)
+sp_event_samples_srq(event_pointer, size, pointer_address)
+sp_event_times_srq(event_pointer, size, pointer_address)
+sp_event_units_srq(event_pointer, size, pointer_address)
 sp_factor_to_hz(x)
 sp_filter_state_free
 sp_filter_state_t
@@ -278,47 +336,28 @@ sp_group_event_list(event)
 sp_group_size_t
 sp_hz_to_factor(x)
 sp_hz_to_samples(x)
-sp_limit(x, min_value, max_value)
-sp_local_alloc(allocator, size, pointer_address)
-sp_local_samples(size, pointer_address)
-sp_local_times(size, pointer_address)
-sp_local_units(size, pointer_address)
+sp_inline_abs(a)
+sp_inline_absolute_difference(a, b)
+sp_inline_limit(x, min_value, max_value)
+sp_inline_max(a, b)
+sp_inline_min(a, b)
+sp_inline_no_underflow_subtract(a, b)
+sp_inline_no_zero_divide(a, b)
+sp_local_alloc_srq(allocator, size, pointer_address)
+sp_local_samples_srq(size, pointer_address)
+sp_local_times_srq(size, pointer_address)
+sp_local_units_srq(size, pointer_address)
 sp_malloc_type(count, type, pointer_address)
-sp_max(a, b)
 sp_memory_add
-sp_min(a, b)
-sp_no_underflow_subtract(a, b)
-sp_no_zero_divide(a, b)
+sp_memory_error
 sp_noise
 sp_noise_event(event_pointer, _config)
-sp_path_bezier
-sp_path_bezier_arc
-sp_path_constant
-sp_path_curves_config_declare(name, _segment_count)
-sp_path_end
-sp_path_free
-sp_path_get
-sp_path_i_bezier
-sp_path_i_bezier_arc
-sp_path_i_constant
-sp_path_i_line
-sp_path_i_move
-sp_path_i_path
-sp_path_line
-sp_path_move
-sp_path_path
-sp_path_point_t
-sp_path_prepare_segments
-sp_path_samples_constant(out, size, value)
-sp_path_segment_count_t
-sp_path_segment_t
-sp_path_set
-sp_path_size
-sp_path_t
-sp_path_times_constant(out, size, value)
-sp_path_value_t
+sp_optional_array_get(array, fixed, index)
+sp_path_point_count_limit
+sp_path_point_count_t
 sp_random_seed
 sp_random_state_t
+sp_rate_duration(n, d)
 sp_realloc_type(count, type, pointer_address)
 sp_s_group_libc
 sp_s_group_sp
@@ -339,6 +378,7 @@ sp_sample_random
 sp_sample_random_bounded(range)
 sp_sample_random_primitive
 sp_sample_t
+sp_sample_to_time
 sp_sample_to_unit(a)
 sp_samples_nearly_equal
 sp_samples_random(size, out)
@@ -359,11 +399,13 @@ sp_status_set_goto(id)
 sp_subtract(a, b)
 sp_time_half_t
 sp_time_interpolate_linear(a, b, t)
+sp_time_odd_p(a)
 sp_time_random
 sp_time_random_bounded(range)
 sp_time_random_bounded_primitive
 sp_time_random_primitive
 sp_time_t
+sp_time_to_sample(x)
 sp_times_random(size, out)
 sp_times_random_bounded(range, size, out)
 sp_times_random_bounded_primitive
@@ -376,7 +418,9 @@ sp_units_random(size, out)
 sp_units_random_bounded(range, size, out)
 sp_units_random_primitive
 sp_wave_event(event_pointer, _config)
+spd
 spline_path_value_t
+sprd
 srq
 ~~~
 
@@ -396,6 +440,7 @@ uint32_t sp_cpu_count
 # types
 ~~~
 sp_convolution_filter_ir_f_t: void* sp_sample_t** sp_time_t* -> status_t
+sp_event_block_generate_t: sp_time_t sp_time_t sp_time_t sp_block_t sp_event_t* -> status_t
 sp_event_generate_t: sp_time_t sp_time_t sp_block_t sp_event_t* -> status_t
 sp_map_generate_t: sp_time_t sp_time_t sp_block_t sp_block_t void* -> status_t
 sp_memory_free_t: void* -> void
@@ -483,11 +528,6 @@ sp_noise_event_config_t: struct
   is_reject: uint8_t
   channel_count: sp_channel_count_t
   channel_config: array sp_channel_config_t sp_channel_limit
-sp_path_curves_config_t: struct
-  segment_count: sp_time_t
-  x: sp_path_value_t*
-  y: sp_path_value_t*
-  c: sp_path_value_t*
 sp_path_segments_t: struct
   data: void*
   size: size_t
@@ -496,6 +536,7 @@ sp_render_config_t: struct
   channel_count: sp_channel_count_t
   rate: sp_time_t
   block_size: sp_time_t
+  display_progress: sp_bool_t
 sp_samples_t: struct
   data: void*
   size: size_t

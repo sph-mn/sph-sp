@@ -104,9 +104,8 @@
          with summand, only the nth additions are written. \
          use case: generating harmonic frequency values */ \
   void sp_##type_name##_additions(value_t start, value_t summand, value_t count, value_t* out) { \
-    for (sp_size_t i = 0; (i < count); i += 1) { \
+    for (sp_size_t i = 0; (i < count); i += 1, start += summand) { \
       out[i] = start; \
-      start += summand; \
     }; \
   } \
   status_t sp_##type_name##_duplicate(value_t* a, sp_size_t count, value_t** out) { \

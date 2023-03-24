@@ -584,6 +584,13 @@ void sp_samples_limit_abs(sp_sample_t* in, sp_time_t count, sp_sample_t limit, s
     };
   };
 }
+void sp_samples_limit(sp_sample_t* in_out, sp_time_t count, sp_sample_t limit) {
+  for (sp_size_t i = 0; (i < count); i += 1) {
+    if (limit < in_out[i]) {
+      in_out[i] = limit;
+    };
+  };
+}
 
 /* other */
 

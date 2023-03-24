@@ -73,7 +73,8 @@
       "write count cumulative additions with summand from start to out.
        with summand, only the nth additions are written.
        use case: generating harmonic frequency values"
-      (sp-for-each-index i count (set (array-get out i) start) (set+ start summand)))
+      (for ((define i sp-size-t 0) (< i count) (set+ i 1 start summand))
+        (set (array-get out i) start)))
     (define ((pre-concat sp_ type-name _duplicate) a count out)
       (status-t value-t* sp-size-t value-t**)
       status-declare

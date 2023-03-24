@@ -75,20 +75,20 @@
     status_require(((a->prepare)(a))); \
     a->prepare = 0; \
   }
-#define sp_event_alloc(event_pointer, allocator, pointer_address) \
+#define sp_event_alloc_srq(event_pointer, allocator, pointer_address) \
   status_require((allocator(pointer_address))); \
-  sp_event_memory_add(event_pointer, (*pointer_address))
-#define sp_event_alloc1(event_pointer, allocator, size, pointer_address) \
+  status_require((sp_event_memory_add(event_pointer, (*pointer_address))))
+#define sp_event_alloc1_srq(event_pointer, allocator, size, pointer_address) \
   status_require((allocator(size, pointer_address))); \
-  sp_event_memory_add(event_pointer, (*pointer_address))
-#define sp_event_malloc(event_pointer, size, pointer_address) \
+  status_require((sp_event_memory_add(event_pointer, (*pointer_address))))
+#define sp_event_malloc_srq(event_pointer, size, pointer_address) \
   status_require((sph_helper_malloc(size, pointer_address))); \
-  sp_event_memory_add(event_pointer, (*pointer_address))
-#define sp_event_malloc_type_n(event_pointer, count, type, pointer_address) sp_event_malloc(event_pointer, (count * sizeof(type)), pointer_address)
-#define sp_event_malloc_type(event_pointer, type, pointer_address) sp_event_malloc(event_pointer, (sizeof(type)), pointer_address)
-#define sp_event_samples(event_pointer, size, pointer_address) sp_event_alloc1(event_pointer, sp_samples_new, size, pointer_address)
-#define sp_event_times(event_pointer, size, pointer_address) sp_event_alloc1(event_pointer, sp_times_new, size, pointer_address)
-#define sp_event_units(event_pointer, size, pointer_address) sp_event_alloc1(event_pointer, sp_units_new, size, pointer_address)
+  status_require((sp_event_memory_add(event_pointer, (*pointer_address))))
+#define sp_event_malloc_type_n_srq(event_pointer, count, type, pointer_address) sp_event_malloc_srq(event_pointer, (count * sizeof(type)), pointer_address)
+#define sp_event_malloc_type_srq(event_pointer, type, pointer_address) sp_event_malloc_srq(event_pointer, (sizeof(type)), pointer_address)
+#define sp_event_samples_srq(event_pointer, size, pointer_address) sp_event_alloc1_srq(event_pointer, sp_samples_new, size, pointer_address)
+#define sp_event_times_srq(event_pointer, size, pointer_address) sp_event_alloc1_srq(event_pointer, sp_times_new, size, pointer_address)
+#define sp_event_units_srq(event_pointer, size, pointer_address) sp_event_alloc1_srq(event_pointer, sp_units_new, size, pointer_address)
 #define sp_event_path_samples_srq(event_pointer, out, ...) \
   status_require((sp_path_samples(out, __VA_ARGS__))); \
   status_require((sp_event_memory_add(event_pointer, (*out))))
