@@ -34,7 +34,7 @@
     (qq
       (sp-define* ((unquote name) _event) sp-event-t*
         (unquote-splicing body)
-        (sp-event-pointer-prepare-srq _event)))))
+        (sp-event-pointer-prepare-optional-srq _event)))))
 
 (sc-define-syntax* (sp-define-event* name-and-options body ...)
   (let*

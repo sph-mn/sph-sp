@@ -3,22 +3,22 @@
 #define sp_declare_event(id) \
   sp_event_t id = { 0 }; \
   id.memory.data = 0
-#define sp_declare_event_2(id1, id2) \
+#define sp_declare_event2(id1, id2) \
   sp_declare_event(id1); \
   sp_declare_event(id2)
-#define sp_declare_event_3(id1, id2, id3) \
+#define sp_declare_event3(id1, id2, id3) \
   sp_declare_event(id1); \
   sp_declare_event(id2); \
   sp_declare_event(id3)
-#define sp_declare_event_4(id1, id2, id3, id4) \
-  sp_declare_event_2(id1, id2); \
-  sp_declare_event_2(id3, id4)
+#define sp_declare_event4(id1, id2, id3, id4) \
+  sp_declare_event2(id1, id2); \
+  sp_declare_event2(id3, id4)
 #define sp_declare_group(id) \
   sp_declare_event(id); \
-  id.prepare = sp_group_prepare
+  sp_group_event(id)
 #define sp_declare_group_parallel(id) \
   sp_declare_event(id); \
-  id.prepare = sp_group_prepare_parallel
+  sp_group_parallel_event(id)
 #define sp_declare_event_list(id) sp_event_list_t* id = 0
 #define sp_event_duration(a) (a.end - a.start)
 #define sp_event_duration_set(a, duration) a.end = (a.start + duration)
@@ -42,6 +42,10 @@
   if (a->free) { \
     (a->free)(a); \
   }
+#define sp_channel_config_copy(in, out) \
+  for (sp_size_t i = 0; (i < sp_channel_limit); i += 1) { \
+    out[i] = in[i]; \
+  }
 
 /** use case: event variables defined at the top-level */
 #define sp_define_event(name, _prepare, duration) sp_event_t name = { .prepare = _prepare, .start = 0, .end = duration, .data = 0, .memory = { 0 } }
@@ -57,24 +61,40 @@
   event_pointer->config = _config
 #define sp_wave_event(event_pointer, _config) \
   event_pointer->prepare = sp_wave_event_prepare; \
+  event_pointer->generate = sp_wave_event_generate; \
   event_pointer->config = _config
 #define sp_noise_event(event_pointer, _config) \
   event_pointer->prepare = sp_noise_event_prepare; \
+  event_pointer->generate = sp_noise_event_generate; \
   event_pointer->config = _config
 #define sp_cheap_noise_event(event_pointer, _config) \
   event_pointer->prepare = sp_cheap_noise_event_prepare; \
+  event_pointer->generate = sp_cheap_noise_event_generate; \
   event_pointer->config = _config
-#define sp_group_event(event_pointer) event_pointer->prepare = sp_group_prepare
-#define sp_event_prepare_srq(a) \
+#define sp_map_event(event_pointer, _config) \
+  event_pointer->prepare = sp_map_event_prepare; \
+  event_pointer->generate = (_config->isolate ? sp_map_event_isolated_generate : sp_map_event_generate); \
+  event_pointer->config = _config
+#define sp_group_event(event_pointer) \
+  event_pointer->prepare = sp_group_prepare; \
+  event_pointer->generate = sp_group_generate
+#define sp_group_parallel_event(event_pointer) \
+  event_pointer->prepare = sp_group_prepare_parallel; \
+  event_pointer->generate = sp_group_generate_parallel
+#define sp_event_prepare_optional_srq(a) \
   if (a.prepare) { \
-    status_require(((a.prepare)((&a)))); \
-    a.prepare = 0; \
+    sp_event_prepare_srq(a); \
   }
-#define sp_event_pointer_prepare_srq(a) \
+#define sp_event_pointer_prepare_optional_srq(a) \
   if (a->prepare) { \
-    status_require(((a->prepare)(a))); \
-    a->prepare = 0; \
+    sp_event_pointer_prepare_srq(a); \
   }
+#define sp_event_prepare_srq(a) \
+  status_require(((a.prepare)((&a)))); \
+  a.prepare = 0
+#define sp_event_pointer_prepare_srq(a) \
+  status_require(((a->prepare)(a))); \
+  a->prepare = 0
 #define sp_event_alloc_srq(event_pointer, allocator, pointer_address) \
   status_require((allocator(pointer_address))); \
   status_require((sp_event_memory_add(event_pointer, (*pointer_address))))
@@ -317,3 +337,8 @@ void sp_wave_event_config_defaults(sp_wave_event_config_t* config);
 status_t sp_sound_event_prepare(sp_event_t* event);
 status_t sp_sound_event_config_new(sp_sound_event_config_t** out);
 status_t sp_sound_event_config_new_n(sp_size_t count, sp_sound_event_config_t** out);
+status_t sp_noise_event_generate(sp_time_t start, sp_time_t end, sp_block_t out, sp_event_t* event);
+status_t sp_cheap_noise_event_generate(sp_time_t start, sp_time_t end, sp_block_t out, sp_event_t* event);
+status_t sp_wave_event_generate(sp_time_t start, sp_time_t end, sp_block_t out, sp_event_t* event);
+status_t sp_map_event_generate(sp_time_t start, sp_time_t end, sp_block_t out, sp_event_t* event);
+status_t sp_map_event_isolated_generate(sp_time_t start, sp_time_t end, sp_block_t out, sp_event_t* event);

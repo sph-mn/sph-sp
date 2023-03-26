@@ -370,7 +370,8 @@
   (sp-for-each-index i test-noise-duration
     (set (array-get cutl i) 0.01 (array-get cuth i) 0.3 (array-get amod i) 1.0))
   (struct-set *config cutl-mod cutl cuth-mod cuth amod amod amp 1 channel-count 2)
-  (struct-set event start 0 end test-noise-duration prepare sp-noise-event-prepare config config)
+  (struct-set event start 0 end test-noise-duration)
+  (sp-noise-event &event config)
   (status-require (sp-event-list-add &events event))
   (status-require (sp-seq 0 test-noise-duration out &events))
   (test-helper-assert "in range -1..1"
@@ -422,8 +423,9 @@
     q-factor 0.1
     channel-count 2
     amp 1)
-  (struct-set event end test-noise-duration config &config prepare sp-cheap-noise-event-prepare)
-  (status-require (event.prepare &event))
+  (struct-set event end test-noise-duration)
+  (sp-cheap-noise-event &event &config)
+  (sp-event-prepare-srq event)
   (status-require (event.generate 0 test-noise-duration out &event))
   (test-helper-assert "in range -1..1"
     (>= 1.0 (sp-samples-absolute-max (array-get out.samples 0) test-noise-duration)))
@@ -437,20 +439,22 @@
     fmod (array sp-time-t test-noise-duration)
     wmod (array sp-time-t test-noise-duration)
     amod (array sp-sample-t test-noise-duration)
-    i sp-time-t
     config sp-sound-event-config-t)
   (sp-declare-event event)
   (status-require (sp-block-new 2 test-noise-duration &out))
-  (for ((set i 0) (< i test-noise-duration) (set+ i 1))
+  (sp-for-each-index i test-noise-duration
     (set (array-get fmod i) 30 (array-get wmod i) 200 (array-get amod i) 1.0))
   (struct-set config amp 1 amod amod noise 0 frq 200 fmod 0 wmod 0 wdt 200)
-  (struct-set event end test-noise-duration config &config prepare sp-sound-event-prepare)
+  (struct-set event end test-noise-duration)
+  (sp-sound-event &event &config)
   (status-require (event.prepare &event))
   (status-require (event.generate 0 test-noise-duration out &event))
   (set config.noise 1)
+  (sp-sound-event &event &config)
   (status-require (event.prepare &event))
   (status-require (event.generate 0 test-noise-duration out &event))
   (set config.noise 2)
+  (sp-sound-event &event &config)
   (status-require (event.prepare &event))
   (status-require (event.generate 0 test-noise-duration out &event))
   (label exit status-return))
@@ -479,11 +483,13 @@
 (define (test-sp-group) status-t
   status-declare
   (declare block sp-block-t m1 sp-time-t* m2 sp-time-t*)
-  (sp-declare-event-2 g g1)
-  (sp-declare-event-3 e1 e2 e3)
+  (sp-declare-event2 g g1)
+  (sp-declare-event3 e1 e2 e3)
   (status-require (sp-times-new 100 &m1))
   (status-require (sp-times-new 100 &m2))
-  (set g.prepare sp-group-prepare g1.start 10 g1.prepare sp-group-prepare)
+  (sp-group-event &g)
+  (sp-group-event &g1)
+  (set g1.start 10)
   (status-require (sp-block-new 2 100 &block))
   (set e1 (test-helper-event 0 20 1) e2 (test-helper-event 20 40 2) e3 (test-helper-event 50 100 3))
   (status-require (sp-group-add &g1 e1))
@@ -530,11 +536,8 @@
     (set (array-get fmod i) 2000 (array-get amod1 i) 1 (array-get amod2 i) 0.5))
   (struct-set *config wvf sp-sine-table wvf-size sp-rate fmod fmod amp 1 amod amod1 channel-count 2)
   (array-set config:channel-config 1 (sp-channel-config 0 10 10 1 amod2))
-  (struct-set event
-    start 0
-    end test-wave-event-duration
-    config config
-    prepare sp-wave-event-prepare)
+  (struct-set event start 0 end test-wave-event-duration)
+  (sp-wave-event &event config)
   (status-require (event.prepare &event))
   (status-require (event.generate 0 30 out &event))
   (status-require (event.generate 30 test-wave-event-duration (sp-block-with-offset out 30) &event))
@@ -561,11 +564,8 @@
   (status-require (sp-block-new 1 test-wave-event-duration &out))
   (error-memory-add2 &out sp-block-free)
   (struct-set *config wvf sp-sine-table wvf-size sp-rate fmod frq amp 1 amod amod channel-count 1)
-  (struct-set event
-    start 0
-    end test-wave-event-duration
-    config config
-    prepare sp-wave-event-prepare)
+  (struct-set event start 0 end test-wave-event-duration)
+  (sp-wave-event &event config)
   (sc-comment (sp-render-range-file event test-wave-event-duration rc "/tmp/sp-test.wav"))
   (sp-render-range-block event 0 test-wave-event-duration rc &out)
   (sc-comment (sp-block-plot-1 out))
@@ -771,7 +771,8 @@
   (error-memory-add fmod)
   (struct-set *config wvf sp-sine-table wvf-size sp-rate fmod fmod amp 1 amod amod channel-count 2)
   (for ((set i 0) (< i 10) (set+ i 1))
-    (struct-set event start 0 end size config config prepare sp-wave-event-prepare)
+    (struct-set event start 0 end size)
+    (sp-wave-event &event config)
     (status-require (sp-event-list-add &events event)))
   (status-require (sp-block-new 2 size &block))
   (sp-seq-events-prepare &events)
@@ -810,7 +811,7 @@
     amod sp-sample-t*
     config sp-wave-event-config-t*
     map-event-config sp-map-event-config-t*)
-  (sp-declare-event-2 parent child)
+  (sp-declare-event2 parent child)
   (error-memory-init 2)
   (status-require (sp-wave-event-config-new &config))
   (error-memory-add config)
@@ -818,7 +819,7 @@
   (error-memory-add map-event-config)
   (set size (* 10 _sp-rate))
   (status-require (sp-path-samples2 &amod size 1.0 1.0))
-  (struct-set *config
+  (struct-pointer-set config
     wvf sp-sine-table
     wvf-size sp-rate
     frq 300
@@ -826,14 +827,12 @@
     amp 1
     amod amod
     channel-count 1)
-  (struct-set child start 0 end size config config prepare sp-wave-event-prepare)
+  (struct-set child start 0 end size)
+  (sp-wave-event &child config)
   (status-require (sp-block-new 1 size &block))
-  (struct-set *map-event-config event child map-generate test-sp-map-event-generate isolate #t)
-  (struct-set parent
-    start child.start
-    end child.end
-    prepare sp-map-event-prepare
-    config map-event-config)
+  (struct-pointer-set map-event-config event child map-generate test-sp-map-event-generate isolate #t)
+  (struct-set parent start child.start end child.end)
+  (sp-map-event &parent map-event-config)
   (status-require (parent.prepare &parent))
   (status-require (parent.generate 0 (/ size 2) block &parent))
   (status-require (parent.generate (/ size 2) size block &parent))
@@ -866,22 +865,14 @@
   "\"goto exit\" can skip events"
   status-declare
   (sp-initialize 3 2 _sp-rate)
-  (test-helper-test-one test-sp-noise-event)
-  (test-helper-test-one test-base)
-  (test-helper-test-one test-path)
-  (test-helper-test-one test-sp-sound-event)
+  (test-helper-test-one test-moving-average)
+  (test-helper-test-one test-statistics)
   (test-helper-test-one test-sp-pan->amp)
   (test-helper-test-one test-windowed-sinc-continuity)
   (test-helper-test-one test-convolve-smaller)
   (test-helper-test-one test-convolve-larger)
-  (test-helper-test-one test-sp-wave-event)
-  (test-helper-test-one test-sp-cheap-noise-event)
-  (test-helper-test-one test-sp-map-event)
-  (test-helper-test-one test-sp-group)
-  (test-helper-test-one test-sp-seq)
-  (test-helper-test-one test-render-range-block)
-  (test-helper-test-one test-moving-average)
-  (test-helper-test-one test-statistics)
+  (test-helper-test-one test-base)
+  (test-helper-test-one test-path)
   (test-helper-test-one test-sp-cheap-filter)
   (test-helper-test-one test-sp-random)
   (test-helper-test-one test-sp-triangle-square)
@@ -895,5 +886,14 @@
   (test-helper-test-one test-random-discrete)
   (test-helper-test-one test-file)
   (test-helper-test-one test-permutations)
+  (sc-comment "sequencing")
+  (test-helper-test-one test-sp-wave-event)
+  (test-helper-test-one test-sp-noise-event)
+  (test-helper-test-one test-sp-cheap-noise-event)
+  (test-helper-test-one test-sp-group)
+  (test-helper-test-one test-sp-seq)
+  (test-helper-test-one test-render-range-block)
+  (test-helper-test-one test-sp-sound-event)
+  (test-helper-test-one test-sp-map-event)
   (test-helper-test-one test-sp-seq-parallel)
   (label exit (sp-deinitialize) (test-helper-display-summary) (return status.id)))

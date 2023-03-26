@@ -288,7 +288,7 @@
   "render the full duration of event to file at path and write information to standard output.
    uses channel count from global variable sp_channel_count and block size sp_rate"
   status-declare
-  (if (not event.end) (sp-event-prepare-srq event))
+  (if (not event.end) (sp-event-prepare-optional-srq event))
   (printf "rendering %lu seconds to file %s\n" (/ event.end sp-rate) path)
   (status-require
     (sp-render-range-file event 0
@@ -300,7 +300,7 @@
    uses channel count from global variable sp_channel_count and block size sp_rate"
   status-declare
   (declare block sp-block-t)
-  (if (not event.end) (sp-event-prepare-srq event))
+  (if (not event.end) (sp-event-prepare-optional-srq event))
   (printf "rendering %lu seconds to plot\n" (/ event.end sp-rate))
   (status-require
     (sp-render-range-block event 0

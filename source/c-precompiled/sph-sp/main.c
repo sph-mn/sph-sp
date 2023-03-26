@@ -380,7 +380,7 @@ exit:
 status_t sp_render_file(sp_event_t event, uint8_t* path) {
   status_declare;
   if (!event.end) {
-    sp_event_prepare_srq(event);
+    sp_event_prepare_optional_srq(event);
   };
   printf("rendering %lu seconds to file %s\n", (event.end / sp_rate), path);
   status_require((sp_render_range_file(event, 0, (event.end), (sp_render_config(sp_channel_count, sp_rate, (4 * sp_rate), 1)), path)));
@@ -394,7 +394,7 @@ status_t sp_render_plot(sp_event_t event) {
   status_declare;
   sp_block_t block;
   if (!event.end) {
-    sp_event_prepare_srq(event);
+    sp_event_prepare_optional_srq(event);
   };
   printf("rendering %lu seconds to plot\n", (event.end / sp_rate));
   status_require((sp_render_range_block(event, 0, (event.end), (sp_render_config(sp_channel_count, sp_rate, sp_rate, 1)), (&block))));
