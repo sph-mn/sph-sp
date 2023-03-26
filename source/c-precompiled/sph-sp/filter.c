@@ -353,21 +353,29 @@ define_sp_state_variable_filter(lp, v2)
   status_t sp_filter(sp_sample_t* in, sp_time_t in_size, sp_sample_t cutoff_l, sp_sample_t cutoff_h, sp_sample_t transition_l, sp_sample_t transition_h, sp_bool_t is_reject, sp_filter_state_t** out_state, sp_sample_t* out_samples) { sp_windowed_sinc_bp_br(in, in_size, cutoff_l, cutoff_h, transition_l, transition_h, is_reject, out_state, out_samples); }
 
 /** one state object per pass.
-   heap memory is to be freed with sp-cheap-filter-state-free but only allocated if is_multipass is true */
-status_t sp_cheap_filter_state_new(sp_time_t max_size, sp_bool_t is_multipass, sp_cheap_filter_state_t* out_state) {
+   heap memory is to be freed with sp-cheap-filter-state-free but only allocated if passes is greater than one */
+status_t sp_cheap_filter_state_new(sp_time_t max_size, sp_filter_passes_t passes, sp_cheap_filter_state_t** out) {
   status_declare;
-  sp_sample_t* in_temp = 0;
-  sp_sample_t* out_temp = 0;
-  if (1 < is_multipass) {
+  sp_sample_t* in_temp;
+  sp_sample_t* out_temp;
+  error_memory_init(3);
+  sp_malloc_type_srq(1, sp_cheap_filter_state_t, out);
+  error_memory_add((*out));
+  if (1 < passes) {
     status_require((sp_samples_new(max_size, (&in_temp))));
+    error_memory_add(in_temp);
     status_require((sp_samples_new(max_size, (&out_temp))));
+    error_memory_add(out_temp);
+  } else {
+    in_temp = 0;
+    out_temp = 0;
   };
-  out_state->in_temp = in_temp;
-  out_state->out_temp = out_temp;
-  memset((out_state->svf_state), 0, (2 * sp_cheap_filter_passes_limit * sizeof(sp_sample_t)));
+  (*out)->in_temp = in_temp;
+  (*out)->out_temp = out_temp;
+  memset(((*out)->svf_state), 0, (2 * sp_filter_passes_limit * sizeof(sp_sample_t)));
 exit:
   if (status_is_failure) {
-    free(in_temp);
+    error_memory_free;
   };
   status_return;
 }

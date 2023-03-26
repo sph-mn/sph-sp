@@ -335,20 +335,25 @@
   (sp-windowed-sinc-bp-br in in-size
     cutoff-l cutoff-h transition-l transition-h is-reject out-state out-samples))
 
-(define (sp-cheap-filter-state-new max-size is-multipass out-state)
-  (status-t sp-time-t sp-bool-t sp-cheap-filter-state-t*)
+(define (sp-cheap-filter-state-new max-size passes out)
+  (status-t sp-time-t sp-filter-passes-t sp-cheap-filter-state-t**)
   "one state object per pass.
-   heap memory is to be freed with sp-cheap-filter-state-free but only allocated if is_multipass is true"
+   heap memory is to be freed with sp-cheap-filter-state-free but only allocated if passes is greater than one"
   status-declare
-  (define in-temp sp-sample-t* 0)
-  (define out-temp sp-sample-t* 0)
-  (if (< 1 is-multipass)
+  (declare in-temp sp-sample-t* out-temp sp-sample-t*)
+  (error-memory-init 3)
+  (sp-malloc-type-srq 1 sp-cheap-filter-state-t out)
+  (error-memory-add *out)
+  (if (< 1 passes)
     (begin
       (status-require (sp-samples-new max-size &in-temp))
-      (status-require (sp-samples-new max-size &out-temp))))
-  (set out-state:in-temp in-temp out-state:out-temp out-temp)
-  (memset out-state:svf-state 0 (* 2 sp-cheap-filter-passes-limit (sizeof sp-sample-t)))
-  (label exit (if status-is-failure (free in-temp)) status-return))
+      (error-memory-add in-temp)
+      (status-require (sp-samples-new max-size &out-temp))
+      (error-memory-add out-temp))
+    (set in-temp 0 out-temp 0))
+  (struct-pointer-set *out in-temp in-temp out-temp out-temp)
+  (memset (struct-pointer-get *out svf-state) 0 (* 2 sp-filter-passes-limit (sizeof sp-sample-t)))
+  (label exit (if status-is-failure error-memory-free) status-return))
 
 (define (sp-cheap-filter-state-free a) (void sp-cheap-filter-state-t*)
   (free a:in-temp)

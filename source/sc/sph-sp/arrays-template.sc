@@ -14,6 +14,18 @@
       "round to the next integer multiple of base "
       (return
         (if* (= 0 a) base (sp-cheap-round-positive (* (/ a (convert-type base sp-sample-t)) base)))))
+    (define ((pre-concat sp_ type-name _min) in count) (value-t value-t* sp-size-t)
+      "count must be greater than zero"
+      (define out value-t (array-get in 0))
+      (for ((define i sp-size-t 1) (< i count) (set+ i 1))
+        (if (< (array-get in i) out) (set out (array-get in i))))
+      (return out))
+    (define ((pre-concat sp_ type-name _max) in count) (value-t value-t* sp-size-t)
+      "count must be greater than zero"
+      (define out value-t (array-get in 0))
+      (for ((define i sp-size-t 1) (< i count) (set+ i 1))
+        (if (> (array-get in i) out) (set out (array-get in i))))
+      (return out))
     (define ((pre-concat sp_ type-name _absolute-max) in count) (value-t value-t* sp-size-t)
       "get the maximum value in samples array, disregarding sign"
       (declare temp sp-time-t max sp-time-t)

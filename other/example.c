@@ -1,7 +1,6 @@
 
 /* small example that uses the core sound generators.
 this example depends on gnuplot to be installed.
-it should open a gnuplot window with a series of bursts of noise.
 see exe/run-example or exe/run-example-sc for how to compile and run with gcc */
 #include <sph-sp.h>
 #define _sp_rate 48000
@@ -18,16 +17,14 @@ status_t simple_event_plot() {
   sp_samples_set(amod, duration, 1);
   srq((sp_event_memory_add((&event), amod)));
   /* allocate sound_event_config, set options and finish event preparation */
-  sp_sound_event_config_t* sound_event_config;
-  srq((sp_sound_event_config_new((&sound_event_config))));
-  srq((sp_event_memory_add((&event), sound_event_config)));
-  sound_event_config->amod = amod;
-  sound_event_config->frq = 10;
-  sound_event_config->noise = 0;
-  event.prepare = sp_sound_event_prepare;
-  event.config = sound_event_config;
+  sp_wave_event_config_t* wave_event_config;
+  srq((sp_wave_event_config_new((&wave_event_config))));
+  srq((sp_event_memory_add((&event), wave_event_config)));
+  wave_event_config->channel_config->amod = amod;
+  wave_event_config->channel_config->frq = 10;
   event.start = 0;
   event.end = duration;
+  sp_wave_event((&event), wave_event_config);
   srq((sp_render_plot(event)));
 exit:
   status_return;
@@ -48,15 +45,15 @@ status_t s1_prepare(sp_event_t* _event) {
   sp_sample_t* amod;
   sp_event_envelope_zero3_srq(_event, (&amod), _duration, (0.1), (c.amp));
   /* sound event configuration */
-  sp_sound_event_config_t* se_c;
-  srq((sp_sound_event_config_new((&se_c))));
-  srq((sp_event_memory_add(_event, se_c)));
-  se_c->amod = amod;
-  se_c->frq = 300;
-  ((se_c->channel_config)[0]).use = 1;
-  ((se_c->channel_config)[0]).amp = (0.5 * c.amp);
-  sp_sound_event(_event, se_c);
-  sp_event_pointer_prepare_srq(_event);
+  sp_wave_event_config_t* wec;
+  srq((sp_wave_event_config_new((&wec))));
+  srq((sp_event_memory_add(_event, wec)));
+  (wec->channel_config)->amod = amod;
+  (wec->channel_config)->frq = 300;
+  (1 + wec->channel_config)->use = 1;
+  (1 + wec->channel_config)->amp = (0.5 * c.amp);
+  sp_wave_event(_event, wec);
+  sp_event_prepare_optional_srq((*_event));
 exit:
   status_return;
 }
@@ -74,21 +71,21 @@ status_t t1_prepare(sp_event_t* _event) {
   sp_time_t times[8] = { 0, 2, 4, 6, 8, 12, 14, 16 };
   sp_event_reset(event);
   times_length = 8;
-  tempo = (rt(1, 1) / 8);
+  tempo = (sp_duration(1, 1) / 8);
   for (sp_size_t i = 0; (i < times_length); i += 1) {
     event = s1_event;
-    sp_event_malloc_type((&event), s1_c_t, (&s1_c));
+    sp_event_malloc_type_srq((&event), s1_c_t, (&s1_c));
     s1_c->amp = ((i % 2) ? 0.25 : 0.9);
     event.config = s1_c;
     event.start = (_sp_rate + (tempo * times[i]));
-    event.end = (event.start + rt(1, 6));
+    event.end = (event.start + sp_duration(1, 6));
     srq((sp_group_add(_event, event)));
   };
-  sp_event_pointer_prepare_srq(_event);
+  sp_event_prepare_optional_srq((*_event));
 exit:
   status_return;
 }
-sp_define_event(t1_event, t1_prepare, (rts(3, 1)));
+sp_define_event(t1_event, t1_prepare, (sp_duration(3, 1)));
 int main() {
   status_declare;
   /* use one cpu core and two output channels */

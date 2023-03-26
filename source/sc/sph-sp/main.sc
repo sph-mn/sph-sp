@@ -120,8 +120,7 @@
 (define (sp-sine-period size out) (void sp-time-t sp-sample-t*)
   "writes one full period of a sine wave into out. the sine has the frequency that makes it fit exactly into size.
    can be used to create lookup tables"
-  (for ((define i sp-time-t 0) (< i size) (set+ i 1))
-    (set (array-get out i) (sin (* i (/ M_PI (/ size 2)))))))
+  (sp-for-each-index i size (set (array-get out i) (sin (* i (/ M_PI (/ size 2)))))))
 
 (define (sp-wave size wvf wvf-size amp amod frq fmod phs-state out)
   (void sp-time-t sp-sample-t* sp-time-t sp-sample-t sp-sample-t* sp-time-t sp-time-t* sp-time-t* sp-sample-t*)
@@ -292,7 +291,8 @@
   (printf "rendering %lu seconds to file %s\n" (/ event.end sp-rate) path)
   (status-require
     (sp-render-range-file event 0
-      event.end (sp-render-config sp-channel-count sp-rate (* 4 sp-rate) #t) path))
+      event.end (sp-render-config sp-channel-count sp-rate (* sp-render-block-seconds sp-rate) #t)
+      path))
   (label exit status-return))
 
 (define (sp-render-plot event) (status-t sp-event-t)
@@ -300,11 +300,15 @@
    uses channel count from global variable sp_channel_count and block size sp_rate"
   status-declare
   (declare block sp-block-t)
+  (printf "event.end\n" event.end)
   (if (not event.end) (sp-event-prepare-optional-srq event))
-  (printf "rendering %lu seconds to plot\n" (/ event.end sp-rate))
+  (if (and event.end (< event.end sp-rate))
+    (printf "rendering %lu milliseconds to plot\n" (/ event.end sp-rate 1000))
+    (printf "rendering %lu seconds to plot\n" (/ event.end sp-rate)))
   (status-require
     (sp-render-range-block event 0
-      event.end (sp-render-config sp-channel-count sp-rate sp-rate #t) &block))
+      event.end (sp-render-config sp-channel-count sp-rate (* sp-render-block-seconds sp-rate) #t)
+      &block))
   (sp-plot-samples (array-get block.samples 0) event.end)
   (label exit status-return))
 

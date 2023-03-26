@@ -4,9 +4,10 @@
 
 (pre-define-if-not-defined
   sp-channel-count-t uint8-t
-  sp-channel-limit 2
-  sp-cheap-filter-passes-limit 8
-  spline-path-value-t sp-sample-t
+  sp-channel-count-limit 2
+  sp-filter-passes-limit 8
+  sp-filter-passes-t uint8-t
+  sp-frq-t uint16-t
   sp-random-seed 1557083953
   sp-sample-nearly-equal sph-f64-nearly-equal
   sp-sample-random-primitive sph-random-f64-1to1
@@ -15,9 +16,10 @@
   sp-samples-random-primitive sph-random-f64-array-1to1
   sp-samples-sum sph-f64-sum
   sp-sample-t double
+  sp-render-block-seconds 4
   sp-size-t sp-time-t
   sp-ssize-t int32-t
-  sp-time-half-t uint16-t
+  sp-stime-t int32-t
   sp-time-random-bounded-primitive sph-random-u32-bounded
   sp-time-random-primitive sph-random-u32
   sp-times-random-bounded-primitive sph-random-u32-bounded-array
@@ -29,8 +31,8 @@
 
 (pre-include "string.h" "stdio.h"
   "stdlib.h" "sph-sp/status.h" "sph-sp/array3.h"
-  "sph-sp/helper.h" "sph-sp/memreg.h" "sph-sp/spline-path.h"
-  "sph-sp/main.h" "sph-sp/arrays.h" "sph-sp/path.h"
+  "sph-sp/helper.h" "sph-sp/memreg.h" "sph-sp/main.h"
+  "sph-sp/arrays.h" "sph-sp/spline-path.h" "sph-sp/path.h"
   "sph-sp/filter.h" "sph-sp/sequencer.h" "sph-sp/statistics.h" "sph-sp/plot.h" "sph-sp/main2.h")
 
 (pre-include-guard-end)

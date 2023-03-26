@@ -4,8 +4,7 @@
   (sp-cheap-filter-lp ...) (sp-cheap-filter sp-state-variable-filter-lp __VA_ARGS__)
   (sp-cheap-filter-hp ...) (sp-cheap-filter sp-state-variable-filter-hp __VA_ARGS__)
   (sp-cheap-filter-bp ...) (sp-cheap-filter sp-state-variable-filter-bp __VA_ARGS__)
-  (sp-cheap-filter-br ...) (sp-cheap-filter sp-state-variable-filter-br __VA_ARGS__)
-  (sp-declare-cheap-filter-state name) (define name sp-cheap-filter-state-t (struct-literal 0)))
+  (sp-cheap-filter-br ...) (sp-cheap-filter sp-state-variable-filter-br __VA_ARGS__))
 
 (declare
   sp-convolution-filter-ir-f-t (type (function-pointer status-t void* sp-sample-t** sp-time-t*))
@@ -25,7 +24,7 @@
     (struct
       (in-temp sp-sample-t*)
       (out-temp sp-sample-t*)
-      (svf-state (array sp-sample-t ((* 2 sp-cheap-filter-passes-limit))))))
+      (svf-state (array sp-sample-t ((* 2 sp-filter-passes-limit))))))
   sp-state-variable-filter-t
   (type
     (function-pointer void sp-sample-t* sp-sample-t* sp-sample-t sp-sample-t sp-time-t sp-sample-t*))
@@ -72,8 +71,8 @@
   (void sp-state-variable-filter-t sp-sample-t*
     sp-time-t sp-sample-t sp-time-t sp-sample-t sp-cheap-filter-state-t* sp-sample-t*)
   (sp-cheap-filter-state-free a) (void sp-cheap-filter-state-t*)
-  (sp-cheap-filter-state-new max-size is-multipass out-state)
-  (status-t sp-time-t sp-bool-t sp-cheap-filter-state-t*)
+  (sp-cheap-filter-state-new max-size passes out)
+  (status-t sp-time-t sp-filter-passes-t sp-cheap-filter-state-t**)
   (sp-filter in in-size cutoff-l cutoff-h transition-l transition-h is-reject out-state out-samples)
   (status-t sp-sample-t* sp-time-t
     sp-sample-t sp-sample-t sp-sample-t sp-sample-t sp-bool-t sp-filter-state-t** sp-sample-t*))

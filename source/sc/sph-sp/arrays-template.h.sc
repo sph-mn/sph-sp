@@ -3,6 +3,8 @@
     ((pre-concat sp_ value-type-name _sort-swap) a b c) (void void* ssize-t ssize-t)
     ((pre-concat sp_ value-type-name _sort-less) a b c) (uint8-t void* ssize-t ssize-t)
     ((pre-concat sp_ value-type-name _round-to-multiple) a base) (value-t value-t value-t)
+    ((pre-concat sp_ type-name _min) in count) (value-t value-t* sp-size-t)
+    ((pre-concat sp_ type-name _max) in count) (value-t value-t* sp-size-t)
     ((pre-concat sp_ type-name _absolute-max) in count) (value-t value-t* sp-size-t)
     ((pre-concat sp_ type-name _reverse) in count out) (void value-t* sp-size-t value-t*)
     ((pre-concat sp_ type-name _equal) in count value) (sp-bool-t value-t* sp-size-t value-t)

@@ -13,14 +13,17 @@
 #ifndef sp_channel_count_t
 #define sp_channel_count_t uint8_t
 #endif
-#ifndef sp_channel_limit
-#define sp_channel_limit 2
+#ifndef sp_channel_count_limit
+#define sp_channel_count_limit 2
 #endif
-#ifndef sp_cheap_filter_passes_limit
-#define sp_cheap_filter_passes_limit 8
+#ifndef sp_filter_passes_limit
+#define sp_filter_passes_limit 8
 #endif
-#ifndef spline_path_value_t
-#define spline_path_value_t sp_sample_t
+#ifndef sp_filter_passes_t
+#define sp_filter_passes_t uint8_t
+#endif
+#ifndef sp_frq_t
+#define sp_frq_t uint16_t
 #endif
 #ifndef sp_random_seed
 #define sp_random_seed 1557083953
@@ -46,14 +49,17 @@
 #ifndef sp_sample_t
 #define sp_sample_t double
 #endif
+#ifndef sp_render_block_seconds
+#define sp_render_block_seconds 4
+#endif
 #ifndef sp_size_t
 #define sp_size_t sp_time_t
 #endif
 #ifndef sp_ssize_t
 #define sp_ssize_t int32_t
 #endif
-#ifndef sp_time_half_t
-#define sp_time_half_t uint16_t
+#ifndef sp_stime_t
+#define sp_stime_t int32_t
 #endif
 #ifndef sp_time_random_bounded_primitive
 #define sp_time_random_bounded_primitive sph_random_u32_bounded
@@ -86,9 +92,9 @@
 #include <sph-sp/array3.h>
 #include <sph-sp/helper.h>
 #include <sph-sp/memreg.h>
-#include <sph-sp/spline-path.h>
 #include <sph-sp/main.h>
 #include <sph-sp/arrays.h>
+#include <sph-sp/spline-path.h>
 #include <sph-sp/path.h>
 #include <sph-sp/filter.h>
 #include <sph-sp/sequencer.h>

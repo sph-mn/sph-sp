@@ -5,7 +5,6 @@
 #define sp_cheap_filter_hp(...) sp_cheap_filter(sp_state_variable_filter_hp, __VA_ARGS__)
 #define sp_cheap_filter_bp(...) sp_cheap_filter(sp_state_variable_filter_bp, __VA_ARGS__)
 #define sp_cheap_filter_br(...) sp_cheap_filter(sp_state_variable_filter_br, __VA_ARGS__)
-#define sp_declare_cheap_filter_state(name) sp_cheap_filter_state_t name = { 0 }
 typedef status_t (*sp_convolution_filter_ir_f_t)(void*, sp_sample_t**, sp_time_t*);
 typedef struct {
   sp_sample_t* carryover;
@@ -20,7 +19,7 @@ typedef struct {
 typedef struct {
   sp_sample_t* in_temp;
   sp_sample_t* out_temp;
-  sp_sample_t svf_state[(2 * sp_cheap_filter_passes_limit)];
+  sp_sample_t svf_state[(2 * sp_filter_passes_limit)];
 } sp_cheap_filter_state_t;
 typedef void (*sp_state_variable_filter_t)(sp_sample_t*, sp_sample_t*, sp_sample_t, sp_sample_t, sp_time_t, sp_sample_t*);
 void sp_moving_average(sp_sample_t* in, sp_time_t in_size, sp_sample_t* prev, sp_sample_t* next, sp_time_t radius, sp_sample_t* out);
@@ -44,5 +43,5 @@ void sp_state_variable_filter_peak(sp_sample_t* out, sp_sample_t* in, sp_sample_
 void sp_state_variable_filter_all(sp_sample_t* out, sp_sample_t* in, sp_sample_t in_count, sp_sample_t cutoff, sp_time_t q_factor, sp_sample_t* state);
 void sp_cheap_filter(sp_state_variable_filter_t type, sp_sample_t* in, sp_time_t in_size, sp_sample_t cutoff, sp_time_t passes, sp_sample_t q_factor, sp_cheap_filter_state_t* state, sp_sample_t* out);
 void sp_cheap_filter_state_free(sp_cheap_filter_state_t* a);
-status_t sp_cheap_filter_state_new(sp_time_t max_size, sp_bool_t is_multipass, sp_cheap_filter_state_t* out_state);
+status_t sp_cheap_filter_state_new(sp_time_t max_size, sp_filter_passes_t passes, sp_cheap_filter_state_t** out);
 status_t sp_filter(sp_sample_t* in, sp_time_t in_size, sp_sample_t cutoff_l, sp_sample_t cutoff_h, sp_sample_t transition_l, sp_sample_t transition_h, sp_bool_t is_reject, sp_filter_state_t** out_state, sp_sample_t* out_samples);

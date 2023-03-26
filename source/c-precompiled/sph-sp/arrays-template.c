@@ -12,6 +12,28 @@
   /** round to the next integer multiple of base  */ \
   value_t sp_##value_type_name##_round_to_multiple(value_t a, value_t base) { return (((0 == a) ? base : sp_cheap_round_positive(((a / ((sp_sample_t)(base))) * base)))); } \
 \
+  /** count must be greater than zero */ \
+  value_t sp_##type_name##_min(value_t* in, sp_size_t count) { \
+    value_t out = in[0]; \
+    for (sp_size_t i = 1; (i < count); i += 1) { \
+      if (in[i] < out) { \
+        out = in[i]; \
+      }; \
+    }; \
+    return (out); \
+  } \
+\
+  /** count must be greater than zero */ \
+  value_t sp_##type_name##_max(value_t* in, sp_size_t count) { \
+    value_t out = in[0]; \
+    for (sp_size_t i = 1; (i < count); i += 1) { \
+      if (in[i] > out) { \
+        out = in[i]; \
+      }; \
+    }; \
+    return (out); \
+  } \
+\
   /** get the maximum value in samples array, disregarding sign */ \
   value_t sp_##type_name##_absolute_max(value_t* in, sp_size_t count) { \
     sp_time_t temp; \

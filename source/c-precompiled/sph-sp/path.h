@@ -1,4 +1,5 @@
 
+#define spline_path_value_t sp_sample_t
 #define sp_path_point_count_t spline_path_segment_count_t
 #define sp_path_point_count_limit 24
 status_t sp_path_samples(sp_sample_t** out, sp_time_t length, sp_path_point_count_t point_count, sp_sample_t* x, sp_sample_t* y, sp_sample_t* c);

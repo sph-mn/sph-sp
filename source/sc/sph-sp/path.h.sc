@@ -1,4 +1,7 @@
-(pre-define sp-path-point-count-t spline-path-segment-count-t sp-path-point-count-limit 24)
+(pre-define
+  spline-path-value-t sp-sample-t
+  sp-path-point-count-t spline-path-segment-count-t
+  sp-path-point-count-limit 24)
 
 (declare
   (sp-path-samples out length point-count x y c)

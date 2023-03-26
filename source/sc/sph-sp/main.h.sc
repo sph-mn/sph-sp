@@ -1,27 +1,30 @@
 (pre-define
-  sp-bool-t uint8-t
-  f64 double
   f128 (sc-insert "long double")
-  sp-s-group-libc "libc"
-  sp-s-group-sp "sp"
-  sp-s-group-sph "sph"
-  sp-s-id-undefined 1
-  sp-s-id-file-write 2
-  sp-s-id-file-read 3
-  sp-s-id-file-not-implemented 4
-  sp-s-id-file-eof 5
-  sp-s-id-eof 6
-  sp-s-id-input-type 7
-  sp-s-id-memory 8
-  sp-s-id-invalid-argument 9
-  sp-s-id-not-implemented 10
-  sp-status-declare (status-declare-group sp-s-group-sp)
-  sp-random-state-t sph-random-state-t
-  sp-noise sp-samples-random
+  f64 double
+  sp-bool-t uint8-t
+  spline-path-value-t sp-sample-t
   sp-memory-error (status-set-goto sp-s-group-sp sp-s-id-memory)
+  sp-noise sp-samples-random
+  sp-random-state-t sph-random-state-t
   sp-sample->time sp-cheap-round-positive
-  (sp-time->sample x) (convert-type x sp-sample-t)
+  sp-s-group-libc "libc"
+  sp-s-group-sph "sph"
+  sp-s-group-sp "sp"
+  sp-s-id-eof 6
+  sp-s-id-file-eof 5
+  sp-s-id-file-not-implemented 4
+  sp-s-id-file-read 3
+  sp-s-id-file-write 2
+  sp-s-id-input-type 7
+  sp-s-id-invalid-argument 9
+  sp-s-id-memory 8
+  sp-s-id-not-implemented 10
+  sp-s-id-undefined 1
+  sp-status-declare (status-declare-group sp-s-group-sp)
   srq status-require
+  sp-max-frq (/ sp-rate 2)
+  (sp-declare-block id) (define id sp-block-t (struct-literal 0))
+  (sp-time->sample x) (convert-type x sp-sample-t)
   (sp-subtract a b) (- a b)
   (sp-block-declare a) (begin (declare a sp-block-t) (set a.size 0))
   (sp-cheap-round-positive a) (convert-type (+ 0.5 a) sp-time-t)
@@ -30,6 +33,8 @@
   (sp-inline-max a b) (if* (> a b) a b)
   (sp-inline-min a b) (if* (< a b) a b)
   (sp-inline-limit x min-value max-value) (sp-inline-max min-value (sp-inline-min max-value x))
+  (sp-inline-optional a b) (if* a a b)
+  (sp-inline-default a b) (if* (not a) (set a b))
   (sp-inline-absolute-difference a b)
   (begin
     "subtract the smaller number from the greater number,
@@ -48,6 +53,8 @@
   (sph-helper-calloc (* count (sizeof type)) pointer-address)
   (sp-realloc-type count type pointer-address)
   (sph-helper-realloc (* count (sizeof type)) pointer-address)
+  (sp-malloc-type-srq count type pointer-address)
+  (status-require (sp-malloc-type count type pointer-address))
   (sp-hz->samples x) (/ sp-rate x)
   (sp-samples->hz x) (convert-type (/ sp-rate x) sp-time-t)
   (sp-hz->factor x) (/ (convert-type x sp-sample-t) (convert-type sp-rate sp-sample-t))
@@ -102,62 +109,62 @@
     (struct
       (channel-count sp-channel-count-t)
       (size sp-time-t)
-      (samples (array sp-sample-t* sp-channel-limit))))
-  sp-file-t (type (struct (file FILE*) (data-size sp-size-t) (channel-count sp-channel-count-t)))
+      (samples (array sp-sample-t* sp-channel-count-limit))))
+  sp-channel-count sp-channel-count-t
   sp-cpu-count uint32-t
+  sp-file-t (type (struct (file FILE*) (data-size sp-size-t) (channel-count sp-channel-count-t)))
   sp-random-state sp-random-state-t
   sp-rate sp-time-t
-  sp-channel-count sp-channel-count-t
-  sp-sine-table sp-sample-t*
-  sp-sine-table-lfo sp-sample-t*
   sp-sine-lfo-factor sp-time-t
+  sp-sine-table-lfo sp-sample-t*
+  sp-sine-table sp-sample-t*
+  (sp-block-copy a b) (void sp-block-t sp-block-t)
+  (sp-block->file block path rate) (status-t sp-block-t uint8-t* sp-time-t)
+  (sp-block-free a) (void sp-block-t*)
+  (sp-block-new channel-count sample-count out-block)
+  (status-t sp-channel-count-t sp-time-t sp-block-t*)
+  (sp-block-with-offset a offset) (sp-block-t sp-block-t sp-time-t)
+  (sp-block-zero a) (void sp-block-t)
+  (sp-convolve a a-len b b-len result-carryover-len result-carryover result-samples)
+  (void sp-sample-t* sp-time-t sp-sample-t* sp-time-t sp-time-t sp-sample-t* sp-sample-t*)
+  (sp-convolve-one a a-len b b-len result-samples)
+  (void sp-sample-t* sp-time-t sp-sample-t* sp-time-t sp-sample-t*)
+  (sp-deinitialize) void
+  (sp-ffti input-len input/output-real input/output-imag) (int sp-time-t double* double*)
+  (sp-fft input-len input/output-real input/output-imag) (int sp-time-t double* double*)
+  (sp-file-close-read file) (void sp-file-t)
+  (sp-file-close-write file) (void sp-file-t*)
+  (sp-file-open-read path file) (status-t uint8-t* sp-file-t*)
+  (sp-file-open-write path channel-count sample-rate file)
+  (status-t uint8-t* sp-channel-count-t sp-time-t sp-file-t*)
+  (sp-file-read file sample-count samples) (status-t sp-file-t sp-time-t sp-sample-t**)
+  (sp-file-write file samples sample-count) (status-t sp-file-t* sp-sample-t** sp-time-t)
+  (sp-initialize cpu-count channel-count rate) (status-t uint16-t sp-channel-count-t sp-time-t)
+  (sp-null-ir out-ir out-len) (status-t sp-sample-t** sp-time-t*)
+  (sp-pan->amp value channel) (sp-sample-t sp-sample-t sp-channel-count-t)
+  (sp-passthrough-ir out-ir out-len) (status-t sp-sample-t** sp-time-t*)
+  (sp-phase current change cycle) (sp-time-t sp-time-t sp-time-t sp-time-t)
+  (sp-phase-float current change cycle) (sp-time-t sp-time-t double sp-time-t)
+  (sp-random-state-new seed) (sp-random-state-t sp-time-t)
+  (sp-sample-max a b) (sp-sample-t sp-sample-t sp-sample-t)
+  (sp-sample-min a b) (sp-sample-t sp-sample-t sp-sample-t)
+  (sp-sinc a) (sp-sample-t sp-sample-t)
+  (sp-sine-lfo size amp amod frq fmod phs-state out)
+  (void sp-time-t sp-sample-t sp-sample-t* sp-time-t sp-time-t* sp-time-t* sp-sample-t*)
+  (sp-sine-period size out) (void sp-time-t sp-sample-t*)
+  (sp-sine size amp amod frq fmod phs-state out)
+  (void sp-time-t sp-sample-t sp-sample-t* sp-time-t sp-time-t* sp-time-t* sp-sample-t*)
+  (sp-spectral-inversion-ir a a-len) (void sp-sample-t* sp-time-t)
+  (sp-spectral-reversal-ir a a-len) (void sp-sample-t* sp-time-t)
+  (sp-status-description a) (uint8-t* status-t)
+  (sp-status-name a) (uint8-t* status-t)
+  (sp-time-factorial a) (sp-time-t sp-time-t)
+  (sp-time-max a b) (sp-time-t sp-time-t sp-time-t)
+  (sp-time-min a b) (sp-time-t sp-time-t sp-time-t)
   (sp-wave size wvf wvf-size amp amod frq fmod phs-state out)
   (void sp-time-t sp-sample-t*
     sp-time-t sp-sample-t sp-sample-t* sp-time-t sp-time-t* sp-time-t* sp-sample-t*)
-  (sp-sine size amp amod frq fmod phs-state out)
-  (void sp-time-t sp-sample-t sp-sample-t* sp-time-t sp-time-t* sp-time-t* sp-sample-t*)
-  (sp-random-state-new seed) (sp-random-state-t sp-time-t)
-  (sp-block-zero a) (void sp-block-t)
-  (sp-block-copy a b) (void sp-block-t sp-block-t)
-  (sp-file-open-write path channel-count sample-rate file)
-  (status-t uint8-t* sp-channel-count-t sp-time-t sp-file-t*)
-  (sp-file-write file samples sample-count) (status-t sp-file-t* sp-sample-t** sp-time-t)
-  (sp-file-close-write file) (void sp-file-t*)
-  (sp-file-read file sample-count samples) (status-t sp-file-t sp-time-t sp-sample-t**)
-  (sp-file-open-read path file) (status-t uint8-t* sp-file-t*)
-  (sp-file-close-read file) (void sp-file-t)
-  (sp-block->file block path rate) (status-t sp-block-t uint8-t* sp-time-t)
-  (sp-block-new channel-count sample-count out-block)
-  (status-t sp-channel-count-t sp-time-t sp-block-t*)
-  (sp-status-description a) (uint8-t* status-t)
-  (sp-status-name a) (uint8-t* status-t)
-  (sp-sinc a) (sp-sample-t sp-sample-t)
-  (sp-window-blackman a width) (sp-sample-t sp-sample-t sp-time-t)
-  (sp-spectral-inversion-ir a a-len) (void sp-sample-t* sp-time-t)
-  (sp-spectral-reversal-ir a a-len) (void sp-sample-t* sp-time-t)
-  (sp-fft input-len input/output-real input/output-imag) (int sp-time-t double* double*)
-  (sp-ffti input-len input/output-real input/output-imag) (int sp-time-t double* double*)
-  (sp-convolve-one a a-len b b-len result-samples)
-  (void sp-sample-t* sp-time-t sp-sample-t* sp-time-t sp-sample-t*)
-  (sp-convolve a a-len b b-len result-carryover-len result-carryover result-samples)
-  (void sp-sample-t* sp-time-t sp-sample-t* sp-time-t sp-time-t sp-sample-t* sp-sample-t*)
-  (sp-block-free a) (void sp-block-t*)
-  (sp-block-with-offset a offset) (sp-block-t sp-block-t sp-time-t)
-  (sp-null-ir out-ir out-len) (status-t sp-sample-t** sp-time-t*)
-  (sp-passthrough-ir out-ir out-len) (status-t sp-sample-t** sp-time-t*)
-  (sp-initialize cpu-count channel-count rate) (status-t uint16-t sp-channel-count-t sp-time-t)
-  (sp-deinitialize) void
-  (sp-sine-period size out) (void sp-time-t sp-sample-t*)
-  (sp-phase current change cycle) (sp-time-t sp-time-t sp-time-t sp-time-t)
-  (sp-phase-float current change cycle) (sp-time-t sp-time-t double sp-time-t)
-  (sp-time-factorial a) (sp-time-t sp-time-t)
-  (sp-pan->amp value channel) (sp-sample-t sp-sample-t sp-channel-count-t)
-  (sp-sine-lfo size amp amod frq fmod phs-state out)
-  (void sp-time-t sp-sample-t sp-sample-t* sp-time-t sp-time-t* sp-time-t* sp-sample-t*)
-  (sp-sample-max a b) (sp-sample-t sp-sample-t sp-sample-t)
-  (sp-time-max a b) (sp-time-t sp-time-t sp-time-t)
-  (sp-sample-min a b) (sp-sample-t sp-sample-t sp-sample-t)
-  (sp-time-min a b) (sp-time-t sp-time-t sp-time-t))
+  (sp-window-blackman a width) (sp-sample-t sp-sample-t sp-time-t))
 
 (sc-comment "extra")
 

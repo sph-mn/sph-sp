@@ -185,7 +185,7 @@ sp_time_t sp_phase_float(sp_time_t current, sp_sample_t change, sp_time_t cycle)
 /** writes one full period of a sine wave into out. the sine has the frequency that makes it fit exactly into size.
    can be used to create lookup tables */
 void sp_sine_period(sp_time_t size, sp_sample_t* out) {
-  for (sp_time_t i = 0; (i < size); i += 1) {
+  for (sp_size_t i = 0; (i < size); i += 1) {
     out[i] = sin((i * (M_PI / (size / 2))));
   };
 }
@@ -383,7 +383,7 @@ status_t sp_render_file(sp_event_t event, uint8_t* path) {
     sp_event_prepare_optional_srq(event);
   };
   printf("rendering %lu seconds to file %s\n", (event.end / sp_rate), path);
-  status_require((sp_render_range_file(event, 0, (event.end), (sp_render_config(sp_channel_count, sp_rate, (4 * sp_rate), 1)), path)));
+  status_require((sp_render_range_file(event, 0, (event.end), (sp_render_config(sp_channel_count, sp_rate, (sp_render_block_seconds * sp_rate), 1)), path)));
 exit:
   status_return;
 }
@@ -393,11 +393,16 @@ exit:
 status_t sp_render_plot(sp_event_t event) {
   status_declare;
   sp_block_t block;
+  printf(("event.end\n"), (event.end));
   if (!event.end) {
     sp_event_prepare_optional_srq(event);
   };
-  printf("rendering %lu seconds to plot\n", (event.end / sp_rate));
-  status_require((sp_render_range_block(event, 0, (event.end), (sp_render_config(sp_channel_count, sp_rate, sp_rate, 1)), (&block))));
+  if (event.end && (event.end < sp_rate)) {
+    printf("rendering %lu milliseconds to plot\n", (event.end / sp_rate / 1000));
+  } else {
+    printf("rendering %lu seconds to plot\n", (event.end / sp_rate));
+  };
+  status_require((sp_render_range_block(event, 0, (event.end), (sp_render_config(sp_channel_count, sp_rate, (sp_render_block_seconds * sp_rate), 1)), (&block))));
   sp_plot_samples(((block.samples)[0]), (event.end));
 exit:
   status_return;

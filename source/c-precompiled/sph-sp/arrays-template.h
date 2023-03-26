@@ -3,6 +3,8 @@
   void sp_##value_type_name##_sort_swap(void* a, ssize_t b, ssize_t c); \
   uint8_t sp_##value_type_name##_sort_less(void* a, ssize_t b, ssize_t c); \
   value_t sp_##value_type_name##_round_to_multiple(value_t a, value_t base); \
+  value_t sp_##type_name##_min(value_t* in, sp_size_t count); \
+  value_t sp_##type_name##_max(value_t* in, sp_size_t count); \
   value_t sp_##type_name##_absolute_max(value_t* in, sp_size_t count); \
   void sp_##type_name##_reverse(value_t* in, sp_size_t count, value_t* out); \
   sp_bool_t sp_##type_name##_equal(value_t* in, sp_size_t count, value_t value); \
