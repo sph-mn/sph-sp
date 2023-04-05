@@ -11,7 +11,6 @@ c code and shared library for sound synthesis and sequencing. the sound processo
   * fast fourier transform (fft) and inverse fast fourier transform (ifft)
 * processors that work seamlessly on blocks of continuous data streams
   * windowed-sinc low-pass, high-pass, band-pass and band-reject filters
-  * state-variable low/high/band/all-pass filter
   * convolution
   * moving average filter
 * synthesis
@@ -22,7 +21,7 @@ c code and shared library for sound synthesis and sequencing. the sound processo
   * event renderer for parallel block processing with custom routines
   * events for sines and filtered noise
   * event groups that compose for instruments, riffs and songs
-  * per channel configuration with optional channel delay
+  * per channel configuration
 * array processing
   * arithmetic, permutations, statistics, and more
 
