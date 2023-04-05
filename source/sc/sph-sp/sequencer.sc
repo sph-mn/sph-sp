@@ -433,7 +433,7 @@
   (return
     (sp-windowed-sinc-bp-br *c:temp ir-length
       (sp-hz->factor frqn) (sp-hz->factor (+ frqn (sp-optional-array-get cc:wmod cc:wdt 0)))
-      (sp-hz->factor cc:trnl) (sp-hz->factor cc:trnh) cc:is-reject
+      (sp-hz->factor cc:trnl) (sp-hz->factor cc:trnh) c:is-reject
       &cc:filter-state (array-get c:temp 1))))
 
 (define (sp-noise-event-free event) (void sp-event-t*)
@@ -484,11 +484,10 @@
             (set filter-states 1)
             (if (or cc:fmod cc:wmod) (set filter-mod 1))
             (if (not cc:fmod) (set cc:fmod c:channel-config:fmod))
-            (if (not cc:wmod) (set cc:wmod c:channel-config:wmod))
-            (if (not cc:wdt) (set cc:wdt c:channel-config:wdt))
-            (if (not cc:trnl) (set cc:trnl c:channel-config:trnl))
             (if (not cc:trnh) (set cc:trnh c:channel-config:trnh))
-            (if (not cc:is-reject) (set cc:is-reject c:channel-config:is-reject))
+            (if (not cc:trnl) (set cc:trnl c:channel-config:trnl))
+            (if (not cc:wdt) (set cc:wdt c:channel-config:wdt))
+            (if (not cc:wmod) (set cc:wmod c:channel-config:wmod))
             (set (array-get ir-lengths cci)
               (sp-windowed-sinc-lp-hp-ir-length (sp-hz->factor (sp-inline-min cc:trnl cc:trnh))))
             (if (< temp-length (array-get ir-lengths cci))
@@ -546,7 +545,7 @@
           (sp-windowed-sinc-bp-br *c:temp duration
             (sp-hz->factor frqn)
             (sp-hz->factor (+ frqn (sp-optional-array-get cc.wmod cc.wdt event-i)))
-            (sp-hz->factor cc.trnl) (sp-hz->factor cc.trnh) cc.is-reject &ccp:filter-state temp)))
+            (sp-hz->factor cc.trnl) (sp-hz->factor cc.trnh) c:is-reject &ccp:filter-state temp)))
       (set temp (array-get c:temp 1)))
     (sp-for-each-index i duration
       (set outn (* cc.amp (array-get cc.amod (+ event-i i)) (array-get temp i)))
@@ -559,120 +558,3 @@
     (sp-event-block-generate
       (struct-pointer-get (convert-type event:config sp-noise-event-config-t*) resolution)
       sp-noise-event-generate-block start end out event)))
-
-(define (sp-cheap-noise-event-config-defaults) sp-cheap-noise-event-config-t
-  (define out sp-cheap-noise-event-config-t (struct-literal 0))
-  (struct-set out
-    channel-config:use 1
-    channel-count sp-channel-count-limit
-    passes 1
-    resolution sp-default-resolution)
-  (sp-for-each-index i sp-channel-count-limit
-    (struct-set (array-get out.channel-config i) amp 1 channel i wdt sp-max-frq))
-  (return out))
-
-(define (sp-cheap-noise-event-config-new-n count out)
-  (status-t sp-time-t sp-cheap-noise-event-config-t**)
-  status-declare
-  (define defaults sp-cheap-noise-event-config-t (sp-cheap-noise-event-config-defaults))
-  (status-require (sp-malloc-type count sp-cheap-noise-event-config-t out))
-  (sp-for-each-index i count (set (array-get *out i) defaults))
-  (label exit status-return))
-
-(define (sp-cheap-noise-event-prepare event) (status-t sp-event-t*)
-  status-declare
-  (declare
-    filter-states sp-bool-t
-    filter-mod sp-bool-t
-    filter-channels (array sp-bool-t sp-channel-count-limit 0)
-    cc sp-cheap-noise-event-channel-config-t*
-    ci sp-channel-count-t
-    c sp-cheap-noise-event-config-t*
-    duration sp-time-t
-    temp-length sp-time-t)
-  (error-memory-init (+ 3 sp-channel-count-limit))
-  (set
-    c event:config
-    cc c:channel-config
-    c:random-state (sp-random-state-new (sp-time-random-primitive &sp-random-state))
-    duration (- event:end event:start)
-    filter-mod (or cc:fmod cc:wmod)
-    filter-states 0)
-  (for ((define cci sp-channel-count-t 1) (< cci c:channel-count) (set+ cci 1))
-    (set cc (+ c:channel-config cci))
-    (if cc:use
-      (begin
-        (if (not cc:amod) (set cc:amod c:channel-config:amod))
-        (if (or cc:frq cc:wdt cc:fmod cc:wmod)
-          (begin
-            (set filter-states 1)
-            (if (or cc:fmod cc:wmod) (set filter-mod 1))
-            (if (not cc:fmod) (set cc:fmod c:channel-config:fmod))
-            (if (not cc:wmod) (set cc:wmod c:channel-config:wmod))
-            (if (not cc:wdt) (set cc:wdt c:channel-config:wdt))
-            (if (not cc:is-reject) (set cc:is-reject c:channel-config:is-reject)))))
-      (set ci cc:channel *cc *c:channel-config cc:channel ci)))
-  (if (not filter-mod) (set c:resolution duration))
-  (set temp-length (sp-inline-min c:resolution (* sp-render-block-seconds sp-rate)))
-  (status-require (sp-malloc-type temp-length sp-sample-t c:temp))
-  (error-memory-add (array-get c:temp 0))
-  (status-require (sp-malloc-type temp-length sp-sample-t (+ 1 c:temp)))
-  (error-memory-add (array-get c:temp 1))
-  (set cc c:channel-config)
-  (status-require (sp-cheap-filter-state-new temp-length c:passes &cc:filter-state))
-  (if (< 1 c:passes) (error-memory-add2 cc:filter-state sp-cheap-filter-state-free))
-  (if filter-states
-    (begin
-      (status-require (sp-malloc-type temp-length sp-sample-t (+ 2 c:temp)))
-      (error-memory-add (array-get c:temp 2))
-      (for ((define cci sp-channel-count-t 1) (< cci c:channel-count) (set+ cci 1))
-        (set cc (+ c:channel-config cci))
-        (if (array-get filter-channels cci)
-          (begin
-            (status-require (sp-cheap-filter-state-new temp-length c:passes &cc:filter-state))
-            (if (< 1 c:passes) (error-memory-add2 cc:filter-state sp-cheap-filter-state-free)))))))
-  (label exit (if status-is-failure error-memory-free) status-return))
-
-(define (sp-cheap-noise-event-free event) (void sp-event-t*)
-  (declare c sp-cheap-noise-event-config-t*)
-  (set event:free 0 c event:config)
-  (sp-event-memory-free event))
-
-(define (sp-cheap-noise-event-generate-block duration block-i event-i out event)
-  (status-t sp-time-t sp-time-t sp-time-t sp-block-t sp-event-t*)
-  status-declare
-  (declare
-    ccp sp-cheap-noise-event-channel-config-t*
-    cc sp-cheap-noise-event-channel-config-t
-    c sp-cheap-noise-event-config-t*
-    frqc sp-sample-t
-    frqn sp-frq-t
-    outn sp-sample-t
-    temp sp-sample-t*
-    wdtn sp-frq-t)
-  (set c event:config)
-  (sp-samples-random-primitive &c:random-state duration *c:temp)
-  (for ((define cci sp-channel-count-t 0) (< cci c:channel-count) (set+ cci 1))
-    (set ccp (+ c:channel-config cci) cc *ccp)
-    (if (and cc.use cc.filter-state)
-      (begin
-        (set
-          temp (array-get c:temp (+ 1 (< 0 cci)))
-          frqn (sp-optional-array-get cc.fmod cc.frq event-i)
-          wdtn (sp-optional-array-get cc.wmod cc.wdt event-i)
-          frqc (/ (+ frqn wdtn) 2.0))
-        (sp-cheap-filter (if* cc.is-reject sp-state-variable-filter-br sp-state-variable-filter-bp)
-          *c:temp duration (sp-hz->factor frqn)
-          c:passes (if* cc.is-reject (/ wdtn frqc) (/ frqc wdtn)) ccp:filter-state temp))
-      (set temp (array-get c:temp 1)))
-    (sp-for-each-index i duration
-      (set outn (* cc.amp (array-get cc.amod (+ event-i i)) (array-get temp i)))
-      (set+ (array-get out.samples cc.channel (+ block-i i)) (sp-inline-limit outn -1 1))))
-  status-return)
-
-(define (sp-cheap-noise-event-generate start end out event)
-  (status-t sp-time-t sp-time-t sp-block-t sp-event-t*)
-  (return
-    (sp-event-block-generate
-      (struct-pointer-get (convert-type event:config sp-cheap-noise-event-config-t*) resolution)
-      sp-cheap-noise-event-generate-block start end out event)))

@@ -17,7 +17,6 @@
   (sp-wave-event-config-new out) (sp-wave-event-config-new-n 1 out)
   (sp-map-event-config-new out) (sp-map-event-config-new-n 1 out)
   (sp-noise-event-config-new out) (sp-noise-event-config-new-n 1 out)
-  (sp-cheap-noise-event-config-new out) (sp-cheap-noise-event-config-new-n 1 out)
   (sp-define-event name _prepare duration)
   (begin
     "use case: event variables defined at the top-level"
@@ -34,11 +33,6 @@
   (struct-pointer-set event-pointer
     prepare sp-noise-event-prepare
     generate sp-noise-event-generate
-    config _config)
-  (sp-cheap-noise-event event-pointer _config)
-  (struct-pointer-set event-pointer
-    prepare sp-cheap-noise-event-prepare
-    generate sp-cheap-noise-event-generate
     config _config)
   (sp-map-event event-pointer _config)
   (struct-pointer-set event-pointer
@@ -239,7 +233,6 @@
       (amod sp-sample-t*)
       (channel sp-channel-count-t)
       (filter-state sp-convolution-filter-state-t*)
-      (is-reject sp-bool-t)
       (frq sp-frq-t)
       (fmod sp-time-t*)
       (wdt sp-frq-t)
@@ -250,43 +243,16 @@
   sp-noise-event-config-t
   (type
     (struct
-      (random-state sp-random-state-t)
-      (resolution sp-time-t)
-      (temp (array sp-sample-t* 3))
-      (channel-count sp-channel-count-t)
-      (channel-config (array sp-noise-event-channel-config-t sp-channel-count-limit))))
-  sp-cheap-noise-event-channel-config-t
-  (type
-    (struct
-      (amp sp-sample-t)
-      (amod sp-sample-t*)
-      (channel sp-channel-count-t)
-      (filter-state sp-cheap-filter-state-t*)
       (is-reject sp-bool-t)
-      (frq sp-frq-t)
-      (fmod sp-time-t*)
-      (wdt sp-frq-t)
-      (wmod sp-time-t*)
-      (use sp-bool-t)))
-  sp-cheap-noise-event-config-t
-  (type
-    (struct
-      (passes uint8-t)
       (random-state sp-random-state-t)
       (resolution sp-time-t)
       (temp (array sp-sample-t* 3))
       (channel-count sp-channel-count-t)
-      (channel-config (array sp-cheap-noise-event-channel-config-t sp-channel-count-limit)))))
+      (channel-config (array sp-noise-event-channel-config-t sp-channel-count-limit)))))
 
 (define sp-event-null sp-event-t (struct-literal 0))
 
 (declare
-  (sp-cheap-noise-event-config-defaults) sp-cheap-noise-event-config-t
-  (sp-cheap-noise-event-config-new-n count out) (status-t sp-time-t sp-cheap-noise-event-config-t**)
-  (sp-cheap-noise-event-free) (void sp-event-t*)
-  (sp-cheap-noise-event-generate start end out event)
-  (status-t sp-time-t sp-time-t sp-block-t sp-event-t*)
-  (sp-cheap-noise-event-prepare event) (status-t sp-event-t*)
   (sp-event-list-add a event) (status-t sp-event-list-t** sp-event-t)
   (sp-event-list-display a) (void sp-event-list-t*)
   (sp-event-list-free events) (void sp-event-list-t**)

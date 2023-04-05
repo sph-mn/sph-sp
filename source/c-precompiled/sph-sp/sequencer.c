@@ -572,7 +572,7 @@ status_t sp_noise_event_filter_state(sp_noise_event_config_t* c, sp_noise_event_
   sp_frq_t frqn;
   sp_samples_random_primitive((&(c->random_state)), ir_length, (*(c->temp)));
   frqn = sp_optional_array_get((cc->fmod), (cc->frq), 0);
-  return ((sp_windowed_sinc_bp_br((*(c->temp)), ir_length, (sp_hz_to_factor(frqn)), (sp_hz_to_factor((frqn + sp_optional_array_get((cc->wmod), (cc->wdt), 0)))), (sp_hz_to_factor((cc->trnl))), (sp_hz_to_factor((cc->trnh))), (cc->is_reject), (&(cc->filter_state)), ((c->temp)[1]))));
+  return ((sp_windowed_sinc_bp_br((*(c->temp)), ir_length, (sp_hz_to_factor(frqn)), (sp_hz_to_factor((frqn + sp_optional_array_get((cc->wmod), (cc->wdt), 0)))), (sp_hz_to_factor((cc->trnl))), (sp_hz_to_factor((cc->trnh))), (c->is_reject), (&(cc->filter_state)), ((c->temp)[1]))));
 }
 void sp_noise_event_free(sp_event_t* event) {
   sp_noise_event_config_t* c;
@@ -629,20 +629,17 @@ status_t sp_noise_event_prepare(sp_event_t* event) {
         if (!cc->fmod) {
           cc->fmod = c->channel_config->fmod;
         };
-        if (!cc->wmod) {
-          cc->wmod = c->channel_config->wmod;
-        };
-        if (!cc->wdt) {
-          cc->wdt = c->channel_config->wdt;
+        if (!cc->trnh) {
+          cc->trnh = c->channel_config->trnh;
         };
         if (!cc->trnl) {
           cc->trnl = c->channel_config->trnl;
         };
-        if (!cc->trnh) {
-          cc->trnh = c->channel_config->trnh;
+        if (!cc->wdt) {
+          cc->wdt = c->channel_config->wdt;
         };
-        if (!cc->is_reject) {
-          cc->is_reject = c->channel_config->is_reject;
+        if (!cc->wmod) {
+          cc->wmod = c->channel_config->wmod;
         };
         ir_lengths[cci] = sp_windowed_sinc_lp_hp_ir_length((sp_hz_to_factor((sp_inline_min((cc->trnl), (cc->trnh))))));
         if (temp_length < ir_lengths[cci]) {
@@ -705,7 +702,7 @@ status_t sp_noise_event_generate_block(sp_time_t duration, sp_time_t block_i, sp
     if (cc.use && cc.filter_state) {
       temp = (c->temp)[(1 + (0 < cci))];
       frqn = sp_optional_array_get((cc.fmod), (cc.frq), event_i);
-      status_require((sp_windowed_sinc_bp_br((*(c->temp)), duration, (sp_hz_to_factor(frqn)), (sp_hz_to_factor((frqn + sp_optional_array_get((cc.wmod), (cc.wdt), event_i)))), (sp_hz_to_factor((cc.trnl))), (sp_hz_to_factor((cc.trnh))), (cc.is_reject), (&(ccp->filter_state)), temp)));
+      status_require((sp_windowed_sinc_bp_br((*(c->temp)), duration, (sp_hz_to_factor(frqn)), (sp_hz_to_factor((frqn + sp_optional_array_get((cc.wmod), (cc.wdt), event_i)))), (sp_hz_to_factor((cc.trnl))), (sp_hz_to_factor((cc.trnh))), (c->is_reject), (&(ccp->filter_state)), temp)));
     } else {
       temp = (c->temp)[1];
     };
@@ -718,143 +715,3 @@ exit:
   status_return;
 }
 status_t sp_noise_event_generate(sp_time_t start, sp_time_t end, sp_block_t out, sp_event_t* event) { return ((sp_event_block_generate((((sp_noise_event_config_t*)(event->config))->resolution), sp_noise_event_generate_block, start, end, out, event))); }
-sp_cheap_noise_event_config_t sp_cheap_noise_event_config_defaults() {
-  sp_cheap_noise_event_config_t out = { 0 };
-  out.channel_config->use = 1;
-  out.channel_count = sp_channel_count_limit;
-  out.passes = 1;
-  out.resolution = sp_default_resolution;
-  for (sp_size_t i = 0; (i < sp_channel_count_limit); i += 1) {
-    ((out.channel_config)[i]).amp = 1;
-    ((out.channel_config)[i]).channel = i;
-    ((out.channel_config)[i]).wdt = sp_max_frq;
-  };
-  return (out);
-}
-status_t sp_cheap_noise_event_config_new_n(sp_time_t count, sp_cheap_noise_event_config_t** out) {
-  status_declare;
-  sp_cheap_noise_event_config_t defaults = sp_cheap_noise_event_config_defaults();
-  status_require((sp_malloc_type(count, sp_cheap_noise_event_config_t, out)));
-  for (sp_size_t i = 0; (i < count); i += 1) {
-    (*out)[i] = defaults;
-  };
-exit:
-  status_return;
-}
-status_t sp_cheap_noise_event_prepare(sp_event_t* event) {
-  status_declare;
-  sp_bool_t filter_states;
-  sp_bool_t filter_mod;
-  sp_bool_t filter_channels[sp_channel_count_limit] = { 0 };
-  sp_cheap_noise_event_channel_config_t* cc;
-  sp_channel_count_t ci;
-  sp_cheap_noise_event_config_t* c;
-  sp_time_t duration;
-  sp_time_t temp_length;
-  error_memory_init((3 + sp_channel_count_limit));
-  c = event->config;
-  cc = c->channel_config;
-  c->random_state = sp_random_state_new((sp_time_random_primitive((&sp_random_state))));
-  duration = (event->end - event->start);
-  filter_mod = (cc->fmod || cc->wmod);
-  filter_states = 0;
-  for (sp_channel_count_t cci = 1; (cci < c->channel_count); cci += 1) {
-    cc = (c->channel_config + cci);
-    if (cc->use) {
-      if (!cc->amod) {
-        cc->amod = c->channel_config->amod;
-      };
-      if (cc->frq || cc->wdt || cc->fmod || cc->wmod) {
-        filter_states = 1;
-        if (cc->fmod || cc->wmod) {
-          filter_mod = 1;
-        };
-        if (!cc->fmod) {
-          cc->fmod = c->channel_config->fmod;
-        };
-        if (!cc->wmod) {
-          cc->wmod = c->channel_config->wmod;
-        };
-        if (!cc->wdt) {
-          cc->wdt = c->channel_config->wdt;
-        };
-        if (!cc->is_reject) {
-          cc->is_reject = c->channel_config->is_reject;
-        };
-      };
-    } else {
-      ci = cc->channel;
-      *cc = *(c->channel_config);
-      cc->channel = ci;
-    };
-  };
-  if (!filter_mod) {
-    c->resolution = duration;
-  };
-  temp_length = sp_inline_min((c->resolution), (sp_render_block_seconds * sp_rate));
-  status_require((sp_malloc_type(temp_length, sp_sample_t, (c->temp))));
-  error_memory_add(((c->temp)[0]));
-  status_require((sp_malloc_type(temp_length, sp_sample_t, (1 + c->temp))));
-  error_memory_add(((c->temp)[1]));
-  cc = c->channel_config;
-  status_require((sp_cheap_filter_state_new(temp_length, (c->passes), (&(cc->filter_state)))));
-  if (1 < c->passes) {
-    error_memory_add2((cc->filter_state), sp_cheap_filter_state_free);
-  };
-  if (filter_states) {
-    status_require((sp_malloc_type(temp_length, sp_sample_t, (2 + c->temp))));
-    error_memory_add(((c->temp)[2]));
-    for (sp_channel_count_t cci = 1; (cci < c->channel_count); cci += 1) {
-      cc = (c->channel_config + cci);
-      if (filter_channels[cci]) {
-        status_require((sp_cheap_filter_state_new(temp_length, (c->passes), (&(cc->filter_state)))));
-        if (1 < c->passes) {
-          error_memory_add2((cc->filter_state), sp_cheap_filter_state_free);
-        };
-      };
-    };
-  };
-exit:
-  if (status_is_failure) {
-    error_memory_free;
-  };
-  status_return;
-}
-void sp_cheap_noise_event_free(sp_event_t* event) {
-  sp_cheap_noise_event_config_t* c;
-  event->free = 0;
-  c = event->config;
-  sp_event_memory_free(event);
-}
-status_t sp_cheap_noise_event_generate_block(sp_time_t duration, sp_time_t block_i, sp_time_t event_i, sp_block_t out, sp_event_t* event) {
-  status_declare;
-  sp_cheap_noise_event_channel_config_t* ccp;
-  sp_cheap_noise_event_channel_config_t cc;
-  sp_cheap_noise_event_config_t* c;
-  sp_sample_t frqc;
-  sp_frq_t frqn;
-  sp_sample_t outn;
-  sp_sample_t* temp;
-  sp_frq_t wdtn;
-  c = event->config;
-  sp_samples_random_primitive((&(c->random_state)), duration, (*(c->temp)));
-  for (sp_channel_count_t cci = 0; (cci < c->channel_count); cci += 1) {
-    ccp = (c->channel_config + cci);
-    cc = *ccp;
-    if (cc.use && cc.filter_state) {
-      temp = (c->temp)[(1 + (0 < cci))];
-      frqn = sp_optional_array_get((cc.fmod), (cc.frq), event_i);
-      wdtn = sp_optional_array_get((cc.wmod), (cc.wdt), event_i);
-      frqc = ((frqn + wdtn) / 2.0);
-      sp_cheap_filter((cc.is_reject ? sp_state_variable_filter_br : sp_state_variable_filter_bp), (*(c->temp)), duration, (sp_hz_to_factor(frqn)), (c->passes), (cc.is_reject ? (wdtn / frqc) : (frqc / wdtn)), (ccp->filter_state), temp);
-    } else {
-      temp = (c->temp)[1];
-    };
-    for (sp_size_t i = 0; (i < duration); i += 1) {
-      outn = (cc.amp * (cc.amod)[(event_i + i)] * temp[i]);
-      (out.samples)[cc.channel][(block_i + i)] += sp_inline_limit(outn, -1, 1);
-    };
-  };
-  status_return;
-}
-status_t sp_cheap_noise_event_generate(sp_time_t start, sp_time_t end, sp_block_t out, sp_event_t* event) { return ((sp_event_block_generate((((sp_cheap_noise_event_config_t*)(event->config))->resolution), sp_cheap_noise_event_generate_block, start, end, out, event))); }

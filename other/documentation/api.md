@@ -6,14 +6,6 @@ sp_block_free :: sp_block_t*:a -> void
 sp_block_new :: sp_channel_count_t:channel_count sp_time_t:sample_count sp_block_t*:out_block -> status_t
 sp_block_with_offset :: sp_block_t:a sp_time_t:offset -> sp_block_t
 sp_block_zero :: sp_block_t:a -> void
-sp_cheap_filter :: sp_state_variable_filter_t:type sp_sample_t*:in sp_time_t:in_size sp_sample_t:cutoff sp_time_t:passes sp_sample_t:q_factor sp_cheap_filter_state_t*:state sp_sample_t*:out -> void
-sp_cheap_filter_state_free :: sp_cheap_filter_state_t*:a -> void
-sp_cheap_filter_state_new :: sp_time_t:max_size sp_filter_passes_t:passes sp_cheap_filter_state_t**:out -> status_t
-sp_cheap_noise_event_config_defaults :: -> sp_cheap_noise_event_config_t
-sp_cheap_noise_event_config_new_n :: sp_time_t:count sp_cheap_noise_event_config_t**:out -> status_t
-sp_cheap_noise_event_free :: -> void
-sp_cheap_noise_event_generate :: sp_time_t:start sp_time_t:end sp_block_t:out sp_event_t*:event -> status_t
-sp_cheap_noise_event_prepare :: sp_event_t*:event -> status_t
 sp_compositions_max :: sp_time_t:sum -> sp_time_t
 sp_compositions_max :: sp_time_t:sum -> sp_time_t
 sp_convolution_filter :: sp_sample_t*:in sp_time_t:in_len sp_convolution_filter_ir_f_t:ir_f void*:ir_f_arguments uint8_t:ir_f_arguments_len sp_convolution_filter_state_t**:out_state sp_sample_t*:out_samples -> status_t
@@ -56,7 +48,6 @@ sp_file_open_read :: uint8_t*:path sp_file_t*:file -> status_t
 sp_file_open_write :: uint8_t*:path sp_channel_count_t:channel_count sp_time_t:sample_rate sp_file_t*:file -> status_t
 sp_file_read :: sp_file_t:file sp_time_t:sample_count sp_sample_t**:samples -> status_t
 sp_file_write :: sp_file_t*:file sp_sample_t**:samples sp_time_t:sample_count -> status_t
-sp_filter :: sp_sample_t*:in sp_time_t:in_size sp_sample_t:cutoff_l sp_sample_t:cutoff_h sp_sample_t:transition_l sp_sample_t:transition_h sp_bool_t:is_reject sp_filter_state_t**:out_state sp_sample_t*:out_samples -> status_t
 sp_group_add :: sp_event_t*:a sp_event_t:event -> status_t
 sp_group_append :: sp_event_t*:a sp_event_t:event -> status_t
 sp_group_event_f :: sp_time_t:start sp_time_t:end sp_block_t:out sp_event_t*:event -> void
@@ -168,12 +159,6 @@ sp_stat_times_range :: sp_time_t*:a sp_time_t:size sp_sample_t*:out -> uint8_t
 sp_stat_times_skewness :: sp_time_t*:a sp_time_t:size sp_sample_t*:out -> uint8_t
 sp_stat_unique_all_max :: sp_time_t:size -> sp_time_t
 sp_stat_unique_max :: sp_time_t:size sp_time_t:width -> sp_time_t
-sp_state_variable_filter_all :: sp_sample_t*:out sp_sample_t*:in sp_sample_t:in_count sp_sample_t:cutoff sp_time_t:q_factor sp_sample_t*:state -> void
-sp_state_variable_filter_bp :: sp_sample_t*:out sp_sample_t*:in sp_sample_t:in_count sp_sample_t:cutoff sp_time_t:q_factor sp_sample_t*:state -> void
-sp_state_variable_filter_br :: sp_sample_t*:out sp_sample_t*:in sp_sample_t:in_count sp_sample_t:cutoff sp_time_t:q_factor sp_sample_t*:state -> void
-sp_state_variable_filter_hp :: sp_sample_t*:out sp_sample_t*:in sp_sample_t:in_count sp_sample_t:cutoff sp_time_t:q_factor sp_sample_t*:state -> void
-sp_state_variable_filter_lp :: sp_sample_t*:out sp_sample_t*:in sp_sample_t:in_count sp_sample_t:cutoff sp_time_t:q_factor sp_sample_t*:state -> void
-sp_state_variable_filter_peak :: sp_sample_t*:out sp_sample_t*:in sp_sample_t:in_count sp_sample_t:cutoff sp_time_t:q_factor sp_sample_t*:state -> void
 sp_status_description :: status_t:a -> uint8_t*
 sp_status_name :: status_t:a -> uint8_t*
 sp_time_deharmonize :: sp_time_t:a sp_time_t:base sp_sample_t:amount -> sp_time_t
@@ -256,13 +241,7 @@ sp_calloc_type(count, type, pointer_address)
 sp_channel_count_limit
 sp_channel_count_t
 sp_cheap_ceiling_positive(a)
-sp_cheap_filter_bp(...)
-sp_cheap_filter_br(...)
-sp_cheap_filter_hp(...)
-sp_cheap_filter_lp(...)
 sp_cheap_floor_positive(a)
-sp_cheap_noise_event(event_pointer, _config)
-sp_cheap_noise_event_config_new(out)
 sp_cheap_round_positive(a)
 sp_declare_block(id)
 sp_declare_event(id)
@@ -451,28 +430,6 @@ sp_block_t: struct
   channel_count: sp_channel_count_t
   size: sp_time_t
   samples: array sp_sample_t* sp_channel_count_limit
-sp_cheap_filter_state_t: struct
-  in_temp: sp_sample_t*
-  out_temp: sp_sample_t*
-  svf_state: array sp_sample_t * 2 sp_filter_passes_limit
-sp_cheap_noise_event_channel_config_t: struct
-  amp: sp_sample_t
-  amod: sp_sample_t*
-  channel: sp_channel_count_t
-  filter_state: sp_cheap_filter_state_t*
-  is_reject: sp_bool_t
-  frq: sp_frq_t
-  fmod: sp_time_t*
-  wdt: sp_frq_t
-  wmod: sp_time_t*
-  use: sp_bool_t
-sp_cheap_noise_event_config_t: struct
-  passes: uint8_t
-  random_state: sp_random_state_t
-  resolution: sp_time_t
-  temp: array sp_sample_t* 3
-  channel_count: sp_channel_count_t
-  channel_config: array sp_cheap_noise_event_channel_config_t sp_channel_count_limit
 sp_convolution_filter_state_t: struct
   carryover: sp_sample_t*
   carryover_len: sp_time_t
@@ -513,7 +470,6 @@ sp_noise_event_channel_config_t: struct
   amod: sp_sample_t*
   channel: sp_channel_count_t
   filter_state: sp_convolution_filter_state_t*
-  is_reject: sp_bool_t
   frq: sp_frq_t
   fmod: sp_time_t*
   wdt: sp_frq_t
@@ -522,6 +478,7 @@ sp_noise_event_channel_config_t: struct
   trnh: sp_frq_t
   use: sp_bool_t
 sp_noise_event_config_t: struct
+  is_reject: sp_bool_t
   random_state: sp_random_state_t
   resolution: sp_time_t
   temp: array sp_sample_t* 3

@@ -19,6 +19,7 @@
   }
 #define feq(a, b) sp_sample_nearly_equal(a, b, (0.01))
 #define _sp_rate 960
+#define sp_seq_event_count 2
 
 /* previous segfault when noise-event duration was unequal sp-rate */
 #define test_noise_duration (_sp_rate + 20)
@@ -432,56 +433,6 @@ exit:
   };
   status_return;
 }
-status_t test_sp_cheap_filter() {
-  status_declare;
-  sp_cheap_filter_state_t* state;
-  sp_sample_t out[test_noise_duration];
-  sp_sample_t in[test_noise_duration];
-  sp_random_state_t rs;
-  rs = sp_random_state_new(80);
-  sp_samples_random_primitive((&rs), test_noise_duration, in);
-  status_require((sp_cheap_filter_state_new(test_noise_duration, sp_filter_passes_limit, (&state))));
-  sp_cheap_filter_lp(in, test_noise_duration, (0.2), 1, 0, state, out);
-  sp_cheap_filter_lp(in, test_noise_duration, (0.2), sp_filter_passes_limit, 0, state, out);
-  sp_cheap_filter_lp(in, test_noise_duration, (0.2), sp_filter_passes_limit, 0, state, out);
-  sp_cheap_filter_state_free(state);
-exit:
-  status_return;
-}
-status_t test_sp_cheap_noise_event() {
-  status_declare;
-  sp_block_t out;
-  sp_time_t fmod[test_noise_duration];
-  sp_sample_t amod[test_noise_duration];
-  sp_cheap_noise_event_config_t* c;
-  sp_declare_event(event);
-  error_memory_init(2);
-  status_require((sp_cheap_noise_event_config_new((&c))));
-  error_memory_add(c);
-  status_require((sp_block_new(2, test_noise_duration, (&out))));
-  error_memory_add2((&out), sp_block_free);
-  for (sp_size_t i = 0; (i < test_noise_duration); i += 1) {
-    fmod[i] = 0.08;
-    amod[i] = 0.8;
-  };
-  c->channel_count = 2;
-  (c->channel_config)->amp = 1;
-  (c->channel_config)->amod = amod;
-  (c->channel_config)->fmod = fmod;
-  (c->channel_config)->wdt = 4800;
-  event.end = test_noise_duration;
-  sp_cheap_noise_event((&event), c);
-  sp_event_prepare_srq(event);
-  status_require(((event.generate)(0, test_noise_duration, out, (&event))));
-  test_helper_assert(("in range -0.8..0.8"), (0.8 >= sp_samples_absolute_max(((out.samples)[0]), test_noise_duration)));
-  sp_block_free((&out));
-exit:
-  if (status_is_failure) {
-    error_memory_free;
-  };
-  status_return;
-}
-#define sp_seq_event_count 2
 status_t test_sp_seq() {
   status_declare;
   sp_block_t out;
@@ -929,7 +880,6 @@ exit:
 int main() {
   status_declare;
   sp_initialize(3, 2, _sp_rate);
-  test_helper_test_one(test_sp_cheap_noise_event);
   test_helper_test_one(test_path);
   test_helper_test_one(test_moving_average);
   test_helper_test_one(test_statistics);
@@ -938,7 +888,6 @@ int main() {
   test_helper_test_one(test_convolve_smaller);
   test_helper_test_one(test_convolve_larger);
   test_helper_test_one(test_base);
-  test_helper_test_one(test_sp_cheap_filter);
   test_helper_test_one(test_sp_random);
   test_helper_test_one(test_sp_triangle_square);
   test_helper_test_one(test_fft);

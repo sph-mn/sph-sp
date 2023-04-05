@@ -26,7 +26,6 @@
 #define sp_wave_event_config_new(out) sp_wave_event_config_new_n(1, out)
 #define sp_map_event_config_new(out) sp_map_event_config_new_n(1, out)
 #define sp_noise_event_config_new(out) sp_noise_event_config_new_n(1, out)
-#define sp_cheap_noise_event_config_new(out) sp_cheap_noise_event_config_new_n(1, out)
 
 /** use case: event variables defined at the top-level */
 #define sp_define_event(name, _prepare, duration) sp_event_t name = { .prepare = _prepare, .start = 0, .end = duration, .config = 0, .memory = { 0 } }
@@ -37,10 +36,6 @@
 #define sp_noise_event(event_pointer, _config) \
   event_pointer->prepare = sp_noise_event_prepare; \
   event_pointer->generate = sp_noise_event_generate; \
-  event_pointer->config = _config
-#define sp_cheap_noise_event(event_pointer, _config) \
-  event_pointer->prepare = sp_cheap_noise_event_prepare; \
-  event_pointer->generate = sp_cheap_noise_event_generate; \
   event_pointer->config = _config
 #define sp_map_event(event_pointer, _config) \
   event_pointer->prepare = sp_map_event_prepare; \
@@ -195,7 +190,6 @@ typedef struct {
   sp_sample_t* amod;
   sp_channel_count_t channel;
   sp_convolution_filter_state_t* filter_state;
-  sp_bool_t is_reject;
   sp_frq_t frq;
   sp_time_t* fmod;
   sp_frq_t wdt;
@@ -205,38 +199,14 @@ typedef struct {
   sp_bool_t use;
 } sp_noise_event_channel_config_t;
 typedef struct {
+  sp_bool_t is_reject;
   sp_random_state_t random_state;
   sp_time_t resolution;
   sp_sample_t* temp[3];
   sp_channel_count_t channel_count;
   sp_noise_event_channel_config_t channel_config[sp_channel_count_limit];
 } sp_noise_event_config_t;
-typedef struct {
-  sp_sample_t amp;
-  sp_sample_t* amod;
-  sp_channel_count_t channel;
-  sp_cheap_filter_state_t* filter_state;
-  sp_bool_t is_reject;
-  sp_frq_t frq;
-  sp_time_t* fmod;
-  sp_frq_t wdt;
-  sp_time_t* wmod;
-  sp_bool_t use;
-} sp_cheap_noise_event_channel_config_t;
-typedef struct {
-  uint8_t passes;
-  sp_random_state_t random_state;
-  sp_time_t resolution;
-  sp_sample_t* temp[3];
-  sp_channel_count_t channel_count;
-  sp_cheap_noise_event_channel_config_t channel_config[sp_channel_count_limit];
-} sp_cheap_noise_event_config_t;
 sp_event_t sp_event_null = { 0 };
-sp_cheap_noise_event_config_t sp_cheap_noise_event_config_defaults();
-status_t sp_cheap_noise_event_config_new_n(sp_time_t count, sp_cheap_noise_event_config_t** out);
-void sp_cheap_noise_event_free();
-status_t sp_cheap_noise_event_generate(sp_time_t start, sp_time_t end, sp_block_t out, sp_event_t* event);
-status_t sp_cheap_noise_event_prepare(sp_event_t* event);
 status_t sp_event_list_add(sp_event_list_t** a, sp_event_t event);
 void sp_event_list_display(sp_event_list_t* a);
 void sp_event_list_free(sp_event_list_t** events);

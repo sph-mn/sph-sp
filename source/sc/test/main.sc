@@ -8,7 +8,8 @@
   (if status-is-success (printf "--\ntests finished successfully.\n")
     (printf "\ntests failed. %d %s\n" status.id (sp-status-description status)))
   (feq a b) (sp-sample-nearly-equal a b 0.01)
-  _sp-rate 960)
+  _sp-rate 960
+  sp-seq-event-count 2)
 
 (sc-comment "previous segfault when noise-event duration was unequal sp-rate")
 (pre-define test-noise-duration (+ _sp-rate 20))
@@ -390,50 +391,6 @@
     (>= 1.0 (sp-samples-absolute-max (array-get out.samples 0) test-noise-duration)))
   (sp-block-free &out)
   (label exit (if status-is-failure error-memory-free) status-return))
-
-(define (test-sp-cheap-filter) status-t
-  status-declare
-  (declare
-    state sp-cheap-filter-state-t*
-    out (array sp-sample-t test-noise-duration)
-    in (array sp-sample-t test-noise-duration)
-    rs sp-random-state-t)
-  (set rs (sp-random-state-new 80))
-  (sp-samples-random-primitive &rs test-noise-duration in)
-  (status-require
-    (sp-cheap-filter-state-new test-noise-duration sp-filter-passes-limit &state))
-  (sp-cheap-filter-lp in test-noise-duration 0.2 1 0 state out)
-  (sp-cheap-filter-lp in test-noise-duration 0.2 sp-filter-passes-limit 0 state out)
-  (sp-cheap-filter-lp in test-noise-duration 0.2 sp-filter-passes-limit 0 state out)
-  (sp-cheap-filter-state-free state)
-  (label exit status-return))
-
-(define (test-sp-cheap-noise-event) status-t
-  status-declare
-  (declare
-    out sp-block-t
-    fmod (array sp-time-t test-noise-duration)
-    amod (array sp-sample-t test-noise-duration)
-    c sp-cheap-noise-event-config-t*)
-  (sp-declare-event event)
-  (error-memory-init 2)
-  (status-require (sp-cheap-noise-event-config-new &c))
-  (error-memory-add c)
-  (status-require (sp-block-new 2 test-noise-duration &out))
-  (error-memory-add2 &out sp-block-free)
-  (sp-for-each-index i test-noise-duration (set (array-get fmod i) 0.08 (array-get amod i) 0.8))
-  (struct-pointer-set c channel-count 2)
-  (struct-pointer-set c:channel-config amp 1 amod amod fmod fmod wdt 4800)
-  (set event.end test-noise-duration)
-  (sp-cheap-noise-event &event c)
-  (sp-event-prepare-srq event)
-  (status-require (event.generate 0 test-noise-duration out &event))
-  (test-helper-assert "in range -0.8..0.8"
-    (>= 0.8 (sp-samples-absolute-max (array-get out.samples 0) test-noise-duration)))
-  (sp-block-free &out)
-  (label exit (if status-is-failure error-memory-free) status-return))
-
-(pre-define sp-seq-event-count 2)
 
 (define (test-sp-seq) status-t
   status-declare
@@ -846,7 +803,6 @@
   "\"goto exit\" can skip events"
   status-declare
   (sp-initialize 3 2 _sp-rate)
-  (test-helper-test-one test-sp-cheap-noise-event)
   (test-helper-test-one test-path)
   (test-helper-test-one test-moving-average)
   (test-helper-test-one test-statistics)
@@ -855,7 +811,6 @@
   (test-helper-test-one test-convolve-smaller)
   (test-helper-test-one test-convolve-larger)
   (test-helper-test-one test-base)
-  (test-helper-test-one test-sp-cheap-filter)
   (test-helper-test-one test-sp-random)
   (test-helper-test-one test-sp-triangle-square)
   (test-helper-test-one test-fft)
