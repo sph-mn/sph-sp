@@ -34,7 +34,8 @@
   (sp-for-each-index i cudist-size (if (< deviate (array-get cudist i)) (return i)))
   (return cudist-size))
 
-(define (sp-time-random-custom cudist cudist-size range) (sp-time-t sp-time-t* sp-time-t sp-time-t)
+(define (sp-time-random-discrete-bounded cudist cudist-size range)
+  (sp-time-t sp-time-t* sp-time-t sp-time-t)
   "get a random number in range with a custom probability distribution given by cudist,
    the cumulative sums of the distribution. the resulting number resolution is proportional to cudist-size"
   (sc-comment "cudist-size minus one because range end is exclusive")
@@ -394,7 +395,7 @@
   (for ((define i sp-size-t 1) (< i count) (set+ i 1))
     (set (array-get out (- i 1)) (- (array-get a i) (array-get a (- i 1))))))
 
-(define (sp-sample-random-custom cudist cudist-size range)
+(define (sp-sample-random-discrete-bounded cudist cudist-size range)
   (sp-sample-t sp-time-t* sp-time-t sp-sample-t)
   (return
     (* range
@@ -434,7 +435,7 @@
       (set (array-get out i) (if* (< limit value) limit value)))))
 
 (define (sp-samples-limit in-out count limit) (void sp-sample-t* sp-time-t sp-sample-t)
- (sp-for-each-index i count (if (< limit (array-get in-out i)) (set (array-get in-out i) limit))))
+  (sp-for-each-index i count (if (< limit (array-get in-out i)) (set (array-get in-out i) limit))))
 
 (sc-comment "other")
 

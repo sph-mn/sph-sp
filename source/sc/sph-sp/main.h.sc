@@ -58,6 +58,8 @@
   (sp-hz->samples x) (/ sp-rate x)
   (sp-samples->hz x) (convert-type (/ sp-rate x) sp-time-t)
   (sp-hz->factor x) (/ (convert-type x sp-sample-t) (convert-type sp-rate sp-sample-t))
+  (sp-hz->rad a) (* 2 M_PI a)
+  (sp-rad->hz a) (* (/ M_PI 2) a)
   (sp-factor->hz x) (convert-type (* x sp-rate) sp-time-t)
   (sp-optional-array-get array fixed index) (if* array (array-get array index) fixed)
   (sp-sample->unit a) (/ (+ 1 a) 2.0)

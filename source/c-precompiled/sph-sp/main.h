@@ -63,6 +63,8 @@
 #define sp_hz_to_samples(x) (sp_rate / x)
 #define sp_samples_to_hz(x) ((sp_time_t)((sp_rate / x)))
 #define sp_hz_to_factor(x) (((sp_sample_t)(x)) / ((sp_sample_t)(sp_rate)))
+#define sp_hz_to_rad(a) (2 * M_PI * a)
+#define sp_rad_to_hz(a) ((M_PI / 2) * a)
 #define sp_factor_to_hz(x) ((sp_time_t)((x * sp_rate)))
 #define sp_optional_array_get(array, fixed, index) (array ? array[index] : fixed)
 #define sp_sample_to_unit(a) ((1 + a) / 2.0)

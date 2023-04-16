@@ -2,7 +2,7 @@
 #define sp_group_prepare_parallel sp_group_prepare
 #define sp_seq_events_prepare sp_event_list_reverse
 #define sp_default_resolution ((sp_rate < 10000) ? sp_rate : (sp_rate / 1000))
-#define sp_event_reset(x) x = sp_event_null
+#define sp_event_reset(x) x = sp_null_event
 #define sp_declare_event(id) \
   sp_event_t id = { 0 }; \
   id.memory.data = 0
@@ -206,7 +206,7 @@ typedef struct {
   sp_channel_count_t channel_count;
   sp_noise_event_channel_config_t channel_config[sp_channel_count_limit];
 } sp_noise_event_config_t;
-sp_event_t sp_event_null = { 0 };
+sp_event_t sp_null_event = { 0 };
 status_t sp_event_list_add(sp_event_list_t** a, sp_event_t event);
 void sp_event_list_display(sp_event_list_t* a);
 void sp_event_list_free(sp_event_list_t** events);

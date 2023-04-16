@@ -2,7 +2,7 @@
   sp-group-prepare-parallel sp-group-prepare
   sp-seq-events-prepare sp-event-list-reverse
   sp-default-resolution (if* (< sp-rate 10000) sp-rate (/ sp-rate 1000))
-  (sp-event-reset x) (set x sp-event-null)
+  (sp-event-reset x) (set x sp-null-event)
   (sp-declare-event id) (begin (define id sp-event-t (struct-literal 0)) (set id.memory.data 0))
   (sp-declare-event-list id) (define id sp-event-list-t* 0)
   (sp-event-duration a) (- a.end a.start)
@@ -250,7 +250,7 @@
       (channel-count sp-channel-count-t)
       (channel-config (array sp-noise-event-channel-config-t sp-channel-count-limit)))))
 
-(define sp-event-null sp-event-t (struct-literal 0))
+(define sp-null-event sp-event-t (struct-literal 0))
 
 (declare
   (sp-event-list-add a event) (status-t sp-event-list-t** sp-event-t)

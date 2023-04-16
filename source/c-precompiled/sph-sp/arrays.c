@@ -55,7 +55,7 @@ sp_time_t sp_time_random_discrete(sp_time_t* cudist, sp_time_t cudist_size) {
 
 /** get a random number in range with a custom probability distribution given by cudist,
    the cumulative sums of the distribution. the resulting number resolution is proportional to cudist-size */
-sp_time_t sp_time_random_custom(sp_time_t* cudist, sp_time_t cudist_size, sp_time_t range) {
+sp_time_t sp_time_random_discrete_bounded(sp_time_t* cudist, sp_time_t cudist_size, sp_time_t range) {
   /* cudist-size minus one because range end is exclusive */
   return ((sp_cheap_round_positive((range * (sp_time_random_discrete(cudist, cudist_size) / ((sp_sample_t)((cudist_size - 1))))))));
 }
@@ -542,7 +542,7 @@ void sp_samples_differences(sp_sample_t* a, sp_time_t count, sp_sample_t* out) {
     out[(i - 1)] = (a[i] - a[(i - 1)]);
   };
 }
-sp_sample_t sp_sample_random_custom(sp_time_t* cudist, sp_time_t cudist_size, sp_sample_t range) { return ((range * (sp_time_random_discrete(cudist, cudist_size) / ((sp_sample_t)(cudist_size))))); }
+sp_sample_t sp_sample_random_discrete_bounded(sp_time_t* cudist, sp_time_t cudist_size, sp_sample_t range) { return ((range * (sp_time_random_discrete(cudist, cudist_size) / ((sp_sample_t)(cudist_size))))); }
 void sp_samples_divisions(sp_sample_t start, sp_sample_t divisor, sp_time_t count, sp_sample_t* out) {
   for (sp_size_t i = 0; (i < count); i += 1) {
     out[i] = start;

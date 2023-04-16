@@ -114,6 +114,7 @@ sp_render_range_block :: sp_event_t:event sp_time_t:start sp_time_t:end sp_rende
 sp_render_range_file :: sp_event_t:event sp_time_t:start sp_time_t:end sp_render_config_t:config uint8_t*:path -> status_t
 sp_sample_max :: sp_sample_t:a sp_sample_t:b -> sp_sample_t
 sp_sample_min :: sp_sample_t:a sp_sample_t:b -> sp_sample_t
+sp_sample_random_discrete_bounded :: sp_time_t*:cudist sp_time_t:cudist_size sp_sample_t:range -> sp_sample_t
 sp_samples_to_times :: sp_sample_t*:in sp_size_t:count sp_time_t*:out -> void
 sp_samples_to_times_replace :: sp_sample_t*:in sp_size_t:count sp_time_t**:out -> status_t
 sp_samples_to_units :: sp_sample_t*:in_out sp_size_t:count -> void
@@ -168,8 +169,8 @@ sp_time_harmonize :: sp_time_t:a sp_time_t:base sp_sample_t:amount -> sp_time_t
 sp_time_harmonize :: sp_time_t:a sp_time_t:base sp_sample_t:amount -> sp_time_t
 sp_time_max :: sp_time_t:a sp_time_t:b -> sp_time_t
 sp_time_min :: sp_time_t:a sp_time_t:b -> sp_time_t
-sp_time_random_custom :: sp_time_t*:cudist sp_time_t:cudist_size sp_time_t:range -> sp_time_t
 sp_time_random_discrete :: sp_time_t*:cudist sp_time_t:cudist_size -> sp_time_t
+sp_time_random_discrete_bounded :: sp_time_t*:cudist sp_time_t:cudist_size sp_time_t:range -> sp_time_t
 sp_time_sum :: sp_time_t*:in sp_time_t:size -> sp_time_t
 sp_times_to_samples :: sp_time_t*:in sp_size_t:count sp_sample_t*:out -> void
 sp_times_to_samples_replace :: sp_time_t*:in sp_size_t:count sp_sample_t**:out -> status_t
@@ -307,6 +308,7 @@ sp_group_event_list(event)
 sp_group_parallel_event(event_pointer)
 sp_group_prepare_parallel
 sp_hz_to_factor(x)
+sp_hz_to_rad(a)
 sp_hz_to_samples(x)
 sp_inline_abs(a)
 sp_inline_absolute_difference(a, b)
@@ -333,6 +335,7 @@ sp_noise_event_config_new(out)
 sp_optional_array_get(array, fixed, index)
 sp_path_point_count_limit
 sp_path_point_count_t
+sp_rad_to_hz(a)
 sp_random_seed
 sp_random_state_t
 sp_rate_duration(n, d)
@@ -406,7 +409,7 @@ srq
 # variables
 ~~~
 sp_channel_count_t sp_channel_count
-sp_event_t sp_event_null
+sp_event_t sp_null_event
 sp_random_state_t sp_random_state
 sp_sample_t* sp_sine_table
 sp_sample_t* sp_sine_table_lfo
