@@ -170,5 +170,6 @@ sp_time_t sp_time_harmonize(sp_time_t a, sp_time_t base, sp_sample_t amount);
 sp_time_t sp_time_deharmonize(sp_time_t a, sp_time_t base, sp_sample_t amount);
 size_t sp_modulo_match(size_t index, size_t* divisors, size_t divisor_count);
 sp_time_t sp_time_expt(sp_time_t base, sp_time_t exp);
-sp_time_t sp_permutations_max(sp_time_t set_size, sp_time_t selection_size);
-sp_time_t sp_compositions_max(sp_time_t sum);
+sp_size_t sp_permutations_max(sp_size_t set_size, sp_size_t selection_size);
+sp_size_t sp_compositions_max(sp_size_t sum);
+sp_size_t sp_set_sequence_max(sp_size_t set_size, sp_size_t selection_size);

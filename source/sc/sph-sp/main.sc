@@ -423,11 +423,11 @@
   (while (> n 0) (set* result n) (set- n 1))
   (return result))
 
-(define (sp-set-sequence-max set-size selection-size) (sp-time-t sp-time-t sp-time-t)
-  "return the maximum number of possible distinct selections from a set with length \"set-size\""
+(define (sp-set-sequence-max set-size selection-size) (sp-size-t sp-size-t sp-size-t)
+  "return the maximum number of possible distinct selections from a set of length \"set-size\""
   (return (if* (= 0 set-size) 0 (sp-time-expt set-size selection-size))))
 
-(define (sp-permutations-max set-size selection-size) (sp-time-t sp-time-t sp-time-t)
+(define (sp-permutations-max set-size selection-size) (sp-size-t sp-size-t sp-size-t)
   (return (/ (sp-time-factorial set-size) (- set-size selection-size))))
 
-(define (sp-compositions-max sum) (sp-time-t sp-time-t) (return (sp-time-expt 2 (- sum 1))))
+(define (sp-compositions-max sum) (sp-size-t sp-size-t) (return (sp-time-expt 2 (- sum 1))))

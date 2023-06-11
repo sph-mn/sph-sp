@@ -21,11 +21,14 @@
 (define (sp-times-random-discrete cudist cudist-size count out)
   (void sp-time-t* sp-time-t sp-time-t sp-time-t*)
   "generate random integers in the range 0..(cudist-size - 1)
-   with probability distribution given via cudist, the cumulative sums of the distribution"
+   with probability distribution given via cudist, the cumulative sums of the distribution.
+   generates a random number in rango 0..cudist-sum"
   (declare deviate sp-time-t sum sp-time-t)
   (set sum (array-get cudist (- cudist-size 1)))
   (sp-for-each-index i count
+    (printf "i %lu %lu\n" i sum)
     (set deviate (sp-time-random-bounded sum))
+    (printf "got deviate")
     (sp-for-each-index i1 cudist-size
       (if (< deviate (array-get cudist i1)) (begin (set (array-get out i) i1) break)))))
 
@@ -233,12 +236,7 @@
 
 (define (sp-times-random-discrete-unique cudist cudist-size size out)
   (void sp-time-t* sp-time-t sp-time-t sp-time-t*)
-  "create size number of discrete random numbers corresponding to the distribution given by cudist
-   without duplicates. cudist-size must be equal to a-size.
-   a/out should not be the same pointer. out is managed by the caller.
-   size is the requested size of generated output values and should be smaller than a-size.
-   size must not be greater than the maximum possible count of unique discrete random values
-   (non-null values in the probability distribution)"
+  "create size number of unique discrete random numbers with the distribution given by cudist"
   (declare a sp-time-t remaining sp-time-t)
   (set remaining (sp-inline-min size cudist-size))
   (while remaining
@@ -247,12 +245,13 @@
     (set (array-get out (- size remaining)) a)
     (set- remaining 1)))
 
-(define (sp-times-sequences base digits size out) (void sp-time-t sp-time-t sp-time-t sp-time-t*)
-  "out-size must be at least digits * size or base ** digits.
-   starts from out + 0. first generated element will be in out + digits.
-   out size will contain the sequences appended"
+(define (sp-times-sequences base digits set-size out)
+  (void sp-time-t sp-time-t sp-time-t sp-time-t*)
+  "append a series of incremented sequences to out, starting with and not modifying the first element in out.
+   out size must be at least digits * set-size or base ** digits.
+   starts with sequence at out + 0. first generated element will be in out + digits"
   (declare i sp-time-t)
-  (for ((set i digits) (< i (* digits size)) (set+ i digits))
+  (for ((set i digits) (< i (* digits set-size)) (set+ i digits))
     (memcpy (+ out i) (+ out (- i digits)) (* digits (sizeof sp-time-t)))
     (sp-times-sequence-increment (+ out i) digits base)))
 

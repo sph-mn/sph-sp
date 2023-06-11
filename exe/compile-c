@@ -6,7 +6,7 @@ c=source/c
 c_sc=source/c-precompiled
 root="$PWD"
 warnings="-Wunused-label -Wunused-value -Wunused-variable"
-gcc_options="-funsigned-char -std=c17 -Wfatal-errors -Wno-pointer-sign $warnings -I$c/foreign -I$c/foreign/sph-sc-lib -I$c_sc -lm"
+gcc_options="-funsigned-char -std=c17 -Wfatal-errors -Wno-pointer-sign $warnings -I$c/foreign -I$c/foreign/sph-sc-lib -I$c_sc -fno-math-errno -lm"
 
 debug_preprocess_sph_sp() {
   target="$target_dir/sph-sp.c"

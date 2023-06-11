@@ -193,7 +193,7 @@
       (config void*)
       (memory sp-memory-t)))
   sp-event-generate-t (type (function-pointer status-t sp-time-t sp-time-t sp-block-t sp-event-t*))
-  sp-event-prepare-t (function-pointer status-t sp-event-t*)
+  sp-event-prepare-t (type (function-pointer status-t sp-event-t*))
   sp-map-generate-t
   (type (function-pointer status-t sp-time-t sp-time-t sp-block-t sp-block-t void*))
   sp-event-list-t

@@ -180,5 +180,6 @@
   (sp-time-deharmonize a base amount) (sp-time-t sp-time-t sp-time-t sp-sample-t)
   (sp-modulo-match index divisors divisor-count) (size-t size-t size-t* size-t)
   (sp-time-expt base exp) (sp-time-t sp-time-t sp-time-t)
-  (sp-permutations-max set-size selection-size) (sp-time-t sp-time-t sp-time-t)
-  (sp-compositions-max sum) (sp-time-t sp-time-t))
+  (sp-permutations-max set-size selection-size) (sp-size-t sp-size-t sp-size-t)
+  (sp-compositions-max sum) (sp-size-t sp-size-t)
+  (sp-set-sequence-max set-size selection-size) (sp-size-t sp-size-t sp-size-t))

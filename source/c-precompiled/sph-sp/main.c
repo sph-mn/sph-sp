@@ -547,7 +547,7 @@ sp_time_t sp_time_factorial(sp_time_t n) {
   return (result);
 }
 
-/** return the maximum number of possible distinct selections from a set with length "set-size" */
-sp_time_t sp_set_sequence_max(sp_time_t set_size, sp_time_t selection_size) { return (((0 == set_size) ? 0 : sp_time_expt(set_size, selection_size))); }
-sp_time_t sp_permutations_max(sp_time_t set_size, sp_time_t selection_size) { return ((sp_time_factorial(set_size) / (set_size - selection_size))); }
-sp_time_t sp_compositions_max(sp_time_t sum) { return ((sp_time_expt(2, (sum - 1)))); }
+/** return the maximum number of possible distinct selections from a set of length "set-size" */
+sp_size_t sp_set_sequence_max(sp_size_t set_size, sp_size_t selection_size) { return (((0 == set_size) ? 0 : sp_time_expt(set_size, selection_size))); }
+sp_size_t sp_permutations_max(sp_size_t set_size, sp_size_t selection_size) { return ((sp_time_factorial(set_size) / (set_size - selection_size))); }
+sp_size_t sp_compositions_max(sp_size_t sum) { return ((sp_time_expt(2, (sum - 1)))); }

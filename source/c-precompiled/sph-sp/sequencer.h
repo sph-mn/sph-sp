@@ -155,7 +155,7 @@ typedef struct sp_event_t {
   sp_memory_t memory;
 } sp_event_t;
 typedef status_t (*sp_event_generate_t)(sp_time_t, sp_time_t, sp_block_t, sp_event_t*);
-status_t (*sp_event_prepare_t)(sp_event_t*);
+typedef status_t (*sp_event_prepare_t)(sp_event_t*);
 typedef status_t (*sp_map_generate_t)(sp_time_t, sp_time_t, sp_block_t, sp_block_t, void*);
 typedef struct sp_event_list_struct {
   struct sp_event_list_struct* previous;

@@ -28,13 +28,16 @@ void sp_times_display(sp_time_t* in, sp_size_t count) {
 }
 
 /** generate random integers in the range 0..(cudist-size - 1)
-   with probability distribution given via cudist, the cumulative sums of the distribution */
+   with probability distribution given via cudist, the cumulative sums of the distribution.
+   generates a random number in rango 0..cudist-sum */
 void sp_times_random_discrete(sp_time_t* cudist, sp_time_t cudist_size, sp_time_t count, sp_time_t* out) {
   sp_time_t deviate;
   sp_time_t sum;
   sum = cudist[(cudist_size - 1)];
   for (sp_size_t i = 0; (i < count); i += 1) {
+    printf("i %lu %lu\n", i, sum);
     deviate = sp_time_random_bounded(sum);
+    printf("got deviate");
     for (sp_size_t i1 = 0; (i1 < cudist_size); i1 += 1) {
       if (deviate < cudist[i1]) {
         out[i] = i1;
@@ -329,12 +332,7 @@ uint8_t sp_times_contains(sp_time_t* in, sp_size_t count, sp_time_t value) {
   return (0);
 }
 
-/** create size number of discrete random numbers corresponding to the distribution given by cudist
-   without duplicates. cudist-size must be equal to a-size.
-   a/out should not be the same pointer. out is managed by the caller.
-   size is the requested size of generated output values and should be smaller than a-size.
-   size must not be greater than the maximum possible count of unique discrete random values
-   (non-null values in the probability distribution) */
+/** create size number of unique discrete random numbers with the distribution given by cudist */
 void sp_times_random_discrete_unique(sp_time_t* cudist, sp_time_t cudist_size, sp_time_t size, sp_time_t* out) {
   sp_time_t a;
   sp_time_t remaining;
@@ -349,12 +347,12 @@ void sp_times_random_discrete_unique(sp_time_t* cudist, sp_time_t cudist_size, s
   };
 }
 
-/** out-size must be at least digits * size or base ** digits.
-   starts from out + 0. first generated element will be in out + digits.
-   out size will contain the sequences appended */
-void sp_times_sequences(sp_time_t base, sp_time_t digits, sp_time_t size, sp_time_t* out) {
+/** append a series of incremented sequences to out, starting with and not modifying the first element in out.
+   out size must be at least digits * set-size or base ** digits.
+   starts with sequence at out + 0. first generated element will be in out + digits */
+void sp_times_sequences(sp_time_t base, sp_time_t digits, sp_time_t set_size, sp_time_t* out) {
   sp_time_t i;
-  for (i = digits; (i < (digits * size)); i += digits) {
+  for (i = digits; (i < (digits * set_size)); i += digits) {
     memcpy((out + i), (out + (i - digits)), (digits * sizeof(sp_time_t)));
     sp_times_sequence_increment((out + i), digits, base);
   };
