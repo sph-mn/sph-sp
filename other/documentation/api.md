@@ -6,7 +6,7 @@ sp_block_free :: sp_block_t*:a -> void
 sp_block_new :: sp_channel_count_t:channel_count sp_time_t:sample_count sp_block_t*:out_block -> status_t
 sp_block_with_offset :: sp_block_t:a sp_time_t:offset -> sp_block_t
 sp_block_zero :: sp_block_t:a -> void
-sp_compositions_max :: sp_time_t:sum -> sp_time_t
+sp_compositions_max :: sp_size_t:sum -> sp_size_t
 sp_compositions_max :: sp_time_t:sum -> sp_time_t
 sp_convolution_filter :: sp_sample_t*:in sp_time_t:in_len sp_convolution_filter_ir_f_t:ir_f void*:ir_f_arguments uint8_t:ir_f_arguments_len sp_convolution_filter_state_t**:out_state sp_sample_t*:out_samples -> status_t
 sp_convolution_filter_state_free :: sp_convolution_filter_state_t*:state -> void
@@ -94,7 +94,7 @@ sp_path_times2 :: sp_time_t**:out sp_time_t:length sp_sample_t:y1 sp_sample_t:y2
 sp_path_times3 :: sp_time_t**:out sp_time_t:length sp_sample_t:x1 sp_sample_t:y1 sp_sample_t:y2 sp_sample_t:y3 -> status_t
 sp_path_times4 :: sp_time_t**:out sp_time_t:length sp_sample_t:x1 sp_sample_t:x2 sp_sample_t:y1 sp_sample_t:y2 sp_sample_t:y3 sp_sample_t:y4 -> status_t
 sp_path_times5 :: sp_time_t**:out sp_time_t:length sp_sample_t:x1 sp_sample_t:x2 sp_sample_t:x3 sp_sample_t:y1 sp_sample_t:y2 sp_sample_t:y3 sp_sample_t:y4 sp_sample_t:y5 -> status_t
-sp_permutations_max :: sp_time_t:set_size sp_time_t:selection_size -> sp_time_t
+sp_permutations_max :: sp_size_t:set_size sp_size_t:selection_size -> sp_size_t
 sp_permutations_max :: sp_time_t:set_size sp_time_t:selection_size -> sp_time_t
 sp_phase :: sp_time_t:current sp_time_t:change sp_time_t:cycle -> sp_time_t
 sp_phase_float :: sp_time_t:current double:change sp_time_t:cycle -> sp_time_t
@@ -131,6 +131,7 @@ sp_samples_set_unity_gain :: sp_sample_t*:in_out sp_sample_t*:reference sp_size_
 sp_seq :: sp_time_t:start sp_time_t:end sp_block_t:out sp_event_list_t**:events -> status_t
 sp_seq_parallel :: sp_time_t:start sp_time_t:end sp_block_t:out sp_event_list_t**:events -> status_t
 sp_sequence_max :: sp_time_t:size sp_time_t:min_size -> sp_time_t
+sp_set_sequence_max :: sp_size_t:set_size sp_size_t:selection_size -> sp_size_t
 sp_set_sequence_max :: sp_time_t:set_size sp_time_t:selection_size -> sp_time_t
 sp_shuffle :: function_pointer void void* sp_size_t sp_size_t:swap void*:in sp_size_t:count -> void
 sp_sinc :: sp_sample_t:a -> sp_sample_t
@@ -415,7 +416,6 @@ sp_sample_t* sp_sine_table
 sp_sample_t* sp_sine_table_lfo
 sp_time_t sp_rate
 sp_time_t sp_sine_lfo_factor
-status_t(*)(sp_event_t*) sp_event_prepare_t
 uint32_t sp_cpu_count
 ~~~
 
@@ -424,6 +424,7 @@ uint32_t sp_cpu_count
 sp_convolution_filter_ir_f_t: void* sp_sample_t** sp_time_t* -> status_t
 sp_event_block_generate_t: sp_time_t sp_time_t sp_time_t sp_block_t sp_event_t* -> status_t
 sp_event_generate_t: sp_time_t sp_time_t sp_block_t sp_event_t* -> status_t
+sp_event_prepare_t: sp_event_t* -> status_t
 sp_map_generate_t: sp_time_t sp_time_t sp_block_t sp_block_t void* -> status_t
 sp_memory_free_t: void* -> void
 sp_stat_samples_f_t: sp_sample_t* sp_time_t sp_sample_t* -> uint8_t

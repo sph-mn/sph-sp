@@ -11,7 +11,7 @@ status_t simple_event_plot() {
   status_declare;
   sp_sample_t* amod;
   sp_time_t duration = _sp_rate;
-  sp_event_t event = sp_event_null;
+  sp_event_t event = sp_null_event;
   /* allocate array for loudness over time */
   srq((sp_samples_new(duration, (&amod))));
   sp_samples_set(amod, duration, 1);

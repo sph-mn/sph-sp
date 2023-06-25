@@ -35,9 +35,7 @@ void sp_times_random_discrete(sp_time_t* cudist, sp_time_t cudist_size, sp_time_
   sp_time_t sum;
   sum = cudist[(cudist_size - 1)];
   for (sp_size_t i = 0; (i < count); i += 1) {
-    printf("i %lu %lu\n", i, sum);
     deviate = sp_time_random_bounded(sum);
-    printf("got deviate");
     for (sp_size_t i1 = 0; (i1 < cudist_size); i1 += 1) {
       if (deviate < cudist[i1]) {
         out[i] = i1;

@@ -26,9 +26,7 @@
   (declare deviate sp-time-t sum sp-time-t)
   (set sum (array-get cudist (- cudist-size 1)))
   (sp-for-each-index i count
-    (printf "i %lu %lu\n" i sum)
     (set deviate (sp-time-random-bounded sum))
-    (printf "got deviate")
     (sp-for-each-index i1 cudist-size
       (if (< deviate (array-get cudist i1)) (begin (set (array-get out i) i1) break)))))
 
@@ -314,9 +312,11 @@
 (define (sp-times-remove in size index count out)
   (void sp-time-t* sp-time-t sp-time-t sp-time-t sp-time-t*)
   "remove count subsequent elements at index from in and write the result to out"
-  (cond ((= 0 index) (memcpy out (+ in count) (* (- size count) (sizeof sp-time-t))))
+  (cond
+    ((= 0 index) (memcpy out (+ in count) (* (- size count) (sizeof sp-time-t))))
     ((= (- size 1) index) (memcpy out in (* (- size count) (sizeof sp-time-t))))
-    (else (memcpy out in (* index (sizeof sp-time-t)))
+    (else
+      (memcpy out in (* index (sizeof sp-time-t)))
       (memcpy (+ out index) (+ in index count) (* (- size index count) (sizeof sp-time-t))))))
 
 (define (sp-times-insert-space in size index count out)

@@ -12,7 +12,7 @@
    plots the samples of a 10hz sine wave"
   status-declare
   (declare amod sp-sample-t*)
-  (define duration sp-time-t _sp-rate event sp-event-t sp-event-null)
+  (define duration sp-time-t _sp-rate event sp-event-t sp-null-event)
   (sc-comment "allocate array for loudness over time")
   (srq (sp-samples-new duration &amod))
   (sp-samples-set amod duration 1)
