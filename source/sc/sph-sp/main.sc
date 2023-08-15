@@ -300,7 +300,6 @@
    uses channel count from global variable sp_channel_count and block size sp_rate"
   status-declare
   (declare block sp-block-t)
-  (printf "event.end\n" event.end)
   (if (not event.end) (sp-event-prepare-optional-srq event))
   (if (and event.end (< event.end sp-rate))
     (printf "rendering %lu milliseconds to plot\n" (/ event.end sp-rate 1000))

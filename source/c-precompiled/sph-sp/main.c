@@ -393,7 +393,6 @@ exit:
 status_t sp_render_plot(sp_event_t event) {
   status_declare;
   sp_block_t block;
-  printf(("event.end\n"), (event.end));
   if (!event.end) {
     sp_event_prepare_optional_srq(event);
   };

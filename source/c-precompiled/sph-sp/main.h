@@ -68,6 +68,8 @@
 #define sp_factor_to_hz(x) ((sp_time_t)((x * sp_rate)))
 #define sp_optional_array_get(array, fixed, index) (array ? array[index] : fixed)
 #define sp_sample_to_unit(a) ((1 + a) / 2.0)
+
+/** hangs if sp is not initialized */
 #define sp_time_random() sp_time_random_primitive((&sp_random_state))
 #define sp_times_random(size, out) sp_times_random_primitive((&sp_random_state), size, out)
 #define sp_samples_random(size, out) sp_samples_random_primitive((&sp_random_state), size, out)
