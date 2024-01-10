@@ -37,7 +37,7 @@ typedef struct {
 status_t s1_prepare(sp_event_t* _event) {
   status_declare;
   sp_time_t _duration = (_event->end - _event->start);
-  /* defines a global event variable (s1-event, sound-1) using an additionally defined event-prepare function with the following content. */
+  /* defines a global event variable (s1-event, sound-1) and additionally an event-prepare function with the following content. */
 
   /* custom configuration passed via the event object */
   s1_c_t c = *((s1_c_t*)(_event->config));

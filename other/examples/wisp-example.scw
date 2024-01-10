@@ -1,0 +1,35 @@
+; sc can also be written using wisp syntax.
+; the sc compiler automatically supports files with the .scw suffix if the wisp guile libraries are installed.
+; this example is only for showing the syntax. it does not run as it misses a wrapping main function with sp_initialize as well as the experimental sp_event_schedule
+
+sp-declare-struct-type n1c-t
+  amp sp-sample-t
+
+sp-define-event* n1
+  declare c n1c-t nc sp-noise-event-config-t* amod sp-sample-t*
+  set c : sp-event-config-get *_event n1c-t
+  srq : sp-noise-event-config-new &nc
+  srq : sp-event-memory-add _event nc
+  sp-event-envelope-zero3-srq _event &amod _duration 0.1 c.amp
+  struct-pointer-set nc:channel-config amod amod frq 300
+  sp-noise-event _event nc
+
+sp-define-group* i1
+  declare n1c n1c-t*
+  sp-event-malloc-type-srq _event n1c-t &n1c
+  set n1c:amp 1
+  srq : sp-group-add _event : sp-event-schedule n1-event 0 (spd 1 6) n1c
+
+sp-define-group* t1
+  declare meter sp-time-t duration sp-time-t count sp-time-t i1c i1c-t*
+  set
+    . count 1
+    . meter : / _duration count
+    . duration meter
+  sp-for-each-index i count
+    srq
+      sp-group-add _event
+        sp-event-schedule i1-event (* i meter) duration 0
+
+define (design) status-t
+  return : sp-render-plot : sp-event-schedule t1-event (spd 1 2) (spd 8 1) 0

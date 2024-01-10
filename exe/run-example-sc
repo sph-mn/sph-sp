@@ -1,8 +1,11 @@
 #!/bin/sh -e
 
-sc other/example.sc other/example.c
-./exe/format-c -i other/example.c
+c_target=other/examples/example.c
+target=temp/example
 
-gcc -lsph-sp other/example.c -o temp/example
-chmod +x temp/example
-./temp/example
+sc other/examples/example.sc $c_target
+./exe/format-c -i $c_target
+
+gcc -lsph-sp $c_target -o $target
+chmod +x $target
+./$target

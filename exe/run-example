@@ -1,5 +1,7 @@
 #!/bin/sh -e
 
-gcc -lsph-sp other/example.c -o temp/example
-chmod +x temp/example
-./temp/example
+target=temp/example
+
+gcc -lsph-sp other/examples/example.c -o $target
+chmod +x $target
+./$target
