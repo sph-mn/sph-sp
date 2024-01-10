@@ -76,7 +76,7 @@
   (declare temp sp-event-list-t* current sp-event-list-t*)
   (set current *events)
   (while current (sp-event-free current:event) (set temp current current current:next) (free temp))
-  (set events 0))
+  (set *events 0))
 
 (define (sp-event-memory-add-with-handler a address handler)
   (status-t sp-event-t* void* sp-memory-free-t)
@@ -472,8 +472,9 @@
     filter-states 0
     temp-length (sp-windowed-sinc-lp-hp-ir-length (sp-hz->factor (sp-inline-min cc:trnl cc:trnh)))
     (array-get ir-lengths 0) temp-length)
-  (sc-comment
-    "set channel defaults and collect required size information for the temporary data buffers")
+  (sc-comment "the first channel is always required")
+  (if (not c:channel-config:amod) (sp-status-set-goto sp-s-id-invalid-argument))
+  (sc-comment "set channel defaults and collect size information for temporary buffers")
   (for ((define cci sp-channel-count-t 1) (< cci c:channel-count) (set+ cci 1))
     (set cc (+ c:channel-config cci))
     (if cc:use

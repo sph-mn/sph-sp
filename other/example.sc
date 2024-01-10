@@ -37,7 +37,7 @@
 
 (sp-define-event* s1
   (sc-comment
-    "defines a global event variable (s1-event, sound-1) using an additionally defined event-prepare function with the following content.")
+    "defines a global event variable (s1-event, sound-1) and additionally an event-prepare function with the following content.")
   (sc-comment "custom configuration passed via the event object")
   (define c s1-c-t (pointer-get (convert-type _event:config s1-c-t*)))
   (sc-comment "envelope from an interpolated path")

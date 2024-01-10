@@ -130,8 +130,8 @@ sp_define_path_n(samples, sp_sample_t)
   sp_define_path_n(times, sp_time_t)
 
   /** x, y and c length is point_count minus two.
-     x values will be cumulative (0.1, 0.2) -> 0.3.
-     x values will be multiplied by length */
+     x values will be multiplied by length.
+     x values will be cumulative (0.1, 0.2) -> 0.3 */
   status_t sp_envelope_zero(sp_sample_t** out, sp_time_t length, sp_path_point_count_t point_count, sp_sample_t* x, sp_sample_t* y, sp_sample_t* c) {
   sp_sample_t path_y[sp_path_point_count_limit];
   x[1] *= length;

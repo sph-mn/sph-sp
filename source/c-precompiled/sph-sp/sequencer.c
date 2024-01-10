@@ -131,7 +131,7 @@ void sp_event_list_free(sp_event_list_t** events) {
     current = current->next;
     free(temp);
   };
-  events = 0;
+  *events = 0;
 }
 
 /** event memory addition with automatic array expansion */
@@ -614,7 +614,11 @@ status_t sp_noise_event_prepare(sp_event_t* event) {
   filter_states = 0;
   temp_length = sp_windowed_sinc_lp_hp_ir_length((sp_hz_to_factor((sp_inline_min((cc->trnl), (cc->trnh))))));
   ir_lengths[0] = temp_length;
-  /* set channel defaults and collect required size information for the temporary data buffers */
+  /* the first channel is always required */
+  if (!c->channel_config->amod) {
+    sp_status_set_goto(sp_s_id_invalid_argument);
+  };
+  /* set channel defaults and collect size information for temporary buffers */
   for (sp_channel_count_t cci = 1; (cci < c->channel_count); cci += 1) {
     cc = (c->channel_config + cci);
     if (cc->use) {

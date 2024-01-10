@@ -84,6 +84,8 @@ uint8_t* sp_status_description(status_t a) {
       b = "unsupported format (only 32 bit float supported)";
     } else if (sp_s_id_file_eof == a.id) {
       b = "end of file";
+    } else if (sp_s_id_invalid_argument == a.id) {
+      b = "invalid argument";
     } else {
       b = "";
     };
@@ -113,6 +115,8 @@ uint8_t* sp_status_name(status_t a) {
       b = "not-implemented";
     } else if (sp_s_id_file_eof == a.id) {
       b = "end-of-file";
+    } else if (sp_s_id_invalid_argument == a.id) {
+      b = "invalid-argument";
     } else {
       b = "unknown";
     };

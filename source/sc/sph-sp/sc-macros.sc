@@ -64,9 +64,11 @@
 (sc-define-syntax* (sp-declare-struct-type name-and-fields ...)
   "(declare-struct-type name (field/type ...):fields name/fields ...)"
   (pair (q begin)
-    (map-slice 2
+    (sc-map-associations 2
       (l (name fields)
-        (qq (declare (unquote name) (type (struct (unquote-splicing (map-slice 2 list fields)))))))
+        (qq
+          (declare (unquote name)
+            (type (struct (unquote-splicing (sc-map-associations 2 list fields)))))))
       name-and-fields)))
 
 (sc-define-syntax* (sp-channel-config-set* channel-config-array (channel-index setting ...) ...)

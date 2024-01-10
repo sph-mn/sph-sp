@@ -96,8 +96,8 @@
 (define (sp-envelope-zero out length point-count x y c)
   (status-t sp-sample-t** sp-time-t sp-path-point-count-t sp-sample-t* sp-sample-t* sp-sample-t*)
   "x, y and c length is point_count minus two.
-   x values will be cumulative (0.1, 0.2) -> 0.3.
-   x values will be multiplied by length"
+   x values will be multiplied by length.
+   x values will be cumulative (0.1, 0.2) -> 0.3"
   (declare path-y (array sp-sample-t sp-path-point-count-limit))
   (set* (array-get x 1) length)
   (set (array-get path-y 0) 0 (array-get path-y (- point-count 1)) 0)
