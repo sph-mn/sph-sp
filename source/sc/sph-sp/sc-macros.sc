@@ -33,6 +33,7 @@
           body)))
     (qq
       (sp-define* ((unquote name) _event) sp-event-t*
+        (set _event:prepare 0)
         (unquote-splicing body)
         (sp-event-prepare-optional-srq *_event)))))
 
@@ -48,18 +49,6 @@
       (begin
         (sp-define-event-prepare* (unquote prepare-name) (unquote-splicing body))
         (sp-define-event (unquote variable-name) (unquote prepare-name) (unquote duration))))))
-
-(sc-define-syntax (sp-define-group* name-and-options body ...)
-  (sp-define-event* name-and-options
-    (set _event:prepare sp-group-prepare _event:generate sp-group-generate)
-    body
-    ...))
-
-(sc-define-syntax (sp-define-group-parallel* name-and-options body ...)
-  (sp-define-event* name-and-options
-    (set _event:prepare sp-group-prepare-parallel _event:generate sp-group-generate-parallel)
-    body
-    ...))
 
 (sc-define-syntax* (sp-declare-struct-type name-and-fields ...)
   "(declare-struct-type name (field/type ...):fields name/fields ...)"

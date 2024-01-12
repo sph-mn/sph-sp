@@ -51,7 +51,7 @@
   (struct-pointer-set (+ 1 wec:channel-config) use 1 amp (* 0.5 c.amp))
   (sp-wave-event _event wec))
 
-(sp-define-group* (t1 (sp-duration 3 1))
+(sp-define-event* (t1 (sp-duration 3 1))
   (sc-comment
     "defines a group named t1 (track 1) with a default duration of 3/1 * _sp_rate.
      srq (alias for status_require) checks return error codes and jumps to a label named 'exit' on error")
@@ -63,6 +63,7 @@
     times (array sp-time-t 8 0 2 4 6 8 12 14 16))
   (sp-event-reset event)
   (set times-length 8 tempo (/ (sp-duration 1 1) 8))
+  (sp-group-event _event)
   (sp-for-each-index i times-length
     (set event s1-event)
     (sp-event-malloc-type-srq &event s1-c-t &s1-c)
@@ -79,4 +80,5 @@
   (sp-initialize 1 2 _sp-rate)
   (sc-comment (srq (simple-event-plot)))
   (srq (sp-render-file t1-event "/tmp/sp-example.wav"))
+  (srq (sp-render-plot t1-event))
   (label exit (sp-deinitialize) status-i-return))

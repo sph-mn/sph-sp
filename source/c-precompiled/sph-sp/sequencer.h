@@ -43,10 +43,12 @@
   event_pointer->config = _config
 #define sp_group_event(event_pointer) \
   event_pointer->prepare = sp_group_prepare; \
-  event_pointer->generate = sp_group_generate
+  event_pointer->generate = sp_group_generate; \
+  event_pointer->config = 0
 #define sp_group_parallel_event(event_pointer) \
-  event_pointer->prepare = sp_group_prepare_parallel; \
-  event_pointer->generate = sp_group_generate_parallel
+  event_pointer->prepare = sp_group_prepare; \
+  event_pointer->generate = sp_group_generate_parallel; \
+  event_pointer->config = 0
 #define sp_event_path_samples_srq(event_pointer, out, ...) \
   status_require((sp_path_samples(out, __VA_ARGS__))); \
   status_require((sp_event_memory_add(event_pointer, (*out))))
@@ -142,6 +144,7 @@
 #define sp_event_samples_srq(event_pointer, size, pointer_address) sp_event_alloc_srq(event_pointer, sp_samples_new, size, pointer_address)
 #define sp_event_times_srq(event_pointer, size, pointer_address) sp_event_alloc_srq(event_pointer, sp_times_new, size, pointer_address)
 #define sp_event_units_srq(event_pointer, size, pointer_address) sp_event_alloc_srq(event_pointer, sp_units_new, size, pointer_address)
+#define sp_event_config_get(a, type) *((type*)(a.config))
 array3_declare_type(sp_memory, memreg2_t);
 typedef void (*sp_memory_free_t)(void*);
 struct sp_event_t;

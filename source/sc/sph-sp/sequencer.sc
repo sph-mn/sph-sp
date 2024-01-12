@@ -270,7 +270,7 @@
   status-return)
 
 (define (sp-group-add group event) (status-t sp-event-t* sp-event-t)
-  "events with end zero will be prepared immediately so that event.prepare can set event.end"
+  "events with end zero will be prepared immediately for cases when event.prepare sets end"
   status-declare
   (if (not event.end) (sp-event-prepare-optional-srq event))
   (status-require (sp-event-list-add (convert-type &group:config sp-event-list-t**) event))

@@ -380,7 +380,7 @@ status_t sp_group_prepare(sp_event_t* group) {
   status_return;
 }
 
-/** events with end zero will be prepared immediately so that event.prepare can set event.end */
+/** events with end zero will be prepared immediately for cases when event.prepare sets end */
 status_t sp_group_add(sp_event_t* group, sp_event_t event) {
   status_declare;
   if (!event.end) {

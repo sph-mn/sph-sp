@@ -40,11 +40,12 @@
     generate (if* _config:isolate sp-map-event-isolated-generate sp-map-event-generate)
     config _config)
   (sp-group-event event-pointer)
-  (struct-pointer-set event-pointer prepare sp-group-prepare generate sp-group-generate)
+  (struct-pointer-set event-pointer prepare sp-group-prepare generate sp-group-generate config 0)
   (sp-group-parallel-event event-pointer)
   (struct-pointer-set event-pointer
-    prepare sp-group-prepare-parallel
-    generate sp-group-generate-parallel)
+    prepare sp-group-prepare
+    generate sp-group-generate-parallel
+    config 0)
   (sp-event-path-samples-srq event-pointer out ...)
   (begin
     (status-require (sp-path-samples out __VA_ARGS__))
@@ -174,7 +175,8 @@
   (sp-event-times-srq event-pointer size pointer-address)
   (sp-event-alloc-srq event-pointer sp-times-new size pointer-address)
   (sp-event-units-srq event-pointer size pointer-address)
-  (sp-event-alloc-srq event-pointer sp-units-new size pointer-address))
+  (sp-event-alloc-srq event-pointer sp-units-new size pointer-address)
+  (sp-event-config-get a type) (pointer-get (convert-type a.config type*)))
 
 (array3-declare-type sp-memory memreg2-t)
 
