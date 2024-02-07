@@ -293,4 +293,5 @@
   (sp-wave-event-config-defaults) sp-wave-event-config-t
   (sp-wave-event-config-new-n count out) (status-t sp-time-t sp-wave-event-config-t**)
   (sp-wave-event-generate start end out event) (status-t sp-time-t sp-time-t sp-block-t sp-event-t*)
-  (sp-wave-event-prepare event) (status-t sp-event-t*))
+  (sp-wave-event-prepare event) (status-t sp-event-t*)
+  (sp-event-schedule event onset duration config) (sp-event-t sp-event-t sp-time-t sp-time-t void*))

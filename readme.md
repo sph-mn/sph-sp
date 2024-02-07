@@ -26,7 +26,7 @@ c code and shared library for sound synthesis and sequencing. the sound processo
   * arithmetic, permutations, statistics, and more
 
 # code example
-see [other/example.c](other/example.c) or alternatively [other/example.sc](other/example.sc)
+see [other/examples/example.c](other/examples/example.c) or alternatively [other/examples/example.sc](other/examples/example.sc)
 
 # documentation
 * [c manual](other/documentation/c-manual.md)

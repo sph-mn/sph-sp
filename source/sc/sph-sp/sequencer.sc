@@ -144,6 +144,13 @@
   (if block-rest (status-require (generate block-rest i (+ i start) out event)))
   (label exit status-return))
 
+(define (sp-event-schedule event onset duration config)
+  (sp-event-t sp-event-t sp-time-t sp-time-t void*)
+  "assumes that event start is zero. copies event"
+  (set+ event.start onset event.end (+ onset duration))
+  (if config (set event.config config))
+  (return event))
+
 (define (sp-seq start end out events) (status-t sp-time-t sp-time-t sp-block-t sp-event-list-t**)
   "event arrays must have been prepared/sorted once with sp_seq_event_prepare for seq to work correctly.
    like for paths, start is inclusive, end is exclusive, so that 0..100 and 100..200 attach seamless.

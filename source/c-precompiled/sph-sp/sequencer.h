@@ -246,3 +246,4 @@ sp_wave_event_config_t sp_wave_event_config_defaults();
 status_t sp_wave_event_config_new_n(sp_time_t count, sp_wave_event_config_t** out);
 status_t sp_wave_event_generate(sp_time_t start, sp_time_t end, sp_block_t out, sp_event_t* event);
 status_t sp_wave_event_prepare(sp_event_t* event);
+sp_event_t sp_event_schedule(sp_event_t event, sp_time_t onset, sp_time_t duration, void* config);

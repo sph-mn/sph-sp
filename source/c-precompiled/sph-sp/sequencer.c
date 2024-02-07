@@ -226,6 +226,16 @@ exit:
   status_return;
 }
 
+/** assumes that event start is zero. copies event */
+sp_event_t sp_event_schedule(sp_event_t event, sp_time_t onset, sp_time_t duration, void* config) {
+  event.start += onset;
+  event.end += (onset + duration);
+  if (config) {
+    event.config = config;
+  };
+  return (event);
+}
+
 /** event arrays must have been prepared/sorted once with sp_seq_event_prepare for seq to work correctly.
    like for paths, start is inclusive, end is exclusive, so that 0..100 and 100..200 attach seamless.
    events can have three function pointers: prepare, generate and free.
