@@ -1,6 +1,6 @@
 #!/bin/sh -e
 
-target=temp/example
+target=tmp/example
 
 gcc -lsph-sp other/examples/example.c -o $target
 chmod +x $target

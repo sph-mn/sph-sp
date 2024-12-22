@@ -2,4 +2,4 @@
 
 # usage: ./exe/install [path-prefix]
 
-./exe/install "$1" -fs
+./exe/install "$1" --symlink

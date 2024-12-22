@@ -2,5 +2,5 @@
 # list all bindings from sph-sp.sc.
 # depends on sc-documentor from sph-sc.
 
-export SC_LOAD_PATH="$PWD/source/sc"
-sc-documentor source/sc/sph-sp/*.h.sc --config=other/display-api-config.scm
+export SC_LOAD_PATH="$PWD/src/sc"
+sc-documentor src/sc/sph-sp/*.h.sc --config=other/display-api-config.scm

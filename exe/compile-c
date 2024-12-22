@@ -1,9 +1,9 @@
 #!/bin/sh -e
 
 optimisation=3
-target_dir=temp
-c=source/c
-c_sc=source/c-precompiled
+target_dir=tmp
+c=src/c
+c_sc=src/c-precompiled
 root="$PWD"
 warnings="-Wunused-label -Wunused-value -Wunused-variable"
 gcc_options="-funsigned-char -std=c17 -Wfatal-errors -Wno-pointer-sign $warnings -I$c/foreign -I$c/foreign/sph-sc-lib -I$c_sc -fno-math-errno -lm"
@@ -21,8 +21,8 @@ compile_sph_sp() {
 }
 
 compile_test_sph_sp() {
-  export LIBRARY_PATH="$root/temp"
-  gcc "$c_sc/test/main.c" -o temp/test-libsph-sp $gcc_options -lsph-sp -Og
+  export LIBRARY_PATH="$root/tmp"
+  gcc "$c_sc/test/main.c" -o tmp/test-libsph-sp $gcc_options -lsph-sp -Og
 }
 
 mkdir -p "$target_dir"

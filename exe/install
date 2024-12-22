@@ -1,23 +1,48 @@
 #!/bin/sh
 
-# usage: ./exe/install [path-prefix]
+# usage: ./exe/install [path-prefix] [--symlink]
 
 prefix="$1"
-cp_args="$2"
+option="$2"
+
 lib_name="libsph-sp.so"
-lib_source="$PWD/temp/$lib_name"
-header_source="$PWD/source/c-precompiled/sph-sp"
-sc_source="$PWD/source/sc/sph-sp/sc-macros.sc"
+lib_source="$PWD/tmp/$lib_name"
+header_source="$PWD/src/c-precompiled/sph-sp"
+sc_source="$PWD/src/sc/sph-sp/sc-macros.sc"
 lib_target="$prefix/usr/lib"
 header_target="$prefix/usr/include"
 sc_target="$prefix/usr/share/sph-sp"
-sph_sc_lib_source="$PWD/source/c/foreign/sph-sc-lib/sph-sp"
+sph_sc_lib_source="$PWD/src/c/foreign/sph-sc-lib/sph-sp"
 
-mkdir -p "$lib_target" "$header_target" "$header_target/sph-sp" "$sc_target" &&
-chmod 755 "$lib_target" "$header_target" "$header_target/sph-sp" "$sc_target" &&
-cp -t "$lib_target" "$lib_source" $cp_args &&
-cp -t "$header_target" "$header_source/sph-sp.h" $cp_args &&
-cp -t "$header_target/sph-sp" "$header_source"/*.h "$sph_sc_lib_source"/* $cp_args &&
-rm "$header_target/sph-sp/sph-sp.h" &&
-cp -t "$sc_target" "$sc_source" $cp_args &&
-chmod -R 644 "$lib_target/libsph-sp.so" "$header_target/"*.h "$sc_target/sc-macros.sc"
+# Create directories with proper permissions
+mkdir -p "$lib_target" "$header_target/sph-sp" "$sc_target"
+chmod 755 "$lib_target" "$header_target" "$header_target/sph-sp" "$sc_target"
+
+# Define function for copy or symlink
+install_file() {
+  src="$1"
+  dest="$2"
+  if [ "$option" = "--symlink" ]; then
+    ln -sf "$src" "$dest"
+  else
+    cp "$src" "$dest"
+  fi
+}
+
+# Install library
+install_file "$lib_source" "$lib_target/$lib_name"
+
+# Install header files
+install_file "$header_source/sph-sp.h" "$header_target/sph-sp.h"
+for header in "$header_source"/*.h "$sph_sc_lib_source"/*; do
+  install_file "$header" "$header_target/sph-sp/$(basename "$header")"
+done
+
+# Remove duplicate sph-sp.h in subdirectory
+rm -f "$header_target/sph-sp/sph-sp.h"
+
+# Install SC file
+install_file "$sc_source" "$sc_target/sc-macros.sc"
+
+# Adjust permissions
+chmod 644 "$lib_target/$lib_name" "$header_target"/sph-sp*.h "$sc_target/sc-macros.sc"

@@ -7,8 +7,8 @@
 # * clang-format
 
 root="$PWD"
-sc=source/sc
-c=source/c-precompiled
+sc=src/sc
+c=src/c-precompiled
 
 compile_sc() {
   # create the c source code

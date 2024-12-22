@@ -1,7 +1,7 @@
 #!/bin/sh -e
 
 c_target=other/examples/example.c
-target=temp/example
+target=tmp/example
 
 sc other/examples/example.sc $c_target
 ./exe/format-c -i $c_target

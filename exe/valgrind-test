@@ -4,4 +4,4 @@
 
 options="--leak-check=full --show-leak-kinds=all --track-origins=yes --suppressions=other/valgrind-suppressions"
 valgrind --tool=memcheck $options ./exe/test $@
-#valgrind --tool=memcheck $options ./temp/example $@
+#valgrind --tool=memcheck $options ./tmp/example $@
