@@ -1,5 +1,5 @@
 
-/* "array3" - struct {.data, .size, .used} that combines memory pointer, length and used length in one object.
+/* "array3" - dynamic array as a struct {.data, .size, .used} that combines memory pointer, length and used length in one object.
    the "used" property is to support variable length data in a fixed size memory area.
    depends on stdlib.h for malloc. custom allocators can be used.
    examples:

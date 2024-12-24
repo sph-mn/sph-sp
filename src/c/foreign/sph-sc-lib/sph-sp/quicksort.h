@@ -1,6 +1,8 @@
 
 /* depends on sys/types.h for ssize_t */
 
+/* ! there may be a current segfaulting bug with small arrays of around size two. */
+
 /** a generic quicksort implementation that works with any array type.
    less should return true if the first argument is < than the second.
    swap should exchange the values of the two arguments it receives.
@@ -14,10 +16,10 @@ void quicksort(uint8_t (*less_p)(void*, ssize_t, ssize_t), void (*swap)(void*, s
   ssize_t r = right;
   while (1) {
     while (less_p(array, l, pivot)) {
-      l = (1 + l);
+      l += 1;
     };
     while (less_p(array, pivot, r)) {
-      r = (r - 1);
+      r -= 1;
     };
     if (l > r) {
       break;
@@ -28,8 +30,8 @@ void quicksort(uint8_t (*less_p)(void*, ssize_t, ssize_t), void (*swap)(void*, s
       pivot = l;
     };
     swap(array, l, r);
-    l = (1 + l);
-    r = (r - 1);
+    l += 1;
+    r -= 1;
   };
   quicksort(less_p, swap, array, left, r);
   quicksort(less_p, swap, array, l, right);

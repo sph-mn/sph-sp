@@ -3,7 +3,7 @@ void sph_thread_pool_destroy(sph_thread_pool_t* a) {
   pthread_mutex_destroy((&(a->queue_mutex)));
 }
 
-/** if enqueued call pthread-exit to end the thread it was dequeued in */
+/** this is a special task that exits the thread it is being executed in */
 void sph_thread_finish(sph_thread_pool_task_t* task) {
   free(task);
   pthread_exit(0);
@@ -24,37 +24,7 @@ void sph_thread_pool_enqueue(sph_thread_pool_t* a, sph_thread_pool_task_t* task)
    and it is unclear when it can be used to free some final resources.
    if discard_queue is true then the current queue is emptied, but note
    that if enqueued tasks free their task object these tasks wont get called anymore */
-int sph_thread_pool_finish(sph_thread_pool_t* a, uint8_t no_wait, uint8_t discard_queue) {
-  void* exit_value;
-  sph_thread_pool_size_t i;
-  sph_thread_pool_size_t size;
-  sph_thread_pool_task_t* task;
-  if (discard_queue) {
-    pthread_mutex_lock((&(a->queue_mutex)));
-    sph_queue_init((&(a->queue)));
-    pthread_mutex_unlock((&(a->queue_mutex)));
-  };
-  size = a->size;
-  for (i = 0; (i < size); i = (1 + i)) {
-    task = malloc((sizeof(sph_thread_pool_task_t)));
-    if (!task) {
-      return (1);
-    };
-    task->f = sph_thread_finish;
-    sph_thread_pool_enqueue(a, task);
-  };
-  if (!no_wait) {
-    for (i = 0; (i < size); i = (1 + i)) {
-      if (0 == pthread_join(((a->threads)[i]), (&exit_value))) {
-        a->size = (a->size - 1);
-        if (0 == a->size) {
-          sph_thread_pool_destroy(a);
-        };
-      };
-    };
-  };
-  return (0);
-}
+int sph_thread_pool_finish(sph_thread_pool_t* a, uint8_t no_wait, uint8_t discard_queue) { return ((sph_thread_pool_resize(a, 0, no_wait, discard_queue))); }
 
 /** internal worker routine */
 void* sph_thread_pool_worker(sph_thread_pool_t* a) {
@@ -73,6 +43,55 @@ wait:
   (task->f)(task);
   goto get_task;
 }
+int sph_thread_pool_resize(sph_thread_pool_t* a, sph_thread_pool_size_t size, uint8_t no_wait, uint8_t discard_queue) {
+  pthread_attr_t attr;
+  int error;
+  void* exit_value;
+  sph_thread_pool_size_t i;
+  sph_thread_pool_task_t* task;
+  if (size > a->size) {
+    if (size > sph_thread_pool_thread_limit) {
+      return (-1);
+    };
+    pthread_attr_init((&attr));
+    pthread_attr_setdetachstate((&attr), PTHREAD_CREATE_JOINABLE);
+    for (i = a->size; (i < size); i += 1) {
+      error = pthread_create((i + a->threads), (&attr), ((void* (*)(void*))(sph_thread_pool_worker)), ((void*)(a)));
+      if (error) {
+        size = i;
+        break;
+      };
+    };
+    pthread_attr_destroy((&attr));
+    a->size = size;
+    return (error);
+  } else {
+    if (discard_queue) {
+      pthread_mutex_lock((&(a->queue_mutex)));
+      sph_queue_init((&(a->queue)));
+      pthread_mutex_unlock((&(a->queue_mutex)));
+    };
+    for (i = size; (i < a->size); i += 1) {
+      task = malloc((sizeof(sph_thread_pool_task_t)));
+      if (!task) {
+        return (1);
+      };
+      task->f = sph_thread_finish;
+      sph_thread_pool_enqueue(a, task);
+    };
+    if (!no_wait) {
+      for (i = size; (i < a->size); i += 1) {
+        if (!pthread_join(((a->threads)[i]), (&exit_value))) {
+          if (i == (a->size - 1)) {
+            sph_thread_pool_destroy(a);
+          };
+        };
+      };
+    };
+    a->size = size;
+    return (0);
+  };
+}
 
 /** returns zero when successful and a non-zero pthread error code otherwise */
 int sph_thread_pool_new(sph_thread_pool_size_t size, sph_thread_pool_t* a) {
@@ -85,7 +104,7 @@ int sph_thread_pool_new(sph_thread_pool_size_t size, sph_thread_pool_t* a) {
   pthread_cond_init((&(a->queue_not_empty)), 0);
   pthread_attr_init((&attr));
   pthread_attr_setdetachstate((&attr), PTHREAD_CREATE_JOINABLE);
-  for (i = 0; (i < size); i = (1 + i)) {
+  for (i = 0; (i < size); i += 1) {
     error = pthread_create((i + a->threads), (&attr), ((void* (*)(void*))(sph_thread_pool_worker)), ((void*)(a)));
     if (error) {
       if (0 < i) {

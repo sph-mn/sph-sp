@@ -1,7 +1,7 @@
 
 #include <stdlib.h>
 #include <stdio.h>
-#include "./helper.h"
+#include <sph/helper.h>
 uint8_t* sph_helper_status_description(status_t a) {
   uint8_t* b;
   if (sph_helper_status_id_memory == a.id) {

@@ -1,9 +1,9 @@
 
-/* depends thread-pool.c */
+/* depends on thread-pool.c */
 sph_thread_pool_t sph_futures_pool;
 uint8_t sph_futures_pool_is_initialized = 0;
 /** call once to initialize the future thread pool that persists for
-   the whole process or until sph-future-deinit is called.
+   the whole process or until sph_future_deinit is called.
    can be called multiple times and just returns if the thread pool already exists.
    returns zero on success */
 int sph_future_init(sph_thread_pool_size_t thread_count) {
@@ -20,7 +20,6 @@ int sph_future_init(sph_thread_pool_size_t thread_count) {
 }
 
 /** internal future worker.
-   a->f returns because modifying data likely needs extra type conversions inside a->f.
    thread-pool does not have a finished field by default so that tasks can themselves free
    their object when they finish */
 void sph_future_eval(sph_thread_pool_task_t* task) {
@@ -30,7 +29,7 @@ void sph_future_eval(sph_thread_pool_task_t* task) {
   a->finished = 1;
 }
 
-/** prepare a future in out and possibly start evaluation in parallel.
+/** prepare a future in "out" and possibly start evaluation in parallel.
    the given function receives data as its sole argument */
 void sph_future_new(sph_future_f_t f, void* data, sph_future_t* out) {
   out->finished = 0;

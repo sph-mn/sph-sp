@@ -32,7 +32,7 @@ typedef struct {
   sph_queue_node_t* first;
   sph_queue_node_t* last;
 } sph_queue_t;
-/** initialise a queue or remove all elements */
+/** initialize a queue or remove all elements */
 void sph_queue_init(sph_queue_t* a) {
   a->first = 0;
   a->last = 0;

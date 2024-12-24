@@ -1,6 +1,8 @@
 #!/bin/sh
 
 sph_sc_root="$1"
+
+# why does this get a subfolder? conflict with globally installed libs?
 destination="$PWD/src/c/foreign/sph-sc-lib/sph-sp"
 
 if test -d "$destination"

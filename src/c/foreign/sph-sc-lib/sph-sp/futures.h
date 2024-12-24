@@ -10,8 +10,7 @@ manages the memory of thread-pool task objects.
 #include <time.h>
 
 #ifndef sph_future_default_poll_interval
-#define sph_future_default_poll_interval \
-  { 0, 200000000 }
+#define sph_future_default_poll_interval { 0, 200000000 }
 #endif
 typedef void* (*sph_future_f_t)(void*);
 typedef struct {
