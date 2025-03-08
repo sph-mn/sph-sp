@@ -5,8 +5,8 @@
 #include <byteswap.h>
 #include <inttypes.h>
 #include <sys/types.h>
-#include <sph-sp/float.h>
-#include <sph-sp/random.h>
+#include <sph/float.h>
+#include <sph/random.h>
 
 /* configuration. changes need recompilation of sph-sp shared library */
 
@@ -88,13 +88,13 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <sph-sp/status.h>
-#include <sph-sp/array3.h>
-#include <sph-sp/helper.h>
-#include <sph-sp/memreg.h>
+#include <sph/status.h>
+#include <sph/array3.h>
+#include <sph/helper.h>
+#include <sph/memreg.h>
 #include <sph-sp/main.h>
 #include <sph-sp/arrays.h>
-#include <sph-sp/spline-path.h>
+#include <sph/spline-path.h>
 #include <sph-sp/path.h>
 #include <sph-sp/filter.h>
 #include <sph-sp/sequencer.h>

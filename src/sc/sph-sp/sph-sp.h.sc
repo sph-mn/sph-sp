@@ -1,5 +1,5 @@
 (pre-include-guard-begin sph-sp-h)
-(pre-include "byteswap.h" "inttypes.h" "sys/types.h" "sph-sp/float.h" "sph-sp/random.h")
+(pre-include "byteswap.h" "inttypes.h" "sys/types.h" "sph/float.h" "sph/random.h")
 (sc-comment "configuration. changes need recompilation of sph-sp shared library")
 
 (pre-define-if-not-defined
@@ -30,9 +30,9 @@
   sp-unit-t double)
 
 (pre-include "string.h" "stdio.h"
-  "stdlib.h" "sph-sp/status.h" "sph-sp/array3.h"
-  "sph-sp/helper.h" "sph-sp/memreg.h" "sph-sp/main.h"
-  "sph-sp/arrays.h" "sph-sp/spline-path.h" "sph-sp/path.h"
+  "stdlib.h" "sph/status.h" "sph/array3.h"
+  "sph/helper.h" "sph/memreg.h" "sph-sp/main.h"
+  "sph-sp/arrays.h" "sph/spline-path.h" "sph-sp/path.h"
   "sph-sp/filter.h" "sph-sp/sequencer.h" "sph-sp/statistics.h" "sph-sp/plot.h" "sph-sp/main2.h")
 
 (pre-include-guard-end)

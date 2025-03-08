@@ -1,7 +1,7 @@
 
 #include <sph-sp/sph-sp.h>
-#include <sph-sp/string.h>
-#include <sph-sp/filesystem.h>
+#include <sph/string.h>
+#include <sph/filesystem.h>
 
 #define test_helper_test_one(func) \
   printf("%s\n", #func); \

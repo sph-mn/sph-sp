@@ -11,16 +11,16 @@
 #include <arpa/inet.h>
 #include <nayuki-fft/fft.c>
 #include "../sph-sp/sph-sp.h"
-#include <sph-sp/spline-path.c>
-#include <sph-sp/quicksort.h>
-#include <sph-sp/queue.h>
-#include <sph-sp/random.c>
-#include <sph-sp/float.c>
-#include <sph-sp/thread-pool.h>
-#include <sph-sp/thread-pool.c>
-#include <sph-sp/futures.h>
-#include <sph-sp/futures.c>
-#include <sph-sp/helper.c>
+#include <sph/spline-path.c>
+#include <sph/quicksort.h>
+#include <sph/queue.h>
+#include <sph/random.c>
+#include <sph/float.c>
+#include <sph/thread-pool.h>
+#include <sph/thread-pool.c>
+#include <sph/futures.h>
+#include <sph/futures.c>
+#include <sph/helper.c>
 
 #define sp_libc_s_id(id) \
   if (id < 0) { \
