@@ -226,7 +226,7 @@ exit:
   status_return;
 }
 
-/** assumes that event start is zero. copies event */
+/** assumes that event start is set to the beginning, for example 0. copies event */
 sp_event_t sp_event_schedule(sp_event_t event, sp_time_t onset, sp_time_t duration, void* config) {
   event.start += onset;
   event.end += (onset + duration);

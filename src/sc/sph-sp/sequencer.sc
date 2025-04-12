@@ -146,7 +146,7 @@
 
 (define (sp-event-schedule event onset duration config)
   (sp-event-t sp-event-t sp-time-t sp-time-t void*)
-  "assumes that event start is zero. copies event"
+  "assumes that event start is set to the beginning, for example 0. copies event"
   (set+ event.start onset event.end (+ onset duration))
   (if config (set event.config config))
   (return event))

@@ -40,6 +40,7 @@ sp_event_memory_ensure :: sp_event_t*:a sp_time_t:additional_size -> status_t
 sp_event_memory_fixed_add :: sp_event_t*:event void*:address -> status_t
 sp_event_memory_fixed_add_with_handler :: sp_event_t*:event void*:address sp_memory_free_t:handler -> void
 sp_event_memory_free :: sp_event_t*:event -> void
+sp_event_schedule :: sp_event_t:event sp_time_t:onset sp_time_t:duration void*:config -> sp_event_t
 sp_fft :: sp_time_t:input_len double*:input_or_output_real double*:input_or_output_imag -> int
 sp_ffti :: sp_time_t:input_len double*:input_or_output_real double*:input_or_output_imag -> int
 sp_file_close_read :: sp_file_t:file -> void
@@ -256,6 +257,7 @@ sp_define_times(id, value)
 sp_define_times_srq(id, count)
 sp_duration(n, d)
 sp_event_alloc_srq(event_pointer, allocator, size, pointer_address)
+sp_event_config_get(a, type)
 sp_event_duration(a)
 sp_event_envelope_scaled3_srq(event_pointer, out, ...)
 sp_event_envelope_scaled4_srq(event_pointer, out, ...)
