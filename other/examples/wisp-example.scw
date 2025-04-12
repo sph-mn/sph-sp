@@ -1,35 +1,53 @@
 ; sc can also be written using wisp syntax.
 ; the sc compiler automatically supports files with the .scw suffix if the wisp guile libraries are installed.
-; this example is only for showing the syntax. it does not run as it misses a wrapping main function with sp_initialize as well as the experimental sp_event_schedule
 
-sp-declare-struct-type n1c-t
-  amp sp-sample-t
+sp-declare-struct-type i1c-t : frq sp-time-t amp sp-sample-t
+sp-declare-struct-type i1pc-t : frq sp-time-t amp sp-sample-t
 
-sp-define-event* n1
-  declare c n1c-t nc sp-noise-event-config-t* amod sp-sample-t*
-  set c : sp-event-config-get *_event n1c-t
-  srq : sp-noise-event-config-new &nc
-  srq : sp-event-memory-add _event nc
-  sp-event-envelope-zero3-srq _event &amod _duration 0.1 c.amp
-  struct-pointer-set nc:channel-config amod amod frq 300
-  sp-noise-event _event nc
+sp-define-event* i1p
+  declare c i1pc-t n sp-time-t wc sp-wave-event-config-t* event sp-event-t amod sp-sample-t*
+  set c : sp-event-config-get *_event i1pc-t
+    . n 5
+  srq : sp-wave-event-config-new-n n &wc
+  srq : sp-event-memory-add _event wc
+  sp-event-envelope-zero3-srq _event &amod _duration 0.1 (/ c.amp n)
+  sp-group-event _event
+  sp-for-each-index i n
+    set event sp-null-event
+    sp-wave-event &event 0
+    struct-pointer-set (struct-pointer-get (+ wc i) channel-config) amod amod frq (+ c.frq (* 4 i))
+    srq : sp-group-add _event : sp-event-schedule event 0 _duration : + wc i
 
-sp-define-group* i1
-  declare n1c n1c-t*
-  sp-event-malloc-type-srq _event n1c-t &n1c
-  set n1c:amp 1
-  srq : sp-group-add _event : sp-event-schedule n1-event 0 (spd 1 6) n1c
+sp-define-event* i1
+  declare c i1c-t i1pc i1pc-t* n sp-time-t
+  set c : sp-event-config-get *_event i1c-t
+    . n 100
+  sp-event-malloc-type-n-srq _event n i1pc-t &i1pc
+  sp-group-event _event
+  sp-for-each-index i n
+    struct-pointer-set : + i1pc i
+      . amp (/ c.amp n)
+      . frq c.frq
+    srq : sp-group-add _event : sp-event-schedule i1p-event 0 _duration : + i1pc 1
 
-sp-define-group* t1
+sp-define-event* t1
   declare meter sp-time-t duration sp-time-t count sp-time-t i1c i1c-t*
   set
-    . count 1
+    . count 2
     . meter : / _duration count
     . duration meter
+  sp-group-event _event
+  sp-event-malloc-type-n-srq _event count i1c-t &i1c
   sp-for-each-index i count
+    struct-pointer-set (+ i1c i)
+      . amp 0.5
+      . frq 200
     srq
       sp-group-add _event
-        sp-event-schedule i1-event (* i meter) duration 0
+        sp-event-schedule i1-event (* i meter) duration (+ i1c i)
 
 define (design) status-t
-  return : sp-render-plot : sp-event-schedule t1-event (spd 1 2) (spd 8 1) 0
+  declare song sp-event-t
+  set song : sp-event-schedule t1-event (spd 1 2) (spd 2 1) 0
+  return : sp-render-plot song
+  ;return : sp-render-file song "/tmp/spout.wav"
