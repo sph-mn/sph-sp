@@ -9,7 +9,7 @@
 (define (sp-file-open-write path channel-count sample-rate file)
   (status-t uint8-t* sp-channel-count-t sp-time-t sp-file-t*)
   status-declare
-  (declare header (array uint8-t 40))
+  (declare header (array uint8-t 44))
   (set
     (pointer-get (convert-type header uint32-t*)) wav-string-riff
     (pointer-get (convert-type (+ 8 header) uint32-t*)) wav-string-wav
@@ -22,6 +22,7 @@
     (pointer-get (convert-type (+ 32 header) uint16-t*)) (* channel-count 4)
     (pointer-get (convert-type (+ 34 header) uint16-t*)) 32
     (pointer-get (convert-type (+ 36 header) uint32-t*)) wav-string-data
+    (pointer-get (convert-type (+ 40 header) uint32-t*)) 0
     file:data-size 0
     file:channel-count channel-count
     file:file (fopen path "w"))
@@ -34,6 +35,8 @@
 (define (sp-file-close-write file) (void sp-file-t*)
   (declare chunk-size uint32-t)
   (set chunk-size (+ 36 file:data-size))
+  (if (bit-and file:data-size 1)
+    (begin (define pad uint8-t 0) (fwrite &pad 1 1 file:file) (set+ file:data-size 1)))
   (fseek file:file 4 SEEK_SET)
   (fwrite &chunk-size 4 1 file:file)
   (fseek file:file 40 SEEK_SET)
@@ -73,7 +76,15 @@
       (and (= 3 (pointer-get (convert-type (+ 20 header) uint16-t*)))
         (= 32 (pointer-get (convert-type (+ 34 header) uint16-t*)))))
     (sp-status-set-goto sp-s-id-file-not-implemented))
+  (define channel-count uint16-t (pointer-get (convert-type (+ 22 header) uint16-t*)))
+  (if
+    (not
+      (and (= (pointer-get (convert-type (+ 32 header) uint16-t*)) (* channel-count 4))
+        (= (pointer-get (convert-type (+ 28 header) uint32-t*))
+          (* (pointer-get (convert-type (+ 24 header) uint16-t*)) channel-count 4))))
+    (sp-status-set-goto sp-s-id-file-not-implemented))
   (set
+    file:channel-count channel-count
     subchunk-id (pointer-get (convert-type (+ 36 header) uint32-t*))
     subchunk-size (pointer-get (convert-type (+ 40 header) uint32-t*)))
   (while (not (= wav-string-data subchunk-id))
@@ -96,6 +107,6 @@
     (for-each-index j sp-channel-count-t
       file.channel-count
       (set (array-get (array-get samples j) i) (array-get file-data (+ (* i file.channel-count) j)))))
-  (label exit (free file-data)))
+  (label exit (free file-data) status-return))
 
 (define (sp-file-close-read file) (void sp-file-t) (fclose file.file))

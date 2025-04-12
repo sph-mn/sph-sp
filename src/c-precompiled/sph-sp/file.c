@@ -7,7 +7,7 @@
 #define wav_string_data htonl(0x64617461)
 status_t sp_file_open_write(uint8_t* path, sp_channel_count_t channel_count, sp_time_t sample_rate, sp_file_t* file) {
   status_declare;
-  uint8_t header[40];
+  uint8_t header[44];
   *((uint32_t*)(header)) = wav_string_riff;
   *((uint32_t*)((8 + header))) = wav_string_wav;
   *((uint32_t*)((12 + header))) = wav_string_fmt;
@@ -19,6 +19,7 @@ status_t sp_file_open_write(uint8_t* path, sp_channel_count_t channel_count, sp_
   *((uint16_t*)((32 + header))) = (channel_count * 4);
   *((uint16_t*)((34 + header))) = 32;
   *((uint32_t*)((36 + header))) = wav_string_data;
+  *((uint32_t*)((40 + header))) = 0;
   file->data_size = 0;
   file->channel_count = channel_count;
   file->file = fopen(path, "w");
@@ -36,6 +37,11 @@ exit:
 void sp_file_close_write(sp_file_t* file) {
   uint32_t chunk_size;
   chunk_size = (36 + file->data_size);
+  if (file->data_size & 1) {
+    uint8_t pad = 0;
+    fwrite((&pad), 1, 1, (file->file));
+    file->data_size += 1;
+  };
   fseek((file->file), 4, SEEK_SET);
   fwrite((&chunk_size), 4, 1, (file->file));
   fseek((file->file), 40, SEEK_SET);
@@ -76,6 +82,11 @@ status_t sp_file_open_read(uint8_t* path, sp_file_t* file) {
   if (!((3 == *((uint16_t*)((20 + header)))) && (32 == *((uint16_t*)((34 + header)))))) {
     sp_status_set_goto(sp_s_id_file_not_implemented);
   };
+  uint16_t channel_count = *((uint16_t*)((22 + header)));
+  if (!((*((uint16_t*)((32 + header))) == (channel_count * 4)) && (*((uint32_t*)((28 + header))) == (*((uint16_t*)((24 + header))) * channel_count * 4)))) {
+    sp_status_set_goto(sp_s_id_file_not_implemented);
+  };
+  file->channel_count = channel_count;
   subchunk_id = *((uint32_t*)((36 + header)));
   subchunk_size = *((uint32_t*)((40 + header)));
   while (!(wav_string_data == subchunk_id)) {
@@ -115,5 +126,6 @@ status_t sp_file_read(sp_file_t file, sp_time_t sample_count, sp_sample_t** samp
   };
 exit:
   free(file_data);
+  status_return;
 }
 void sp_file_close_read(sp_file_t file) { fclose((file.file)); }
