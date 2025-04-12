@@ -15,18 +15,9 @@ refer to other/example.sc
 ~~~
 
 * loads all sph-sp sc macros
-* has to be called in each source file that uses macros
+* has to be called in each source file that uses macros or given via an option to the sc transpiler 'sc --includes="/usr/share/sph-sp/sc-macros.sc" ...'
 
 # bindings
-
-## sp-init*
-~~~
-(sp-include* sample-rate)
-~~~
-
-* includes sph-sp.h
-* defines the preprocessor variable _sp_rate
-
 ## sp-define*
 ~~~
 (sp-define* (name parameter ...) (parameter-types ...) body ...)
@@ -53,11 +44,10 @@ refer to other/example.sc
 * _event:prepare will be automatically called if set in body
 * otherwise like sp-define*
 
-## sp-define-group*
-* like sp-define-event* but sets _event:prepare to sp-group-prepare
+## sp-declare-struct-type
+example usage
+~~~
+(sp-declare-struct-type mytypename (amp sp-sample-t frq sp-time-t))
+~~~
 
-## sp-define-group-parallel*
-* like sp-define-event* but sets _event:prepare to sp-group-prepare-parallel
-
-## more
-see [../../source/sc/main/sc-macros.sc] for undocumented macros.
+see [../../source/sc/main/sc-macros.sc] for more macros.

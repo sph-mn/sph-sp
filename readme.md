@@ -26,7 +26,9 @@ c code and shared library for sound synthesis and sequencing. the sound processo
   * arithmetic, permutations, statistics, and more
 
 # code example
-see [other/examples/example.c](other/examples/example.c) or alternatively [other/examples/example.sc](other/examples/example.sc)
+see [other/examples/example.c](other/examples/example.c).
+
+alternative c syntax: [wisp-sc](other/examples/example.scw), [sc](other/examples/example.sc)
 
 # sound example
 these files came about during testing in development: [1](https://sph.mn/auditive_visual/sound/2022/2022-12-10.15814.flac), [2](https://sph.mn/auditive_visual/sound/2022/2022-12-10.07345.flac), [3](https://sph.mn/auditive_visual/sound/2022/2022-12-10.09439.flac), [4](https://sph.mn/auditive_visual/sound/2022/2021-04-12.05370.flac) (one stream of non-repeating patterns per channel).
