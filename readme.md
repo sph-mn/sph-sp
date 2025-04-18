@@ -20,10 +20,10 @@ c code and shared library for sound synthesis and sequencing. the sound processo
 * sequencing
   * event renderer for parallel block processing with custom routines
   * events for sines and filtered noise
-  * event groups that compose for instruments, riffs and songs
-  * per channel configuration
+  * composable event groups for instruments, riffs and songs
+  * per channel configuration and channel delay
 * array processing
-  * arithmetic, permutations, statistics, and more
+  * arithmetic, combinations, statistics, and more
 
 # code example
 see [other/examples/example.c](other/examples/example.c).
