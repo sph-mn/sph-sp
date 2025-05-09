@@ -79,7 +79,6 @@
 #define sp_units_random_bounded(range, size, out) sp_units_random_bounded_primitive((&sp_random_state), range, size, out)
 #define sp_time_random_bounded(range) sp_time_random_bounded_primitive((&sp_random_state), range)
 #define sp_sample_random() sp_sample_random_primitive((&sp_random_state))
-#define sp_sample_random_bounded(range) sp_sample_random_bounded_primitive((&sp_random_state), range)
 #define sp_unit_random() sp_unit_random_primitive((&sp_random_state))
 #define error_memory_init(register_size) memreg2_init_named(error, register_size)
 #define local_memory_init(register_size) memreg2_init_named(exit, register_size)

@@ -1,5 +1,4 @@
 (pre-define
-  sp-group-prepare-parallel sp-group-prepare
   sp-seq-events-prepare sp-event-list-reverse
   sp-default-resolution (if* (< sp-rate 10000) sp-rate (/ sp-rate 1000))
   (sp-event-reset x) (set x sp-null-event)
@@ -258,7 +257,7 @@
   (sp-event-list-add a event) (status-t sp-event-list-t** sp-event-t)
   (sp-event-list-display a) (void sp-event-list-t*)
   (sp-event-list-free events) (void sp-event-list-t**)
-  (sp-event-list-remove-element a element) (void sp-event-list-t** sp-event-list-t*)
+  (sp-event-list-remove a element) (void sp-event-list-t** sp-event-list-t*)
   (sp-event-list-reverse a) (void sp-event-list-t**)
   (sp-event-list-validate a) (void sp-event-list-t*)
   (sp-event-memory-add-with-handler event address handler)
@@ -272,20 +271,20 @@
   (sp-group-event-free a) (void sp-event-t*)
   (sp-group-event-f start end out event) (void sp-time-t sp-time-t sp-block-t sp-event-t*)
   (sp-group-event-parallel-f start end out event) (void sp-time-t sp-time-t sp-block-t sp-event-t*)
-  (sp-group-free) (void sp-event-t*)
+  (sp-group-free group) (void sp-event-t*)
   (sp-group-generate-parallel start end out a) (status-t sp-time-t sp-time-t sp-block-t sp-event-t*)
   (sp-group-generate start end out a) (status-t sp-time-t sp-time-t sp-block-t sp-event-t*)
   (sp-group-prepare event) (status-t sp-event-t*)
   (sp-group-prepare-parallel a) (status-t sp-event-t*)
   (sp-map-event-config-new-n count out) (status-t sp-time-t sp-map-event-config-t**)
-  (sp-map-event-free) (void sp-event-t*)
+  (sp-map-event-free event) (void sp-event-t*)
   (sp-map-event-generate start end out event) (status-t sp-time-t sp-time-t sp-block-t sp-event-t*)
   (sp-map-event-isolated-generate start end out event)
   (status-t sp-time-t sp-time-t sp-block-t sp-event-t*)
   (sp-map-event-prepare event) (status-t sp-event-t*)
   (sp-noise-event-config-defaults) sp-noise-event-config-t
   (sp-noise-event-config-new-n count out) (status-t sp-time-t sp-noise-event-config-t**)
-  (sp-noise-event-free) (void sp-event-t*)
+  (sp-noise-event-free event) (void sp-event-t*)
   (sp-noise-event-generate start end out event) (status-t sp-time-t sp-time-t sp-block-t sp-event-t*)
   (sp-noise-event-prepare event) (status-t sp-event-t*)
   (sp-seq-parallel start end out events) (status-t sp-time-t sp-time-t sp-block-t sp-event-list-t**)

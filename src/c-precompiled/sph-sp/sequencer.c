@@ -24,13 +24,13 @@ void sp_event_list_reverse(sp_event_list_t** a) {
   };
   *a = current;
 }
-uint8_t sp_event_list_find_duplicate(sp_event_list_t* a, sp_event_list_t* b) {
+void sp_event_list_find_duplicate(sp_event_list_t* a, sp_event_list_t* b) {
   sp_time_t i = 0;
   sp_time_t count = 0;
   while (a) {
     if (a == b) {
       if (1 == count) {
-        printf("duplicate list entry %lu at index %lu\n", a, i);
+        printf("duplicate list entry %p at index %lu\n", a, i);
         exit(1);
       } else {
         count += 1;
@@ -46,11 +46,11 @@ void sp_event_list_validate(sp_event_list_t* a) {
   sp_event_list_t* c = 0;
   while (b) {
     if (!(c == b->previous)) {
-      printf("link to previous is invalid at index %lu, element %lu\n", i, b);
+      printf("link to previous is invalid at index %lu, element %p\n", i, b);
       exit(1);
     };
     if ((b->next == b->previous) && !(0 == b->next)) {
-      printf("circular list entry at index %lu, element %lu\n", i, b);
+      printf("circular list entry at index %lu, element %p\n", i, b);
       exit(1);
     };
     sp_event_list_find_duplicate(a, b);

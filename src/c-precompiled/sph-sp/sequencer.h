@@ -1,5 +1,4 @@
 
-#define sp_group_prepare_parallel sp_group_prepare
 #define sp_seq_events_prepare sp_event_list_reverse
 #define sp_default_resolution ((sp_rate < 10000) ? sp_rate : (sp_rate / 1000))
 #define sp_event_reset(x) x = sp_null_event
@@ -213,7 +212,7 @@ sp_event_t sp_null_event = { 0 };
 status_t sp_event_list_add(sp_event_list_t** a, sp_event_t event);
 void sp_event_list_display(sp_event_list_t* a);
 void sp_event_list_free(sp_event_list_t** events);
-void sp_event_list_remove_element(sp_event_list_t** a, sp_event_list_t* element);
+void sp_event_list_remove(sp_event_list_t** a, sp_event_list_t* element);
 void sp_event_list_reverse(sp_event_list_t** a);
 void sp_event_list_validate(sp_event_list_t* a);
 status_t sp_event_memory_add_with_handler(sp_event_t* event, void* address, sp_memory_free_t handler);
@@ -225,19 +224,19 @@ status_t sp_group_append(sp_event_t* a, sp_event_t event);
 void sp_group_event_free(sp_event_t* a);
 void sp_group_event_f(sp_time_t start, sp_time_t end, sp_block_t out, sp_event_t* event);
 void sp_group_event_parallel_f(sp_time_t start, sp_time_t end, sp_block_t out, sp_event_t* event);
-void sp_group_free();
+void sp_group_free(sp_event_t* group);
 status_t sp_group_generate_parallel(sp_time_t start, sp_time_t end, sp_block_t out, sp_event_t* a);
 status_t sp_group_generate(sp_time_t start, sp_time_t end, sp_block_t out, sp_event_t* a);
 status_t sp_group_prepare(sp_event_t* event);
 status_t sp_group_prepare_parallel(sp_event_t* a);
 status_t sp_map_event_config_new_n(sp_time_t count, sp_map_event_config_t** out);
-void sp_map_event_free();
+void sp_map_event_free(sp_event_t* event);
 status_t sp_map_event_generate(sp_time_t start, sp_time_t end, sp_block_t out, sp_event_t* event);
 status_t sp_map_event_isolated_generate(sp_time_t start, sp_time_t end, sp_block_t out, sp_event_t* event);
 status_t sp_map_event_prepare(sp_event_t* event);
 sp_noise_event_config_t sp_noise_event_config_defaults();
 status_t sp_noise_event_config_new_n(sp_time_t count, sp_noise_event_config_t** out);
-void sp_noise_event_free();
+void sp_noise_event_free(sp_event_t* event);
 status_t sp_noise_event_generate(sp_time_t start, sp_time_t end, sp_block_t out, sp_event_t* event);
 status_t sp_noise_event_prepare(sp_event_t* event);
 status_t sp_seq_parallel(sp_time_t start, sp_time_t end, sp_block_t out, sp_event_list_t** events);

@@ -17,11 +17,11 @@
   (while next (set current next next next:next current:next current:previous current:previous next))
   (set *a current))
 
-(define (sp-event-list-find-duplicate a b) (uint8-t sp-event-list-t* sp-event-list-t*)
+(define (sp-event-list-find-duplicate a b) (void sp-event-list-t* sp-event-list-t*)
   (define i sp-time-t 0 count sp-time-t 0)
   (while a
     (if (= a b)
-      (if (= 1 count) (begin (printf "duplicate list entry %lu at index %lu\n" a i) (exit 1))
+      (if (= 1 count) (begin (printf "duplicate list entry %p at index %lu\n" a i) (exit 1))
         (set+ count 1)))
     (set+ i 1)
     (set a a:next)))
@@ -30,9 +30,9 @@
   (define i sp-time-t 0 b sp-event-list-t* a c sp-event-list-t* 0)
   (while b
     (if (not (= c b:previous))
-      (begin (printf "link to previous is invalid at index %lu, element %lu\n" i b) (exit 1)))
+      (begin (printf "link to previous is invalid at index %lu, element %p\n" i b) (exit 1)))
     (if (and (= b:next b:previous) (not (= 0 b:next)))
-      (begin (printf "circular list entry at index %lu, element %lu\n" i b) (exit 1)))
+      (begin (printf "circular list entry at index %lu, element %p\n" i b) (exit 1)))
     (sp-event-list-find-duplicate a b)
     (set+ i 1)
     (set c b b b:next)))
