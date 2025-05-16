@@ -34,6 +34,7 @@
 /** only works for non-negative values */
 #define sp_cheap_floor_positive(a) ((sp_time_t)(a))
 #define sp_cheap_ceiling_positive(a) (((sp_time_t)(a)) + (((sp_time_t)(a)) < a))
+#define sp_inline_mod(a, b) % (a, b)
 #define sp_inline_max(a, b) ((a > b) ? a : b)
 #define sp_inline_min(a, b) ((a < b) ? a : b)
 #define sp_inline_limit(x, min_value, max_value) sp_inline_max(min_value, (sp_inline_min(max_value, x)))

@@ -29,4 +29,22 @@
   void sp_##type_name##_multiply_##type_name(value_t* in_out, sp_size_t count, value_t* in); \
   void sp_##type_name##_divide_##type_name(value_t* in_out, sp_size_t count, value_t* in); \
   void sp_##type_name##_add_##type_name(value_t* in_out, sp_size_t count, value_t* in); \
-  void sp_##type_name##_subtract_##type_name(value_t* in_out, sp_size_t count, value_t* in)
+  void sp_##type_name##_subtract_##type_name(value_t* in_out, sp_size_t count, value_t* in); \
+  void sp_##type_name##_set_##type_name(value_t* in_out, sp_size_t count, value_t* in); \
+  void sp_##type_name##_set_##type_name##_left(value_t* in_out, sp_size_t count, value_t* in); \
+  void sp_##type_name##_harmonic(value_t base, sp_time_t count, value_t* out); \
+  void sp_##type_name##_odd_harmonics(value_t base, sp_time_t count, value_t* out); \
+  void sp_##type_name##_even_harmonics(value_t base, sp_time_t count, value_t* out); \
+  void sp_##type_name##_nth_harmonics(value_t base, value_t k, sp_time_t count, value_t* out); \
+  void sp_##type_name##_cumulative(value_t base, value_t* deltas, sp_time_t count, value_t* out); \
+  void sp_##type_name##_decumulative(value_t base, value_t* deltas, sp_time_t count, value_t* out); \
+  void sp_##type_name##_prime_indexed(value_t base, sp_time_t count, value_t* out); \
+  void sp_##type_name##_modular_series(value_t base, sp_time_t mod, sp_sample_t delta, sp_time_t count, value_t* out); \
+  void sp_##type_name##_fixed_sets(value_t base, value_t* ratios, value_t len, value_t* out); \
+  void sp_##type_name##_clustered(value_t center, value_t spread, value_t count, value_t* out); \
+  void sp_##type_name##_linear(value_t base, value_t k, value_t count, value_t* out); \
+  void sp_##type_name##_exponential(value_t base, value_t k, value_t count, value_t* out); \
+  void sp_##type_name##_gaussian(value_t base, value_t centre, value_t width, value_t count, value_t* out); \
+  void sp_##type_name##_power(value_t base, value_t p, value_t count, value_t* out); \
+  void sp_##type_name##_bessel(value_t base, value_t count, value_t* out); \
+  void sp_##type_name##_logistic(value_t base, value_t k, value_t count, value_t* out)

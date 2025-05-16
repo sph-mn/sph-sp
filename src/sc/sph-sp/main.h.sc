@@ -30,6 +30,7 @@
   (sp-cheap-round-positive a) (convert-type (+ 0.5 a) sp-time-t)
   (sp-cheap-floor-positive a) (begin "only works for non-negative values" (convert-type a sp-time-t))
   (sp-cheap-ceiling-positive a) (+ (convert-type a sp-time-t) (< (convert-type a sp-time-t) a))
+  (sp-inline-mod a b) (% a b)
   (sp-inline-max a b) (if* (> a b) a b)
   (sp-inline-min a b) (if* (< a b) a b)
   (sp-inline-limit x min-value max-value) (sp-inline-max min-value (sp-inline-min max-value x))

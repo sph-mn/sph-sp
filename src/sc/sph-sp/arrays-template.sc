@@ -136,4 +136,80 @@
     (define ((pre-concat sp_ type-name _subtract_ type-name) in-out count in)
       (void value-t* sp-size-t value-t*)
       (sp-for-each-index i count
-        (set (array-get in-out i) (subtract (array-get in-out i) (array-get in i)))))))
+        (set (array-get in-out i) (subtract (array-get in-out i) (array-get in i)))))
+    (define ((pre-concat sp_ type-name _set_ type-name) in-out count in)
+      (void value-t* sp-size-t value-t*)
+      (memcpy in-out in (* count (sizeof value-t))))
+    (define ((pre-concat sp_ type-name _set_ type-name _left) in-out count in)
+      (void value-t* sp-size-t value-t*)
+      (sp-for-each-index i count (set (array-get in-out (* -1 i)) (array-get in i))))
+    (define ((pre-concat sp_ type-name _harmonic) base count out) (void value-t sp-time-t value-t*)
+      "f(n) = base * (n+1)"
+      (sp-for-each-index i count (set (array-get out i) (* base (+ 1 i)))))
+    (define ((pre-concat sp_ type-name _odd-harmonics) base count out)
+      (void value-t sp-time-t value-t*)
+      "f(n) = base * (2·n+1)"
+      (sp-for-each-index i count (set (array-get out i) (* base (+ 1 (* 2 i))))))
+    (define ((pre-concat sp_ type-name _even-harmonics) base count out)
+      (void value-t sp-time-t value-t*)
+      "f(n) = base * 2·(n+1)"
+      (sp-for-each-index i count (set (array-get out i) (* base 2 (+ 1 i)))))
+    (define ((pre-concat sp_ type-name _nth-harmonics) base k count out)
+      (void value-t value-t sp-time-t value-t*)
+      "f(n) = base * k * (n+1)"
+      (sp-for-each-index i count (set (array-get out i) (* base k (+ 1 i)))))
+    (define ((pre-concat sp_ type-name _cumulative) base deltas count out)
+      (void value-t value-t* sp-time-t value-t*)
+      "f(n) = f(n–1) + deltas[n]"
+      (define acc value-t base)
+      (sp-for-each-index i count (set acc (+ acc (array-get deltas i))) (set (array-get out i) acc)))
+    (define ((pre-concat sp_ type-name _decumulative) base deltas count out)
+      (void value-t value-t* sp-time-t value-t*)
+      "f(n) = f(n–1) – deltas[n]"
+      (define acc value-t base)
+      (sp-for-each-index i count (set acc (- acc (array-get deltas i))) (set (array-get out i) acc)))
+    (define ((pre-concat sp_ type-name _prime-indexed) base count out)
+      (void value-t sp-time-t value-t*)
+      "f(n) = base * pₙ, pₙ = nth prime"
+      (sp-for-each-index i (sp-time-min count (/ (sizeof sp-primes) (sizeof sp-time-t)))
+        (set (array-get out i) (* base (array-get sp-primes i)))))
+    (define ((pre-concat sp_ type-name _modular-series) base mod delta count out)
+      (void value-t sp-time-t sp-sample-t sp-time-t value-t*)
+      "f(n) = base + (n mod mod)·delta"
+      (sp-for-each-index i count (set (array-get out i) (+ base (* (fmod i mod) delta)))))
+    (define ((pre-concat sp_ type-name _fixed_sets) base ratios len out)
+      (void value-t value-t* value-t value-t*)
+      "f(n) = base * ratios[n]"
+      (sp-for-each-index i len (set (array-get out i) (* base (array-get ratios i)))))
+    (define ((pre-concat sp_ type-name _clustered) center spread count out)
+      (void value-t value-t value-t value-t*)
+      "f(n) = center + spread·(n–(count–1)/2)"
+      (define half value-t (/ (- count 1) 2))
+      (sp-for-each-index i count (set (array-get out i) (+ center (* spread (- i half))))))
+    (define ((pre-concat sp_ type-name _linear) base k count out)
+      (void value-t value-t value-t value-t*)
+      "a(n) = base – k·n"
+      (sp-for-each-index i count (set (array-get out i) (- base (* k i)))))
+    (define ((pre-concat sp_ type-name _exponential) base k count out)
+      (void value-t value-t value-t value-t*)
+      "a(n) = base·e^(–k·n)"
+      (sp-for-each-index i count (set (array-get out i) (* base (exp (- (* k i)))))))
+    (define ((pre-concat sp_ type-name _gaussian) base centre width count out)
+      (void value-t value-t value-t value-t value-t*)
+      "a(n) = base·e^(–((n–centre)²)/(2·width²))"
+      (define denom value-t (* 2 (* width width)))
+      (sp-for-each-index i count
+        (define d value-t (- i centre))
+        (set (array-get out i) (* base (exp (/ (- (* d d)) denom))))))
+    (define ((pre-concat sp_ type-name _power) base p count out)
+      (void value-t value-t value-t value-t*)
+      "a(n) = base·(n+1)^(–p)"
+      (sp-for-each-index i count (set (array-get out i) (* base (pow (+ 1 i) (- p))))))
+    (define ((pre-concat sp_ type-name _bessel) base count out) (void value-t value-t value-t*)
+      "a(n) = base·j0(n)"
+      (sp-for-each-index i count (set (array-get out i) (* base (j0 i)))))
+    (define ((pre-concat sp_ type-name _logistic) base k count out)
+      (void value-t value-t value-t value-t*)
+      "a(n) = base / (1 + e^(k·(n–mid)))"
+      (define mid value-t (/ (- count 1) 2))
+      (sp-for-each-index i count (set (array-get out i) (/ base (+ 1 (exp (* k (- i mid))))))))))

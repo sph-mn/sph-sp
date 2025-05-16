@@ -31,13 +31,11 @@ sp_envelope_zero5 :: sp_sample_t**:out sp_time_t:length sp_sample_t:x1 sp_sample
 sp_event_list_add :: sp_event_list_t**:a sp_event_t:event -> status_t
 sp_event_list_display :: sp_event_list_t*:a -> void
 sp_event_list_free :: sp_event_list_t**:events -> void
-sp_event_list_remove_element :: sp_event_list_t**:a sp_event_list_t*:element -> void
+sp_event_list_remove :: sp_event_list_t**:a sp_event_list_t*:element -> void
 sp_event_list_reverse :: sp_event_list_t**:a -> void
 sp_event_list_validate :: sp_event_list_t*:a -> void
-sp_event_memory_add :: sp_event_t*:event void*:address -> status_t
 sp_event_memory_add_with_handler :: sp_event_t*:event void*:address sp_memory_free_t:handler -> status_t
 sp_event_memory_ensure :: sp_event_t*:a sp_time_t:additional_size -> status_t
-sp_event_memory_fixed_add :: sp_event_t*:event void*:address -> status_t
 sp_event_memory_fixed_add_with_handler :: sp_event_t*:event void*:address sp_memory_free_t:handler -> void
 sp_event_memory_free :: sp_event_t*:event -> void
 sp_event_schedule :: sp_event_t:event sp_time_t:onset sp_time_t:duration void*:config -> sp_event_t
@@ -54,14 +52,14 @@ sp_group_append :: sp_event_t*:a sp_event_t:event -> status_t
 sp_group_event_f :: sp_time_t:start sp_time_t:end sp_block_t:out sp_event_t*:event -> void
 sp_group_event_free :: sp_event_t*:a -> void
 sp_group_event_parallel_f :: sp_time_t:start sp_time_t:end sp_block_t:out sp_event_t*:event -> void
-sp_group_free :: -> void
+sp_group_free :: sp_event_t*:group -> void
 sp_group_generate :: sp_time_t:start sp_time_t:end sp_block_t:out sp_event_t*:a -> status_t
 sp_group_generate_parallel :: sp_time_t:start sp_time_t:end sp_block_t:out sp_event_t*:a -> status_t
 sp_group_prepare :: sp_event_t*:event -> status_t
 sp_group_prepare_parallel :: sp_event_t*:a -> status_t
 sp_initialize :: uint16_t:cpu_count sp_channel_count_t:channel_count sp_time_t:rate -> status_t
 sp_map_event_config_new_n :: sp_time_t:count sp_map_event_config_t**:out -> status_t
-sp_map_event_free :: -> void
+sp_map_event_free :: sp_event_t*:event -> void
 sp_map_event_generate :: sp_time_t:start sp_time_t:end sp_block_t:out sp_event_t*:event -> status_t
 sp_map_event_isolated_generate :: sp_time_t:start sp_time_t:end sp_block_t:out sp_event_t*:event -> status_t
 sp_map_event_prepare :: sp_event_t*:event -> status_t
@@ -69,7 +67,7 @@ sp_modulo_match :: size_t:index size_t*:divisors size_t:divisor_count -> size_t
 sp_moving_average :: sp_sample_t*:in sp_time_t:in_size sp_sample_t*:prev sp_sample_t*:next sp_time_t:radius sp_sample_t*:out -> void
 sp_noise_event_config_defaults :: -> sp_noise_event_config_t
 sp_noise_event_config_new_n :: sp_time_t:count sp_noise_event_config_t**:out -> status_t
-sp_noise_event_free :: -> void
+sp_noise_event_free :: sp_event_t*:event -> void
 sp_noise_event_generate :: sp_time_t:start sp_time_t:end sp_block_t:out sp_event_t*:event -> status_t
 sp_noise_event_prepare :: sp_event_t*:event -> status_t
 sp_normal_random :: sp_time_t:min sp_time_t:max -> sp_time_t
@@ -113,39 +111,11 @@ sp_render_file :: sp_event_t:event uint8_t*:path -> status_t
 sp_render_plot :: sp_event_t:event -> status_t
 sp_render_range_block :: sp_event_t:event sp_time_t:start sp_time_t:end sp_render_config_t:config sp_block_t*:out -> status_t
 sp_render_range_file :: sp_event_t:event sp_time_t:start sp_time_t:end sp_render_config_t:config uint8_t*:path -> status_t
-sp_sample_absolute_max :: sp_sample_t*:in sp_size_t:count -> sp_sample_t
-sp_sample_add :: sp_sample_t*:in_out sp_size_t:count sp_sample_t:value -> void
-sp_sample_add_sample :: sp_sample_t*:in_out sp_size_t:count sp_sample_t*:in -> void
-sp_sample_additions :: sp_sample_t:start sp_sample_t:summand sp_sample_t:count sp_sample_t*:out -> void
-sp_sample_and_sample :: sp_sample_t*:a sp_sample_t*:b sp_size_t:count sp_sample_t:limit sp_sample_t*:out -> void
-sp_sample_array_free :: sp_sample_t**:in sp_size_t:count -> void
-sp_sample_copy :: sp_sample_t*:in sp_size_t:count sp_sample_t*:out -> void
-sp_sample_cusum :: sp_sample_t*:in sp_sample_t:count sp_sample_t*:out -> void
-sp_sample_divide :: sp_sample_t*:in_out sp_size_t:count sp_sample_t:value -> void
-sp_sample_divide_sample :: sp_sample_t*:in_out sp_size_t:count sp_sample_t*:in -> void
-sp_sample_duplicate :: sp_sample_t*:a sp_size_t:count sp_sample_t**:out -> status_t
-sp_sample_equal :: sp_sample_t*:in sp_size_t:count sp_sample_t:value -> sp_bool_t
+sp_sample_geometric :: sp_sample_t:base sp_sample_t:ratio sp_time_t:count sp_sample_t*:out -> void
+sp_sample_logarithmic :: sp_sample_t:base sp_sample_t:scale sp_time_t:count sp_sample_t*:out -> void
 sp_sample_max :: sp_sample_t:a sp_sample_t:b -> sp_sample_t
-sp_sample_max :: sp_sample_t*:in sp_size_t:count -> sp_sample_t
 sp_sample_min :: sp_sample_t:a sp_sample_t:b -> sp_sample_t
-sp_sample_min :: sp_sample_t*:in sp_size_t:count -> sp_sample_t
-sp_sample_multiply :: sp_sample_t*:in_out sp_size_t:count sp_sample_t:value -> void
-sp_sample_multiply_sample :: sp_sample_t*:in_out sp_size_t:count sp_sample_t*:in -> void
-sp_sample_new :: sp_size_t:count sp_sample_t**:out -> status_t
-sp_sample_or_sample :: sp_sample_t*:a sp_sample_t*:b sp_size_t:count sp_sample_t:limit sp_sample_t*:out -> void
 sp_sample_random_discrete_bounded :: sp_time_t*:cudist sp_time_t:cudist_size sp_sample_t:range -> sp_sample_t
-sp_sample_range :: sp_sample_t*:in sp_size_t:start sp_size_t:end sp_sample_t*:out -> void
-sp_sample_reverse :: sp_sample_t*:in sp_size_t:count sp_sample_t*:out -> void
-sp_sample_round_to_multiple :: sp_sample_t:a sp_sample_t:base -> sp_sample_t
-sp_sample_set :: sp_sample_t*:in_out sp_size_t:count sp_sample_t:value -> void
-sp_sample_shuffle :: sp_sample_t*:in sp_size_t:count -> void
-sp_sample_sort_less :: void*:a ssize_t:b ssize_t:c -> uint8_t
-sp_sample_sort_swap :: void*:a ssize_t:b ssize_t:c -> void
-sp_sample_square :: sp_sample_t*:in sp_size_t:count -> void
-sp_sample_subtract :: sp_sample_t*:in_out sp_size_t:count sp_sample_t:value -> void
-sp_sample_subtract_sample :: sp_sample_t*:in_out sp_size_t:count sp_sample_t*:in -> void
-sp_sample_swap :: sp_time_t*:in_out sp_ssize_t:index_1 sp_ssize_t:index_2 -> void
-sp_sample_xor_sample :: sp_sample_t*:a sp_sample_t*:b sp_size_t:count sp_sample_t:limit sp_sample_t*:out -> void
 sp_samples_to_times :: sp_sample_t*:in sp_size_t:count sp_time_t*:out -> void
 sp_samples_to_times_replace :: sp_sample_t*:in sp_size_t:count sp_time_t**:out -> status_t
 sp_samples_to_units :: sp_sample_t*:in_out sp_size_t:count -> void
@@ -194,46 +164,18 @@ sp_stat_unique_all_max :: sp_time_t:size -> sp_time_t
 sp_stat_unique_max :: sp_time_t:size sp_time_t:width -> sp_time_t
 sp_status_description :: status_t:a -> uint8_t*
 sp_status_name :: status_t:a -> uint8_t*
-sp_time_absolute_max :: sp_time_t*:in sp_size_t:count -> sp_time_t
-sp_time_add :: sp_time_t*:in_out sp_size_t:count sp_time_t:value -> void
-sp_time_add_time :: sp_time_t*:in_out sp_size_t:count sp_time_t*:in -> void
-sp_time_additions :: sp_time_t:start sp_time_t:summand sp_time_t:count sp_time_t*:out -> void
-sp_time_and_time :: sp_time_t*:a sp_time_t*:b sp_size_t:count sp_time_t:limit sp_time_t*:out -> void
-sp_time_array_free :: sp_time_t**:in sp_size_t:count -> void
-sp_time_copy :: sp_time_t*:in sp_size_t:count sp_time_t*:out -> void
-sp_time_cusum :: sp_time_t*:in sp_time_t:count sp_time_t*:out -> void
 sp_time_deharmonize :: sp_time_t:a sp_time_t:base sp_sample_t:amount -> sp_time_t
-sp_time_divide :: sp_time_t*:in_out sp_size_t:count sp_time_t:value -> void
-sp_time_divide_time :: sp_time_t*:in_out sp_size_t:count sp_time_t*:in -> void
-sp_time_duplicate :: sp_time_t*:a sp_size_t:count sp_time_t**:out -> status_t
-sp_time_equal :: sp_time_t*:in sp_size_t:count sp_time_t:value -> sp_bool_t
 sp_time_expt :: sp_time_t:base sp_time_t:exp -> sp_time_t
 sp_time_factorial :: sp_time_t:a -> sp_time_t
+sp_time_geometric :: sp_time_t:base sp_time_t:ratio sp_time_t:count sp_time_t*:out -> void
 sp_time_harmonize :: sp_time_t:a sp_time_t:base sp_sample_t:amount -> sp_time_t
 sp_time_harmonize :: sp_time_t:a sp_time_t:base sp_sample_t:amount -> sp_time_t
+sp_time_logarithmic :: sp_time_t:base sp_sample_t:scale sp_time_t:count sp_time_t*:out -> void
 sp_time_max :: sp_time_t:a sp_time_t:b -> sp_time_t
-sp_time_max :: sp_time_t*:in sp_size_t:count -> sp_time_t
 sp_time_min :: sp_time_t:a sp_time_t:b -> sp_time_t
-sp_time_min :: sp_time_t*:in sp_size_t:count -> sp_time_t
-sp_time_multiply :: sp_time_t*:in_out sp_size_t:count sp_time_t:value -> void
-sp_time_multiply_time :: sp_time_t*:in_out sp_size_t:count sp_time_t*:in -> void
-sp_time_new :: sp_size_t:count sp_time_t**:out -> status_t
-sp_time_or_time :: sp_time_t*:a sp_time_t*:b sp_size_t:count sp_time_t:limit sp_time_t*:out -> void
 sp_time_random_discrete :: sp_time_t*:cudist sp_time_t:cudist_size -> sp_time_t
 sp_time_random_discrete_bounded :: sp_time_t*:cudist sp_time_t:cudist_size sp_time_t:range -> sp_time_t
-sp_time_range :: sp_time_t*:in sp_size_t:start sp_size_t:end sp_time_t*:out -> void
-sp_time_reverse :: sp_time_t*:in sp_size_t:count sp_time_t*:out -> void
-sp_time_round_to_multiple :: sp_time_t:a sp_time_t:base -> sp_time_t
-sp_time_set :: sp_time_t*:in_out sp_size_t:count sp_time_t:value -> void
-sp_time_shuffle :: sp_time_t*:in sp_size_t:count -> void
-sp_time_sort_less :: void*:a ssize_t:b ssize_t:c -> uint8_t
-sp_time_sort_swap :: void*:a ssize_t:b ssize_t:c -> void
-sp_time_square :: sp_time_t*:in sp_size_t:count -> void
-sp_time_subtract :: sp_time_t*:in_out sp_size_t:count sp_time_t:value -> void
-sp_time_subtract_time :: sp_time_t*:in_out sp_size_t:count sp_time_t*:in -> void
 sp_time_sum :: sp_time_t*:in sp_time_t:size -> sp_time_t
-sp_time_swap :: sp_time_t*:in_out sp_ssize_t:index_1 sp_ssize_t:index_2 -> void
-sp_time_xor_time :: sp_time_t*:a sp_time_t*:b sp_size_t:count sp_time_t:limit sp_time_t*:out -> void
 sp_times_to_samples :: sp_time_t*:in sp_size_t:count sp_sample_t*:out -> void
 sp_times_to_samples_replace :: sp_time_t*:in sp_size_t:count sp_sample_t**:out -> status_t
 sp_times_bits_to_times :: sp_time_t*:a sp_time_t:size sp_time_t*:out -> void
@@ -282,11 +224,106 @@ sp_windowed_sinc_lp_hp_ir :: sp_sample_t:cutoff sp_sample_t:transition sp_bool_t
 sp_windowed_sinc_lp_hp_ir :: sp_sample_t:cutoff sp_sample_t:transition sp_bool_t:is_high_pass sp_sample_t**:out_ir sp_time_t*:out_len -> status_t
 sp_windowed_sinc_lp_hp_ir_f :: void*:arguments sp_sample_t**:out_ir sp_time_t*:out_len -> status_t
 sp_windowed_sinc_lp_hp_ir_length :: sp_sample_t:transition -> sp_time_t
+sp_sample_round_to_multiple :: sp_sample_t:a sp_sample_t:base -> sp_sample_t
+sp_sample_sort_less :: void*:a ssize_t:b ssize_t:c -> uint8_t
+sp_sample_sort_swap :: void*:a ssize_t:b ssize_t:c -> void
+sp_samples_absolute_max :: value_t*:in sp_size_t:count -> sp_sample_t
+sp_samples_add :: value_t*:in_out sp_size_t:count sp_sample_t:value -> void
+sp_samples_add_samples :: value_t*:in_out sp_size_t:count value_t*:in -> void
+sp_samples_additions :: sp_sample_t:start sp_sample_t:summand sp_sample_t:count value_t*:out -> void
+sp_samples_and_samples :: value_t*:a value_t*:b sp_size_t:count sp_sample_t:limit value_t*:out -> void
+sp_samples_array_free :: value_t**:in sp_size_t:count -> void
+sp_samples_bessel :: sp_sample_t:base sp_sample_t:count value_t*:out -> void
+sp_samples_clustered :: sp_sample_t:center sp_sample_t:spread sp_sample_t:count value_t*:out -> void
+sp_samples_copy :: value_t*:in sp_size_t:count value_t*:out -> void
+sp_samples_cumulative :: sp_sample_t:base value_t*:deltas sp_time_t:count value_t*:out -> void
+sp_samples_cusum :: value_t*:in sp_sample_t:count value_t*:out -> void
+sp_samples_decumulative :: sp_sample_t:base value_t*:deltas sp_time_t:count value_t*:out -> void
+sp_samples_divide :: value_t*:in_out sp_size_t:count sp_sample_t:value -> void
+sp_samples_divide_samples :: value_t*:in_out sp_size_t:count value_t*:in -> void
+sp_samples_duplicate :: value_t*:a sp_size_t:count value_t**:out -> status_t
+sp_samples_equal :: value_t*:in sp_size_t:count sp_sample_t:value -> sp_bool_t
+sp_samples_even_harmonics :: sp_sample_t:base sp_time_t:count value_t*:out -> void
+sp_samples_exponential :: sp_sample_t:base sp_sample_t:k sp_sample_t:count value_t*:out -> void
+sp_samples_fixed_sets :: sp_sample_t:base value_t*:ratios sp_sample_t:len value_t*:out -> void
+sp_samples_gaussian :: sp_sample_t:base sp_sample_t:centre sp_sample_t:width sp_sample_t:count value_t*:out -> void
+sp_samples_harmonic :: sp_sample_t:base sp_time_t:count value_t*:out -> void
+sp_samples_linear :: sp_sample_t:base sp_sample_t:k sp_sample_t:count value_t*:out -> void
+sp_samples_logistic :: sp_sample_t:base sp_sample_t:k sp_sample_t:count value_t*:out -> void
+sp_samples_max :: value_t*:in sp_size_t:count -> sp_sample_t
+sp_samples_min :: value_t*:in sp_size_t:count -> sp_sample_t
+sp_samples_modular_series :: sp_sample_t:base sp_time_t:mod sp_sample_t:delta sp_time_t:count value_t*:out -> void
+sp_samples_multiply :: value_t*:in_out sp_size_t:count sp_sample_t:value -> void
+sp_samples_multiply_samples :: value_t*:in_out sp_size_t:count value_t*:in -> void
+sp_samples_new :: sp_size_t:count value_t**:out -> status_t
+sp_samples_nth_harmonics :: sp_sample_t:base sp_sample_t:k sp_time_t:count value_t*:out -> void
+sp_samples_odd_harmonics :: sp_sample_t:base sp_time_t:count value_t*:out -> void
+sp_samples_or_samples :: value_t*:a value_t*:b sp_size_t:count sp_sample_t:limit value_t*:out -> void
+sp_samples_power :: sp_sample_t:base sp_sample_t:p sp_sample_t:count value_t*:out -> void
+sp_samples_prime_indexed :: sp_sample_t:base sp_time_t:count value_t*:out -> void
+sp_samples_range :: value_t*:in sp_size_t:start sp_size_t:end value_t*:out -> void
+sp_samples_reverse :: value_t*:in sp_size_t:count value_t*:out -> void
+sp_samples_set :: value_t*:in_out sp_size_t:count sp_sample_t:value -> void
+sp_samples_set_samples :: value_t*:in_out sp_size_t:count value_t*:in -> void
+sp_samples_set_samples_left :: value_t*:in_out sp_size_t:count value_t*:in -> void
+sp_samples_shuffle :: value_t*:in sp_size_t:count -> void
+sp_samples_square :: value_t*:in sp_size_t:count -> void
+sp_samples_subtract :: value_t*:in_out sp_size_t:count sp_sample_t:value -> void
+sp_samples_subtract_samples :: value_t*:in_out sp_size_t:count value_t*:in -> void
+sp_samples_swap :: sp_time_t*:in_out sp_ssize_t:index_1 sp_ssize_t:index_2 -> void
+sp_samples_xor_samples :: value_t*:a value_t*:b sp_size_t:count sp_sample_t:limit value_t*:out -> void
+sp_time_round_to_multiple :: sp_time_t:a sp_time_t:base -> sp_time_t
+sp_time_sort_less :: void*:a ssize_t:b ssize_t:c -> uint8_t
+sp_time_sort_swap :: void*:a ssize_t:b ssize_t:c -> void
+sp_times_absolute_max :: value_t*:in sp_size_t:count -> sp_time_t
+sp_times_add :: value_t*:in_out sp_size_t:count sp_time_t:value -> void
+sp_times_add_times :: value_t*:in_out sp_size_t:count value_t*:in -> void
+sp_times_additions :: sp_time_t:start sp_time_t:summand sp_time_t:count value_t*:out -> void
+sp_times_and_times :: value_t*:a value_t*:b sp_size_t:count sp_time_t:limit value_t*:out -> void
+sp_times_array_free :: value_t**:in sp_size_t:count -> void
+sp_times_bessel :: sp_time_t:base sp_time_t:count value_t*:out -> void
+sp_times_clustered :: sp_time_t:center sp_time_t:spread sp_time_t:count value_t*:out -> void
+sp_times_copy :: value_t*:in sp_size_t:count value_t*:out -> void
+sp_times_cumulative :: sp_time_t:base value_t*:deltas sp_time_t:count value_t*:out -> void
+sp_times_cusum :: value_t*:in sp_time_t:count value_t*:out -> void
+sp_times_decumulative :: sp_time_t:base value_t*:deltas sp_time_t:count value_t*:out -> void
+sp_times_divide :: value_t*:in_out sp_size_t:count sp_time_t:value -> void
+sp_times_divide_times :: value_t*:in_out sp_size_t:count value_t*:in -> void
+sp_times_duplicate :: value_t*:a sp_size_t:count value_t**:out -> status_t
+sp_times_equal :: value_t*:in sp_size_t:count sp_time_t:value -> sp_bool_t
+sp_times_even_harmonics :: sp_time_t:base sp_time_t:count value_t*:out -> void
+sp_times_exponential :: sp_time_t:base sp_time_t:k sp_time_t:count value_t*:out -> void
+sp_times_fixed_sets :: sp_time_t:base value_t*:ratios sp_time_t:len value_t*:out -> void
+sp_times_gaussian :: sp_time_t:base sp_time_t:centre sp_time_t:width sp_time_t:count value_t*:out -> void
+sp_times_harmonic :: sp_time_t:base sp_time_t:count value_t*:out -> void
+sp_times_linear :: sp_time_t:base sp_time_t:k sp_time_t:count value_t*:out -> void
+sp_times_logistic :: sp_time_t:base sp_time_t:k sp_time_t:count value_t*:out -> void
+sp_times_max :: value_t*:in sp_size_t:count -> sp_time_t
+sp_times_min :: value_t*:in sp_size_t:count -> sp_time_t
+sp_times_modular_series :: sp_time_t:base sp_time_t:mod sp_sample_t:delta sp_time_t:count value_t*:out -> void
+sp_times_multiply :: value_t*:in_out sp_size_t:count sp_time_t:value -> void
+sp_times_multiply_times :: value_t*:in_out sp_size_t:count value_t*:in -> void
+sp_times_new :: sp_size_t:count value_t**:out -> status_t
+sp_times_nth_harmonics :: sp_time_t:base sp_time_t:k sp_time_t:count value_t*:out -> void
+sp_times_odd_harmonics :: sp_time_t:base sp_time_t:count value_t*:out -> void
+sp_times_or_times :: value_t*:a value_t*:b sp_size_t:count sp_time_t:limit value_t*:out -> void
+sp_times_power :: sp_time_t:base sp_time_t:p sp_time_t:count value_t*:out -> void
+sp_times_prime_indexed :: sp_time_t:base sp_time_t:count value_t*:out -> void
+sp_times_range :: value_t*:in sp_size_t:start sp_size_t:end value_t*:out -> void
+sp_times_reverse :: value_t*:in sp_size_t:count value_t*:out -> void
+sp_times_set :: value_t*:in_out sp_size_t:count sp_time_t:value -> void
+sp_times_set_times :: value_t*:in_out sp_size_t:count value_t*:in -> void
+sp_times_set_times_left :: value_t*:in_out sp_size_t:count value_t*:in -> void
+sp_times_shuffle :: value_t*:in sp_size_t:count -> void
+sp_times_square :: value_t*:in sp_size_t:count -> void
+sp_times_subtract :: value_t*:in_out sp_size_t:count sp_time_t:value -> void
+sp_times_subtract_times :: value_t*:in_out sp_size_t:count value_t*:in -> void
+sp_times_swap :: sp_time_t*:in_out sp_ssize_t:index_1 sp_ssize_t:index_2 -> void
+sp_times_xor_times :: value_t*:a value_t*:b sp_size_t:count sp_time_t:limit value_t*:out -> void
 ~~~
 
 # macros
 ~~~
-arrays_template_h(value_t, value_type_name, type_name)
 error_memory_add(address)
 error_memory_add2(address, handler)
 error_memory_free
@@ -369,7 +406,6 @@ sp_frq_t
 sp_group_event(event_pointer)
 sp_group_event_list(event)
 sp_group_parallel_event(event_pointer)
-sp_group_prepare_parallel
 sp_hz_to_factor(x)
 sp_hz_to_rad(a)
 sp_hz_to_samples(x)
@@ -379,6 +415,7 @@ sp_inline_default(a, b)
 sp_inline_limit(x, min_value, max_value)
 sp_inline_max(a, b)
 sp_inline_min(a, b)
+sp_inline_mod(a, b)
 sp_inline_no_underflow_subtract(a, b)
 sp_inline_no_zero_divide(a, b)
 sp_inline_optional(a, b)
@@ -420,7 +457,6 @@ sp_s_id_undefined
 sp_sample_interpolate_linear(a, b, t)
 sp_sample_nearly_equal
 sp_sample_random
-sp_sample_random_bounded(range)
 sp_sample_random_primitive
 sp_sample_t
 sp_sample_to_time
