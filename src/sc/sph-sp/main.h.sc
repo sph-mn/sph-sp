@@ -103,7 +103,7 @@
   (begin
     "like rt but works in places where variables are not allowed (ex: array initializers) and before sp_initialize has been called"
     (convert-type (* (/ _sp-rate d) n) sp-time-t))
-  spd sp-duration
+  sp-d sp-duration
   sprd sp-rate-duration)
 
 (declare

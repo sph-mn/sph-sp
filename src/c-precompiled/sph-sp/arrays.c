@@ -479,7 +479,7 @@ status_t sp_times_to_samples_replace(sp_time_t* in, sp_size_t count, sp_sample_t
 exit:
   status_return;
 }
-void sp_time_geometric(sp_time_t base, sp_time_t ratio, sp_time_t count, sp_time_t* out) {
+void sp_times_geometric(sp_time_t base, sp_time_t ratio, sp_time_t count, sp_time_t* out) {
   for (sp_size_t i = 0; (i < count); i += 1) {
     sp_time_t r_pow = 1;
     for (sp_size_t j = 0; (j < i); j += 1) {
@@ -488,7 +488,7 @@ void sp_time_geometric(sp_time_t base, sp_time_t ratio, sp_time_t count, sp_time
     out[i] = (base * r_pow);
   };
 }
-void sp_time_logarithmic(sp_time_t base, sp_sample_t scale, sp_time_t count, sp_time_t* out) {
+void sp_times_logarithmic(sp_time_t base, sp_sample_t scale, sp_time_t count, sp_time_t* out) {
   for (sp_size_t i = 0; (i < count); i += 1) {
     sp_sample_t v = (base * log1p((scale * (i + 1))));
     out[i] = llround(v);
@@ -602,12 +602,12 @@ void sp_samples_limit(sp_sample_t* in_out, sp_time_t count, sp_sample_t limit) {
     };
   };
 }
-void sp_sample_geometric(sp_sample_t base, sp_sample_t ratio, sp_time_t count, sp_sample_t* out) {
+void sp_samples_geometric(sp_sample_t base, sp_sample_t ratio, sp_time_t count, sp_sample_t* out) {
   for (sp_size_t i = 0; (i < count); i += 1) {
     out[i] = (base * pow(ratio, i));
   };
 }
-void sp_sample_logarithmic(sp_sample_t base, sp_sample_t scale, sp_time_t count, sp_sample_t* out) {
+void sp_samples_logarithmic(sp_sample_t base, sp_sample_t scale, sp_time_t count, sp_sample_t* out) {
   for (sp_size_t i = 0; (i < count); i += 1) {
     out[i] = (base * log1p((scale * (i + 1))));
   };

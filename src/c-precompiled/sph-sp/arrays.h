@@ -52,8 +52,8 @@ void sp_times_insert_space(sp_time_t* in, sp_time_t size, sp_time_t index, sp_ti
 void sp_times_subdivide_difference(sp_time_t* a, sp_time_t size, sp_time_t index, sp_time_t count, sp_time_t* out);
 void sp_times_to_samples(sp_time_t* in, sp_size_t count, sp_sample_t* out);
 status_t sp_times_to_samples_replace(sp_time_t* in, sp_size_t count, sp_sample_t** out);
-void sp_time_geometric(sp_time_t base, sp_time_t ratio, sp_time_t count, sp_time_t* out);
-void sp_time_logarithmic(sp_time_t base, sp_sample_t scale, sp_time_t count, sp_time_t* out);
+void sp_times_geometric(sp_time_t base, sp_time_t ratio, sp_time_t count, sp_time_t* out);
+void sp_times_logarithmic(sp_time_t base, sp_sample_t scale, sp_time_t count, sp_time_t* out);
 /* samples */
 arrays_template_h(sp_sample_t, sample, samples);
 void sp_samples_display(sp_sample_t* in, sp_size_t count);
@@ -69,5 +69,5 @@ void sp_samples_scale_sum(sp_sample_t* in, sp_size_t count, sp_sample_t target_y
 void sp_samples_blend(sp_sample_t* a, sp_sample_t* b, sp_sample_t fraction, sp_time_t size, sp_sample_t* out);
 void sp_samples_limit_abs(sp_sample_t* in, sp_time_t count, sp_sample_t limit, sp_sample_t* out);
 sp_sample_t sp_sample_random_discrete_bounded(sp_time_t* cudist, sp_time_t cudist_size, sp_sample_t range);
-void sp_sample_geometric(sp_sample_t base, sp_sample_t ratio, sp_time_t count, sp_sample_t* out);
-void sp_sample_logarithmic(sp_sample_t base, sp_sample_t scale, sp_time_t count, sp_sample_t* out);
+void sp_samples_geometric(sp_sample_t base, sp_sample_t ratio, sp_time_t count, sp_sample_t* out);
+void sp_samples_logarithmic(sp_sample_t base, sp_sample_t scale, sp_time_t count, sp_sample_t* out);

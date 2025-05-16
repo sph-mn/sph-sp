@@ -48,6 +48,6 @@ sp-define-event* t1
 
 define (design) status-t
   declare song sp-event-t
-  set song : sp-event-schedule t1-event (spd 1 2) (spd 2 1) 0
+  set song : sp-event-schedule t1-event (sp-d 1 2) (sp-d 2 1) 0
   return : sp-render-plot song
   ;return : sp-render-file song "/tmp/spout.wav"

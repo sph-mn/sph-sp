@@ -580,8 +580,8 @@ status_t test_path() {
   sp_sample_t c[2] = { 0, 0.1 };
   status_require((sp_envelope_zero((&samples), 100, 2, x, y, c)));
   status_require((sp_envelope_zero3((&samples), 100, 10, 1)));
-  status_require((sp_envelope_scaled((&times), 100, 5, 2, x, y, c)));
-  status_require((sp_envelope_scaled3((&times), 100, 5, 10, 1, 2, 3)));
+  status_require((sp_envelope_scale((&times), 100, 5, 2, x, y, c)));
+  status_require((sp_envelope_scale3((&times), 100, 5, 10, 1, 2, 3)));
   sp_event_reset(event);
   sp_event_path_samples3_srq((&event), (&samples), 100, 10, 0, 1, 10);
 exit:

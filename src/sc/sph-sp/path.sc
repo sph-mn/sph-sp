@@ -64,25 +64,25 @@
       (array-set* x x1 x2 x3)
       (array-set* y y1 y2 y3 y4 y5)
       ((pre-concat sp-path- type-name) out length 5 x y 0))
-    (define ((pre-concat sp-path- type-name _c 2) out length y1 y2 c1)
+    (define ((pre-concat sp-path- type-name _curve 2) out length y1 y2 c1)
       (status-t type** sp-time-t sp-sample-t sp-sample-t sp-sample-t)
       (declare y (array sp-sample-t 2))
       (array-set* y y1 y2)
       ((pre-concat sp-path- type-name) out length 2 0 y &c1))
-    (define ((pre-concat sp-path- type-name _c 3) out length x1 y1 y2 y3 c1 c2)
+    (define ((pre-concat sp-path- type-name _curve 3) out length x1 y1 y2 y3 c1 c2)
       (status-t type** sp-time-t sp-sample-t sp-sample-t sp-sample-t sp-sample-t sp-sample-t sp-sample-t)
       (declare y (array sp-sample-t 3) c (array sp-sample-t 2))
       (array-set* y y1 y2 y3)
       (array-set* c c1 c2)
       ((pre-concat sp-path- type-name) out length 3 &x1 y c))
-    (define ((pre-concat sp-path- type-name _c 4) out length x1 x2 y1 y2 y3 y4 c1 c2 c3)
+    (define ((pre-concat sp-path- type-name _curve 4) out length x1 x2 y1 y2 y3 y4 c1 c2 c3)
       (status-t type** sp-time-t sp-sample-t sp-sample-t sp-sample-t sp-sample-t sp-sample-t sp-sample-t sp-sample-t sp-sample-t sp-sample-t)
       (declare x (array sp-sample-t 2) y (array sp-sample-t 4) c (array sp-sample-t 3))
       (array-set* x x1 x2)
       (array-set* y y1 y2 y3 y4)
       (array-set* c c1 c2 c3)
       ((pre-concat sp-path- type-name) out length 4 x y c))
-    (define ((pre-concat sp-path- type-name _c 5) out length x1 x2 x3 y1 y2 y3 y4 y5 c1 c2 c3 c4)
+    (define ((pre-concat sp-path- type-name _curve 5) out length x1 x2 x3 y1 y2 y3 y4 y5 c1 c2 c3 c4)
       (status-t type** sp-time-t sp-sample-t sp-sample-t sp-sample-t sp-sample-t sp-sample-t sp-sample-t sp-sample-t sp-sample-t sp-sample-t sp-sample-t sp-sample-t sp-sample-t)
       (declare x (array sp-sample-t 3) y (array sp-sample-t 5) c (array sp-sample-t 4))
       (array-set* x x1 x2 x3)
@@ -95,9 +95,11 @@
 
 (define (sp-envelope-zero out length point-count x y c)
   (status-t sp-sample-t** sp-time-t sp-path-point-count-t sp-sample-t* sp-sample-t* sp-sample-t*)
-  "x, y and c length is point_count minus two.
-   x values will be multiplied by length.
-   x values will be cumulative (0.1, 0.2) -> 0.3"
+  "from a first implicit y value 0 to a final implicit y value 0.
+   only the intermediate points are provided.
+   x, y and c length is point_count minus two.
+   x values will be cumulative (0.1, 0.2) -> 0.3.
+   x values will be multiplied by length."
   (declare path-y (array sp-sample-t sp-path-point-count-limit))
   (set* (array-get x 1) length)
   (set (array-get path-y 0) 0 (array-get path-y (- point-count 1)) 0)
@@ -122,28 +124,28 @@
       (set* x1 length)
       (set x2 (+ x1 (* x2 length)) x3 (+ x2 (* x3 length)))
       (return ((pre-concat sp-path- type-name 5) out length x1 x2 x3 0 y1 y2 y3 0)))
-    (define ((pre-concat prefix _c 3) out length x1 y1 c1 c2)
+    (define ((pre-concat prefix _curve 3) out length x1 y1 c1 c2)
       (status-t type** sp-time-t sp-sample-t sp-sample-t sp-sample-t sp-sample-t)
-      (return ((pre-concat sp-path- type-name _c 3) out length (* x1 length) 0 y1 0 c1 c2)))
-    (define ((pre-concat prefix _c 4) out length x1 x2 y1 y2 c1 c2 c3)
+      (return ((pre-concat sp-path- type-name _curve 3) out length (* x1 length) 0 y1 0 c1 c2)))
+    (define ((pre-concat prefix _curve 4) out length x1 x2 y1 y2 c1 c2 c3)
       (status-t type** sp-time-t sp-sample-t sp-sample-t sp-sample-t sp-sample-t sp-sample-t sp-sample-t sp-sample-t)
       (return
-        ( (pre-concat sp-path- type-name _c 4) out length
+        ( (pre-concat sp-path- type-name _curve 4) out length
           (* x1 length) (+ (* x1 length) (* x2 length)) 0 y1 y2 0 c1 c2 c3)))
-    (define ((pre-concat prefix _c 5) out length x1 x2 x3 y1 y2 y3 c1 c2 c3 c4)
+    (define ((pre-concat prefix _curve 5) out length x1 x2 x3 y1 y2 y3 c1 c2 c3 c4)
       (status-t type** sp-time-t sp-sample-t sp-sample-t sp-sample-t sp-sample-t sp-sample-t sp-sample-t sp-sample-t sp-sample-t sp-sample-t sp-sample-t)
       (set* x1 length)
       (set x2 (+ x1 (* x2 length)) x3 (+ x2 (* x3 length)))
-      (return ((pre-concat sp-path- type-name _c 5) out length x1 x2 x3 0 y1 y2 y3 0 c1 c2 c3 c4)))))
+      (return ((pre-concat sp-path- type-name _curve 5) out length x1 x2 x3 0 y1 y2 y3 0 c1 c2 c3 c4)))))
 
 (sp-define-envelope-zero-n sp-envelope-zero samples sp-sample-t)
 
-(define (sp-envelope-scaled out length point-count y-scalar x y c)
+(define (sp-envelope-scale out length point-count y-scalar x y c)
   (status-t sp-time-t** sp-time-t sp-path-point-count-t sp-sample-t sp-sample-t* sp-sample-t* sp-sample-t*)
   "y and c length is point_count.
    x length is point_count minus two.
    x values will be cumulative (0.1, 0.2) -> 0.3.
-   x values will be multiplied by length"
+   x values will be multiplied by length."
   (declare path-y (array sp-sample-t sp-path-point-count-limit))
   (set* (array-get x 1) length)
   (set
@@ -155,7 +157,7 @@
       (array-get path-y i) (* y-scalar (array-get y i))))
   (return (sp-path-times out length point-count x path-y c)))
 
-(pre-define (sp-define-envelope-scaled-n prefix type-name type)
+(pre-define (sp-define-envelope-scale-n prefix type-name type)
   (begin
     (define ((pre-concat prefix 3) out length y-scalar x1 y1 y2 y3)
       (status-t type** sp-time-t sp-sample-t sp-sample-t sp-sample-t sp-sample-t sp-sample-t)
@@ -176,4 +178,4 @@
         ( (pre-concat sp-path- type-name 5) out length
           x1 x2 x3 (* y-scalar y1) (* y-scalar y2) (* y-scalar y3) (* y-scalar y4) (* y-scalar y5))))))
 
-(sp-define-envelope-scaled-n sp-envelope-scaled times sp-time-t)
+(sp-define-envelope-scale-n sp-envelope-scale times sp-time-t)

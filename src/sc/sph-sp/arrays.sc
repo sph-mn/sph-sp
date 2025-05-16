@@ -351,13 +351,13 @@
   (set *out temp)
   (label exit status-return))
 
-(define (sp-time-geometric base ratio count out) (void sp-time-t sp-time-t sp-time-t sp-time-t*)
+(define (sp-times-geometric base ratio count out) (void sp-time-t sp-time-t sp-time-t sp-time-t*)
   (sp-for-each-index i count
     (define r-pow sp-time-t 1)
     (sp-for-each-index j i (set* r-pow ratio))
     (set (array-get out i) (* base r-pow))))
 
-(define (sp-time-logarithmic base scale count out)
+(define (sp-times-logarithmic base scale count out)
   (void sp-time-t sp-sample-t sp-time-t sp-time-t*)
   (sp-for-each-index i count
     (define v sp-sample-t (* base (log1p (* scale (+ i 1)))))
@@ -448,11 +448,11 @@
 (define (sp-samples-limit in-out count limit) (void sp-sample-t* sp-time-t sp-sample-t)
   (sp-for-each-index i count (if (< limit (array-get in-out i)) (set (array-get in-out i) limit))))
 
-(define (sp-sample-geometric base ratio count out)
+(define (sp-samples-geometric base ratio count out)
   (void sp-sample-t sp-sample-t sp-time-t sp-sample-t*)
   (sp-for-each-index i count (set (array-get out i) (* base (pow ratio i)))))
 
-(define (sp-sample-logarithmic base scale count out)
+(define (sp-samples-logarithmic base scale count out)
   (void sp-sample-t sp-sample-t sp-time-t sp-sample-t*)
   (sp-for-each-index i count (set (array-get out i) (* base (log1p (* scale (+ i 1)))))))
 

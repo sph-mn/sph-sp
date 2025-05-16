@@ -104,7 +104,7 @@
 
 /** like rt but works in places where variables are not allowed (ex: array initializers) and before sp_initialize has been called */
 #define sp_duration(n, d) ((sp_time_t)(((_sp_rate / d) * n)))
-#define spd sp_duration
+#define sp_d sp_duration
 #define sprd sp_rate_duration
 typedef struct {
   sp_channel_count_t channel_count;

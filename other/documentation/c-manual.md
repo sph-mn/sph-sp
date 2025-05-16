@@ -72,9 +72,9 @@ srq(sp_block_new(2, 48000, &block));
 # interpolated paths
 - specify points and interpolation methods and get arrays for points on the path
 - use cases: envelopes and other modulation paths
-- functionality is provided by calls like sp_path_samples or sp_envelope_scaled
+- functionality is provided by calls like sp_path_samples or sp_envelope_scale
 - "sp_path_samples(...)" calculates a sample array from points
-- "sp_envelope_zero(...)" or "sp_envelope_scaled(...)" provide alternative ways of defining envelopes
+- "sp_envelope_zero(...)" or "sp_envelope_scale(...)" provide alternative ways of defining envelopes
 
 example
 ```c

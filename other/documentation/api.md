@@ -14,17 +14,17 @@ sp_convolution_filter_state_set :: sp_convolution_filter_ir_f_t:ir_f void*:ir_f_
 sp_convolve :: sp_sample_t*:a sp_time_t:a_len sp_sample_t*:b sp_time_t:b_len sp_time_t:result_carryover_len sp_sample_t*:result_carryover sp_sample_t*:result_samples -> void
 sp_convolve_one :: sp_sample_t*:a sp_time_t:a_len sp_sample_t*:b sp_time_t:b_len sp_sample_t*:result_samples -> void
 sp_deinitialize :: -> void
-sp_envelope_scaled :: sp_time_t**:out sp_time_t:length sp_path_point_count_t:point_count sp_sample_t:y_scalar sp_sample_t*:x sp_sample_t*:y sp_sample_t*:c -> status_t
-sp_envelope_scaled_c3 :: sp_time_t**:out sp_time_t:length sp_sample_t:y_scalar sp_sample_t:x1 sp_sample_t:y1 sp_sample_t:y2 sp_sample_t:y3 sp_sample_t:c1 sp_sample_t:c2 -> status_t
-sp_envelope_scaled_c4 :: sp_time_t**:out sp_time_t:length sp_sample_t:y_scalar sp_sample_t:x1 sp_sample_t:x2 sp_sample_t:y1 sp_sample_t:y2 sp_sample_t:y3 sp_sample_t:y4 sp_sample_t:c1 sp_sample_t:c2 sp_sample_t:c3 -> status_t
-sp_envelope_scaled_c5 :: sp_time_t**:out sp_time_t:length sp_sample_t:y_scalar sp_sample_t:x1 sp_sample_t:x2 sp_sample_t:x3 sp_sample_t:y1 sp_sample_t:y2 sp_sample_t:y3 sp_sample_t:y4 sp_sample_t:y5 sp_sample_t:c1 sp_sample_t:c2 sp_sample_t:c3 sp_sample_t:c4 -> status_t
-sp_envelope_scaled3 :: sp_time_t**:out sp_time_t:length sp_sample_t:y_scalar sp_sample_t:x1 sp_sample_t:y1 sp_sample_t:y2 sp_sample_t:y3 -> status_t
-sp_envelope_scaled4 :: sp_time_t**:out sp_time_t:length sp_sample_t:y_scalar sp_sample_t:x1 sp_sample_t:x2 sp_sample_t:y1 sp_sample_t:y2 sp_sample_t:y3 sp_sample_t:y4 -> status_t
-sp_envelope_scaled5 :: sp_time_t**:out sp_time_t:length sp_sample_t:y_scalar sp_sample_t:x1 sp_sample_t:x2 sp_sample_t:x3 sp_sample_t:y1 sp_sample_t:y2 sp_sample_t:y3 sp_sample_t:y4 sp_sample_t:y5 -> status_t
+sp_envelope_scale :: sp_time_t**:out sp_time_t:length sp_path_point_count_t:point_count sp_sample_t:y_scalar sp_sample_t*:x sp_sample_t*:y sp_sample_t*:c -> status_t
+sp_envelope_scale_curve3 :: sp_time_t**:out sp_time_t:length sp_sample_t:y_scalar sp_sample_t:x1 sp_sample_t:y1 sp_sample_t:y2 sp_sample_t:y3 sp_sample_t:c1 sp_sample_t:c2 -> status_t
+sp_envelope_scale_curve4 :: sp_time_t**:out sp_time_t:length sp_sample_t:y_scalar sp_sample_t:x1 sp_sample_t:x2 sp_sample_t:y1 sp_sample_t:y2 sp_sample_t:y3 sp_sample_t:y4 sp_sample_t:c1 sp_sample_t:c2 sp_sample_t:c3 -> status_t
+sp_envelope_scale_curve5 :: sp_time_t**:out sp_time_t:length sp_sample_t:y_scalar sp_sample_t:x1 sp_sample_t:x2 sp_sample_t:x3 sp_sample_t:y1 sp_sample_t:y2 sp_sample_t:y3 sp_sample_t:y4 sp_sample_t:y5 sp_sample_t:c1 sp_sample_t:c2 sp_sample_t:c3 sp_sample_t:c4 -> status_t
+sp_envelope_scale3 :: sp_time_t**:out sp_time_t:length sp_sample_t:y_scalar sp_sample_t:x1 sp_sample_t:y1 sp_sample_t:y2 sp_sample_t:y3 -> status_t
+sp_envelope_scale4 :: sp_time_t**:out sp_time_t:length sp_sample_t:y_scalar sp_sample_t:x1 sp_sample_t:x2 sp_sample_t:y1 sp_sample_t:y2 sp_sample_t:y3 sp_sample_t:y4 -> status_t
+sp_envelope_scale5 :: sp_time_t**:out sp_time_t:length sp_sample_t:y_scalar sp_sample_t:x1 sp_sample_t:x2 sp_sample_t:x3 sp_sample_t:y1 sp_sample_t:y2 sp_sample_t:y3 sp_sample_t:y4 sp_sample_t:y5 -> status_t
 sp_envelope_zero :: sp_sample_t**:out sp_time_t:length sp_path_point_count_t:point_count sp_sample_t*:x sp_sample_t*:y sp_sample_t*:c -> status_t
-sp_envelope_zero_c3 :: sp_sample_t**:out sp_time_t:length sp_sample_t:x1 sp_sample_t:y1 sp_sample_t:c1 sp_sample_t:c2 -> status_t
-sp_envelope_zero_c4 :: sp_sample_t**:out sp_time_t:length sp_sample_t:x1 sp_sample_t:x2 sp_sample_t:y1 sp_sample_t:y2 sp_sample_t:c1 sp_sample_t:c2 sp_sample_t:c3 -> status_t
-sp_envelope_zero_c5 :: sp_sample_t**:out sp_time_t:length sp_sample_t:x1 sp_sample_t:x2 sp_sample_t:x3 sp_sample_t:y1 sp_sample_t:y2 sp_sample_t:y3 sp_sample_t:c1 sp_sample_t:c2 sp_sample_t:c3 sp_sample_t:c4 -> status_t
+sp_envelope_zero_curve3 :: sp_sample_t**:out sp_time_t:length sp_sample_t:x1 sp_sample_t:y1 sp_sample_t:c1 sp_sample_t:c2 -> status_t
+sp_envelope_zero_curve4 :: sp_sample_t**:out sp_time_t:length sp_sample_t:x1 sp_sample_t:x2 sp_sample_t:y1 sp_sample_t:y2 sp_sample_t:c1 sp_sample_t:c2 sp_sample_t:c3 -> status_t
+sp_envelope_zero_curve5 :: sp_sample_t**:out sp_time_t:length sp_sample_t:x1 sp_sample_t:x2 sp_sample_t:x3 sp_sample_t:y1 sp_sample_t:y2 sp_sample_t:y3 sp_sample_t:c1 sp_sample_t:c2 sp_sample_t:c3 sp_sample_t:c4 -> status_t
 sp_envelope_zero3 :: sp_sample_t**:out sp_time_t:length sp_sample_t:x1 sp_sample_t:y1 -> status_t
 sp_envelope_zero4 :: sp_sample_t**:out sp_time_t:length sp_sample_t:x1 sp_sample_t:x2 sp_sample_t:y1 sp_sample_t:y2 -> status_t
 sp_envelope_zero5 :: sp_sample_t**:out sp_time_t:length sp_sample_t:x1 sp_sample_t:x2 sp_sample_t:x3 sp_sample_t:y1 sp_sample_t:y2 sp_sample_t:y3 -> status_t
@@ -76,19 +76,19 @@ sp_pan_to_amp :: sp_sample_t:value sp_channel_count_t:channel -> sp_sample_t
 sp_pan_to_amp :: sp_sample_t:value sp_channel_count_t:channel -> sp_sample_t
 sp_passthrough_ir :: sp_sample_t**:out_ir sp_time_t*:out_len -> status_t
 sp_path_samples :: sp_sample_t**:out sp_time_t:length sp_path_point_count_t:point_count sp_sample_t*:x sp_sample_t*:y sp_sample_t*:c -> status_t
-sp_path_samples_c2 :: sp_sample_t**:out sp_time_t:length sp_sample_t:y1 sp_sample_t:y2 sp_sample_t:c1 -> status_t
-sp_path_samples_c3 :: sp_sample_t**:out sp_time_t:length sp_sample_t:x1 sp_sample_t:y1 sp_sample_t:y2 sp_sample_t:y3 sp_sample_t:c1 sp_sample_t:c2 -> status_t
-sp_path_samples_c4 :: sp_sample_t**:out sp_time_t:length sp_sample_t:x1 sp_sample_t:x2 sp_sample_t:y1 sp_sample_t:y2 sp_sample_t:y3 sp_sample_t:y4 sp_sample_t:c1 sp_sample_t:c2 sp_sample_t:c3 -> status_t
-sp_path_samples_c5 :: sp_sample_t**:out sp_time_t:length sp_sample_t:x1 sp_sample_t:x2 sp_sample_t:x3 sp_sample_t:y1 sp_sample_t:y2 sp_sample_t:y3 sp_sample_t:y4 sp_sample_t:y5 sp_sample_t:c1 sp_sample_t:c2 sp_sample_t:c3 sp_sample_t:c4 -> status_t
+sp_path_samples_curve2 :: sp_sample_t**:out sp_time_t:length sp_sample_t:y1 sp_sample_t:y2 sp_sample_t:c1 -> status_t
+sp_path_samples_curve3 :: sp_sample_t**:out sp_time_t:length sp_sample_t:x1 sp_sample_t:y1 sp_sample_t:y2 sp_sample_t:y3 sp_sample_t:c1 sp_sample_t:c2 -> status_t
+sp_path_samples_curve4 :: sp_sample_t**:out sp_time_t:length sp_sample_t:x1 sp_sample_t:x2 sp_sample_t:y1 sp_sample_t:y2 sp_sample_t:y3 sp_sample_t:y4 sp_sample_t:c1 sp_sample_t:c2 sp_sample_t:c3 -> status_t
+sp_path_samples_curve5 :: sp_sample_t**:out sp_time_t:length sp_sample_t:x1 sp_sample_t:x2 sp_sample_t:x3 sp_sample_t:y1 sp_sample_t:y2 sp_sample_t:y3 sp_sample_t:y4 sp_sample_t:y5 sp_sample_t:c1 sp_sample_t:c2 sp_sample_t:c3 sp_sample_t:c4 -> status_t
 sp_path_samples2 :: sp_sample_t**:out sp_time_t:length sp_sample_t:y1 sp_sample_t:y2 -> status_t
 sp_path_samples3 :: sp_sample_t**:out sp_time_t:length sp_sample_t:x1 sp_sample_t:y1 sp_sample_t:y2 sp_sample_t:y3 -> status_t
 sp_path_samples4 :: sp_sample_t**:out sp_time_t:length sp_sample_t:x1 sp_sample_t:x2 sp_sample_t:y1 sp_sample_t:y2 sp_sample_t:y3 sp_sample_t:y4 -> status_t
 sp_path_samples5 :: sp_sample_t**:out sp_time_t:length sp_sample_t:x1 sp_sample_t:x2 sp_sample_t:x3 sp_sample_t:y1 sp_sample_t:y2 sp_sample_t:y3 sp_sample_t:y4 sp_sample_t:y5 -> status_t
 sp_path_times :: sp_time_t**:out sp_time_t:length sp_path_point_count_t:point_count sp_sample_t*:x sp_sample_t*:y sp_sample_t*:c -> status_t
-sp_path_times_c2 :: sp_time_t**:out sp_time_t:length sp_sample_t:y1 sp_sample_t:y2 sp_sample_t:c1 -> status_t
-sp_path_times_c3 :: sp_time_t**:out sp_time_t:length sp_sample_t:x1 sp_sample_t:y1 sp_sample_t:y2 sp_sample_t:y3 sp_sample_t:c1 sp_sample_t:c2 -> status_t
-sp_path_times_c4 :: sp_time_t**:out sp_time_t:length sp_sample_t:x1 sp_sample_t:x2 sp_sample_t:y1 sp_sample_t:y2 sp_sample_t:y3 sp_sample_t:y4 sp_sample_t:c1 sp_sample_t:c2 sp_sample_t:c3 -> status_t
-sp_path_times_c5 :: sp_time_t**:out sp_time_t:length sp_sample_t:x1 sp_sample_t:x2 sp_sample_t:x3 sp_sample_t:y1 sp_sample_t:y2 sp_sample_t:y3 sp_sample_t:y4 sp_sample_t:y5 sp_sample_t:c1 sp_sample_t:c2 sp_sample_t:c3 sp_sample_t:c4 -> status_t
+sp_path_times_curve2 :: sp_time_t**:out sp_time_t:length sp_sample_t:y1 sp_sample_t:y2 sp_sample_t:c1 -> status_t
+sp_path_times_curve3 :: sp_time_t**:out sp_time_t:length sp_sample_t:x1 sp_sample_t:y1 sp_sample_t:y2 sp_sample_t:y3 sp_sample_t:c1 sp_sample_t:c2 -> status_t
+sp_path_times_curve4 :: sp_time_t**:out sp_time_t:length sp_sample_t:x1 sp_sample_t:x2 sp_sample_t:y1 sp_sample_t:y2 sp_sample_t:y3 sp_sample_t:y4 sp_sample_t:c1 sp_sample_t:c2 sp_sample_t:c3 -> status_t
+sp_path_times_curve5 :: sp_time_t**:out sp_time_t:length sp_sample_t:x1 sp_sample_t:x2 sp_sample_t:x3 sp_sample_t:y1 sp_sample_t:y2 sp_sample_t:y3 sp_sample_t:y4 sp_sample_t:y5 sp_sample_t:c1 sp_sample_t:c2 sp_sample_t:c3 sp_sample_t:c4 -> status_t
 sp_path_times2 :: sp_time_t**:out sp_time_t:length sp_sample_t:y1 sp_sample_t:y2 -> status_t
 sp_path_times3 :: sp_time_t**:out sp_time_t:length sp_sample_t:x1 sp_sample_t:y1 sp_sample_t:y2 sp_sample_t:y3 -> status_t
 sp_path_times4 :: sp_time_t**:out sp_time_t:length sp_sample_t:x1 sp_sample_t:x2 sp_sample_t:y1 sp_sample_t:y2 sp_sample_t:y3 sp_sample_t:y4 -> status_t
@@ -111,8 +111,6 @@ sp_render_file :: sp_event_t:event uint8_t*:path -> status_t
 sp_render_plot :: sp_event_t:event -> status_t
 sp_render_range_block :: sp_event_t:event sp_time_t:start sp_time_t:end sp_render_config_t:config sp_block_t*:out -> status_t
 sp_render_range_file :: sp_event_t:event sp_time_t:start sp_time_t:end sp_render_config_t:config uint8_t*:path -> status_t
-sp_sample_geometric :: sp_sample_t:base sp_sample_t:ratio sp_time_t:count sp_sample_t*:out -> void
-sp_sample_logarithmic :: sp_sample_t:base sp_sample_t:scale sp_time_t:count sp_sample_t*:out -> void
 sp_sample_max :: sp_sample_t:a sp_sample_t:b -> sp_sample_t
 sp_sample_min :: sp_sample_t:a sp_sample_t:b -> sp_sample_t
 sp_sample_random_discrete_bounded :: sp_time_t*:cudist sp_time_t:cudist_size sp_sample_t:range -> sp_sample_t
@@ -122,7 +120,9 @@ sp_samples_to_units :: sp_sample_t*:in_out sp_size_t:count -> void
 sp_samples_blend :: sp_sample_t*:a sp_sample_t*:b sp_sample_t:fraction sp_time_t:size sp_sample_t*:out -> void
 sp_samples_display :: sp_sample_t*:in sp_size_t:count -> void
 sp_samples_divisions :: sp_sample_t:start sp_sample_t:divisor sp_time_t:count sp_sample_t*:out -> void
+sp_samples_geometric :: sp_sample_t:base sp_sample_t:ratio sp_time_t:count sp_sample_t*:out -> void
 sp_samples_limit_abs :: sp_sample_t*:in sp_time_t:count sp_sample_t:limit sp_sample_t*:out -> void
+sp_samples_logarithmic :: sp_sample_t:base sp_sample_t:scale sp_time_t:count sp_sample_t*:out -> void
 sp_samples_scale_to_times :: sp_sample_t*:a sp_time_t:size sp_time_t:max sp_time_t*:out -> void
 sp_samples_scale_sum :: sp_sample_t*:in sp_size_t:count sp_sample_t:target_y sp_sample_t*:out -> void
 sp_samples_scale_y :: sp_sample_t*:in sp_time_t:count sp_sample_t:target_y -> void
@@ -167,10 +167,8 @@ sp_status_name :: status_t:a -> uint8_t*
 sp_time_deharmonize :: sp_time_t:a sp_time_t:base sp_sample_t:amount -> sp_time_t
 sp_time_expt :: sp_time_t:base sp_time_t:exp -> sp_time_t
 sp_time_factorial :: sp_time_t:a -> sp_time_t
-sp_time_geometric :: sp_time_t:base sp_time_t:ratio sp_time_t:count sp_time_t*:out -> void
 sp_time_harmonize :: sp_time_t:a sp_time_t:base sp_sample_t:amount -> sp_time_t
 sp_time_harmonize :: sp_time_t:a sp_time_t:base sp_sample_t:amount -> sp_time_t
-sp_time_logarithmic :: sp_time_t:base sp_sample_t:scale sp_time_t:count sp_time_t*:out -> void
 sp_time_max :: sp_time_t:a sp_time_t:b -> sp_time_t
 sp_time_min :: sp_time_t:a sp_time_t:b -> sp_time_t
 sp_time_random_discrete :: sp_time_t*:cudist sp_time_t:cudist_size -> sp_time_t
@@ -185,9 +183,11 @@ sp_times_constant :: sp_size_t:count sp_time_t:value sp_time_t**:out -> status_t
 sp_times_contains :: sp_time_t*:in sp_size_t:count sp_time_t:value -> uint8_t
 sp_times_display :: sp_time_t*:in sp_size_t:count -> void
 sp_times_extract_in_range :: sp_time_t*:a sp_time_t:size sp_time_t:min sp_time_t:max sp_time_t*:out sp_time_t*:out_size -> void
+sp_times_geometric :: sp_time_t:base sp_time_t:ratio sp_time_t:count sp_time_t*:out -> void
 sp_times_gt_indices :: sp_time_t*:a sp_time_t:size sp_time_t:n sp_time_t*:out sp_time_t*:out_size -> void
 sp_times_insert_space :: sp_time_t*:in sp_time_t:size sp_time_t:index sp_time_t:count sp_time_t*:out -> void
 sp_times_limit :: sp_time_t*:a sp_time_t:count sp_time_t:n sp_time_t*:out -> void
+sp_times_logarithmic :: sp_time_t:base sp_sample_t:scale sp_time_t:count sp_time_t*:out -> void
 sp_times_make_seamless_left :: sp_time_t*:a sp_time_t:a_count sp_time_t*:b sp_time_t:b_count sp_time_t*:out -> void
 sp_times_make_seamless_right :: sp_time_t*:a sp_time_t:a_count sp_time_t*:b sp_time_t:b_count sp_time_t*:out -> void
 sp_times_mask :: sp_time_t*:a sp_time_t*:b sp_sample_t*:coefficients sp_time_t:size sp_time_t*:out -> void
@@ -343,6 +343,7 @@ sp_channel_count_t
 sp_cheap_ceiling_positive(a)
 sp_cheap_floor_positive(a)
 sp_cheap_round_positive(a)
+sp_d
 sp_declare_block(id)
 sp_declare_event(id)
 sp_declare_event_list(id)
@@ -356,19 +357,19 @@ sp_duration(n, d)
 sp_event_alloc_srq(event_pointer, allocator, size, pointer_address)
 sp_event_config_get(a, type)
 sp_event_duration(a)
-sp_event_envelope_scaled3_srq(event_pointer, out, ...)
-sp_event_envelope_scaled4_srq(event_pointer, out, ...)
-sp_event_envelope_scaled5_srq(event_pointer, out, ...)
-sp_event_envelope_scaled_c3_srq(event_pointer, out, ...)
-sp_event_envelope_scaled_c4_srq(event_pointer, out, ...)
-sp_event_envelope_scaled_c5_srq(event_pointer, out, ...)
-sp_event_envelope_scaled_srq(event_pointer, out, ...)
+sp_event_envelope_scale3_srq(event_pointer, out, ...)
+sp_event_envelope_scale4_srq(event_pointer, out, ...)
+sp_event_envelope_scale5_srq(event_pointer, out, ...)
+sp_event_envelope_scale_curve3_srq(event_pointer, out, ...)
+sp_event_envelope_scale_curve4_srq(event_pointer, out, ...)
+sp_event_envelope_scale_curve5_srq(event_pointer, out, ...)
+sp_event_envelope_scale_srq(event_pointer, out, ...)
 sp_event_envelope_zero3_srq(event_pointer, out, ...)
 sp_event_envelope_zero4_srq(event_pointer, out, ...)
 sp_event_envelope_zero5_srq(event_pointer, out, ...)
-sp_event_envelope_zero_c3_srq(event_pointer, out, ...)
-sp_event_envelope_zero_c4_srq(event_pointer, out, ...)
-sp_event_envelope_zero_c5_srq(event_pointer, out, ...)
+sp_event_envelope_zero_curve3_srq(event_pointer, out, ...)
+sp_event_envelope_zero_curve4_srq(event_pointer, out, ...)
+sp_event_envelope_zero_curve5_srq(event_pointer, out, ...)
 sp_event_envelope_zero_srq(event_pointer, out, ...)
 sp_event_free(a)
 sp_event_malloc_srq(event_pointer, size, pointer_address)
@@ -380,16 +381,16 @@ sp_event_memory_fixed_add(event, address)
 sp_event_path_samples3_srq(event_pointer, out, ...)
 sp_event_path_samples4_srq(event_pointer, out, ...)
 sp_event_path_samples5_srq(event_pointer, out, ...)
-sp_event_path_samples_c3_srq(event_pointer, out, ...)
-sp_event_path_samples_c4_srq(event_pointer, out, ...)
-sp_event_path_samples_c5_srq(event_pointer, out, ...)
+sp_event_path_samples_curve3_srq(event_pointer, out, ...)
+sp_event_path_samples_curve4_srq(event_pointer, out, ...)
+sp_event_path_samples_curve5_srq(event_pointer, out, ...)
 sp_event_path_samples_srq(event_pointer, out, ...)
 sp_event_path_times3_srq(event_pointer, out, ...)
 sp_event_path_times4_srq(event_pointer, out, ...)
 sp_event_path_times5_srq(event_pointer, out, ...)
-sp_event_path_times_c3_srq(event_pointer, out, ...)
-sp_event_path_times_c4_srq(event_pointer, out, ...)
-sp_event_path_times_c5_srq(event_pointer, out, ...)
+sp_event_path_times_curve3_srq(event_pointer, out, ...)
+sp_event_path_times_curve4_srq(event_pointer, out, ...)
+sp_event_path_times_curve5_srq(event_pointer, out, ...)
 sp_event_path_times_srq(event_pointer, out, ...)
 sp_event_prepare_optional_srq(a)
 sp_event_prepare_srq(a)
@@ -498,7 +499,6 @@ sp_units_random_bounded(range, size, out)
 sp_units_random_primitive
 sp_wave_event(event_pointer, _config)
 sp_wave_event_config_new(out)
-spd
 spline_path_value_t
 spline_path_value_t
 sprd

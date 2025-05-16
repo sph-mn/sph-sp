@@ -72,8 +72,8 @@
   (void sp-time-t* sp-time-t sp-time-t sp-time-t sp-time-t*)
   (sp-times->samples in count out) (void sp-time-t* sp-size-t sp-sample-t*)
   (sp-times->samples-replace in count out) (status-t sp-time-t* sp-size-t sp-sample-t**)
-  (sp-time-geometric base ratio count out) (void sp-time-t sp-time-t sp-time-t sp-time-t*)
-  (sp-time-logarithmic base scale count out) (void sp-time-t sp-sample-t sp-time-t sp-time-t*))
+  (sp-times-geometric base ratio count out) (void sp-time-t sp-time-t sp-time-t sp-time-t*)
+  (sp-times-logarithmic base scale count out) (void sp-time-t sp-sample-t sp-time-t sp-time-t*))
 
 (sc-comment "samples")
 (arrays-template-h sp-sample-t sample samples)
@@ -95,5 +95,5 @@
   (sp-samples-limit-abs in count limit out) (void sp-sample-t* sp-time-t sp-sample-t sp-sample-t*)
   (sp-sample-random-discrete-bounded cudist cudist-size range)
   (sp-sample-t sp-time-t* sp-time-t sp-sample-t)
-  (sp-sample-geometric base ratio count out) (void sp-sample-t sp-sample-t sp-time-t sp-sample-t*)
-  (sp-sample-logarithmic base scale count out) (void sp-sample-t sp-sample-t sp-time-t sp-sample-t*))
+  (sp-samples-geometric base ratio count out) (void sp-sample-t sp-sample-t sp-time-t sp-sample-t*)
+  (sp-samples-logarithmic base scale count out) (void sp-sample-t sp-sample-t sp-time-t sp-sample-t*))

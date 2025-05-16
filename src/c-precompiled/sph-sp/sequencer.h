@@ -60,14 +60,14 @@
 #define sp_event_path_samples5_srq(event_pointer, out, ...) \
   status_require((sp_path_samples5(out, __VA_ARGS__))); \
   status_require((sp_event_memory_add(event_pointer, (*out))))
-#define sp_event_path_samples_c3_srq(event_pointer, out, ...) \
-  status_require((sp_path_samples_c3(out, __VA_ARGS__))); \
+#define sp_event_path_samples_curve3_srq(event_pointer, out, ...) \
+  status_require((sp_path_samples_curve3(out, __VA_ARGS__))); \
   status_require((sp_event_memory_add(event_pointer, (*out))))
-#define sp_event_path_samples_c4_srq(event_pointer, out, ...) \
-  status_require((sp_path_samples_c4(out, __VA_ARGS__))); \
+#define sp_event_path_samples_curve4_srq(event_pointer, out, ...) \
+  status_require((sp_path_samples_curve4(out, __VA_ARGS__))); \
   status_require((sp_event_memory_add(event_pointer, (*out))))
-#define sp_event_path_samples_c5_srq(event_pointer, out, ...) \
-  status_require((sp_path_samples_c5(out, __VA_ARGS__))); \
+#define sp_event_path_samples_curve5_srq(event_pointer, out, ...) \
+  status_require((sp_path_samples_curve5(out, __VA_ARGS__))); \
   status_require((sp_event_memory_add(event_pointer, (*out))))
 #define sp_event_path_times_srq(event_pointer, out, ...) \
   status_require((sp_path_times(out, __VA_ARGS__))); \
@@ -81,14 +81,14 @@
 #define sp_event_path_times5_srq(event_pointer, out, ...) \
   status_require((sp_path_times5(out, __VA_ARGS__))); \
   status_require((sp_event_memory_add(event_pointer, (*out))))
-#define sp_event_path_times_c3_srq(event_pointer, out, ...) \
-  status_require((sp_path_times_c3(out, __VA_ARGS__))); \
+#define sp_event_path_times_curve3_srq(event_pointer, out, ...) \
+  status_require((sp_path_times_curve3(out, __VA_ARGS__))); \
   status_require((sp_event_memory_add(event_pointer, (*out))))
-#define sp_event_path_times_c4_srq(event_pointer, out, ...) \
-  status_require((sp_path_times_c4(out, __VA_ARGS__))); \
+#define sp_event_path_times_curve4_srq(event_pointer, out, ...) \
+  status_require((sp_path_times_curve4(out, __VA_ARGS__))); \
   status_require((sp_event_memory_add(event_pointer, (*out))))
-#define sp_event_path_times_c5_srq(event_pointer, out, ...) \
-  status_require((sp_path_times_c5(out, __VA_ARGS__))); \
+#define sp_event_path_times_curve5_srq(event_pointer, out, ...) \
+  status_require((sp_path_times_curve5(out, __VA_ARGS__))); \
   status_require((sp_event_memory_add(event_pointer, (*out))))
 #define sp_event_envelope_zero_srq(event_pointer, out, ...) \
   status_require((sp_envelope_zero(out, __VA_ARGS__))); \
@@ -102,35 +102,35 @@
 #define sp_event_envelope_zero5_srq(event_pointer, out, ...) \
   status_require((sp_envelope_zero5(out, __VA_ARGS__))); \
   status_require((sp_event_memory_add(event_pointer, (*out))))
-#define sp_event_envelope_zero_c3_srq(event_pointer, out, ...) \
-  status_require((sp_envelope_zero_c3(out, __VA_ARGS__))); \
+#define sp_event_envelope_zero_curve3_srq(event_pointer, out, ...) \
+  status_require((sp_envelope_zero_curve3(out, __VA_ARGS__))); \
   status_require((sp_event_memory_add(event_pointer, (*out))))
-#define sp_event_envelope_zero_c4_srq(event_pointer, out, ...) \
-  status_require((sp_envelope_zero_c4(out, __VA_ARGS__))); \
+#define sp_event_envelope_zero_curve4_srq(event_pointer, out, ...) \
+  status_require((sp_envelope_zero_curve4(out, __VA_ARGS__))); \
   status_require((sp_event_memory_add(event_pointer, (*out))))
-#define sp_event_envelope_zero_c5_srq(event_pointer, out, ...) \
-  status_require((sp_envelope_zero_c5(out, __VA_ARGS__))); \
+#define sp_event_envelope_zero_curve5_srq(event_pointer, out, ...) \
+  status_require((sp_envelope_zero_curve5(out, __VA_ARGS__))); \
   status_require((sp_event_memory_add(event_pointer, (*out))))
-#define sp_event_envelope_scaled_srq(event_pointer, out, ...) \
-  status_require((sp_envelope_scaled(out, __VA_ARGS__))); \
+#define sp_event_envelope_scale_srq(event_pointer, out, ...) \
+  status_require((sp_envelope_scale(out, __VA_ARGS__))); \
   status_require((sp_event_memory_add(event_pointer, (*out))))
-#define sp_event_envelope_scaled3_srq(event_pointer, out, ...) \
-  status_require((sp_envelope_scaled3(out, __VA_ARGS__))); \
+#define sp_event_envelope_scale3_srq(event_pointer, out, ...) \
+  status_require((sp_envelope_scale3(out, __VA_ARGS__))); \
   status_require((sp_event_memory_add(event_pointer, (*out))))
-#define sp_event_envelope_scaled4_srq(event_pointer, out, ...) \
-  status_require((sp_envelope_scaled4(out, __VA_ARGS__))); \
+#define sp_event_envelope_scale4_srq(event_pointer, out, ...) \
+  status_require((sp_envelope_scale4(out, __VA_ARGS__))); \
   status_require((sp_event_memory_add(event_pointer, (*out))))
-#define sp_event_envelope_scaled5_srq(event_pointer, out, ...) \
-  status_require((sp_envelope_scaled5(out, __VA_ARGS__))); \
+#define sp_event_envelope_scale5_srq(event_pointer, out, ...) \
+  status_require((sp_envelope_scale5(out, __VA_ARGS__))); \
   status_require((sp_event_memory_add(event_pointer, (*out))))
-#define sp_event_envelope_scaled_c3_srq(event_pointer, out, ...) \
-  status_require((sp_envelope_scaled_c3(out, __VA_ARGS__))); \
+#define sp_event_envelope_scale_curve3_srq(event_pointer, out, ...) \
+  status_require((sp_envelope_scale_curve3(out, __VA_ARGS__))); \
   status_require((sp_event_memory_add(event_pointer, (*out))))
-#define sp_event_envelope_scaled_c4_srq(event_pointer, out, ...) \
-  status_require((sp_envelope_scaled_c4(out, __VA_ARGS__))); \
+#define sp_event_envelope_scale_curve4_srq(event_pointer, out, ...) \
+  status_require((sp_envelope_scale_curve4(out, __VA_ARGS__))); \
   status_require((sp_event_memory_add(event_pointer, (*out))))
-#define sp_event_envelope_scaled_c5_srq(event_pointer, out, ...) \
-  status_require((sp_envelope_scaled_c5(out, __VA_ARGS__))); \
+#define sp_event_envelope_scale_curve5_srq(event_pointer, out, ...) \
+  status_require((sp_envelope_scale_curve5(out, __VA_ARGS__))); \
   status_require((sp_event_memory_add(event_pointer, (*out))))
 #define sp_event_alloc_srq(event_pointer, allocator, size, pointer_address) \
   status_require((allocator(size, pointer_address))); \
