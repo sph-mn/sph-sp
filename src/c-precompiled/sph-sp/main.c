@@ -554,3 +554,53 @@ sp_time_t sp_time_factorial(sp_time_t n) {
 sp_size_t sp_set_sequence_max(sp_size_t set_size, sp_size_t selection_size) { return (((0 == set_size) ? 0 : sp_time_expt(set_size, selection_size))); }
 sp_size_t sp_permutations_max(sp_size_t set_size, sp_size_t selection_size) { return ((sp_time_factorial(set_size) / (set_size - selection_size))); }
 sp_size_t sp_compositions_max(sp_size_t sum) { return ((sp_time_expt(2, (sum - 1)))); }
+
+/** return a mask with the lower divisions bits set */
+static inline sp_scale_t sp_scale_mask(sp_time_t divisions) { return (((divisions >= ((sp_time_t)((8 * sizeof(sp_scale_t))))) ? ~((sp_scale_t)(0)) : ((((sp_scale_t)(1)) << divisions) - 1))); }
+
+/** build a scale bitset from an array of pitch-class indices */
+static inline sp_scale_t sp_scale_make(sp_time_t* pitch_classes, sp_time_t count, sp_time_t divisions) {
+  sp_scale_t scale = 0;
+  for (sp_size_t i = 0; (i < count); i += 1) {
+    scale = (scale | (((sp_scale_t)(1)) << (pitch_classes[i] % divisions)));
+  };
+  return ((scale & sp_scale_mask(divisions)));
+}
+
+/** rotate (transpose) the scale by steps within divisions slots */
+static inline sp_scale_t sp_scale_rotate(sp_scale_t scale, sp_time_t steps, sp_time_t divisions) {
+  if (!divisions) {
+    divisions = ((sp_time_t)((8 * sizeof(sp_scale_t))));
+  };
+  steps = (((steps % divisions) + divisions) % divisions);
+  if (!steps) {
+    return ((scale & sp_scale_mask(divisions)));
+  };
+  if (divisions == (8 * sizeof(sp_scale_t))) {
+    return (((scale << steps) | (scale >> (((sp_time_t)((8 * sizeof(sp_scale_t)))) - steps))));
+  };
+  return ((((scale << steps) | (scale >> (divisions - steps))) & sp_scale_mask(divisions)));
+}
+
+/** count how many notes (bits) are set in the scale */
+static inline sp_time_t sp_scale_divisions(sp_scale_t scale) {
+  sp_time_t count = 0;
+  while (scale) {
+    scale = (scale & (scale - 1));
+    count += 1;
+  };
+  return (count);
+}
+
+/** return index of the least-significant set bit (first note) */
+static inline sp_time_t sp_scale_first_index(sp_scale_t scale) {
+  sp_time_t i = 0;
+  while (!(scale & 1)) {
+    scale = (scale >> 1);
+    i += 1;
+  };
+  return (i);
+}
+
+/** rotate so the first note sits at bit 0 (canonical form) */
+static inline sp_scale_t sp_scale_canonical(sp_scale_t scale, sp_time_t divisions) { return ((sp_scale_rotate(scale, (-1 * sp_scale_first_index(scale)), divisions))); }

@@ -49,6 +49,9 @@
 #ifndef sp_sample_t
 #define sp_sample_t double
 #endif
+#ifndef sp_scale_t
+#define sp_scale_t uint64_t
+#endif
 #ifndef sp_render_block_seconds
 #define sp_render_block_seconds 4
 #endif

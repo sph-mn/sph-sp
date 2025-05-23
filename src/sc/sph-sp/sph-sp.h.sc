@@ -16,6 +16,7 @@
   sp-samples-random-primitive sph-random-f64-array-1to1
   sp-samples-sum sph-f64-sum
   sp-sample-t double
+  sp-scale-t uint64-t
   sp-render-block-seconds 4
   sp-size-t sp-time-t
   sp-ssize-t int32-t

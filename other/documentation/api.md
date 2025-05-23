@@ -129,6 +129,12 @@ sp_samples_scale_y :: sp_sample_t*:in sp_time_t:count sp_sample_t:target_y -> vo
 sp_samples_set_gain :: sp_sample_t*:in_out sp_size_t:count sp_sample_t:amp -> void
 sp_samples_set_gain :: sp_sample_t*:in_out sp_size_t:count sp_sample_t:amp -> void
 sp_samples_set_unity_gain :: sp_sample_t*:in_out sp_sample_t*:reference sp_size_t:count -> void
+sp_scale_canonical :: sp_scale_t:scale sp_time_t:divisions -> static inline sp_scale_t
+sp_scale_divisions :: sp_scale_t:scale -> static inline sp_time_t
+sp_scale_first_index :: sp_scale_t:scale -> static inline sp_time_t
+sp_scale_make :: sp_time_t*:pitch_classes sp_time_t:count sp_time_t:divisions -> static inline sp_scale_t
+sp_scale_mask :: sp_time_t:divisions -> static inline sp_scale_t
+sp_scale_rotate :: sp_scale_t:scale sp_time_t:steps sp_time_t:divisions -> static inline sp_scale_t
 sp_seq :: sp_time_t:start sp_time_t:end sp_block_t:out sp_event_list_t**:events -> status_t
 sp_seq_parallel :: sp_time_t:start sp_time_t:end sp_block_t:out sp_event_list_t**:events -> status_t
 sp_sequence_max :: sp_time_t:size sp_time_t:min_size -> sp_time_t
@@ -470,6 +476,7 @@ sp_samples_random_primitive
 sp_samples_sum
 sp_samples_to_hz(x)
 sp_samples_zero(a, size)
+sp_scale_t
 sp_seq_events_prepare
 sp_size_t
 sp_ssize_t

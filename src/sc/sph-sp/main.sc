@@ -432,3 +432,50 @@
   (return (/ (sp-time-factorial set-size) (- set-size selection-size))))
 
 (define (sp-compositions-max sum) (sp-size-t sp-size-t) (return (sp-time-expt 2 (- sum 1))))
+
+(define (sp-scale-mask divisions) ((static inline sp-scale-t) sp-time-t)
+  "return a mask with the lower divisions bits set"
+  (return
+    (if* (>= divisions (convert-type (* 8 (sizeof sp-scale-t)) sp-time-t))
+      (bit-not (convert-type 0 sp-scale-t))
+      (- (bit-shift-left (convert-type 1 sp-scale-t) divisions) 1))))
+
+(define (sp-scale-make pitch-classes count divisions)
+  ((static inline sp-scale-t) sp-time-t* sp-time-t sp-time-t)
+  "build a scale bitset from an array of pitch-class indices"
+  (define scale sp-scale-t 0)
+  (sp-for-each-index i count
+    (set scale
+      (bit-or scale
+        (bit-shift-left (convert-type 1 sp-scale-t) (modulo (array-get pitch-classes i) divisions)))))
+  (return (bit-and scale (sp-scale-mask divisions))))
+
+(define (sp-scale-rotate scale steps divisions)
+  ((static inline sp-scale-t) sp-scale-t sp-time-t sp-time-t)
+  "rotate (transpose) the scale by steps within divisions slots"
+  (if (not divisions) (set divisions (convert-type (* 8 (sizeof sp-scale-t)) sp-time-t)))
+  (set steps (modulo (+ (modulo steps divisions) divisions) divisions))
+  (if (not steps) (return (bit-and scale (sp-scale-mask divisions))))
+  (if (= divisions (* 8 (sizeof sp-scale-t)))
+    (return
+      (bit-or (bit-shift-left scale steps)
+        (bit-shift-right scale (- (convert-type (* 8 (sizeof sp-scale-t)) sp-time-t) steps)))))
+  (return
+    (bit-and (bit-or (bit-shift-left scale steps) (bit-shift-right scale (- divisions steps)))
+      (sp-scale-mask divisions))))
+
+(define (sp-scale-divisions scale) ((static inline sp-time-t) sp-scale-t)
+  "count how many notes (bits) are set in the scale"
+  (define count sp-time-t 0)
+  (while scale (set scale (bit-and scale (- scale 1))) (set+ count 1))
+  (return count))
+
+(define (sp-scale-first-index scale) ((static inline sp-time-t) sp-scale-t)
+  "return index of the least-significant set bit (first note)"
+  (define i sp-time-t 0)
+  (while (not (bit-and scale 1)) (set scale (bit-shift-right scale 1)) (set+ i 1))
+  (return i))
+
+(define (sp-scale-canonical scale divisions) ((static inline sp-scale-t) sp-scale-t sp-time-t)
+  "rotate so the first note sits at bit 0 (canonical form)"
+  (return (sp-scale-rotate scale (* -1 (sp-scale-first-index scale)) divisions)))
