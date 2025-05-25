@@ -97,6 +97,7 @@
 #include <sph/memreg.h>
 #include <sph-sp/main.h>
 #include <sph-sp/arrays.h>
+#include <sph-sp/distributions.h>
 #include <sph/spline-path.h>
 #include <sph-sp/path.h>
 #include <sph-sp/filter.h>

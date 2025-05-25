@@ -229,20 +229,6 @@ void sp_times_bits_to_times(sp_time_t* a, sp_time_t size, sp_time_t* out) {
   };
 }
 
-/** write to out values that are randomly either 1 or 0 */
-status_t sp_times_random_binary(sp_time_t size, sp_time_t* out) {
-  sp_time_t random_size;
-  sp_time_t* temp;
-  status_declare;
-  random_size = ((size < (sizeof(sp_time_t) * 8)) ? 1 : ((size / (sizeof(sp_time_t) * 8)) + 1));
-  status_require((sp_times_new(random_size, (&temp))));
-  sp_times_random(random_size, temp);
-  sp_times_bits_to_times(temp, size, out);
-  free(temp);
-exit:
-  status_return;
-}
-
 /** write to out indices of a that are greater than n
    a/out can be the same pointer */
 void sp_times_gt_indices(sp_time_t* a, sp_time_t size, sp_time_t n, sp_time_t* out, sp_time_t* out_size) {
@@ -312,14 +298,6 @@ void sp_times_scale_sum(sp_time_t* in, sp_size_t count, sp_time_t sum, sp_time_t
   };
 }
 
-/** write count cumulative multiplications with factor from start to out */
-void sp_times_multiplications(sp_time_t start, sp_time_t factor, sp_time_t count, sp_time_t* out) {
-  for (sp_size_t i = 0; (i < count); i += 1) {
-    out[i] = start;
-    start *= factor;
-  };
-}
-
 /** true if array in contains element value */
 uint8_t sp_times_contains(sp_time_t* in, sp_size_t count, sp_time_t value) {
   for (sp_size_t i = 0; (i < count); i += 1) {
@@ -328,21 +306,6 @@ uint8_t sp_times_contains(sp_time_t* in, sp_size_t count, sp_time_t value) {
     };
   };
   return (0);
-}
-
-/** create size number of unique discrete random numbers with the distribution given by cudist */
-void sp_times_random_discrete_unique(sp_time_t* cudist, sp_time_t cudist_size, sp_time_t size, sp_time_t* out) {
-  sp_time_t a;
-  sp_time_t remaining;
-  remaining = sp_inline_min(size, cudist_size);
-  while (remaining) {
-    a = sp_time_random_discrete(cudist, cudist_size);
-    if (sp_times_contains(out, (size - remaining), a)) {
-      continue;
-    };
-    out[(size - remaining)] = a;
-    remaining -= 1;
-  };
 }
 
 /** append a series of incremented sequences to out, starting with and not modifying the first element in out.
@@ -479,21 +442,6 @@ status_t sp_times_to_samples_replace(sp_time_t* in, sp_size_t count, sp_sample_t
 exit:
   status_return;
 }
-void sp_times_geometric(sp_time_t base, sp_time_t ratio, sp_time_t count, sp_time_t* out) {
-  for (sp_size_t i = 0; (i < count); i += 1) {
-    sp_time_t r_pow = 1;
-    for (sp_size_t j = 0; (j < i); j += 1) {
-      r_pow *= ratio;
-    };
-    out[i] = (base * r_pow);
-  };
-}
-void sp_times_logarithmic(sp_time_t base, sp_sample_t scale, sp_time_t count, sp_time_t* out) {
-  for (sp_size_t i = 0; (i < count); i += 1) {
-    sp_sample_t v = (base * log1p((scale * (i + 1))));
-    out[i] = llround(v);
-  };
-}
 
 /* samples */
 arrays_template(sp_sample_t, sample, samples, sp_subtract, fabs);
@@ -553,7 +501,6 @@ void sp_samples_differences(sp_sample_t* a, sp_time_t count, sp_sample_t* out) {
     out[(i - 1)] = (a[i] - a[(i - 1)]);
   };
 }
-sp_sample_t sp_sample_random_discrete_bounded(sp_time_t* cudist, sp_time_t cudist_size, sp_sample_t range) { return ((range * (sp_time_random_discrete(cudist, cudist_size) / ((sp_sample_t)(cudist_size))))); }
 void sp_samples_divisions(sp_sample_t start, sp_sample_t divisor, sp_time_t count, sp_sample_t* out) {
   for (sp_size_t i = 0; (i < count); i += 1) {
     out[i] = start;
@@ -600,16 +547,6 @@ void sp_samples_limit(sp_sample_t* in_out, sp_time_t count, sp_sample_t limit) {
     if (limit < in_out[i]) {
       in_out[i] = limit;
     };
-  };
-}
-void sp_samples_geometric(sp_sample_t base, sp_sample_t ratio, sp_time_t count, sp_sample_t* out) {
-  for (sp_size_t i = 0; (i < count); i += 1) {
-    out[i] = (base * pow(ratio, i));
-  };
-}
-void sp_samples_logarithmic(sp_sample_t base, sp_sample_t scale, sp_time_t count, sp_sample_t* out) {
-  for (sp_size_t i = 0; (i < count); i += 1) {
-    out[i] = (base * log1p((scale * (i + 1))));
   };
 }
 

@@ -121,15 +121,6 @@
     }; \
     free(in); \
   } \
-\
-  /** write count cumulative additions with summand from start to out. \
-         with summand, only the nth additions are written. \
-         use case: generating harmonic frequency values */ \
-  void sp_##type_name##_additions(value_t start, value_t summand, value_t count, value_t* out) { \
-    for (sp_size_t i = 0; (i < count); i += 1, start += summand) { \
-      out[i] = start; \
-    }; \
-  } \
   status_t sp_##type_name##_duplicate(value_t* a, sp_size_t count, value_t** out) { \
     status_declare; \
     value_t* temp; \
@@ -138,13 +129,6 @@
     *out = temp; \
   exit: \
     status_return; \
-  } \
-\
-  /** write into out values from start (inclusively) to end (exclusively) */ \
-  void sp_##type_name##_range(value_t* in, sp_size_t start, sp_size_t end, value_t* out) { \
-    for (sp_size_t i = 0; (i < (end - start)); i += 1) { \
-      out[i] = in[(start + i)]; \
-    }; \
   } \
 \
   /** if a[i] and b[i] greater than limit, take b[i] else 0 */ \
@@ -215,125 +199,5 @@
   void sp_##type_name##_set_##type_name##_left(value_t* in_out, sp_size_t count, value_t* in) { \
     for (sp_size_t i = 0; (i < count); i += 1) { \
       in_out[(-1 * i)] = in[i]; \
-    }; \
-  } \
-\
-  /** f(n) = base * (n+1) */ \
-  void sp_##type_name##_harmonic(value_t base, sp_time_t count, value_t* out) { \
-    for (sp_size_t i = 0; (i < count); i += 1) { \
-      out[i] = (base * (1 + i)); \
-    }; \
-  } \
-\
-  /** f(n) = base * (2·n+1) */ \
-  void sp_##type_name##_odd_harmonics(value_t base, sp_time_t count, value_t* out) { \
-    for (sp_size_t i = 0; (i < count); i += 1) { \
-      out[i] = (base * (1 + (2 * i))); \
-    }; \
-  } \
-\
-  /** f(n) = base * 2·(n+1) */ \
-  void sp_##type_name##_even_harmonics(value_t base, sp_time_t count, value_t* out) { \
-    for (sp_size_t i = 0; (i < count); i += 1) { \
-      out[i] = (base * 2 * (1 + i)); \
-    }; \
-  } \
-\
-  /** f(n) = base * k * (n+1) */ \
-  void sp_##type_name##_nth_harmonics(value_t base, value_t k, sp_time_t count, value_t* out) { \
-    for (sp_size_t i = 0; (i < count); i += 1) { \
-      out[i] = (base * k * (1 + i)); \
-    }; \
-  } \
-\
-  /** f(n) = f(n–1) + deltas[n] */ \
-  void sp_##type_name##_cumulative(value_t base, value_t* deltas, sp_time_t count, value_t* out) { \
-    value_t acc = base; \
-    for (sp_size_t i = 0; (i < count); i += 1) { \
-      acc = (acc + deltas[i]); \
-      out[i] = acc; \
-    }; \
-  } \
-\
-  /** f(n) = f(n–1) – deltas[n] */ \
-  void sp_##type_name##_decumulative(value_t base, value_t* deltas, sp_time_t count, value_t* out) { \
-    value_t acc = base; \
-    for (sp_size_t i = 0; (i < count); i += 1) { \
-      acc = (acc - deltas[i]); \
-      out[i] = acc; \
-    }; \
-  } \
-\
-  /** f(n) = base * pₙ, pₙ = nth prime */ \
-  void sp_##type_name##_prime_indexed(value_t base, sp_time_t count, value_t* out) { \
-    for (sp_size_t i = 0; (i < sp_time_min(count, (sizeof(sp_primes) / sizeof(sp_time_t)))); i += 1) { \
-      out[i] = (base * sp_primes[i]); \
-    }; \
-  } \
-\
-  /** f(n) = base + (n mod mod)·delta */ \
-  void sp_##type_name##_modular_series(value_t base, sp_time_t mod, sp_sample_t delta, sp_time_t count, value_t* out) { \
-    for (sp_size_t i = 0; (i < count); i += 1) { \
-      out[i] = (base + (fmod(i, mod) * delta)); \
-    }; \
-  } \
-\
-  /** f(n) = base * ratios[n] */ \
-  void sp_##type_name##_fixed_sets(value_t base, value_t* ratios, value_t len, value_t* out) { \
-    for (sp_size_t i = 0; (i < len); i += 1) { \
-      out[i] = (base * ratios[i]); \
-    }; \
-  } \
-\
-  /** f(n) = center + spread·(n–(count–1)/2) */ \
-  void sp_##type_name##_clustered(value_t center, value_t spread, value_t count, value_t* out) { \
-    value_t half = ((count - 1) / 2); \
-    for (sp_size_t i = 0; (i < count); i += 1) { \
-      out[i] = (center + (spread * (i - half))); \
-    }; \
-  } \
-\
-  /** a(n) = base – k·n */ \
-  void sp_##type_name##_linear(value_t base, value_t k, value_t count, value_t* out) { \
-    for (sp_size_t i = 0; (i < count); i += 1) { \
-      out[i] = (base - (k * i)); \
-    }; \
-  } \
-\
-  /** a(n) = base·e^(–k·n) */ \
-  void sp_##type_name##_exponential(value_t base, value_t k, value_t count, value_t* out) { \
-    for (sp_size_t i = 0; (i < count); i += 1) { \
-      out[i] = (base * exp((-(k * i)))); \
-    }; \
-  } \
-\
-  /** a(n) = base·e^(–((n–centre)²)/(2·width²)) */ \
-  void sp_##type_name##_gaussian(value_t base, value_t centre, value_t width, value_t count, value_t* out) { \
-    value_t denom = (2 * (width * width)); \
-    for (sp_size_t i = 0; (i < count); i += 1) { \
-      value_t d = (i - centre); \
-      out[i] = (base * exp(((-(d * d)) / denom))); \
-    }; \
-  } \
-\
-  /** a(n) = base·(n+1)^(–p) */ \
-  void sp_##type_name##_power(value_t base, value_t p, value_t count, value_t* out) { \
-    for (sp_size_t i = 0; (i < count); i += 1) { \
-      out[i] = (base * pow((1 + i), (-p))); \
-    }; \
-  } \
-\
-  /** a(n) = base·j0(n) */ \
-  void sp_##type_name##_bessel(value_t base, value_t count, value_t* out) { \
-    for (sp_size_t i = 0; (i < count); i += 1) { \
-      out[i] = (base * j0(i)); \
-    }; \
-  } \
-\
-  /** a(n) = base / (1 + e^(k·(n–mid))) */ \
-  void sp_##type_name##_logistic(value_t base, value_t k, value_t count, value_t* out) { \
-    value_t mid = ((count - 1) / 2); \
-    for (sp_size_t i = 0; (i < count); i += 1) { \
-      out[i] = (base / (1 + exp((k * (i - mid))))); \
     }; \
   }

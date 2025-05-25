@@ -151,18 +151,6 @@
       (set+ i 1 bits-i 1))
     (set+ a-i 1)))
 
-(define (sp-times-random-binary size out) (status-t sp-time-t sp-time-t*)
-  "write to out values that are randomly either 1 or 0"
-  (declare random-size sp-time-t temp sp-time-t*)
-  status-declare
-  (set random-size
-    (if* (< size (* (sizeof sp-time-t) 8)) 1 (+ (/ size (* (sizeof sp-time-t) 8)) 1)))
-  (status-require (sp-times-new random-size &temp))
-  (sp-times-random random-size temp)
-  (sp-times-bits->times temp size out)
-  (free temp)
-  (label exit status-return))
-
 (define (sp-times-gt-indices a size n out out-size)
   (void sp-time-t* sp-time-t sp-time-t sp-time-t* sp-time-t*)
   "write to out indices of a that are greater than n
@@ -222,26 +210,10 @@
   (sp-for-each-index i count
     (set (array-get out i) (sp-cheap-round-positive (* (array-get out i) factor)))))
 
-(define (sp-times-multiplications start factor count out)
-  (void sp-time-t sp-time-t sp-time-t sp-time-t*)
-  "write count cumulative multiplications with factor from start to out"
-  (sp-for-each-index i count (set (array-get out i) start) (set* start factor)))
-
 (define (sp-times-contains in count value) (uint8-t sp-time-t* sp-size-t sp-time-t)
   "true if array in contains element value"
   (sp-for-each-index i count (if (= value (array-get in i)) (return #t)))
   (return #f))
-
-(define (sp-times-random-discrete-unique cudist cudist-size size out)
-  (void sp-time-t* sp-time-t sp-time-t sp-time-t*)
-  "create size number of unique discrete random numbers with the distribution given by cudist"
-  (declare a sp-time-t remaining sp-time-t)
-  (set remaining (sp-inline-min size cudist-size))
-  (while remaining
-    (set a (sp-time-random-discrete cudist cudist-size))
-    (if (sp-times-contains out (- size remaining) a) continue)
-    (set (array-get out (- size remaining)) a)
-    (set- remaining 1)))
 
 (define (sp-times-sequences base digits set-size out)
   (void sp-time-t sp-time-t sp-time-t sp-time-t*)
@@ -351,18 +323,6 @@
   (set *out temp)
   (label exit status-return))
 
-(define (sp-times-geometric base ratio count out) (void sp-time-t sp-time-t sp-time-t sp-time-t*)
-  (sp-for-each-index i count
-    (define r-pow sp-time-t 1)
-    (sp-for-each-index j i (set* r-pow ratio))
-    (set (array-get out i) (* base r-pow))))
-
-(define (sp-times-logarithmic base scale count out)
-  (void sp-time-t sp-sample-t sp-time-t sp-time-t*)
-  (sp-for-each-index i count
-    (define v sp-sample-t (* base (log1p (* scale (+ i 1)))))
-    (set (array-get out i) (llround v))))
-
 (sc-comment "samples")
 (arrays-template sp-sample-t sample samples sp-subtract fabs)
 
@@ -406,12 +366,6 @@
   (for ((define i sp-size-t 1) (< i count) (set+ i 1))
     (set (array-get out (- i 1)) (- (array-get a i) (array-get a (- i 1))))))
 
-(define (sp-sample-random-discrete-bounded cudist cudist-size range)
-  (sp-sample-t sp-time-t* sp-time-t sp-sample-t)
-  (return
-    (* range
-      (/ (sp-time-random-discrete cudist cudist-size) (convert-type cudist-size sp-sample-t)))))
-
 (define (sp-samples-divisions start divisor count out)
   (void sp-sample-t sp-sample-t sp-time-t sp-sample-t*)
   (sp-for-each-index i count (set (array-get out i) start) (set/ start divisor)))
@@ -447,14 +401,6 @@
 
 (define (sp-samples-limit in-out count limit) (void sp-sample-t* sp-time-t sp-sample-t)
   (sp-for-each-index i count (if (< limit (array-get in-out i)) (set (array-get in-out i) limit))))
-
-(define (sp-samples-geometric base ratio count out)
-  (void sp-sample-t sp-sample-t sp-time-t sp-sample-t*)
-  (sp-for-each-index i count (set (array-get out i) (* base (pow ratio i)))))
-
-(define (sp-samples-logarithmic base scale count out)
-  (void sp-sample-t sp-sample-t sp-time-t sp-sample-t*)
-  (sp-for-each-index i count (set (array-get out i) (* base (log1p (* scale (+ i 1)))))))
 
 (sc-comment "other")
 

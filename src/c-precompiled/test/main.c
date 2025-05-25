@@ -606,7 +606,7 @@ status_t test_times() {
   a_temp = 0;
   size = 8;
   s = sp_random_state_new(123);
-  sp_times_multiplications(1, 3, size, a);
+  sp_times_geometric(1, 3, size, a);
   test_helper_assert("multiplications", (81 == a[4]));
   sp_times_additions(1, 3, size, a);
   test_helper_assert("additions", (13 == a[4]));
@@ -618,11 +618,11 @@ status_t test_times() {
   sp_times_bits_to_times(a, (8 * sizeof(sp_time_t)), bits);
   test_helper_assert(("bits->times"), ((1 == bits[0]) && (1 == bits[3]) && (0 == bits[4]) && (1 == bits[10])));
   free(bits);
-  sp_times_multiplications(1, 3, size, a);
+  sp_times_geometric(1, 3, size, a);
   sp_times_shuffle(a, size);
   s = sp_random_state_new(12);
   sp_times_random_binary(size, a);
-  sp_times_multiplications(1, 3, size, a);
+  sp_times_geometric(1, 3, size, a);
   s = sp_random_state_new(113);
   sp_times_select_random(a, size, b, (&b_size));
 exit:

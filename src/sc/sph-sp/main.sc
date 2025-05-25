@@ -30,6 +30,7 @@
     (if* array (array-get array index) fixed)))
 
 (pre-include "sph-sp/arrays.c")
+(pre-include "sph-sp/distributions.c")
 
 (define-sp-interleave sp-interleave sp-sample-t
   (set (array-get b b-size) (array-get (array-get a channel) a-size)))

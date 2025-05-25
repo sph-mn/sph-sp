@@ -57,6 +57,7 @@
 /** fixed if array is zero, otherwise array value at index */
 #define sp_modvalue(fixed, array, index) (array ? array[index] : fixed)
 #include <sph-sp/arrays.c>
+#include <sph-sp/distributions.c>
 define_sp_interleave(sp_interleave, sp_sample_t, (b[b_size] = (a[channel])[a_size]))
   define_sp_interleave(sp_deinterleave, sp_sample_t, ((a[channel])[a_size] = b[b_size]))
     sp_sample_t sp_sample_max(sp_sample_t a, sp_sample_t b) { return (((a > b) ? a : b)); }

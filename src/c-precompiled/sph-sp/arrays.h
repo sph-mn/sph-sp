@@ -1,5 +1,35 @@
 
-#include <sph-sp/arrays-template.h>
+#define arrays_template_h(value_t, value_type_name, type_name) \
+  void sp_##value_type_name##_sort_swap(void* a, ssize_t b, ssize_t c); \
+  uint8_t sp_##value_type_name##_sort_less(void* a, ssize_t b, ssize_t c); \
+  value_t sp_##value_type_name##_round_to_multiple(value_t a, value_t base); \
+  value_t sp_##type_name##_min(value_t* in, sp_size_t count); \
+  value_t sp_##type_name##_max(value_t* in, sp_size_t count); \
+  value_t sp_##type_name##_absolute_max(value_t* in, sp_size_t count); \
+  void sp_##type_name##_reverse(value_t* in, sp_size_t count, value_t* out); \
+  sp_bool_t sp_##type_name##_equal(value_t* in, sp_size_t count, value_t value); \
+  void sp_##type_name##_square(value_t* in, sp_size_t count); \
+  void sp_##type_name##_add(value_t* in_out, sp_size_t count, value_t value); \
+  void sp_##type_name##_multiply(value_t* in_out, sp_size_t count, value_t value); \
+  void sp_##type_name##_divide(value_t* in_out, sp_size_t count, value_t value); \
+  void sp_##type_name##_set(value_t* in_out, sp_size_t count, value_t value); \
+  void sp_##type_name##_subtract(value_t* in_out, sp_size_t count, value_t value); \
+  status_t sp_##type_name##_new(sp_size_t count, value_t** out); \
+  void sp_##type_name##_copy(value_t* in, sp_size_t count, value_t* out); \
+  void sp_##type_name##_cusum(value_t* in, value_t count, value_t* out); \
+  void sp_##type_name##_swap(sp_time_t* in_out, sp_ssize_t index_1, sp_ssize_t index_2); \
+  void sp_##type_name##_shuffle(value_t* in, sp_size_t count); \
+  void sp_##type_name##_array_free(value_t** in, sp_size_t count); \
+  status_t sp_##type_name##_duplicate(value_t* a, sp_size_t count, value_t** out); \
+  void sp_##type_name##_and_##type_name(value_t* a, value_t* b, sp_size_t count, value_t limit, value_t* out); \
+  void sp_##type_name##_or_##type_name(value_t* a, value_t* b, sp_size_t count, value_t limit, value_t* out); \
+  void sp_##type_name##_xor_##type_name(value_t* a, value_t* b, sp_size_t count, value_t limit, value_t* out); \
+  void sp_##type_name##_multiply_##type_name(value_t* in_out, sp_size_t count, value_t* in); \
+  void sp_##type_name##_divide_##type_name(value_t* in_out, sp_size_t count, value_t* in); \
+  void sp_##type_name##_add_##type_name(value_t* in_out, sp_size_t count, value_t* in); \
+  void sp_##type_name##_subtract_##type_name(value_t* in_out, sp_size_t count, value_t* in); \
+  void sp_##type_name##_set_##type_name(value_t* in_out, sp_size_t count, value_t* in); \
+  void sp_##type_name##_set_##type_name##_left(value_t* in_out, sp_size_t count, value_t* in)
 
 #define sp_samples_zero(a, size) memset(a, 0, (size * sizeof(sp_sample_t)))
 #define sp_times_zero(a, size) memset(a, 0, (size * sizeof(sp_time_t)))
@@ -21,24 +51,18 @@ arrays_template_h(sp_time_t, time, times);
 sp_time_t sp_time_sum(sp_time_t* in, sp_time_t size);
 sp_time_t sp_times_sum(sp_time_t* a, sp_time_t size);
 void sp_times_display(sp_time_t* in, sp_size_t count);
-void sp_times_random_discrete(sp_time_t* cudist, sp_time_t cudist_size, sp_time_t count, sp_time_t* out);
-sp_time_t sp_time_random_discrete(sp_time_t* cudist, sp_time_t cudist_size);
-sp_time_t sp_time_random_discrete_bounded(sp_time_t* cudist, sp_time_t cudist_size, sp_time_t range);
 status_t sp_times_permutations(sp_time_t size, sp_time_t* set, sp_time_t set_size, sp_time_t*** out, sp_time_t* out_size);
 void sp_times_sequence_increment(sp_time_t* in, sp_size_t size, sp_size_t set_size);
 status_t sp_times_compositions(sp_time_t sum, sp_time_t*** out, sp_time_t* out_size, sp_time_t** out_sizes);
 void sp_times_select(sp_time_t* in, sp_time_t* indices, sp_time_t count, sp_time_t* out);
 void sp_times_bits_to_times(sp_time_t* a, sp_time_t size, sp_time_t* out);
-status_t sp_times_random_binary(sp_time_t size, sp_time_t* out);
 void sp_times_gt_indices(sp_time_t* a, sp_time_t size, sp_time_t n, sp_time_t* out, sp_time_t* out_size);
 void sp_times_select_random(sp_time_t* a, sp_time_t size, sp_time_t* out, sp_time_t* out_size);
 status_t sp_times_constant(sp_size_t count, sp_time_t value, sp_time_t** out);
 status_t sp_times_scale(sp_time_t* in, sp_size_t count, sp_time_t factor, sp_time_t* out);
 void sp_times_shuffle_swap(void* a, sp_size_t i1, sp_size_t i2);
 void sp_times_scale_sum(sp_time_t* in, sp_size_t count, sp_time_t sum, sp_time_t* out);
-void sp_times_multiplications(sp_time_t start, sp_time_t factor, sp_time_t count, sp_time_t* out);
 uint8_t sp_times_contains(sp_time_t* in, sp_size_t count, sp_time_t value);
-void sp_times_random_discrete_unique(sp_time_t* cudist, sp_time_t cudist_size, sp_time_t size, sp_time_t* out);
 void sp_times_sequences(sp_time_t base, sp_time_t digits, sp_time_t size, sp_time_t* out);
 void sp_times_blend(sp_time_t* a, sp_time_t* b, sp_sample_t fraction, sp_time_t size, sp_time_t* out);
 void sp_times_mask(sp_time_t* a, sp_time_t* b, sp_sample_t* coefficients, sp_time_t size, sp_time_t* out);
@@ -52,8 +76,6 @@ void sp_times_insert_space(sp_time_t* in, sp_time_t size, sp_time_t index, sp_ti
 void sp_times_subdivide_difference(sp_time_t* a, sp_time_t size, sp_time_t index, sp_time_t count, sp_time_t* out);
 void sp_times_to_samples(sp_time_t* in, sp_size_t count, sp_sample_t* out);
 status_t sp_times_to_samples_replace(sp_time_t* in, sp_size_t count, sp_sample_t** out);
-void sp_times_geometric(sp_time_t base, sp_time_t ratio, sp_time_t count, sp_time_t* out);
-void sp_times_logarithmic(sp_time_t base, sp_sample_t scale, sp_time_t count, sp_time_t* out);
 /* samples */
 arrays_template_h(sp_sample_t, sample, samples);
 void sp_samples_display(sp_sample_t* in, sp_size_t count);
@@ -68,6 +90,3 @@ void sp_samples_scale_y(sp_sample_t* in, sp_time_t count, sp_sample_t target_y);
 void sp_samples_scale_sum(sp_sample_t* in, sp_size_t count, sp_sample_t target_y, sp_sample_t* out);
 void sp_samples_blend(sp_sample_t* a, sp_sample_t* b, sp_sample_t fraction, sp_time_t size, sp_sample_t* out);
 void sp_samples_limit_abs(sp_sample_t* in, sp_time_t count, sp_sample_t limit, sp_sample_t* out);
-sp_sample_t sp_sample_random_discrete_bounded(sp_time_t* cudist, sp_time_t cudist_size, sp_sample_t range);
-void sp_samples_geometric(sp_sample_t base, sp_sample_t ratio, sp_time_t count, sp_sample_t* out);
-void sp_samples_logarithmic(sp_sample_t base, sp_sample_t scale, sp_time_t count, sp_sample_t* out);
