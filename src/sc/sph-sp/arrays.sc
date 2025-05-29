@@ -355,7 +355,8 @@
 
 (define (sp-samples-set-unity-gain in-out reference count)
   (void sp-sample-t* sp-sample-t* sp-size-t)
-  "scale amplitude of in-out to match the one of reference.
+  "match the peak of some reference buffer.
+   scale amplitude of in-out to match the one of reference.
    no change if any array is zero"
   (sp-samples-set-gain in-out count (sp-samples-absolute-max reference count)))
 

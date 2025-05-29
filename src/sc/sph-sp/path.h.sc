@@ -54,7 +54,6 @@
     sp-sample-t sp-sample-t sp-sample-t
     sp-sample-t sp-sample-t sp-sample-t
     sp-sample-t sp-sample-t sp-sample-t sp-sample-t sp-sample-t sp-sample-t)
-
   (sp-envelope-zero out length point-count x y c)
   (status-t sp-sample-t** sp-time-t sp-path-point-count-t sp-sample-t* sp-sample-t* sp-sample-t*)
   (sp-envelope-zero3 out length x1 y1) (status-t sp-sample-t** sp-time-t sp-sample-t sp-sample-t)

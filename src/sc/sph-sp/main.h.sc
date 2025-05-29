@@ -20,7 +20,6 @@
   sp-s-id-memory 8
   sp-s-id-not-implemented 10
   sp-s-id-undefined 1
-  sp-status-declare (status-declare-group sp-s-group-sp)
   srq status-require
   sp-max-frq (/ sp-rate 2)
   (sp-declare-block id) (define id sp-block-t (struct-literal 0))

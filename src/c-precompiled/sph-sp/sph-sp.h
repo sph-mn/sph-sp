@@ -88,6 +88,12 @@
 #ifndef sp_unit_t
 #define sp_unit_t double
 #endif
+#ifndef sp_pow
+#define sp_pow pow
+#endif
+#ifndef sp_exp
+#define sp_exp exp
+#endif
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>

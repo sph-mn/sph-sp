@@ -105,8 +105,9 @@
   (void sp-sample-t sp-sample-t sp-sample-t sp-time-t sp-sample-t*)
   (define max-val sp-sample-t 0)
   (sp-for-each-index i count
-    (define x sp-sample-t (/ i (- count 1)))
-    (define val sp-sample-t (* (pow x (- alpha 1)) (pow (- 1 x) (- beta-param 1))))
+    (define
+      x sp-sample-t (/ i (- count 1))
+      val sp-sample-t (* (pow x (- alpha 1)) (pow (- 1 x) (- beta-param 1))))
     (set (array-get out i) val)
     (if (> val max-val) (set max-val val)))
   (define scale sp-sample-t (/ base max-val))
@@ -117,11 +118,6 @@
   (sp-for-each-index i count
     (define mask-val sp-sample-t (if* (array-get pattern (modulo i pattern-len)) base 0))
     (set (array-get out i) mask-val)))
-
-(define (sp-samples-random-cluster base cluster-size count out)
-  (void sp-sample-t sp-time-t sp-time-t sp-sample-t*)
-  (sp-for-each-index i count (set (array-get out i) 0))
-  (sp-for-each-index k cluster-size (set (array-get out (modulo (rand) count)) base)))
 
 (define (sp-samples-segment-steps base levels segments count out)
   (void sp-sample-t sp-sample-t* sp-time-t sp-time-t sp-sample-t*)

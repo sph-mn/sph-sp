@@ -489,7 +489,8 @@ void sp_samples_set_gain(sp_sample_t* in_out, sp_size_t count, sp_sample_t amp) 
   };
 }
 
-/** scale amplitude of in-out to match the one of reference.
+/** match the peak of some reference buffer.
+   scale amplitude of in-out to match the one of reference.
    no change if any array is zero */
 void sp_samples_set_unity_gain(sp_sample_t* in_out, sp_sample_t* reference, sp_size_t count) { sp_samples_set_gain(in_out, count, (sp_samples_absolute_max(reference, count))); }
 

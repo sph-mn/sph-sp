@@ -12,6 +12,21 @@
 #define spline_path_bezier1_interpolate(t, mt, a, b, c) ((a * mt * mt) + (b * 2 * mt * t) + (c * t * t))
 #define spline_path_declare_segment(id) spline_path_segment_t id = { 0 }
 #define spline_path_points_get_with_offset(points, index, field_offset) *((spline_path_value_t*)((field_offset + ((uint8_t*)((points + index))))))
+static spline_path_segment_t spline_path_alloc_segment(void (*gen)(size_t, size_t, spline_path_segment_t*, spline_path_value_t*), spline_path_value_t x, spline_path_value_t y, void* out, size_t data_size) {
+  spline_path_declare_segment(s);
+  s.generate = gen;
+  s.points_count = 2;
+  ((s.points)[1]).x = x;
+  ((s.points)[1]).y = y;
+  s.data = malloc(data_size);
+  if (s.data) {
+    memcpy((s.data), out, data_size);
+  } else {
+    return ((spline_path_constant()));
+  };
+  s.free = free;
+  return (s);
+}
 
 /** get values on path between start (inclusive) and end (exclusive).
    since x values are integers, a path from (0 0) to (10 20) reaches 20 at the 11th point.
@@ -215,6 +230,54 @@ spline_path_value_t spline_path_bezier1_interpolate_points(spline_path_value_t t
 spline_path_value_t spline_path_bezier2_interpolate_points(spline_path_value_t t, spline_path_value_t mt, spline_path_point_t* points, size_t field_offset) { return ((spline_path_bezier2_interpolate(t, mt, (spline_path_points_get_with_offset(points, 0, field_offset)), (spline_path_points_get_with_offset(points, 1, field_offset)), (spline_path_points_get_with_offset(points, 2, field_offset)), (spline_path_points_get_with_offset(points, 3, field_offset))))); }
 void spline_path_bezier1_generate(size_t start, size_t end, spline_path_segment_t* s, spline_path_value_t* out) { spline_path_beziern_generate(spline_path_bezier1_interpolate_points, start, end, s, out); }
 void spline_path_bezier2_generate(size_t start, size_t end, spline_path_segment_t* s, spline_path_value_t* out) { spline_path_beziern_generate(spline_path_bezier2_interpolate_points, start, end, s, out); }
+void spline_path_power_generate(size_t start, size_t end, spline_path_segment_t* s, spline_path_value_t* out) {
+  spline_path_point_t p0;
+  spline_path_point_t p1;
+  spline_path_value_t span;
+  size_t off;
+  spline_path_value_t gamma;
+  size_t i;
+  spline_path_value_t t;
+  spline_path_value_t f;
+  p0 = (s->points)[0];
+  p1 = (s->points)[(s->points_count - 1)];
+  span = (p1.x - p0.x);
+  off = (start - p0.x);
+  gamma = (s->data ? *((spline_path_value_t*)(s->data)) : 1.0);
+  for (i = 0; (i < (end - start)); i += 1) {
+    t = ((i + off) / span);
+    f = spline_path_pow(t, gamma);
+    out[i] = linearly_interpolate((p0.y), (p1.y), f);
+  };
+}
+void spline_path_exponential_generate(size_t start, size_t end, spline_path_segment_t* s, spline_path_value_t* out) {
+  spline_path_point_t p0;
+  spline_path_point_t p1;
+  spline_path_value_t span;
+  size_t off;
+  spline_path_value_t gamma;
+  spline_path_value_t denom;
+  size_t i;
+  spline_path_value_t t;
+  spline_path_value_t f;
+  p0 = (s->points)[0];
+  p1 = (s->points)[(s->points_count - 1)];
+  span = (p1.x - p0.x);
+  off = (start - p0.x);
+  gamma = (s->data ? *((spline_path_value_t*)(s->data)) : 0.0);
+  denom = ((spline_path_fabs(gamma) < DBL_EPSILON) ? 1.0 : (spline_path_exp(gamma) - 1.0));
+  for (i = 0; (i < (end - start)); i += 1) {
+    t = ((i + off) / span);
+    f = ((spline_path_fabs(gamma) < DBL_EPSILON) ? t : ((spline_path_exp((gamma * t)) - 1.0) / denom));
+    out[i] = linearly_interpolate((p0.y), (p1.y), f);
+  };
+}
+
+/** power-curve interpolation. y = y0 + (y1 - y0) * t ** gamma */
+spline_path_segment_t spline_path_power(spline_path_value_t x, spline_path_value_t y, spline_path_value_t gamma) { return ((spline_path_alloc_segment(spline_path_power_generate, x, y, (&gamma), (sizeof(spline_path_value_t))))); }
+
+/** y = y0 + (y1 - y0) * ((e ** (gamma * t) - 1) / (e ** gamma - 1)) */
+spline_path_segment_t spline_path_exponential(spline_path_value_t x, spline_path_value_t y, spline_path_value_t gamma) { return ((spline_path_alloc_segment(spline_path_exponential_generate, x, y, (&gamma), (sizeof(spline_path_value_t))))); }
 
 /** returns a move segment to move to the specified point */
 spline_path_segment_t spline_path_move(spline_path_value_t x, spline_path_value_t y) {
@@ -349,7 +412,7 @@ spline_path_point_t spline_path_perpendicular_point(spline_path_point_t p1, spli
     };
   };
   /* normalized direction vector */
-  m = sqrt(((d.x * d.x) + (d.y * d.y)));
+  m = spline_path_sqrt(((d.x * d.x) + (d.y * d.y)));
   d.x = ((i2.x - i1.x) / m);
   d.y = ((i2.y - i1.y) / m);
   result.x = (c.x + (0.5 * distance * m * d.x));

@@ -30,3 +30,6 @@ status_t sp_times_random_binary(sp_time_t size, sp_time_t* out);
 sp_time_t sp_time_random_discrete(sp_time_t* cudist, sp_time_t cudist_size);
 sp_time_t sp_time_random_discrete_bounded(sp_time_t* cudist, sp_time_t cudist_size, sp_time_t range);
 void sp_times_random_discrete(sp_time_t* cudist, sp_time_t cudist_size, sp_time_t count, sp_time_t* out);
+void sp_samples_beta_distribution(sp_sample_t base, sp_sample_t alpha, sp_sample_t beta_param, sp_time_t count, sp_sample_t* out);
+void sp_samples_binary_mask(sp_sample_t base, uint8_t* pattern, sp_time_t pattern_len, sp_time_t count, sp_sample_t* out);
+void sp_samples_segment_steps(sp_sample_t base, sp_sample_t* levels, sp_time_t segments, sp_time_t count, sp_sample_t* out);

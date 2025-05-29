@@ -34,6 +34,18 @@
 #ifndef spline_path_point_max
 #define spline_path_point_max 4
 #endif
+#ifndef spline_path_fabs
+#define spline_path_fabs fabs
+#endif
+#ifndef spline_path_exp
+#define spline_path_exp exp
+#endif
+#ifndef spline_path_pow
+#define spline_path_pow pow
+#endif
+#ifndef spline_path_sqrt
+#define spline_path_sqrt sqrt
+#endif
 typedef struct {
   spline_path_value_t x;
   spline_path_value_t y;
@@ -70,4 +82,6 @@ spline_path_segment_t spline_path_constant();
 spline_path_segment_t spline_path_path(spline_path_t path);
 spline_path_segment_t spline_path_bezier1(spline_path_value_t x1, spline_path_value_t y1, spline_path_value_t x2, spline_path_value_t y2);
 spline_path_segment_t spline_path_bezier2(spline_path_value_t x1, spline_path_value_t y1, spline_path_value_t x2, spline_path_value_t y2, spline_path_value_t x3, spline_path_value_t y3);
+spline_path_segment_t spline_path_power(spline_path_value_t x, spline_path_value_t y, spline_path_value_t gamma);
+spline_path_segment_t spline_path_exponential(spline_path_value_t x, spline_path_value_t y, spline_path_value_t gamma);
 #endif

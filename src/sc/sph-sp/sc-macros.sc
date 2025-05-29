@@ -1,7 +1,10 @@
 (sc-define-syntax (srq* a ...) (begin (srq a) ...))
 
+(sc-define-syntax (sp-for-each-index-from from index limit body ...)
+  (for-each-index-from from index sp-size-t limit body ...))
+
 (sc-define-syntax (sp-for-each-index index limit body ...)
-  (for-each-index index sp-size-t limit body ...))
+  (sp-for-each-index-from 0 index limit body ...))
 
 (sc-define-syntax* (sp-define* name-and-parameters types body ...)
   (let*

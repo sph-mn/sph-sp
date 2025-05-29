@@ -28,7 +28,9 @@
   sp-time-t uint32-t
   sp-unit-random-primitive sph-random-f64-0to1
   sp-units-random-primitive sph-random-f64-array-0to1
-  sp-unit-t double)
+  sp-unit-t double
+  sp-pow pow
+  sp-exp exp)
 
 (pre-include "string.h" "stdio.h"
   "stdlib.h" "sph/status.h" "sph/array3.h"

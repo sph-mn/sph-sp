@@ -173,14 +173,6 @@ void sp_samples_binary_mask(sp_sample_t base, uint8_t* pattern, sp_time_t patter
     out[i] = mask_val;
   };
 }
-void sp_samples_random_cluster(sp_sample_t base, sp_time_t cluster_size, sp_time_t count, sp_sample_t* out) {
-  for (sp_size_t i = 0; (i < count); i += 1) {
-    out[i] = 0;
-  };
-  for (sp_size_t k = 0; (k < cluster_size); k += 1) {
-    out[(rand() % count)] = base;
-  };
-}
 void sp_samples_segment_steps(sp_sample_t base, sp_sample_t* levels, sp_time_t segments, sp_time_t count, sp_sample_t* out) {
   sp_time_t segment_len = (count / segments);
   sp_time_t remainder = (count % segments);

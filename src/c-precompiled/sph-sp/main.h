@@ -20,7 +20,6 @@
 #define sp_s_id_memory 8
 #define sp_s_id_not_implemented 10
 #define sp_s_id_undefined 1
-#define sp_status_declare status_declare_group(sp_s_group_sp)
 #define srq status_require
 #define sp_max_frq (sp_rate / 2)
 #define sp_declare_block(id) sp_block_t id = { 0 }
