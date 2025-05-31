@@ -58,13 +58,6 @@
       (void value-t value-t value-t value-t*)
       "a(n) = base·e^(–k·n)"
       (sp-for-each-index i count (set (array-get out i) (* base (exp (- (* k i)))))))
-    (define ((pre-concat sp_ type-name _gaussian) base centre width count out)
-      (void value-t value-t value-t value-t value-t*)
-      "a(n) = base·e^(–((n–centre)²)/(2·width²))"
-      (define denom value-t (* 2 (* width width)))
-      (sp-for-each-index i count
-        (define d value-t (- i centre))
-        (set (array-get out i) (* base (exp (/ (- (* d d)) denom))))))
     (define ((pre-concat sp_ type-name _power) base p count out)
       (void value-t value-t value-t value-t*)
       "a(n) = base·(n+1)^(–p)"
@@ -101,16 +94,17 @@
   (void sp-sample-t sp-sample-t sp-time-t sp-sample-t*)
   (sp-for-each-index i count (set (array-get out i) (* base (log1p (* scale (+ i 1)))))))
 
-(define (sp-samples-beta-distribution base alpha beta-param count out)
+(define (sp-samples-beta-distribution base alpha beta count out)
   (void sp-sample-t sp-sample-t sp-sample-t sp-time-t sp-sample-t*)
   (define max-val sp-sample-t 0)
   (sp-for-each-index i count
-    (define
-      x sp-sample-t (/ i (- count 1))
-      val sp-sample-t (* (pow x (- alpha 1)) (pow (- 1 x) (- beta-param 1))))
+    (define x sp-sample-t (/ (convert-type i sp-sample-t) (convert-type (- count 1) sp-sample-t)))
+    (if (and (= x 0.0) (< alpha 1.0)) (set x 1.0e-10))
+    (if (and (= x 1.0) (< beta 1.0)) (set x (- 1.0 1.0e-10)))
+    (define val sp-sample-t (* (sp-pow x (- alpha 1.0)) (sp-pow (- 1.0 x) (- beta 1.0))))
     (set (array-get out i) val)
     (if (> val max-val) (set max-val val)))
-  (define scale sp-sample-t (/ base max-val))
+  (define scale sp-sample-t (if* (> max-val 0.0) (/ base max-val) 0.0))
   (sp-for-each-index i count (set (array-get out i) (* (array-get out i) scale))))
 
 (define (sp-samples-binary-mask base pattern pattern-len count out)
@@ -130,6 +124,14 @@
     (sp-for-each-index j len
       (set (array-get out idx) (* base (array-get levels s)))
       (set idx (+ idx 1)))))
+
+(define (sp-samples-gaussian base centre width count out)
+  (void sp-sample-t sp-sample-t sp-sample-t sp-sample-t sp-sample-t*)
+  "a(n) = base·e^(–((n–centre)²)/(2·width²))"
+  (define denominator sp-sample-t (* 2 width width))
+  (sp-for-each-index i count
+    (define d sp-sample-t (- i centre))
+    (set (array-get out i) (* base (sp-exp (/ (- (* d d)) denominator))))))
 
 (define (sp-times-random-discrete-unique cudist cudist-size size out)
   (void sp-time-t* sp-time-t sp-time-t sp-time-t*)

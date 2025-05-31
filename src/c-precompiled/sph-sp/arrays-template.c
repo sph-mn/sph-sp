@@ -200,4 +200,15 @@
     for (sp_size_t i = 0; (i < count); i += 1) { \
       in_out[(-1 * i)] = in[i]; \
     }; \
+  } \
+  void sp_##type_name##_sort_ascending(value_t* a, sp_size_t count) { \
+    for (sp_size_t i = 1; (i < count); i += 1) { \
+      value_t key = a[i]; \
+      sp_size_t j = i; \
+      while ((j && (a[(j - 1)] > key))) { \
+        a[j] = a[(j - 1)]; \
+        j = (j - 1); \
+      }; \
+      a[j] = key; \
+    }; \
   }

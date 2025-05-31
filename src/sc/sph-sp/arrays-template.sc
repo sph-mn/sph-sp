@@ -131,4 +131,10 @@
       (memcpy in-out in (* count (sizeof value-t))))
     (define ((pre-concat sp_ type-name _set_ type-name _left) in-out count in)
       (void value-t* sp-size-t value-t*)
-      (sp-for-each-index i count (set (array-get in-out (* -1 i)) (array-get in i))))))
+      (sp-for-each-index i count (set (array-get in-out (* -1 i)) (array-get in i))))
+    (define ((pre-concat sp_ type-name _sort-ascending) a count) (void value-t* sp-size-t)
+      (sp-for-each-index-from 1 i
+        count (define key value-t (array-get a i) j sp-size-t i)
+        (while (and j (> (array-get a (- j 1)) key))
+          (set (array-get a j) (array-get a (- j 1)) j (- j 1)))
+        (set (array-get a j) key)))))

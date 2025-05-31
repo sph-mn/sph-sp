@@ -12,6 +12,90 @@
 #define spline_path_bezier1_interpolate(t, mt, a, b, c) ((a * mt * mt) + (b * 2 * mt * t) + (c * t * t))
 #define spline_path_declare_segment(id) spline_path_segment_t id = { 0 }
 #define spline_path_points_get_with_offset(points, index, field_offset) *((spline_path_value_t*)((field_offset + ((uint8_t*)((points + index))))))
+void spline_path_debug_print(spline_path_t* path, uint8_t indent) {
+  uint8_t* type = 0;
+  uint8_t pad[32];
+  memset(pad, ' ', (sizeof(pad)));
+  pad[((indent < 30) ? indent : 30)] = 0;
+  printf("%spath segments: %u\n", pad, (path->segments_count));
+  for (size_t i = 0; (i < path->segments_count); i += 1) {
+    spline_path_segment_t* s = &((path->segments)[i]);
+    spline_path_point_t* p0 = &((s->points)[0]);
+    spline_path_point_t* p1 = &((s->points)[(s->points_count - 1)]);
+    if (spline_path_line_generate == s->generate) {
+      type = "line";
+    } else if (spline_path_move_generate == s->generate) {
+      type = "move";
+    } else if (spline_path_constant_generate == s->generate) {
+      type = "constant";
+    } else if (spline_path_bezier1_generate == s->generate) {
+      type = "bezier1";
+    } else if (spline_path_bezier2_generate == s->generate) {
+      type = "bezier2";
+    } else if (spline_path_power_generate == s->generate) {
+      type = "power";
+    } else if (spline_path_exponential_generate == s->generate) {
+      type = "exponential";
+    } else if (spline_path_path_generate == s->generate) {
+      type = "path";
+    } else {
+      type = "custom";
+    };
+    printf(("%s  %s %.3f %.3f -> %.3f %.3f\n"), pad, type, (p0->x), (p0->y), (p1->x), (p1->y));
+    if ((s->generate == spline_path_path_generate) && s->data) {
+      spline_path_t* sub = ((spline_path_t*)(s->data));
+      spline_path_debug_print(sub, (indent + 2));
+    };
+  };
+  return;
+}
+uint8_t spline_path_validate(spline_path_t* path, uint8_t log) {
+  if (!path || !path->segments || (path->segments_count == 0)) {
+    if (log) {
+      fprintf(stderr, "spline_path_validate: invalid path pointer or empty segment list\n");
+    };
+    return (1);
+  };
+  for (size_t i = 0; (i < path->segments_count); i += 1) {
+    spline_path_segment_t* s = &((path->segments)[i]);
+    spline_path_point_t* p0 = &((s->points)[0]);
+    spline_path_point_t* p1 = &((s->points)[1]);
+    if ((s->points_count < 2) || (s->points_count > spline_path_point_max)) {
+      if (log) {
+        fprintf(stderr, "segment %u: invalid points count %u\n", i, (s->points_count));
+      };
+      return (1);
+    };
+    if (p1->x < p0->x) {
+      if (log) {
+        fprintf(stderr, ("segment %u: end x (%f) < start x (%f)\n"), i, (p1->x), (p0->x));
+      };
+      return (1);
+    };
+    if (!s->generate) {
+      if (log) {
+        fprintf(stderr, "segment %u: missing generate function\n", i);
+      };
+      return (1);
+    };
+    if (s->generate == spline_path_path_generate) {
+      spline_path_t* sub = ((spline_path_t*)(s->data));
+      if (!sub || !sub->segments || (sub->segments_count == 0)) {
+        if (log) {
+          fprintf(stderr, "segment %u: invalid nested path\n", i);
+        };
+        return (1);
+      };
+      if (spline_path_validate(sub, log)) {
+        if (log) {
+          fprintf(stderr, "segment %u: nested path validation failed\n", i);
+        };
+        return (1);
+      };
+    };
+  };
+  return (0);
+}
 static spline_path_segment_t spline_path_alloc_segment(void (*gen)(size_t, size_t, spline_path_segment_t*, spline_path_value_t*), spline_path_value_t x, spline_path_value_t y, void* out, size_t data_size) {
   spline_path_declare_segment(s);
   s.generate = gen;
@@ -71,7 +155,9 @@ size_t spline_path_size(spline_path_t path) {
   return ((p.x));
 }
 uint8_t spline_path_path_prepare(spline_path_segment_t* s) {
-  (s->points)[1] = spline_path_end((*((spline_path_t*)(s->data))));
+  spline_path_point_t path_end = spline_path_end((*((spline_path_t*)(s->data))));
+  ((s->points)[1]).x = (((s->points)[0]).x + path_end.x);
+  ((s->points)[1]).y = path_end.y;
   return (0);
 }
 uint8_t spline_path_constant_prepare(spline_path_segment_t* s) {
@@ -169,7 +255,7 @@ void spline_path_line_generate(size_t start, size_t end, spline_path_segment_t* 
     out[i] = linearly_interpolate((p_start.y), (p_end.y), t);
   };
 }
-void spline_path_path_generate(size_t start, size_t end, spline_path_segment_t* s, spline_path_value_t* out) { spline_path_get(((spline_path_t*)(s->data)), (start - s->points->x), (end - s->points->x), out); }
+void spline_path_path_generate(size_t start, size_t end, spline_path_segment_t* s, spline_path_value_t* out) { spline_path_get(((spline_path_t*)(s->data)), (start - ((size_t)(s->points->x))), (end - ((size_t)(s->points->x))), out); }
 
 /** quadratic bezier curve with one control point.
    bezier interpolation also interpolates x. higher resolution sampling and linear interpolation are used to fill gaps */
@@ -309,14 +395,13 @@ spline_path_segment_t spline_path_constant() {
 spline_path_segment_t spline_path_path(spline_path_t path) {
   spline_path_declare_segment(s);
   s.data = malloc((sizeof(spline_path_t)));
-  if (s.data) {
-    *((spline_path_t*)(s.data)) = path;
-  } else {
+  if (!s.data) {
     return ((spline_path_constant()));
   };
+  *((spline_path_t*)(s.data)) = path;
   s.free = free;
   s.generate = spline_path_path_generate;
-  s.points_count = 1;
+  s.points_count = 2;
   s.prepare = spline_path_path_prepare;
   return (s);
 }

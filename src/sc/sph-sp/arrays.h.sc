@@ -36,7 +36,8 @@
     (void value-t* sp-size-t value-t*)
     ((pre-concat sp_ type-name _set_ type-name) in-out count in) (void value-t* sp-size-t value-t*)
     ((pre-concat sp_ type-name _set_ type-name _left) in-out count in)
-    (void value-t* sp-size-t value-t*)))
+    (void value-t* sp-size-t value-t*)
+    ((pre-concat sp_ type-name _sort-ascending) a count) (void value-t* sp-size-t)))
 
 (pre-define
   (sp-samples-zero a size) (memset a 0 (* size (sizeof sp-sample-t)))

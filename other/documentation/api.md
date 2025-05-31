@@ -117,15 +117,19 @@ sp_sample_random_discrete_bounded :: sp_time_t*:cudist sp_time_t:cudist_size sp_
 sp_samples_to_times :: sp_sample_t*:in sp_size_t:count sp_time_t*:out -> void
 sp_samples_to_times_replace :: sp_sample_t*:in sp_size_t:count sp_time_t**:out -> status_t
 sp_samples_to_units :: sp_sample_t*:in_out sp_size_t:count -> void
+sp_samples_beta_distribution :: sp_sample_t:base sp_sample_t:alpha sp_sample_t:beta_param sp_time_t:count sp_sample_t*:out -> void
+sp_samples_binary_mask :: sp_sample_t:base uint8_t*:pattern sp_time_t:pattern_len sp_time_t:count sp_sample_t*:out -> void
 sp_samples_blend :: sp_sample_t*:a sp_sample_t*:b sp_sample_t:fraction sp_time_t:size sp_sample_t*:out -> void
 sp_samples_display :: sp_sample_t*:in sp_size_t:count -> void
 sp_samples_divisions :: sp_sample_t:start sp_sample_t:divisor sp_time_t:count sp_sample_t*:out -> void
+sp_samples_gaussian :: sp_sample_t:base sp_sample_t:centre sp_sample_t:width sp_sample_t:count sp_sample_t*:out -> void
 sp_samples_geometric :: sp_sample_t:base sp_sample_t:ratio sp_time_t:count sp_sample_t*:out -> void
 sp_samples_limit_abs :: sp_sample_t*:in sp_time_t:count sp_sample_t:limit sp_sample_t*:out -> void
 sp_samples_logarithmic :: sp_sample_t:base sp_sample_t:scale sp_time_t:count sp_sample_t*:out -> void
 sp_samples_scale_to_times :: sp_sample_t*:a sp_time_t:size sp_time_t:max sp_time_t*:out -> void
 sp_samples_scale_sum :: sp_sample_t*:in sp_size_t:count sp_sample_t:target_y sp_sample_t*:out -> void
 sp_samples_scale_y :: sp_sample_t*:in sp_time_t:count sp_sample_t:target_y -> void
+sp_samples_segment_steps :: sp_sample_t:base sp_sample_t*:levels sp_time_t:segments sp_time_t:count sp_sample_t*:out -> void
 sp_samples_set_gain :: sp_sample_t*:in_out sp_size_t:count sp_sample_t:amp -> void
 sp_samples_set_gain :: sp_sample_t*:in_out sp_size_t:count sp_sample_t:amp -> void
 sp_samples_set_unity_gain :: sp_sample_t*:in_out sp_sample_t*:reference sp_size_t:count -> void
@@ -197,7 +201,6 @@ sp_times_logarithmic :: sp_time_t:base sp_sample_t:scale sp_time_t:count sp_time
 sp_times_make_seamless_left :: sp_time_t*:a sp_time_t:a_count sp_time_t*:b sp_time_t:b_count sp_time_t*:out -> void
 sp_times_make_seamless_right :: sp_time_t*:a sp_time_t:a_count sp_time_t*:b sp_time_t:b_count sp_time_t*:out -> void
 sp_times_mask :: sp_time_t*:a sp_time_t*:b sp_sample_t*:coefficients sp_time_t:size sp_time_t*:out -> void
-sp_times_multiplications :: sp_time_t:start sp_time_t:factor sp_time_t:count sp_time_t*:out -> void
 sp_times_permutations :: sp_time_t:size sp_time_t*:set sp_time_t:set_size sp_time_t***:out sp_time_t*:out_size -> status_t
 sp_times_random_binary :: sp_time_t:size sp_time_t*:out -> status_t
 sp_times_random_discrete :: sp_time_t*:cudist sp_time_t:cudist_size sp_time_t:count sp_time_t*:out -> void
@@ -252,13 +255,12 @@ sp_samples_equal :: value_t*:in sp_size_t:count sp_sample_t:value -> sp_bool_t
 sp_samples_even_harmonics :: sp_sample_t:base sp_time_t:count value_t*:out -> void
 sp_samples_exponential :: sp_sample_t:base sp_sample_t:k sp_sample_t:count value_t*:out -> void
 sp_samples_fixed_sets :: sp_sample_t:base value_t*:ratios sp_sample_t:len value_t*:out -> void
-sp_samples_gaussian :: sp_sample_t:base sp_sample_t:centre sp_sample_t:width sp_sample_t:count value_t*:out -> void
-sp_samples_harmonic :: sp_sample_t:base sp_time_t:count value_t*:out -> void
 sp_samples_linear :: sp_sample_t:base sp_sample_t:k sp_sample_t:count value_t*:out -> void
 sp_samples_logistic :: sp_sample_t:base sp_sample_t:k sp_sample_t:count value_t*:out -> void
 sp_samples_max :: value_t*:in sp_size_t:count -> sp_sample_t
 sp_samples_min :: value_t*:in sp_size_t:count -> sp_sample_t
 sp_samples_modular_series :: sp_sample_t:base sp_time_t:mod sp_sample_t:delta sp_time_t:count value_t*:out -> void
+sp_samples_multiplications :: sp_sample_t:base sp_time_t:count value_t*:out -> void
 sp_samples_multiply :: value_t*:in_out sp_size_t:count sp_sample_t:value -> void
 sp_samples_multiply_samples :: value_t*:in_out sp_size_t:count value_t*:in -> void
 sp_samples_new :: sp_size_t:count value_t**:out -> status_t
@@ -273,6 +275,7 @@ sp_samples_set :: value_t*:in_out sp_size_t:count sp_sample_t:value -> void
 sp_samples_set_samples :: value_t*:in_out sp_size_t:count value_t*:in -> void
 sp_samples_set_samples_left :: value_t*:in_out sp_size_t:count value_t*:in -> void
 sp_samples_shuffle :: value_t*:in sp_size_t:count -> void
+sp_samples_sort_ascending :: value_t*:a sp_size_t:count -> void
 sp_samples_square :: value_t*:in sp_size_t:count -> void
 sp_samples_subtract :: value_t*:in_out sp_size_t:count sp_sample_t:value -> void
 sp_samples_subtract_samples :: value_t*:in_out sp_size_t:count value_t*:in -> void
@@ -300,13 +303,12 @@ sp_times_equal :: value_t*:in sp_size_t:count sp_time_t:value -> sp_bool_t
 sp_times_even_harmonics :: sp_time_t:base sp_time_t:count value_t*:out -> void
 sp_times_exponential :: sp_time_t:base sp_time_t:k sp_time_t:count value_t*:out -> void
 sp_times_fixed_sets :: sp_time_t:base value_t*:ratios sp_time_t:len value_t*:out -> void
-sp_times_gaussian :: sp_time_t:base sp_time_t:centre sp_time_t:width sp_time_t:count value_t*:out -> void
-sp_times_harmonic :: sp_time_t:base sp_time_t:count value_t*:out -> void
 sp_times_linear :: sp_time_t:base sp_time_t:k sp_time_t:count value_t*:out -> void
 sp_times_logistic :: sp_time_t:base sp_time_t:k sp_time_t:count value_t*:out -> void
 sp_times_max :: value_t*:in sp_size_t:count -> sp_time_t
 sp_times_min :: value_t*:in sp_size_t:count -> sp_time_t
 sp_times_modular_series :: sp_time_t:base sp_time_t:mod sp_sample_t:delta sp_time_t:count value_t*:out -> void
+sp_times_multiplications :: sp_time_t:base sp_time_t:count value_t*:out -> void
 sp_times_multiply :: value_t*:in_out sp_size_t:count sp_time_t:value -> void
 sp_times_multiply_times :: value_t*:in_out sp_size_t:count value_t*:in -> void
 sp_times_new :: sp_size_t:count value_t**:out -> status_t
@@ -321,6 +323,7 @@ sp_times_set :: value_t*:in_out sp_size_t:count sp_time_t:value -> void
 sp_times_set_times :: value_t*:in_out sp_size_t:count value_t*:in -> void
 sp_times_set_times_left :: value_t*:in_out sp_size_t:count value_t*:in -> void
 sp_times_shuffle :: value_t*:in sp_size_t:count -> void
+sp_times_sort_ascending :: value_t*:a sp_size_t:count -> void
 sp_times_square :: value_t*:in sp_size_t:count -> void
 sp_times_subtract :: value_t*:in_out sp_size_t:count sp_time_t:value -> void
 sp_times_subtract_times :: value_t*:in_out sp_size_t:count value_t*:in -> void
@@ -330,6 +333,7 @@ sp_times_xor_times :: value_t*:a value_t*:b sp_size_t:count sp_time_t:limit valu
 
 # macros
 ~~~
+distributions_template_h(value_t, value_type_name, type_name)
 error_memory_add(address)
 error_memory_add2(address, handler)
 error_memory_free
@@ -404,6 +408,7 @@ sp_event_reset(x)
 sp_event_samples_srq(event_pointer, size, pointer_address)
 sp_event_times_srq(event_pointer, size, pointer_address)
 sp_event_units_srq(event_pointer, size, pointer_address)
+sp_exp
 sp_factor_to_hz(x)
 sp_filter_passes_limit
 sp_filter_passes_t
@@ -442,6 +447,7 @@ sp_noise_event_config_new(out)
 sp_optional_array_get(array, fixed, index)
 sp_path_point_count_limit
 sp_path_point_count_t
+sp_pow
 sp_rad_to_hz(a)
 sp_random_seed
 sp_random_state_t
@@ -480,7 +486,6 @@ sp_scale_t
 sp_seq_events_prepare
 sp_size_t
 sp_ssize_t
-sp_status_declare
 sp_status_set(_id)
 sp_status_set_goto(id)
 sp_stime_t

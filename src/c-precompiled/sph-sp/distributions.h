@@ -14,7 +14,6 @@
   void sp_##type_name##_clustered(value_t center, value_t spread, value_t count, value_t* out); \
   void sp_##type_name##_linear(value_t base, value_t k, value_t count, value_t* out); \
   void sp_##type_name##_exponential(value_t base, value_t k, value_t count, value_t* out); \
-  void sp_##type_name##_gaussian(value_t base, value_t centre, value_t width, value_t count, value_t* out); \
   void sp_##type_name##_power(value_t base, value_t p, value_t count, value_t* out); \
   void sp_##type_name##_bessel(value_t base, value_t count, value_t* out); \
   void sp_##type_name##_logistic(value_t base, value_t k, value_t count, value_t* out)
@@ -33,3 +32,4 @@ void sp_times_random_discrete(sp_time_t* cudist, sp_time_t cudist_size, sp_time_
 void sp_samples_beta_distribution(sp_sample_t base, sp_sample_t alpha, sp_sample_t beta_param, sp_time_t count, sp_sample_t* out);
 void sp_samples_binary_mask(sp_sample_t base, uint8_t* pattern, sp_time_t pattern_len, sp_time_t count, sp_sample_t* out);
 void sp_samples_segment_steps(sp_sample_t base, sp_sample_t* levels, sp_time_t segments, sp_time_t count, sp_sample_t* out);
+void sp_samples_gaussian(sp_sample_t base, sp_sample_t centre, sp_sample_t width, sp_sample_t count, sp_sample_t* out);

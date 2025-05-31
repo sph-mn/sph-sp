@@ -96,15 +96,6 @@
     }; \
   } \
 \
-  /** a(n) = base·e^(–((n–centre)²)/(2·width²)) */ \
-  void sp_##type_name##_gaussian(value_t base, value_t centre, value_t width, value_t count, value_t* out) { \
-    value_t denom = (2 * (width * width)); \
-    for (sp_size_t i = 0; (i < count); i += 1) { \
-      value_t d = (i - centre); \
-      out[i] = (base * exp(((-(d * d)) / denom))); \
-    }; \
-  } \
-\
   /** a(n) = base·(n+1)^(–p) */ \
   void sp_##type_name##_power(value_t base, value_t p, value_t count, value_t* out) { \
     for (sp_size_t i = 0; (i < count); i += 1) { \
@@ -152,17 +143,23 @@ void sp_samples_logarithmic(sp_sample_t base, sp_sample_t scale, sp_time_t count
     out[i] = (base * log1p((scale * (i + 1))));
   };
 }
-void sp_samples_beta_distribution(sp_sample_t base, sp_sample_t alpha, sp_sample_t beta_param, sp_time_t count, sp_sample_t* out) {
+void sp_samples_beta_distribution(sp_sample_t base, sp_sample_t alpha, sp_sample_t beta, sp_time_t count, sp_sample_t* out) {
   sp_sample_t max_val = 0;
   for (sp_size_t i = 0; (i < count); i += 1) {
-    sp_sample_t x = (i / (count - 1));
-    sp_sample_t val = (pow(x, (alpha - 1)) * pow((1 - x), (beta_param - 1)));
+    sp_sample_t x = (((sp_sample_t)(i)) / ((sp_sample_t)((count - 1))));
+    if ((x == 0.0) && (alpha < 1.0)) {
+      x = 1.0e-10;
+    };
+    if ((x == 1.0) && (beta < 1.0)) {
+      x = (1.0 - 1.0e-10);
+    };
+    sp_sample_t val = (sp_pow(x, (alpha - 1.0)) * sp_pow((1.0 - x), (beta - 1.0)));
     out[i] = val;
     if (val > max_val) {
       max_val = val;
     };
   };
-  sp_sample_t scale = (base / max_val);
+  sp_sample_t scale = ((max_val > 0.0) ? (base / max_val) : 0.0);
   for (sp_size_t i = 0; (i < count); i += 1) {
     out[i] = (out[i] * scale);
   };
@@ -183,6 +180,15 @@ void sp_samples_segment_steps(sp_sample_t base, sp_sample_t* levels, sp_time_t s
       out[idx] = (base * levels[s]);
       idx = (idx + 1);
     };
+  };
+}
+
+/** a(n) = base·e^(–((n–centre)²)/(2·width²)) */
+void sp_samples_gaussian(sp_sample_t base, sp_sample_t centre, sp_sample_t width, sp_sample_t count, sp_sample_t* out) {
+  sp_sample_t denominator = (2 * width * width);
+  for (sp_size_t i = 0; (i < count); i += 1) {
+    sp_sample_t d = (i - centre);
+    out[i] = (base * sp_exp(((-(d * d)) / denominator)));
   };
 }
 

@@ -29,7 +29,8 @@
   void sp_##type_name##_add_##type_name(value_t* in_out, sp_size_t count, value_t* in); \
   void sp_##type_name##_subtract_##type_name(value_t* in_out, sp_size_t count, value_t* in); \
   void sp_##type_name##_set_##type_name(value_t* in_out, sp_size_t count, value_t* in); \
-  void sp_##type_name##_set_##type_name##_left(value_t* in_out, sp_size_t count, value_t* in)
+  void sp_##type_name##_set_##type_name##_left(value_t* in_out, sp_size_t count, value_t* in); \
+  void sp_##type_name##_sort_ascending(value_t* a, sp_size_t count)
 
 #define sp_samples_zero(a, size) memset(a, 0, (size * sizeof(sp_sample_t)))
 #define sp_times_zero(a, size) memset(a, 0, (size * sizeof(sp_time_t)))
