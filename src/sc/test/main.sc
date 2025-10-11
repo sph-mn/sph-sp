@@ -15,13 +15,15 @@
 (pre-define test-noise-duration (+ _sp-rate 20))
 
 (define (test-helper-event-generate start end out event)
-  (status-t sp-time-t sp-time-t sp-block-t sp-event-t*)
+  (status-t sp-time-t sp-time-t void* sp-event-t*)
   status-declare
-  (declare i sp-time-t ci sp-channel-count-t value uint64-t)
-  (set value (convert-type (convert-type event:config uint64-t) sp-time-t))
+  (declare i sp-time-t ci sp-channel-count-t value uint64-t out-block sp-block-t)
+  (set
+    out-block (pointer-get (convert-type out sp-block-t*))
+    value (convert-type (convert-type event:config uint64-t) sp-time-t))
   (for ((set i start) (< i end) (set+ i 1))
-    (for ((set ci 0) (< ci out.channel-count) (set+ ci 1))
-      (set (array-get out.samples ci (- i start)) value)))
+    (for ((set ci 0) (< ci out-block.channel-count) (set+ ci 1))
+      (set (array-get out-block.samples ci (- i start)) value)))
   status-return)
 
 (define (test-helper-event start end number) (sp-event-t sp-time-t sp-time-t sp-time-t)
@@ -386,7 +388,7 @@
   (struct-set event start 0 end test-noise-duration)
   (sp-noise-event &event config)
   (status-require (sp-event-list-add &events event))
-  (status-require (sp-seq 0 test-noise-duration out &events))
+  (status-require (sp-seq 0 test-noise-duration &out &events))
   (test-helper-assert "in range -1..1"
     (>= 1.0 (sp-samples-absolute-max (array-get out.samples 0) test-noise-duration)))
   (sp-block-free &out)
@@ -394,14 +396,15 @@
 
 (define (test-sp-seq) status-t
   status-declare
-  (declare out sp-block-t)
+  (declare out sp-block-t shifted sp-block-t)
   (sp-declare-event-list events)
   (status-require (sp-event-list-add &events (test-helper-event 0 40 1)))
   (status-require (sp-event-list-add &events (test-helper-event 41 100 2)))
   (status-require (sp-block-new 2 100 &out))
   (sp-seq-events-prepare &events)
-  (sp-seq 0 50 out &events)
-  (sp-seq 50 100 (sp-block-with-offset out 50) &events)
+  (sp-seq 0 50 &out &events)
+  (set shifted (sp-block-with-offset out 50))
+  (sp-seq 50 100 &shifted &events)
   (test-helper-assert "block contents 1 event 1"
     (and (= 1 (array-get out.samples 0 0)) (= 1 (array-get out.samples 0 39))))
   (test-helper-assert "block contents 1 gap" (= 0 (array-get out.samples 0 40)))
@@ -413,7 +416,7 @@
 
 (define (test-sp-group) status-t
   status-declare
-  (declare block sp-block-t m1 sp-time-t* m2 sp-time-t*)
+  (declare block sp-block-t shifted sp-block-t m1 sp-time-t* m2 sp-time-t*)
   (sp-declare-event g)
   (sp-declare-event g1)
   (sp-declare-event e1)
@@ -434,8 +437,9 @@
   (sp-event-memory-fixed-add &g m1)
   (sp-event-memory-fixed-add &g m2)
   (status-require (g.prepare &g))
-  (status-require (g.generate 0 50 block &g))
-  (status-require (g.generate 50 100 (sp-block-with-offset block 50) &g))
+  (status-require (g.generate 0 50 &block &g))
+  (set shifted (sp-block-with-offset block 50))
+  (status-require (g.generate 50 100 &shifted &g))
   (g.free &g)
   (test-helper-assert "block contents event 1"
     (and (= 1 (array-get block.samples 0 10)) (= 1 (array-get block.samples 0 29))))
@@ -456,6 +460,7 @@
   status-declare
   (declare
     out sp-block-t
+    shifted sp-block-t
     fmod (array sp-time-t test-wave-event-duration)
     amod1 (array sp-sample-t test-wave-event-duration)
     amod2 (array sp-sample-t test-wave-event-duration)
@@ -473,8 +478,9 @@
   (set event.end test-wave-event-duration)
   (sp-wave-event &event config)
   (status-require (event.prepare &event))
-  (status-require (event.generate 0 30 out &event))
-  (status-require (event.generate 30 test-wave-event-duration (sp-block-with-offset out 30) &event))
+  (status-require (event.generate 0 30 &out &event))
+  (set shifted (sp-block-with-offset out 30))
+  (status-require (event.generate 30 test-wave-event-duration &shifted &event))
   (test-helper-assert "amod applied channel 0"
     (feq 0.9 (sp-samples-max (array-get out.samples 0) test-wave-event-duration)))
   (test-helper-assert "amod applied channel 1"
@@ -696,6 +702,7 @@
     fmod sp-time-t*
     size sp-time-t
     block sp-block-t
+    shifted sp-block-t
     config sp-wave-event-config-t*
     event-count sp-time-t)
   (sp-declare-event event)
@@ -717,7 +724,8 @@
   (sp-seq-events-prepare &events)
   (set step-size (/ size 10))
   (for ((set i 0) (< i size) (set+ i step-size))
-    (sp-seq-parallel i (+ i step-size) (sp-block-with-offset block i) &events))
+    (set shifted (sp-block-with-offset block i))
+    (sp-seq-parallel i (+ i step-size) &shifted &events))
   (test-helper-assert "first 1"
     (and (sp-sample-nearly-equal 0 (array-get block.samples 0 0) 0.001)
       (sp-sample-nearly-equal 0 (array-get block.samples 1 0) 0.001)))
@@ -738,9 +746,10 @@
   (label exit (if status-is-failure error-memory-free) status-return))
 
 (define (test-sp-map-event-generate start end in out state)
-  (status-t sp-time-t sp-time-t sp-block-t sp-block-t void*)
+  (status-t sp-time-t sp-time-t void* void* void*)
   status-declare
-  (sp-block-copy in out)
+  (sp-block-copy (pointer-get (convert-type in sp-block-t*))
+    (pointer-get (convert-type out sp-block-t*)))
   status-return)
 
 (define (test-sp-map-event) status-t
@@ -772,8 +781,8 @@
   (struct-set parent start child.start end child.end)
   (sp-map-event &parent map-event-config)
   (status-require (parent.prepare &parent))
-  (status-require (parent.generate 0 (/ size 2) block &parent))
-  (status-require (parent.generate (/ size 2) size block &parent))
+  (status-require (parent.generate 0 (/ size 2) &block &parent))
+  (status-require (parent.generate (/ size 2) size &block &parent))
   (parent.free &parent)
   (sp-block-free &block)
   (free amod)

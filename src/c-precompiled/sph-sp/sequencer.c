@@ -202,7 +202,7 @@ void sp_event_memory_free(sp_event_t* a) {
 }
 
 /** calls generate for sub-blocks of at most size resolution */
-status_t sp_event_block_generate(sp_time_t resolution, sp_event_block_generate_t generate, sp_time_t start, sp_time_t end, sp_block_t out, sp_event_t* event) {
+status_t sp_event_block_generate(sp_time_t resolution, sp_event_block_generate_t generate, sp_time_t start, sp_time_t end, void* out, sp_event_t* event) {
   status_declare;
   sp_time_t block_count;
   sp_time_t block_initial;
@@ -244,12 +244,16 @@ sp_event_t sp_event_schedule(sp_event_t event, sp_time_t onset, sp_time_t durati
    if prepare fails, sp_seq returns immediately.
    past events including the event list elements are freed when processing the following block.
    on error, all events and the event list are freed */
-status_t sp_seq(sp_time_t start, sp_time_t end, sp_block_t out, sp_event_list_t** events) {
+status_t sp_seq(sp_time_t start, sp_time_t end, void* out, sp_event_list_t** events) {
   status_declare;
   sp_event_t e;
   sp_event_t* ep;
   sp_event_list_t* next;
   sp_event_list_t* current;
+  sp_time_t offset;
+  sp_time_t relative_start;
+  sp_time_t relative_end;
+  sp_block_t shifted;
   current = *events;
   while (current) {
     ep = &(current->event);
@@ -264,7 +268,11 @@ status_t sp_seq(sp_time_t start, sp_time_t end, sp_block_t out, sp_event_list_t*
     } else if (e.end > start) {
       sp_event_prepare_optional_srq(e);
       *ep = e;
-      status_require(((e.generate)(((start > e.start) ? (start - e.start) : 0), (sp_inline_min(end, (e.end)) - e.start), ((e.start > start) ? sp_block_with_offset(out, (e.start - start)) : out), ep)));
+      offset = ((e.start > start) ? (e.start - start) : 0);
+      relative_start = (offset + (start - e.start));
+      relative_end = (((end - e.start) < (e.end - e.start)) ? (end - e.start) : (e.end - e.start));
+      shifted = sp_block_with_offset((*((sp_block_t*)(out))), offset);
+      status_require(((e.generate)(relative_start, relative_end, (&shifted), ep)));
     };
     current = current->next;
   };
@@ -290,7 +298,7 @@ void* sp_seq_parallel_future_f(void* data) {
   a = data;
   ep = a->event;
   sp_event_prepare_optional_srq((*ep));
-  status_require(((ep->generate)((a->start), (a->end), (a->out), ep)));
+  status_require(((ep->generate)((a->start), (a->end), (&(a->out)), ep)));
 exit:
   a->status = status;
   return (0);
@@ -298,10 +306,11 @@ exit:
 
 /** like sp_seq but evaluates events with multiple threads in parallel.
    there is some overhead, as each event gets its own output block */
-status_t sp_seq_parallel(sp_time_t start, sp_time_t end, sp_block_t out, sp_event_list_t** events) {
+status_t sp_seq_parallel(sp_time_t start, sp_time_t end, void* out, sp_event_list_t** events) {
   status_declare;
   sp_event_list_t* current;
   sp_time_t active;
+  sp_block_t out_block;
   sp_time_t allocated;
   sp_time_t e_end;
   sp_event_t* ep;
@@ -314,6 +323,7 @@ status_t sp_seq_parallel(sp_time_t start, sp_time_t end, sp_block_t out, sp_even
   active = 0;
   allocated = 0;
   current = *events;
+  out_block = *((sp_block_t*)(out));
   /* count */
   while (current) {
     if (end <= current->event.start) {
@@ -345,7 +355,7 @@ status_t sp_seq_parallel(sp_time_t start, sp_time_t end, sp_block_t out, sp_even
       sf->out_start = ((e.start > start) ? (e.start - start) : 0);
       sf->event = ep;
       sf->status.id = status_id_success;
-      status_require((sp_block_new((out.channel_count), (e_end - e_start), (&(sf->out)))));
+      status_require((sp_block_new((out_block.channel_count), (e_end - e_start), (&(sf->out)))));
       allocated += 1;
       sph_future_new(sp_seq_parallel_future_f, sf, (&(sf->future)));
     };
@@ -356,9 +366,9 @@ status_t sp_seq_parallel(sp_time_t start, sp_time_t end, sp_block_t out, sp_even
     sf = (sf_array + sf_i);
     sph_future_touch((&(sf->future)));
     status_require((sf->status));
-    for (sp_size_t ci = 0; (ci < out.channel_count); ci += 1) {
+    for (sp_size_t ci = 0; (ci < out_block.channel_count); ci += 1) {
       for (sp_size_t i = 0; (i < sf->out.size); i += 1) {
-        ((out.samples)[ci])[(sf->out_start + i)] += ((sf->out.samples)[ci])[i];
+        ((out_block.samples)[ci])[(sf->out_start + i)] += ((sf->out.samples)[ci])[i];
       };
     };
   };
@@ -379,8 +389,8 @@ void sp_group_free(sp_event_t* group) {
   sp_event_list_free((sp_group_event_list(group)));
   sp_event_memory_free(group);
 }
-status_t sp_group_generate(sp_time_t start, sp_time_t end, sp_block_t out, sp_event_t* group) { return ((sp_seq(start, end, out, ((sp_event_list_t**)(&(group->config)))))); }
-status_t sp_group_generate_parallel(sp_time_t start, sp_time_t end, sp_block_t out, sp_event_t* group) { return ((sp_seq_parallel(start, end, out, ((sp_event_list_t**)(&(group->config)))))); }
+status_t sp_group_generate(sp_time_t start, sp_time_t end, void* out, sp_event_t* group) { return ((sp_seq(start, end, out, ((sp_event_list_t**)(&(group->config)))))); }
+status_t sp_group_generate_parallel(sp_time_t start, sp_time_t end, void* out, sp_event_t* group) { return ((sp_seq_parallel(start, end, out, ((sp_event_list_t**)(&(group->config)))))); }
 status_t sp_group_prepare(sp_event_t* group) {
   status_declare;
   if (group->config) {
@@ -441,10 +451,9 @@ void sp_map_event_free(sp_event_t* event) {
   sp_event_free((c->event));
   sp_event_memory_free(event);
 }
-status_t sp_map_event_generate(sp_time_t start, sp_time_t end, sp_block_t out, sp_event_t* event) {
+status_t sp_map_event_generate(sp_time_t start, sp_time_t end, void* out, sp_event_t* event) {
   status_declare;
-  sp_map_event_config_t* c;
-  c = event->config;
+  sp_map_event_config_t* c = event->config;
   status_require(((c->event.generate)(start, end, out, (&(c->event)))));
   status_require(((c->map_generate)(start, end, out, out, (c->config))));
 exit:
@@ -452,14 +461,14 @@ exit:
 }
 
 /** creates temporary output, lets event write to it, and passes the temporary output to a user function */
-status_t sp_map_event_isolated_generate(sp_time_t start, sp_time_t end, sp_block_t out, sp_event_t* event) {
+status_t sp_map_event_isolated_generate(sp_time_t start, sp_time_t end, void* out, sp_event_t* event) {
   status_declare;
   sp_declare_block(temp_out);
   sp_map_event_config_t* c;
   c = event->config;
-  status_require((sp_block_new((out.channel_count), (out.size), (&temp_out))));
-  status_require(((c->event.generate)(start, end, temp_out, (&(c->event)))));
-  status_require(((c->map_generate)(start, end, temp_out, out, (c->config))));
+  status_require((sp_block_new((((sp_block_t*)(out))->channel_count), (((sp_block_t*)(out))->size), (&temp_out))));
+  status_require(((c->event.generate)(start, end, (&temp_out), (&(c->event)))));
+  status_require(((c->map_generate)(start, end, (&temp_out), out, (c->config))));
 exit:
   sp_block_free((&temp_out));
   status_return;
@@ -522,7 +531,7 @@ status_t sp_wave_event_prepare(sp_event_t* event) {
   };
   status_return;
 }
-status_t sp_wave_event_generate(sp_time_t start, sp_time_t end, sp_block_t out, sp_event_t* event) {
+status_t sp_wave_event_generate(sp_time_t start, sp_time_t end, void* out, sp_event_t* event) {
   status_declare;
   sp_wave_event_config_t* c;
   sp_wave_event_channel_config_t cc;
@@ -541,7 +550,7 @@ status_t sp_wave_event_generate(sp_time_t start, sp_time_t end, sp_block_t out, 
       } else {
         phsn = cc.phs;
       };
-      (out.samples)[cc.channel][(i - start)] += (cc.amp * (cc.amod)[i] * (c->wvf)[phsn]);
+      (((sp_block_t*)(out))->samples)[cc.channel][(i - start)] += (cc.amp * (cc.amod)[i] * (c->wvf)[phsn]);
       cc.phs += (cc.fmod ? (cc.frq + (cc.fmod)[i]) : cc.frq);
       if (cc.phs >= c->wvf_size) {
         cc.phs = (cc.phs % c->wvf_size);
@@ -700,7 +709,7 @@ exit:
   };
   status_return;
 }
-status_t sp_noise_event_generate_block(sp_time_t duration, sp_time_t block_i, sp_time_t event_i, sp_block_t out, sp_event_t* event) {
+status_t sp_noise_event_generate_block(sp_time_t duration, sp_time_t block_i, sp_time_t event_i, void* out, sp_event_t* event) {
   status_declare;
   sp_noise_event_config_t* c;
   sp_noise_event_channel_config_t cc;
@@ -722,10 +731,10 @@ status_t sp_noise_event_generate_block(sp_time_t duration, sp_time_t block_i, sp
     };
     for (sp_size_t i = 0; (i < duration); i += 1) {
       outn = (cc.amp * (cc.amod)[(event_i + i)] * temp[i]);
-      (out.samples)[cc.channel][(block_i + i)] += sp_inline_limit(outn, -1, 1);
+      (((sp_block_t*)(out))->samples)[cc.channel][(block_i + i)] += sp_inline_limit(outn, -1, 1);
     };
   };
 exit:
   status_return;
 }
-status_t sp_noise_event_generate(sp_time_t start, sp_time_t end, sp_block_t out, sp_event_t* event) { return ((sp_event_block_generate((((sp_noise_event_config_t*)(event->config))->resolution), sp_noise_event_generate_block, start, end, out, event))); }
+status_t sp_noise_event_generate(sp_time_t start, sp_time_t end, void* out, sp_event_t* event) { return ((sp_event_block_generate((((sp_noise_event_config_t*)(event->config))->resolution), sp_noise_event_generate_block, start, end, out, event))); }

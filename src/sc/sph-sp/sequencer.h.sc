@@ -188,15 +188,15 @@
       sp-event-t
       (start sp-time-t)
       (end sp-time-t)
-      (generate (function-pointer status-t sp-time-t sp-time-t sp-block-t (struct sp-event-t*)))
+      (generate (function-pointer status-t sp-time-t sp-time-t void* (struct sp-event-t*)))
       (prepare (function-pointer status-t (struct sp-event-t*)))
+      (update (function-pointer status-t (struct sp-event-t*)))
       (free (function-pointer void (struct sp-event-t*)))
       (config void*)
       (memory sp-memory-t)))
-  sp-event-generate-t (type (function-pointer status-t sp-time-t sp-time-t sp-block-t sp-event-t*))
+  sp-event-generate-t (type (function-pointer status-t sp-time-t sp-time-t void* sp-event-t*))
   sp-event-prepare-t (type (function-pointer status-t sp-event-t*))
-  sp-map-generate-t
-  (type (function-pointer status-t sp-time-t sp-time-t sp-block-t sp-block-t void*))
+  sp-map-generate-t (type (function-pointer status-t sp-time-t sp-time-t void* void* void*))
   sp-event-list-t
   (type
     (struct
@@ -205,7 +205,7 @@
       (next (struct sp-event-list-struct*))
       (event sp-event-t)))
   sp-event-block-generate-t
-  (type (function-pointer status-t sp-time-t sp-time-t sp-time-t sp-block-t sp-event-t*))
+  (type (function-pointer status-t sp-time-t sp-time-t sp-time-t void* sp-event-t*))
   sp-map-event-config-t
   (type
     (struct (config void*) (event sp-event-t) (map-generate sp-map-generate-t) (isolate sp-bool-t)))
@@ -269,28 +269,28 @@
   (sp-group-add a event) (status-t sp-event-t* sp-event-t)
   (sp-group-append a event) (status-t sp-event-t* sp-event-t)
   (sp-group-event-free a) (void sp-event-t*)
-  (sp-group-event-f start end out event) (void sp-time-t sp-time-t sp-block-t sp-event-t*)
-  (sp-group-event-parallel-f start end out event) (void sp-time-t sp-time-t sp-block-t sp-event-t*)
+  (sp-group-event-f start end out event) (void sp-time-t sp-time-t void* sp-event-t*)
+  (sp-group-event-parallel-f start end out event) (void sp-time-t sp-time-t void* sp-event-t*)
   (sp-group-free group) (void sp-event-t*)
-  (sp-group-generate-parallel start end out a) (status-t sp-time-t sp-time-t sp-block-t sp-event-t*)
-  (sp-group-generate start end out a) (status-t sp-time-t sp-time-t sp-block-t sp-event-t*)
+  (sp-group-generate-parallel start end out a) (status-t sp-time-t sp-time-t void* sp-event-t*)
+  (sp-group-generate start end out a) (status-t sp-time-t sp-time-t void* sp-event-t*)
   (sp-group-prepare event) (status-t sp-event-t*)
   (sp-group-prepare-parallel a) (status-t sp-event-t*)
   (sp-map-event-config-new-n count out) (status-t sp-time-t sp-map-event-config-t**)
   (sp-map-event-free event) (void sp-event-t*)
-  (sp-map-event-generate start end out event) (status-t sp-time-t sp-time-t sp-block-t sp-event-t*)
+  (sp-map-event-generate start end out event) (status-t sp-time-t sp-time-t void* sp-event-t*)
   (sp-map-event-isolated-generate start end out event)
-  (status-t sp-time-t sp-time-t sp-block-t sp-event-t*)
+  (status-t sp-time-t sp-time-t void* sp-event-t*)
   (sp-map-event-prepare event) (status-t sp-event-t*)
   (sp-noise-event-config-defaults) sp-noise-event-config-t
   (sp-noise-event-config-new-n count out) (status-t sp-time-t sp-noise-event-config-t**)
   (sp-noise-event-free event) (void sp-event-t*)
-  (sp-noise-event-generate start end out event) (status-t sp-time-t sp-time-t sp-block-t sp-event-t*)
+  (sp-noise-event-generate start end out event) (status-t sp-time-t sp-time-t void* sp-event-t*)
   (sp-noise-event-prepare event) (status-t sp-event-t*)
-  (sp-seq-parallel start end out events) (status-t sp-time-t sp-time-t sp-block-t sp-event-list-t**)
-  (sp-seq start end out events) (status-t sp-time-t sp-time-t sp-block-t sp-event-list-t**)
+  (sp-seq-parallel start end out events) (status-t sp-time-t sp-time-t void* sp-event-list-t**)
+  (sp-seq start end out events) (status-t sp-time-t sp-time-t void* sp-event-list-t**)
   (sp-wave-event-config-defaults) sp-wave-event-config-t
   (sp-wave-event-config-new-n count out) (status-t sp-time-t sp-wave-event-config-t**)
-  (sp-wave-event-generate start end out event) (status-t sp-time-t sp-time-t sp-block-t sp-event-t*)
+  (sp-wave-event-generate start end out event) (status-t sp-time-t sp-time-t void* sp-event-t*)
   (sp-wave-event-prepare event) (status-t sp-event-t*)
   (sp-event-schedule event onset duration config) (sp-event-t sp-event-t sp-time-t sp-time-t void*))

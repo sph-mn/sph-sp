@@ -477,3 +477,10 @@ for example for custom wave formulas in generate
   * perfect fourth 4:3
   * perfect fifth 3:2
   * 1:1 (unison), 2:1 (octave), 5:3 (major sixth), 3:2 (perfect fifth), 4:3 (perfect fourth), 5:4 (major third), 6:5 (minor third)
+
+# why is event-list a linked list and not an array
+dynamic insertions with maintained order, and memory lifecycle tracking.
+
+status_t sp_event_list_add(sp_event_list_t** a, sp_event_t event);
+
+the list is mutable during iteration

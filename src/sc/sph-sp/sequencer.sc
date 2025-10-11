@@ -124,7 +124,7 @@
   (set a:memory.data 0))
 
 (define (sp-event-block-generate resolution generate start end out event)
-  (status-t sp-time-t sp-event-block-generate-t sp-time-t sp-time-t sp-block-t sp-event-t*)
+  (status-t sp-time-t sp-event-block-generate-t sp-time-t sp-time-t void* sp-event-t*)
   "calls generate for sub-blocks of at most size resolution"
   status-declare
   (declare
@@ -151,7 +151,7 @@
   (if config (set event.config config))
   (return event))
 
-(define (sp-seq start end out events) (status-t sp-time-t sp-time-t sp-block-t sp-event-list-t**)
+(define (sp-seq start end out events) (status-t sp-time-t sp-time-t void* sp-event-list-t**)
   "event arrays must have been prepared/sorted once with sp_seq_event_prepare for seq to work correctly.
    like for paths, start is inclusive, end is exclusive, so that 0..100 and 100..200 attach seamless.
    events can have three function pointers: prepare, generate and free.
@@ -161,7 +161,15 @@
    past events including the event list elements are freed when processing the following block.
    on error, all events and the event list are freed"
   status-declare
-  (declare e sp-event-t ep sp-event-t* next sp-event-list-t* current sp-event-list-t*)
+  (declare
+    e sp-event-t
+    ep sp-event-t*
+    next sp-event-list-t*
+    current sp-event-list-t*
+    offset sp-time-t
+    relative-start sp-time-t
+    relative-end sp-time-t
+    shifted sp-block-t)
   (set current *events)
   (while current
     (set ep &current:event e *ep)
@@ -169,11 +177,14 @@
       ( (<= e.end start) (set next current:next) (sp-event-list-remove events current)
         (set current next) continue)
       ((<= end e.start) break)
-      ( (> e.end start) (sp-event-prepare-optional-srq e) (set *ep e)
-        (status-require
-          (e.generate (if* (> start e.start) (- start e.start) 0)
-            (- (sp-inline-min end e.end) e.start)
-            (if* (> e.start start) (sp-block-with-offset out (- e.start start)) out) ep))))
+      ( (> e.end start) (sp-event-prepare-optional-srq e)
+        (set
+          *ep e
+          offset (if* (> e.start start) (- e.start start) 0)
+          relative-start (+ offset (- start e.start))
+          relative-end (if* (< (- end e.start) (- e.end e.start)) (- end e.start) (- e.end e.start))
+          shifted (sp-block-with-offset (pointer-get (convert-type out sp-block-t*)) offset))
+        (status-require (e.generate relative-start relative-end &shifted ep))))
     (set current current:next))
   (label exit (if status-is-failure (sp-event-list-free events)) status-return))
 
@@ -193,17 +204,18 @@
   (declare a sp-seq-future-t* ep sp-event-t*)
   (set a data ep a:event)
   (sp-event-prepare-optional-srq *ep)
-  (status-require (ep:generate a:start a:end a:out ep))
+  (status-require (ep:generate a:start a:end &a:out ep))
   (label exit (set a:status status) (return 0)))
 
 (define (sp-seq-parallel start end out events)
-  (status-t sp-time-t sp-time-t sp-block-t sp-event-list-t**)
+  (status-t sp-time-t sp-time-t void* sp-event-list-t**)
   "like sp_seq but evaluates events with multiple threads in parallel.
    there is some overhead, as each event gets its own output block"
   status-declare
   (declare
     current sp-event-list-t*
     active sp-time-t
+    out-block sp-block-t
     allocated sp-time-t
     e-end sp-time-t
     ep sp-event-t*
@@ -212,7 +224,12 @@
     sf-array sp-seq-future-t*
     sf sp-seq-future-t*
     next sp-event-list-t*)
-  (set sf-array 0 active 0 allocated 0 current *events)
+  (set
+    sf-array 0
+    active 0
+    allocated 0
+    current *events
+    out-block (pointer-get (convert-type out sp-block-t*)))
   (sc-comment "count")
   (while current
     (cond ((<= end current:event.start) break) ((> current:event.end start) (set+ active 1)))
@@ -236,7 +253,7 @@
           sf:out-start (if* (> e.start start) (- e.start start) 0)
           sf:event ep
           sf:status.id status-id-success)
-        (status-require (sp-block-new out.channel-count (- e-end e-start) &sf:out))
+        (status-require (sp-block-new out-block.channel-count (- e-end e-start) &sf:out))
         (set+ allocated 1) (sph-future-new sp-seq-parallel-future-f sf &sf:future)))
     (set current current:next))
   (sc-comment "merge")
@@ -244,9 +261,9 @@
     (set sf (+ sf-array sf-i))
     (sph-future-touch &sf:future)
     (status-require sf:status)
-    (sp-for-each-index ci out.channel-count
+    (sp-for-each-index ci out-block.channel-count
       (sp-for-each-index i sf:out.size
-        (set+ (array-get (array-get out.samples ci) (+ sf:out-start i))
+        (set+ (array-get (array-get out-block.samples ci) (+ sf:out-start i))
           (array-get (array-get sf:out.samples ci) i)))))
   (label exit
     (if sf-array
@@ -262,12 +279,11 @@
   (sp-event-list-free (sp-group-event-list group))
   (sp-event-memory-free group))
 
-(define (sp-group-generate start end out group)
-  (status-t sp-time-t sp-time-t sp-block-t sp-event-t*)
+(define (sp-group-generate start end out group) (status-t sp-time-t sp-time-t void* sp-event-t*)
   (return (sp-seq start end out (convert-type &group:config sp-event-list-t**))))
 
 (define (sp-group-generate-parallel start end out group)
-  (status-t sp-time-t sp-time-t sp-block-t sp-event-t*)
+  (status-t sp-time-t sp-time-t void* sp-event-t*)
   (return (sp-seq-parallel start end out (convert-type &group:config sp-event-list-t**))))
 
 (define (sp-group-prepare group) (status-t sp-event-t*)
@@ -318,24 +334,25 @@
   (sp-event-memory-free event))
 
 (define (sp-map-event-generate start end out event)
-  (status-t sp-time-t sp-time-t sp-block-t sp-event-t*)
+  (status-t sp-time-t sp-time-t void* sp-event-t*)
   status-declare
-  (declare c sp-map-event-config-t*)
-  (set c event:config)
+  (define c sp-map-event-config-t* event:config)
   (status-require (c:event.generate start end out &c:event))
   (status-require (c:map-generate start end out out c:config))
   (label exit status-return))
 
 (define (sp-map-event-isolated-generate start end out event)
-  (status-t sp-time-t sp-time-t sp-block-t sp-event-t*)
+  (status-t sp-time-t sp-time-t void* sp-event-t*)
   "creates temporary output, lets event write to it, and passes the temporary output to a user function"
   status-declare
   (sp-declare-block temp-out)
   (declare c sp-map-event-config-t*)
   (set c event:config)
-  (status-require (sp-block-new out.channel-count out.size &temp-out))
-  (status-require (c:event.generate start end temp-out &c:event))
-  (status-require (c:map-generate start end temp-out out c:config))
+  (status-require
+    (sp-block-new (struct-pointer-get (convert-type out sp-block-t*) channel-count)
+      (struct-pointer-get (convert-type out sp-block-t*) size) &temp-out))
+  (status-require (c:event.generate start end &temp-out &c:event))
+  (status-require (c:map-generate start end &temp-out out c:config))
   (label exit (sp-block-free &temp-out) status-return))
 
 (define (sp-wave-event-config-defaults) sp-wave-event-config-t
@@ -385,7 +402,7 @@
   status-return)
 
 (define (sp-wave-event-generate start end out event)
-  (status-t sp-time-t sp-time-t sp-block-t sp-event-t*)
+  (status-t sp-time-t sp-time-t void* sp-event-t*)
   status-declare
   (declare
     c sp-wave-event-config-t*
@@ -401,7 +418,9 @@
           (set phsn (+ cc.phs (array-get cc.pmod i)))
           (if (>= phsn c:wvf-size) (set phsn (modulo phsn c:wvf-size))))
         (set phsn cc.phs))
-      (set+ (array-get out.samples cc.channel (- i start))
+      (set+
+        (array-get (struct-pointer-get (convert-type out sp-block-t*) samples) cc.channel
+          (- i start))
         (* cc.amp (array-get cc.amod i) (array-get c:wvf phsn)) cc.phs
         (if* cc.fmod (+ cc.frq (array-get cc.fmod i)) cc.frq))
       (if (>= cc.phs c:wvf-size) (set cc.phs (modulo cc.phs c:wvf-size))))
@@ -531,7 +550,7 @@
   (label exit (if status-is-failure error-memory-free) status-return))
 
 (define (sp-noise-event-generate-block duration block-i event-i out event)
-  (status-t sp-time-t sp-time-t sp-time-t sp-block-t sp-event-t*)
+  (status-t sp-time-t sp-time-t sp-time-t void* sp-event-t*)
   status-declare
   (declare
     c sp-noise-event-config-t*
@@ -557,11 +576,14 @@
       (set temp (array-get c:temp 1)))
     (sp-for-each-index i duration
       (set outn (* cc.amp (array-get cc.amod (+ event-i i)) (array-get temp i)))
-      (set+ (array-get out.samples cc.channel (+ block-i i)) (sp-inline-limit outn -1 1))))
+      (set+
+        (array-get (struct-pointer-get (convert-type out sp-block-t*) samples) cc.channel
+          (+ block-i i))
+        (sp-inline-limit outn -1 1))))
   (label exit status-return))
 
 (define (sp-noise-event-generate start end out event)
-  (status-t sp-time-t sp-time-t sp-block-t sp-event-t*)
+  (status-t sp-time-t sp-time-t void* sp-event-t*)
   (return
     (sp-event-block-generate
       (struct-pointer-get (convert-type event:config sp-noise-event-config-t*) resolution)

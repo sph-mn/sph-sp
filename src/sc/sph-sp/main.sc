@@ -261,12 +261,12 @@
   (for ((set i 0) (< i block-end) (set+ i config.block-size))
     (if config.display-progress
       (printf "%.1f%\n" (* 100 (/ i (convert-type block-end sp-sample-t)))))
-    (status-require (sp-seq i (+ i config.block-size) block &events))
+    (status-require (sp-seq i (+ i config.block-size) &block &events))
     (status-require (sp-file-write &file block.samples config.block-size))
     (sp-block-zero block))
   (if remainder
     (begin
-      (status-require (sp-seq i (+ i remainder) block &events))
+      (status-require (sp-seq i (+ i remainder) &block &events))
       (status-require (sp-file-write &file block.samples remainder))))
   (sp-event-list-free &events)
   (label exit (sp-block-free &block) (sp-file-close-write &file) status-return))
@@ -281,7 +281,7 @@
   (sp-declare-event-list events)
   (status-require (sp-event-list-add &events event))
   (status-require (sp-block-new config.channel-count (- end start) &block))
-  (status-require (sp-seq start end block &events))
+  (status-require (sp-seq start end &block &events))
   (sp-event-list-free &events)
   (set *out block)
   (label exit status-return))

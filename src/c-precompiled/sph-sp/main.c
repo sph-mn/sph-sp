@@ -349,12 +349,12 @@ status_t sp_render_range_file(sp_event_t event, sp_time_t start, sp_time_t end, 
     if (config.display_progress) {
       printf(("%.1f%\n"), (100 * (i / ((sp_sample_t)(block_end)))));
     };
-    status_require((sp_seq(i, (i + config.block_size), block, (&events))));
+    status_require((sp_seq(i, (i + config.block_size), (&block), (&events))));
     status_require((sp_file_write((&file), (block.samples), (config.block_size))));
     sp_block_zero(block);
   };
   if (remainder) {
-    status_require((sp_seq(i, (i + remainder), block, (&events))));
+    status_require((sp_seq(i, (i + remainder), (&block), (&events))));
     status_require((sp_file_write((&file), (block.samples), remainder)));
   };
   sp_event_list_free((&events));
@@ -373,7 +373,7 @@ status_t sp_render_range_block(sp_event_t event, sp_time_t start, sp_time_t end,
   sp_declare_event_list(events);
   status_require((sp_event_list_add((&events), event)));
   status_require((sp_block_new((config.channel_count), (end - start), (&block))));
-  status_require((sp_seq(start, end, block, (&events))));
+  status_require((sp_seq(start, end, (&block), (&events))));
   sp_event_list_free((&events));
   *out = block;
 exit:

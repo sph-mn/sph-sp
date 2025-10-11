@@ -88,6 +88,9 @@ gcc -lsph-sp main.c
 * files under `source/c/foreign/nayuki-fft`: mit license
 * rest: lgpl3+
 
+# possible enhancements
+* further optimizations of numerical stability
+
 # thanks to
 * [tom roelandts](https://tomroelandts.com/) on whose information the windowed sinc filters are based on
 * [mborg](https://github.com/mborgerding/kissfft) for the first fft implementation that was used

@@ -23,15 +23,17 @@
 
 /* previous segfault when noise-event duration was unequal sp-rate */
 #define test_noise_duration (_sp_rate + 20)
-status_t test_helper_event_generate(sp_time_t start, sp_time_t end, sp_block_t out, sp_event_t* event) {
+status_t test_helper_event_generate(sp_time_t start, sp_time_t end, void* out, sp_event_t* event) {
   status_declare;
   sp_time_t i;
   sp_channel_count_t ci;
   uint64_t value;
+  sp_block_t out_block;
+  out_block = *((sp_block_t*)(out));
   value = ((sp_time_t)(((uint64_t)(event->config))));
   for (i = start; (i < end); i += 1) {
-    for (ci = 0; (ci < out.channel_count); ci += 1) {
-      (out.samples)[ci][(i - start)] = value;
+    for (ci = 0; (ci < out_block.channel_count); ci += 1) {
+      (out_block.samples)[ci][(i - start)] = value;
     };
   };
   status_return;
@@ -424,7 +426,7 @@ status_t test_sp_noise_event() {
   event.end = test_noise_duration;
   sp_noise_event((&event), config);
   status_require((sp_event_list_add((&events), event)));
-  status_require((sp_seq(0, test_noise_duration, out, (&events))));
+  status_require((sp_seq(0, test_noise_duration, (&out), (&events))));
   test_helper_assert(("in range -1..1"), (1.0 >= sp_samples_absolute_max(((out.samples)[0]), test_noise_duration)));
   sp_block_free((&out));
 exit:
@@ -436,13 +438,15 @@ exit:
 status_t test_sp_seq() {
   status_declare;
   sp_block_t out;
+  sp_block_t shifted;
   sp_declare_event_list(events);
   status_require((sp_event_list_add((&events), (test_helper_event(0, 40, 1)))));
   status_require((sp_event_list_add((&events), (test_helper_event(41, 100, 2)))));
   status_require((sp_block_new(2, 100, (&out))));
   sp_seq_events_prepare((&events));
-  sp_seq(0, 50, out, (&events));
-  sp_seq(50, 100, (sp_block_with_offset(out, 50)), (&events));
+  sp_seq(0, 50, (&out), (&events));
+  shifted = sp_block_with_offset(out, 50);
+  sp_seq(50, 100, (&shifted), (&events));
   test_helper_assert("block contents 1 event 1", ((1 == (out.samples)[0][0]) && (1 == (out.samples)[0][39])));
   test_helper_assert("block contents 1 gap", (0 == (out.samples)[0][40]));
   test_helper_assert("block contents 1 event 2", ((2 == (out.samples)[0][41]) && (2 == (out.samples)[0][99])));
@@ -454,6 +458,7 @@ exit:
 status_t test_sp_group() {
   status_declare;
   sp_block_t block;
+  sp_block_t shifted;
   sp_time_t* m1;
   sp_time_t* m2;
   sp_declare_event(g);
@@ -478,8 +483,9 @@ status_t test_sp_group() {
   sp_event_memory_fixed_add((&g), m1);
   sp_event_memory_fixed_add((&g), m2);
   status_require(((g.prepare)((&g))));
-  status_require(((g.generate)(0, 50, block, (&g))));
-  status_require(((g.generate)(50, 100, (sp_block_with_offset(block, 50)), (&g))));
+  status_require(((g.generate)(0, 50, (&block), (&g))));
+  shifted = sp_block_with_offset(block, 50);
+  status_require(((g.generate)(50, 100, (&shifted), (&g))));
   (g.free)((&g));
   test_helper_assert("block contents event 1", ((1 == (block.samples)[0][10]) && (1 == (block.samples)[0][29])));
   test_helper_assert("block contents event 2", ((2 == (block.samples)[0][30]) && (2 == (block.samples)[0][39])));
@@ -496,6 +502,7 @@ exit:
 status_t test_sp_wave_event() {
   status_declare;
   sp_block_t out;
+  sp_block_t shifted;
   sp_time_t fmod[test_wave_event_duration];
   sp_sample_t amod1[test_wave_event_duration];
   sp_sample_t amod2[test_wave_event_duration];
@@ -521,8 +528,9 @@ status_t test_sp_wave_event() {
   event.end = test_wave_event_duration;
   sp_wave_event((&event), config);
   status_require(((event.prepare)((&event))));
-  status_require(((event.generate)(0, 30, out, (&event))));
-  status_require(((event.generate)(30, test_wave_event_duration, (sp_block_with_offset(out, 30)), (&event))));
+  status_require(((event.generate)(0, 30, (&out), (&event))));
+  shifted = sp_block_with_offset(out, 30);
+  status_require(((event.generate)(30, test_wave_event_duration, (&shifted), (&event))));
   test_helper_assert("amod applied channel 0", (feq((0.9), (sp_samples_max(((out.samples)[0]), test_wave_event_duration)))));
   test_helper_assert("amod applied channel 1", (feq((0.4), (sp_samples_max(((out.samples)[1]), test_wave_event_duration)))));
   /* (sp-plot-samples (array-get out.samples 1) test-wave-event-duration) */
@@ -771,6 +779,7 @@ status_t test_sp_seq_parallel() {
   sp_time_t* fmod;
   sp_time_t size;
   sp_block_t block;
+  sp_block_t shifted;
   sp_wave_event_config_t* config;
   sp_time_t event_count;
   sp_declare_event(event);
@@ -797,7 +806,8 @@ status_t test_sp_seq_parallel() {
   sp_seq_events_prepare((&events));
   step_size = (size / 10);
   for (i = 0; (i < size); i += step_size) {
-    sp_seq_parallel(i, (i + step_size), (sp_block_with_offset(block, i)), (&events));
+    shifted = sp_block_with_offset(block, i);
+    sp_seq_parallel(i, (i + step_size), (&shifted), (&events));
   };
   test_helper_assert("first 1", (sp_sample_nearly_equal(0, ((block.samples)[0][0]), (0.001)) && sp_sample_nearly_equal(0, ((block.samples)[1][0]), (0.001))));
   test_helper_assert("last 1", (sp_sample_nearly_equal((8.314696), ((block.samples)[0][(step_size - 1)]), (0.001)) && sp_sample_nearly_equal((8.314696), ((block.samples)[1][(step_size - 1)]), (0.001))));
@@ -814,9 +824,9 @@ exit:
   };
   status_return;
 }
-status_t test_sp_map_event_generate(sp_time_t start, sp_time_t end, sp_block_t in, sp_block_t out, void* state) {
+status_t test_sp_map_event_generate(sp_time_t start, sp_time_t end, void* in, void* out, void* state) {
   status_declare;
-  sp_block_copy(in, out);
+  sp_block_copy((*((sp_block_t*)(in))), (*((sp_block_t*)(out))));
   status_return;
 }
 status_t test_sp_map_event() {
@@ -851,8 +861,8 @@ status_t test_sp_map_event() {
   parent.end = child.end;
   sp_map_event((&parent), map_event_config);
   status_require(((parent.prepare)((&parent))));
-  status_require(((parent.generate)(0, (size / 2), block, (&parent))));
-  status_require(((parent.generate)((size / 2), size, block, (&parent))));
+  status_require(((parent.generate)(0, (size / 2), (&block), (&parent))));
+  status_require(((parent.generate)((size / 2), size, (&block), (&parent))));
   (parent.free)((&parent));
   sp_block_free((&block));
   free(amod);
