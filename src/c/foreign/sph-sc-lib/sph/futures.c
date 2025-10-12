@@ -1,4 +1,6 @@
 
+#include <stddef.h>
+
 /* depends on thread-pool.c */
 sph_thread_pool_t sph_futures_pool;
 uint8_t sph_futures_pool_is_initialized = 0;
@@ -26,7 +28,7 @@ void sph_future_eval(sph_thread_pool_task_t* task) {
   sph_future_t* a;
   a = ((sph_future_t*)((((uint8_t*)(task)) - offsetof(sph_future_t, task))));
   task->data = (a->f)((task->data));
-  a->finished = 1;
+  atomic_store_explicit((&(a->finished)), 1, memory_order_release);
 }
 
 /** prepare a future in "out" and possibly start evaluation in parallel.
@@ -36,6 +38,7 @@ void sph_future_new(sph_future_f_t f, void* data, sph_future_t* out) {
   out->f = f;
   out->task.f = sph_future_eval;
   out->task.data = data;
+  atomic_store_explicit((&(out->finished)), 0, memory_order_relaxed);
   sph_thread_pool_enqueue((&sph_futures_pool), (&(out->task)));
 }
 
@@ -44,14 +47,14 @@ void sph_future_new(sph_future_f_t f, void* data, sph_future_t* out) {
 void sph_future_deinit() {
   if (sph_futures_pool_is_initialized) {
     sph_thread_pool_finish((&sph_futures_pool), 0, 0);
-    sph_thread_pool_destroy((&sph_futures_pool));
+    sph_futures_pool_is_initialized = 0;
   };
 }
 
 /** blocks until future is finished and returns its result */
 void* sph_future_touch(sph_future_t* a) {
   const struct timespec poll_interval = sph_future_default_poll_interval;
-  while (!a->finished) {
+  while (!atomic_load_explicit((&(a->finished)), memory_order_acquire)) {
     nanosleep((&poll_interval), 0);
   };
   return ((a->task.data));

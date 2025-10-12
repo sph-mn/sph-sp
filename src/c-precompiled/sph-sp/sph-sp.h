@@ -107,7 +107,11 @@
 #include <sph/spline-path.h>
 #include <sph-sp/path.h>
 #include <sph-sp/filter.h>
+#include <sph/queue.h>
+#include <sph/thread-pool.h>
+#include <sph/futures.h>
 #include <sph-sp/sequencer.h>
+#include <sph-sp/parallel.h>
 #include <sph-sp/statistics.h>
 #include <sph-sp/plot.h>
 #include <sph-sp/main2.h>

@@ -771,7 +771,7 @@ exit:
 }
 
 /** sum 10 wave events */
-status_t test_sp_seq_parallel() {
+status_t test_sp_seq_parallel_block() {
   status_declare;
   sp_time_t i;
   sp_time_t step_size;
@@ -807,7 +807,7 @@ status_t test_sp_seq_parallel() {
   step_size = (size / 10);
   for (i = 0; (i < size); i += step_size) {
     shifted = sp_block_with_offset(block, i);
-    sp_seq_parallel(i, (i + step_size), (&shifted), (&events));
+    sp_seq_parallel_block(i, (i + step_size), shifted, (&events));
   };
   test_helper_assert("first 1", (sp_sample_nearly_equal(0, ((block.samples)[0][0]), (0.001)) && sp_sample_nearly_equal(0, ((block.samples)[1][0]), (0.001))));
   test_helper_assert("last 1", (sp_sample_nearly_equal((8.314696), ((block.samples)[0][(step_size - 1)]), (0.001)) && sp_sample_nearly_equal((8.314696), ((block.samples)[1][(step_size - 1)]), (0.001))));
@@ -917,7 +917,7 @@ int main() {
   test_helper_test_one(test_sp_map_event);
   test_helper_test_one(test_render_range_block);
   test_helper_test_one(test_sp_noise_event);
-  test_helper_test_one(test_sp_seq_parallel);
+  test_helper_test_one(test_sp_seq_parallel_block);
 exit:
   sp_deinitialize();
   test_helper_display_summary();

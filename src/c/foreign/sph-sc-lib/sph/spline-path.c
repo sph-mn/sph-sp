@@ -4,9 +4,10 @@
 #include <stdlib.h>
 #include <math.h>
 #include <stddef.h>
+#include <stdio.h>
+#include <string.h>
 
 #define spline_path_bezier_resolution 2
-#define spline_path_cheap_round_positive(a) ((size_t)((0.5 + a)))
 #define linearly_interpolate(a, b, t) (a + (t * (b - a)))
 #define spline_path_bezier2_interpolate(t, mt, a, b, c, d) ((a * mt * mt * mt) + (b * 3 * mt * mt * t) + (c * 3 * mt * t * t) + (d * t * t * t))
 #define spline_path_bezier1_interpolate(t, mt, a, b, c) ((a * mt * mt) + (b * 2 * mt * t) + (c * t * t))
@@ -17,7 +18,7 @@ void spline_path_debug_print(spline_path_t* path, uint8_t indent) {
   uint8_t pad[32];
   memset(pad, ' ', (sizeof(pad)));
   pad[((indent < 30) ? indent : 30)] = 0;
-  printf("%spath segments: %u\n", pad, (path->segments_count));
+  printf("%spath segments: %zu\n", pad, ((size_t)(path->segments_count)));
   for (size_t i = 0; (i < path->segments_count); i += 1) {
     spline_path_segment_t* s = &((path->segments)[i]);
     spline_path_point_t* p0 = &((s->points)[0]);
@@ -41,7 +42,7 @@ void spline_path_debug_print(spline_path_t* path, uint8_t indent) {
     } else {
       type = "custom";
     };
-    printf(("%s  %s %.3f %.3f -> %.3f %.3f\n"), pad, type, (p0->x), (p0->y), (p1->x), (p1->y));
+    printf(("%s  %s %.3f %.3f -> %.3f %.3f\n"), pad, ((char*)(type)), (p0->x), (p0->y), (p1->x), (p1->y));
     if ((s->generate == spline_path_path_generate) && s->data) {
       spline_path_t* sub = ((spline_path_t*)(s->data));
       spline_path_debug_print(sub, (indent + 2));
@@ -62,19 +63,19 @@ uint8_t spline_path_validate(spline_path_t* path, uint8_t log) {
     spline_path_point_t* p1 = &((s->points)[1]);
     if ((s->points_count < 2) || (s->points_count > spline_path_point_max)) {
       if (log) {
-        fprintf(stderr, "segment %u: invalid points count %u\n", i, (s->points_count));
+        fprintf(stderr, "segment %zu: invalid points count %zu\n", i, ((size_t)(s->points_count)));
       };
       return (1);
     };
     if (p1->x < p0->x) {
       if (log) {
-        fprintf(stderr, ("segment %u: end x (%f) < start x (%f)\n"), i, (p1->x), (p0->x));
+        fprintf(stderr, ("segment %zu: end x (%f) < start x (%f)\n"), i, (p1->x), (p0->x));
       };
       return (1);
     };
     if (!s->generate) {
       if (log) {
-        fprintf(stderr, "segment %u: missing generate function\n", i);
+        fprintf(stderr, "segment %zu: missing generate function\n", i);
       };
       return (1);
     };
@@ -82,13 +83,13 @@ uint8_t spline_path_validate(spline_path_t* path, uint8_t log) {
       spline_path_t* sub = ((spline_path_t*)(s->data));
       if (!sub || !sub->segments || (sub->segments_count == 0)) {
         if (log) {
-          fprintf(stderr, "segment %u: invalid nested path\n", i);
+          fprintf(stderr, "segment %zu: invalid nested path\n", i);
         };
         return (1);
       };
       if (spline_path_validate(sub, log)) {
         if (log) {
-          fprintf(stderr, "segment %u: nested path validation failed\n", i);
+          fprintf(stderr, "segment %zu: nested path validation failed\n", i);
         };
         return (1);
       };
@@ -195,7 +196,7 @@ uint8_t spline_path_set(spline_path_t* path, spline_path_segment_t* segments, sp
   return (0);
 }
 
-/** like spline_path_set but copies segments to new memory which has to be freed after use */
+/** like spline_path_set but copies segments to new memory which has to be freed explicitly after use */
 uint8_t spline_path_set_copy(spline_path_t* path, spline_path_segment_t* segments, spline_path_segment_count_t segments_count) {
   spline_path_segment_t* s = malloc((segments_count * sizeof(spline_path_segment_t)));
   if (!s) {
@@ -260,18 +261,23 @@ void spline_path_path_generate(size_t start, size_t end, spline_path_segment_t* 
 /** quadratic bezier curve with one control point.
    bezier interpolation also interpolates x. higher resolution sampling and linear interpolation are used to fill gaps */
 void spline_path_beziern_generate(spline_path_value_t (*interpolator)(spline_path_value_t, spline_path_value_t, spline_path_point_t*, size_t), size_t start, size_t end, spline_path_segment_t* s, spline_path_value_t* out) {
+  size_t b_size;
+  size_t i;
+  size_t j;
   spline_path_value_t mt;
   spline_path_point_t p_end;
   spline_path_point_t p_start;
   spline_path_value_t s_size;
   spline_path_value_t t;
-  size_t b_size;
-  size_t x;
   size_t x_previous;
+  size_t x;
   spline_path_value_t y_previous;
-  size_t i;
-  size_t j;
   spline_path_value_t y;
+  spline_path_value_t mt_prev;
+  spline_path_value_t t_prev;
+  size_t xj;
+  size_t j_start;
+  x = start;
   p_start = (s->points)[0];
   p_end = (s->points)[(s->points_count - 1)];
   b_size = (spline_path_bezier_resolution * (end - start));
@@ -281,7 +287,7 @@ void spline_path_beziern_generate(spline_path_value_t (*interpolator)(spline_pat
     mt = (1.0 - t);
     x = round((interpolator(t, mt, (s->points), (offsetof(spline_path_point_t, x)))));
     y = interpolator(t, mt, (s->points), (offsetof(spline_path_point_t, y)));
-    if (x < end) {
+    if ((x >= start) && (x < end)) {
       out[(x - start)] = y;
     };
     if (2 > (x - x_previous)) {
@@ -291,22 +297,31 @@ void spline_path_beziern_generate(spline_path_value_t (*interpolator)(spline_pat
       y_previous = out[(x_previous - start)];
     } else {
       /* gap at the beginning. find value for x before start */
+      t_prev = 0;
+      mt_prev = 1;
       for (j = i; j; j -= 1) {
         t = (j / s_size);
         mt = (1.0 - t);
-        x_previous = round((interpolator(t, mt, (s->points), (offsetof(spline_path_point_t, x)))));
-        if (x_previous < x) {
+        xj = round((interpolator(t, mt, (s->points), (offsetof(spline_path_point_t, x)))));
+        if (xj < x) {
+          x_previous = xj;
+          t_prev = t;
+          mt_prev = mt;
           break;
         };
       };
       if (j) {
-        y_previous = p_start.y;
+        y_previous = interpolator(t_prev, mt_prev, (s->points), (offsetof(spline_path_point_t, y)));
       } else {
         y_previous = p_start.y;
         x_previous = p_start.x;
       };
     };
-    for (j = 1; (j < (x - x_previous)); j += 1) {
+    j_start = 1;
+    if ((x_previous + j_start) < start) {
+      j_start = (start - x_previous);
+    };
+    for (j = j_start; ((j < (x - x_previous)) && ((x_previous + j) < end)); j += 1) {
       t = (j / ((spline_path_value_t)((x - x_previous))));
       out[((x_previous + j) - start)] = linearly_interpolate(y_previous, y, t);
     };
@@ -510,7 +525,8 @@ uint8_t spline_path_bezier_arc_prepare(spline_path_segment_t* s) {
 }
 
 /** curvature is a real between -1..1, with the maximum at the sides of
-   a rectangle with the points as diagonally opposing edges */
+   a rectangle with the points as diagonally opposing edges.
+   interpolates with a quadratic bezier with a midpoint sagitta proportional to chord length */
 spline_path_segment_t spline_path_bezier_arc(spline_path_value_t x, spline_path_value_t y, spline_path_value_t curvature) {
   spline_path_segment_t s;
   if (0.0 == curvature) {

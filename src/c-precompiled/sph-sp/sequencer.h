@@ -44,10 +44,6 @@
   event_pointer->prepare = sp_group_prepare; \
   event_pointer->generate = sp_group_generate; \
   event_pointer->config = 0
-#define sp_group_parallel_event(event_pointer) \
-  event_pointer->prepare = sp_group_prepare; \
-  event_pointer->generate = sp_group_generate_parallel; \
-  event_pointer->config = 0
 #define sp_event_path_samples_srq(event_pointer, out, ...) \
   status_require((sp_path_samples(out, __VA_ARGS__))); \
   status_require((sp_event_memory_add(event_pointer, (*out))))
@@ -224,12 +220,9 @@ status_t sp_group_add(sp_event_t* a, sp_event_t event);
 status_t sp_group_append(sp_event_t* a, sp_event_t event);
 void sp_group_event_free(sp_event_t* a);
 void sp_group_event_f(sp_time_t start, sp_time_t end, void* out, sp_event_t* event);
-void sp_group_event_parallel_f(sp_time_t start, sp_time_t end, void* out, sp_event_t* event);
 void sp_group_free(sp_event_t* group);
-status_t sp_group_generate_parallel(sp_time_t start, sp_time_t end, void* out, sp_event_t* a);
 status_t sp_group_generate(sp_time_t start, sp_time_t end, void* out, sp_event_t* a);
 status_t sp_group_prepare(sp_event_t* event);
-status_t sp_group_prepare_parallel(sp_event_t* a);
 status_t sp_map_event_config_new_n(sp_time_t count, sp_map_event_config_t** out);
 void sp_map_event_free(sp_event_t* event);
 status_t sp_map_event_generate(sp_time_t start, sp_time_t end, void* out, sp_event_t* event);
@@ -240,7 +233,6 @@ status_t sp_noise_event_config_new_n(sp_time_t count, sp_noise_event_config_t** 
 void sp_noise_event_free(sp_event_t* event);
 status_t sp_noise_event_generate(sp_time_t start, sp_time_t end, void* out, sp_event_t* event);
 status_t sp_noise_event_prepare(sp_event_t* event);
-status_t sp_seq_parallel(sp_time_t start, sp_time_t end, void* out, sp_event_list_t** events);
 status_t sp_seq(sp_time_t start, sp_time_t end, void* out, sp_event_list_t** events);
 sp_wave_event_config_t sp_wave_event_config_defaults();
 status_t sp_wave_event_config_new_n(sp_time_t count, sp_wave_event_config_t** out);

@@ -3,9 +3,8 @@
 
 (pre-include "math.h" "errno.h"
   "arpa/inet.h" "nayuki-fft/fft.c" "../sph-sp/sph-sp.h"
-  "sph/spline-path.c" "sph/quicksort.h" "sph/queue.h"
-  "sph/random.c" "sph/float.c" "sph/thread-pool.h"
-  "sph/thread-pool.c" "sph/futures.h" "sph/futures.c" "sph/helper.c")
+  "sph/spline-path.c" "sph/quicksort.h" "sph/random.c"
+  "sph/float.c" "sph/thread-pool.c" "sph/futures.c" "sph/helper.c")
 
 (pre-define
   (sp-libc-s-id id) (if (< id 0) (status-set-goto sp-s-group-libc id))
@@ -233,7 +232,7 @@
           (set+ (array-get carryover c-index) (* (array-get a a-index) (array-get b b-index))))))))
 
 (pre-include "sph-sp/plot.c" "sph-sp/filter.c"
-  "sph-sp/sequencer.c" "sph-sp/statistics.c" "sph-sp/file.c")
+  "sph-sp/sequencer.c" "sph-sp/parallel.c" "sph-sp/statistics.c" "sph-sp/file.c")
 
 (define (sp-render-config channel-count rate block-size display-progress)
   (sp-render-config-t sp-channel-count-t sp-time-t sp-time-t sp-bool-t)

@@ -8,6 +8,7 @@ manages the memory of thread-pool task objects.
    depends on thread-pool.h */
 #include <inttypes.h>
 #include <time.h>
+#include <stdatomic.h>
 
 #ifndef sph_future_default_poll_interval
 #define sph_future_default_poll_interval { 0, 200000000 }
@@ -15,7 +16,7 @@ manages the memory of thread-pool task objects.
 typedef void* (*sph_future_f_t)(void*);
 typedef struct {
   sph_thread_pool_task_t task;
-  uint8_t finished;
+  _Atomic uint8_t finished;
   sph_future_f_t f;
 } sph_future_t;
 int sph_future_init(sph_thread_pool_size_t thread_count);

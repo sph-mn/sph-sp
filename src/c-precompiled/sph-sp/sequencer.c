@@ -282,115 +282,12 @@ exit:
   };
   status_return;
 }
-typedef struct {
-  sp_time_t start;
-  sp_time_t end;
-  sp_time_t out_start;
-  sp_block_t out;
-  sp_event_t* event;
-  status_t status;
-  sph_future_t future;
-} sp_seq_future_t;
-void* sp_seq_parallel_future_f(void* data) {
-  status_declare;
-  sp_seq_future_t* a;
-  sp_event_t* ep;
-  a = data;
-  ep = a->event;
-  sp_event_prepare_optional_srq((*ep));
-  status_require(((ep->generate)((a->start), (a->end), (&(a->out)), ep)));
-exit:
-  a->status = status;
-  return (0);
-}
-
-/** like sp_seq but evaluates events with multiple threads in parallel.
-   there is some overhead, as each event gets its own output block */
-status_t sp_seq_parallel(sp_time_t start, sp_time_t end, void* out, sp_event_list_t** events) {
-  status_declare;
-  sp_event_list_t* current;
-  sp_time_t active;
-  sp_block_t out_block;
-  sp_time_t allocated;
-  sp_time_t e_end;
-  sp_event_t* ep;
-  sp_event_t e;
-  sp_time_t e_start;
-  sp_seq_future_t* sf_array;
-  sp_seq_future_t* sf;
-  sp_event_list_t* next;
-  sf_array = 0;
-  active = 0;
-  allocated = 0;
-  current = *events;
-  out_block = *((sp_block_t*)(out));
-  /* count */
-  while (current) {
-    if (end <= current->event.start) {
-      break;
-    } else if (current->event.end > start) {
-      active += 1;
-    };
-    current = current->next;
-  };
-  status_require((sp_malloc_type(active, sp_seq_future_t, (&sf_array))));
-  /* distribute */
-  current = *events;
-  while (current) {
-    ep = &(current->event);
-    e = *ep;
-    if (e.end <= start) {
-      next = current->next;
-      sp_event_list_remove(events, current);
-      current = next;
-      continue;
-    } else if (end <= e.start) {
-      break;
-    } else if (e.end > start) {
-      sf = (sf_array + allocated);
-      e_start = ((start > e.start) ? (start - e.start) : 0);
-      e_end = (sp_inline_min(end, (e.end)) - e.start);
-      sf->start = e_start;
-      sf->end = e_end;
-      sf->out_start = ((e.start > start) ? (e.start - start) : 0);
-      sf->event = ep;
-      sf->status.id = status_id_success;
-      status_require((sp_block_new((out_block.channel_count), (e_end - e_start), (&(sf->out)))));
-      allocated += 1;
-      sph_future_new(sp_seq_parallel_future_f, sf, (&(sf->future)));
-    };
-    current = current->next;
-  };
-  /* merge */
-  for (sp_size_t sf_i = 0; (sf_i < active); sf_i += 1) {
-    sf = (sf_array + sf_i);
-    sph_future_touch((&(sf->future)));
-    status_require((sf->status));
-    for (sp_size_t ci = 0; (ci < out_block.channel_count); ci += 1) {
-      for (sp_size_t i = 0; (i < sf->out.size); i += 1) {
-        ((out_block.samples)[ci])[(sf->out_start + i)] += ((sf->out.samples)[ci])[i];
-      };
-    };
-  };
-exit:
-  if (sf_array) {
-    for (sp_size_t i = 0; (i < allocated); i += 1) {
-      sp_block_free((&((sf_array[i]).out)));
-    };
-    free(sf_array);
-  };
-  if (status_is_failure) {
-    sp_event_list_free(events);
-  };
-  status_return;
-}
 void sp_group_free(sp_event_t* group) {
   group->free = 0;
   sp_event_list_free((sp_group_event_list(group)));
   sp_event_memory_free(group);
 }
 status_t sp_group_generate(sp_time_t start, sp_time_t end, void* out, sp_event_t* group) { return ((sp_seq(start, end, out, ((sp_event_list_t**)(&(group->config)))))); }
-status_t sp_group_generate_parallel(sp_time_t start, sp_time_t end, void* out, sp_event_t* group) { return ((sp_seq_parallel(start, end, out, ((sp_event_list_t**)(&(group->config)))))); }
 status_t sp_group_prepare(sp_event_t* group) {
   status_declare;
   if (group->config) {

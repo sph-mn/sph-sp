@@ -188,92 +188,6 @@
     (set current current:next))
   (label exit (if status-is-failure (sp-event-list-free events)) status-return))
 
-(declare sp-seq-future-t
-  (type
-    (struct
-      (start sp-time-t)
-      (end sp-time-t)
-      (out-start sp-time-t)
-      (out sp-block-t)
-      (event sp-event-t*)
-      (status status-t)
-      (future sph-future-t))))
-
-(define (sp-seq-parallel-future-f data) (void* void*)
-  status-declare
-  (declare a sp-seq-future-t* ep sp-event-t*)
-  (set a data ep a:event)
-  (sp-event-prepare-optional-srq *ep)
-  (status-require (ep:generate a:start a:end &a:out ep))
-  (label exit (set a:status status) (return 0)))
-
-(define (sp-seq-parallel start end out events)
-  (status-t sp-time-t sp-time-t void* sp-event-list-t**)
-  "like sp_seq but evaluates events with multiple threads in parallel.
-   there is some overhead, as each event gets its own output block"
-  status-declare
-  (declare
-    current sp-event-list-t*
-    active sp-time-t
-    out-block sp-block-t
-    allocated sp-time-t
-    e-end sp-time-t
-    ep sp-event-t*
-    e sp-event-t
-    e-start sp-time-t
-    sf-array sp-seq-future-t*
-    sf sp-seq-future-t*
-    next sp-event-list-t*)
-  (set
-    sf-array 0
-    active 0
-    allocated 0
-    current *events
-    out-block (pointer-get (convert-type out sp-block-t*)))
-  (sc-comment "count")
-  (while current
-    (cond ((<= end current:event.start) break) ((> current:event.end start) (set+ active 1)))
-    (set current current:next))
-  (status-require (sp-malloc-type active sp-seq-future-t &sf-array))
-  (sc-comment "distribute")
-  (set current *events)
-  (while current
-    (set ep &current:event e *ep)
-    (cond
-      ( (<= e.end start) (set next current:next) (sp-event-list-remove events current)
-        (set current next) continue)
-      ((<= end e.start) break)
-      ( (> e.end start)
-        (set
-          sf (+ sf-array allocated)
-          e-start (if* (> start e.start) (- start e.start) 0)
-          e-end (- (sp-inline-min end e.end) e.start)
-          sf:start e-start
-          sf:end e-end
-          sf:out-start (if* (> e.start start) (- e.start start) 0)
-          sf:event ep
-          sf:status.id status-id-success)
-        (status-require (sp-block-new out-block.channel-count (- e-end e-start) &sf:out))
-        (set+ allocated 1) (sph-future-new sp-seq-parallel-future-f sf &sf:future)))
-    (set current current:next))
-  (sc-comment "merge")
-  (sp-for-each-index sf-i active
-    (set sf (+ sf-array sf-i))
-    (sph-future-touch &sf:future)
-    (status-require sf:status)
-    (sp-for-each-index ci out-block.channel-count
-      (sp-for-each-index i sf:out.size
-        (set+ (array-get (array-get out-block.samples ci) (+ sf:out-start i))
-          (array-get (array-get sf:out.samples ci) i)))))
-  (label exit
-    (if sf-array
-      (begin
-        (sp-for-each-index i allocated
-          (sp-block-free (address-of (struct-get (array-get sf-array i) out))))
-        (free sf-array)))
-    (if status-is-failure (sp-event-list-free events))
-    status-return))
-
 (define (sp-group-free group) (void sp-event-t*)
   (set group:free 0)
   (sp-event-list-free (sp-group-event-list group))
@@ -281,10 +195,6 @@
 
 (define (sp-group-generate start end out group) (status-t sp-time-t sp-time-t void* sp-event-t*)
   (return (sp-seq start end out (convert-type &group:config sp-event-list-t**))))
-
-(define (sp-group-generate-parallel start end out group)
-  (status-t sp-time-t sp-time-t void* sp-event-t*)
-  (return (sp-seq-parallel start end out (convert-type &group:config sp-event-list-t**))))
 
 (define (sp-group-prepare group) (status-t sp-event-t*)
   status-declare

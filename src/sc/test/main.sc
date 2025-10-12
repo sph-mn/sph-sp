@@ -692,7 +692,7 @@
   (free out)
   (label exit status-return))
 
-(define (test-sp-seq-parallel) status-t
+(define (test-sp-seq-parallel-block) status-t
   "sum 10 wave events"
   status-declare
   (declare
@@ -725,7 +725,7 @@
   (set step-size (/ size 10))
   (for ((set i 0) (< i size) (set+ i step-size))
     (set shifted (sp-block-with-offset block i))
-    (sp-seq-parallel i (+ i step-size) &shifted &events))
+    (sp-seq-parallel-block i (+ i step-size) shifted &events))
   (test-helper-assert "first 1"
     (and (sp-sample-nearly-equal 0 (array-get block.samples 0 0) 0.001)
       (sp-sample-nearly-equal 0 (array-get block.samples 1 0) 0.001)))
@@ -839,5 +839,5 @@
   (test-helper-test-one test-sp-map-event)
   (test-helper-test-one test-render-range-block)
   (test-helper-test-one test-sp-noise-event)
-  (test-helper-test-one test-sp-seq-parallel)
+  (test-helper-test-one test-sp-seq-parallel-block)
   (label exit (sp-deinitialize) (test-helper-display-summary) (return status.id)))

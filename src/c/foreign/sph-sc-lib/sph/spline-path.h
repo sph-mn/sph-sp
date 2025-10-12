@@ -5,20 +5,28 @@
 /* * spline-path creates discrete 2d paths interpolated between some given points
  * maps from one independent value to one dependent continuous value
  * only the dependent value is returned
- * kept minimal (only 2d, only selected generates, limited segment count) to be extremely fast
+ * kept minimal (only 2d, only selected generates, limited segment count) to be fast
  * negative independent values are not supported
  * segments-count must be greater than zero
- * multidimensional interpolation could only be archieved with multiple configs and calls
+ * higher-dimensional interpolation could only be archieved with multiple configs and calls
  * a copy of segments is made internally and only the copy is used
  * uses points as structs because pre-defined size arrays can not be used in structs
  * segments must be a valid spline-path segment configuration
  * generates are called with path-relative start/end inside segment and with out positioned at offset for this start/end block
- * all segment types require a fixed number of given points. line: 1, bezier: 3, move: 1, constant: 0, path: 0
+ * all segment types require a fixed number of given points. line: 1, bezier1: 3, bezier2: 4, move: 1, constant: 0, path: 0
  * segments start at the previous point or (0 0)
  * bezier interpolation assume that output array values are set to zero before use
+ * bezier sampling interpolates x and y, then fills gaps linearly in x between produced samples
+ * bezier output x over the segment is non-decreasing; shapes that fold back in x are unsupported
  * segments draw from the start point inclusive to end point exclusive
- * both dimensions are float types for precision with internal calculations */
+ * both dimensions are float types for precision with internal calculations
+ * threads using the same path should work on separate copies of the path
+ * start must be smaller than end
+ * out must have length difference(end, start)
+ * spline_path_validate is available to check structure and monotone-x rules before use
+ * spline_path_size_max must be representable in spline_path_value_t and size_t */
 #include <inttypes.h>
+#include <stdint.h>
 
 /* spline-path-size-max must be a value that fits in spline-path-value-t and size-t */
 

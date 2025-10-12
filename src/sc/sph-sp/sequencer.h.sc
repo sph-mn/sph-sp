@@ -40,11 +40,6 @@
     config _config)
   (sp-group-event event-pointer)
   (struct-pointer-set event-pointer prepare sp-group-prepare generate sp-group-generate config 0)
-  (sp-group-parallel-event event-pointer)
-  (struct-pointer-set event-pointer
-    prepare sp-group-prepare
-    generate sp-group-generate-parallel
-    config 0)
   (sp-event-path-samples-srq event-pointer out ...)
   (begin
     (status-require (sp-path-samples out __VA_ARGS__))
@@ -270,12 +265,9 @@
   (sp-group-append a event) (status-t sp-event-t* sp-event-t)
   (sp-group-event-free a) (void sp-event-t*)
   (sp-group-event-f start end out event) (void sp-time-t sp-time-t void* sp-event-t*)
-  (sp-group-event-parallel-f start end out event) (void sp-time-t sp-time-t void* sp-event-t*)
   (sp-group-free group) (void sp-event-t*)
-  (sp-group-generate-parallel start end out a) (status-t sp-time-t sp-time-t void* sp-event-t*)
   (sp-group-generate start end out a) (status-t sp-time-t sp-time-t void* sp-event-t*)
   (sp-group-prepare event) (status-t sp-event-t*)
-  (sp-group-prepare-parallel a) (status-t sp-event-t*)
   (sp-map-event-config-new-n count out) (status-t sp-time-t sp-map-event-config-t**)
   (sp-map-event-free event) (void sp-event-t*)
   (sp-map-event-generate start end out event) (status-t sp-time-t sp-time-t void* sp-event-t*)
@@ -287,7 +279,6 @@
   (sp-noise-event-free event) (void sp-event-t*)
   (sp-noise-event-generate start end out event) (status-t sp-time-t sp-time-t void* sp-event-t*)
   (sp-noise-event-prepare event) (status-t sp-event-t*)
-  (sp-seq-parallel start end out events) (status-t sp-time-t sp-time-t void* sp-event-list-t**)
   (sp-seq start end out events) (status-t sp-time-t sp-time-t void* sp-event-list-t**)
   (sp-wave-event-config-defaults) sp-wave-event-config-t
   (sp-wave-event-config-new-n count out) (status-t sp-time-t sp-wave-event-config-t**)

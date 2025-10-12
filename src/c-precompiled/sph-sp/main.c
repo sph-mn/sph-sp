@@ -13,12 +13,9 @@
 #include "../sph-sp/sph-sp.h"
 #include <sph/spline-path.c>
 #include <sph/quicksort.h>
-#include <sph/queue.h>
 #include <sph/random.c>
 #include <sph/float.c>
-#include <sph/thread-pool.h>
 #include <sph/thread-pool.c>
-#include <sph/futures.h>
 #include <sph/futures.c>
 #include <sph/helper.c>
 
@@ -320,6 +317,7 @@ void sp_convolve(sp_sample_t* a, sp_time_t a_len, sp_sample_t* b, sp_time_t b_le
 #include <sph-sp/plot.c>
 #include <sph-sp/filter.c>
 #include <sph-sp/sequencer.c>
+#include <sph-sp/parallel.c>
 #include <sph-sp/statistics.c>
 #include <sph-sp/file.c>
 sp_render_config_t sp_render_config(sp_channel_count_t channel_count, sp_time_t rate, sp_time_t block_size, sp_bool_t display_progress) {
