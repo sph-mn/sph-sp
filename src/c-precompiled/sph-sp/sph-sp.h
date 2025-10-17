@@ -94,22 +94,16 @@
 #ifndef sp_exp
 #define sp_exp exp
 #endif
+#define spline_path_value_t sp_sample_t
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <sph/status.h>
-#include <sph/array3.h>
-#include <sph/helper.h>
-#include <sph/memreg.h>
+#include <sph/memory.h>
 #include <sph-sp/main.h>
 #include <sph-sp/arrays.h>
 #include <sph-sp/distributions.h>
-#include <sph/spline-path.h>
 #include <sph-sp/path.h>
 #include <sph-sp/filter.h>
-#include <sph/queue.h>
-#include <sph/thread-pool.h>
-#include <sph/futures.h>
 #include <sph-sp/sequencer.h>
 #include <sph-sp/parallel.h>
 #include <sph-sp/statistics.h>

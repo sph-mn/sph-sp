@@ -2,7 +2,6 @@
 #define f128 long double
 #define f64 double
 #define sp_bool_t uint8_t
-#define spline_path_value_t sp_sample_t
 #define sp_memory_error status_set_goto(sp_s_group_sp, sp_s_id_memory)
 #define sp_noise sp_samples_random
 #define sp_random_state_t sph_random_state_t
@@ -56,9 +55,9 @@
 #define sp_status_set_goto(id) \
   sp_status_set(id); \
   status_goto
-#define sp_malloc_type(count, type, pointer_address) sph_helper_malloc((count * sizeof(type)), pointer_address)
-#define sp_calloc_type(count, type, pointer_address) sph_helper_calloc((count * sizeof(type)), pointer_address)
-#define sp_realloc_type(count, type, pointer_address) sph_helper_realloc((count * sizeof(type)), pointer_address)
+#define sp_malloc_type(count, type, pointer_address) sph_malloc((count * sizeof(type)), pointer_address)
+#define sp_calloc_type(count, type, pointer_address) sph_calloc((count * sizeof(type)), pointer_address)
+#define sp_realloc_type(count, type, pointer_address) sph_realloc((count * sizeof(type)), pointer_address)
 #define sp_malloc_type_srq(count, type, pointer_address) status_require((sp_malloc_type(count, type, pointer_address)))
 #define sp_hz_to_samples(x) (sp_rate / x)
 #define sp_samples_to_hz(x) ((sp_time_t)((sp_rate / x)))

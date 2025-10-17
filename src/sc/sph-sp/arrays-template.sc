@@ -56,7 +56,7 @@
       (void value-t* sp-size-t value-t)
       (sp-for-each-index i count (set (array-get in-out i) (subtract (array-get in-out i) value))))
     (define ((pre-concat sp_ type-name _new) count out) (status-t sp-size-t value-t**)
-      (return (sph-helper-calloc (* count (sizeof value-t)) out)))
+      (return (sph-calloc (* count (sizeof value-t)) out)))
     (define ((pre-concat sp_ type-name _copy) in count out) (void value-t* sp-size-t value-t*)
       (sp-for-each-index i count (set (array-get out i) (array-get in i))))
     (define ((pre-concat sp_ type-name _cusum) in count out) (void value-t* value-t value-t*)

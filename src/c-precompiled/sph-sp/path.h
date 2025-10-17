@@ -2,6 +2,7 @@
 #define spline_path_value_t sp_sample_t
 #define sp_path_point_count_t spline_path_segment_count_t
 #define sp_path_point_count_limit 24
+#include <sph/spline-path.h>
 status_t sp_path_samples(sp_sample_t** out, sp_time_t length, sp_path_point_count_t point_count, sp_sample_t* x, sp_sample_t* y, sp_sample_t* c);
 status_t sp_path_samples2(sp_sample_t** out, sp_time_t length, sp_sample_t y1, sp_sample_t y2);
 status_t sp_path_samples3(sp_sample_t** out, sp_time_t length, sp_sample_t x1, sp_sample_t y1, sp_sample_t y2, sp_sample_t y3);

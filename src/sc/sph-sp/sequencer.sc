@@ -3,7 +3,7 @@
    event.prepare and event.generate must be user replaceable.
    event.prepare is to be set to null by callers of event.prepare")
 
-(pre-define sp-event-memory-growth-factor 2 sp-event-memory-initial-size 4)
+(pre-include "sph/memory.c")
 
 (define (sp-event-list-display-element a) (void sp-event-list-t*)
   (printf "%lu %lu %lu event %lu %lu\n" a:previous a a:next a:event.start a:event.end))
@@ -77,51 +77,6 @@
   (set current *events)
   (while current (sp-event-free current:event) (set temp current current current:next) (free temp))
   (set *events 0))
-
-(define (sp-event-memory-add-with-handler a address handler)
-  (status-t sp-event-t* void* sp-memory-free-t)
-  "event memory addition with automatic array expansion"
-  status-declare
-  (if a:memory.data
-    (if
-      (and (not (array3-unused-size a:memory))
-        (sp-memory-resize &a:memory (* sp-event-memory-growth-factor (array3-max-size a:memory))))
-      sp-memory-error)
-    (if (sp-memory-new sp-event-memory-initial-size &a:memory) sp-memory-error
-      (if (not a:free) (set a:free sp-event-memory-free))))
-  (declare m memreg2-t)
-  (struct-set m address address handler handler)
-  (sp-event-memory-array-add a:memory m)
-  (label exit status-return))
-
-(define (sp-event-memory-ensure a additional-size) (status-t sp-event-t* sp-time-t)
-  "ensures that event memory is initialized and can take $additional_size more elements"
-  status-declare
-  (if a:memory.data
-    (if
-      (and (> additional-size (array3-unused-size a:memory))
-        (sp-memory-resize &a:memory
-          (+ (array3-max-size a:memory) (- additional-size (array3-unused-size a:memory)))))
-      sp-memory-error)
-    (if (sp-memory-new additional-size &a:memory) sp-memory-error
-      (if (not a:free) (set a:free sp-event-memory-free))))
-  (label exit status-return))
-
-(define (sp-event-memory-fixed-add-with-handler a address handler)
-  (void sp-event-t* void* sp-memory-free-t)
-  "depends on the event memory array to already have enough free space.
-   no needed return status check, no free space checks or resizing"
-  (declare m memreg2-t)
-  (struct-set m address address handler handler)
-  (sp-event-memory-array-add a:memory m))
-
-(define (sp-event-memory-free a) (void sp-event-t*)
-  "free all registered memory and unitialize the event-memory register"
-  (if (not a:memory.data) return)
-  (declare m memreg2-t)
-  (sp-for-each-index i (array3-size a:memory) (set m (array3-get a:memory i)) (m.handler m.address))
-  (array3-free a:memory)
-  (set a:memory.data 0))
 
 (define (sp-event-block-generate resolution generate start end out event)
   (status-t sp-time-t sp-event-block-generate-t sp-time-t sp-time-t void* sp-event-t*)

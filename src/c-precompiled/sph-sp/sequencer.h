@@ -1,6 +1,9 @@
 
+#include <sph/memory.h>
+
 #define sp_seq_events_prepare sp_event_list_reverse
 #define sp_default_resolution ((sp_rate < 10000) ? sp_rate : (sp_rate / 1000))
+#define sp_memory_t sph_memory_t
 #define sp_event_reset(x) x = sp_null_event
 #define sp_declare_event(id) \
   sp_event_t id = { 0 }; \
@@ -19,9 +22,9 @@
   if (a.prepare) { \
     sp_event_prepare_srq(a); \
   }
-#define sp_event_memory_array_add array3_add
-#define sp_event_memory_add(event, address) sp_event_memory_add_with_handler(event, address, free)
-#define sp_event_memory_fixed_add(event, address) sp_event_memory_fixed_add_with_handler(event, address, free)
+#define sp_event_memory_ensure(event_pointer, needed) sph_memory_ensure((&(event_pointer->memory)), needed)
+#define sp_event_memory_add(event_pointer, address) sph_memory_add_with_handler((&(event_pointer->memory)), address, free)
+#define sp_event_memory_free(event_pointer) sph_memory_destroy((&(event_pointer->memory)))
 #define sp_wave_event_config_new(out) sp_wave_event_config_new_n(1, out)
 #define sp_map_event_config_new(out) sp_map_event_config_new_n(1, out)
 #define sp_noise_event_config_new(out) sp_noise_event_config_new_n(1, out)
@@ -132,7 +135,7 @@
   status_require((allocator(size, pointer_address))); \
   status_require((sp_event_memory_add(event_pointer, (*pointer_address))))
 #define sp_event_malloc_srq(event_pointer, size, pointer_address) \
-  status_require((sph_helper_malloc(size, pointer_address))); \
+  status_require((sph_malloc(size, pointer_address))); \
   status_require((sp_event_memory_add(event_pointer, (*pointer_address))))
 #define sp_event_malloc_type_n_srq(event_pointer, count, type, pointer_address) sp_event_malloc_srq(event_pointer, (count * sizeof(type)), pointer_address)
 #define sp_event_malloc_type_srq(event_pointer, type, pointer_address) sp_event_malloc_type_n_srq(event_pointer, 1, type, pointer_address)
@@ -140,8 +143,6 @@
 #define sp_event_times_srq(event_pointer, size, pointer_address) sp_event_alloc_srq(event_pointer, sp_times_new, size, pointer_address)
 #define sp_event_units_srq(event_pointer, size, pointer_address) sp_event_alloc_srq(event_pointer, sp_units_new, size, pointer_address)
 #define sp_event_config_get(a, type) *((type*)(a.config))
-array3_declare_type(sp_memory, memreg2_t);
-typedef void (*sp_memory_free_t)(void*);
 struct sp_event_t;
 typedef struct sp_event_t {
   sp_time_t start;
@@ -212,10 +213,6 @@ void sp_event_list_free(sp_event_list_t** events);
 void sp_event_list_remove(sp_event_list_t** a, sp_event_list_t* element);
 void sp_event_list_reverse(sp_event_list_t** a);
 void sp_event_list_validate(sp_event_list_t* a);
-status_t sp_event_memory_add_with_handler(sp_event_t* event, void* address, sp_memory_free_t handler);
-status_t sp_event_memory_ensure(sp_event_t* a, sp_time_t additional_size);
-void sp_event_memory_fixed_add_with_handler(sp_event_t* event, void* address, sp_memory_free_t handler);
-void sp_event_memory_free(sp_event_t* event);
 status_t sp_group_add(sp_event_t* a, sp_event_t event);
 status_t sp_group_append(sp_event_t* a, sp_event_t event);
 void sp_group_event_free(sp_event_t* a);

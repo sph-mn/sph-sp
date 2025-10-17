@@ -1,4 +1,4 @@
-(pre-include "sph-sp/sph-sp.h" "sph/string.h" "sph/filesystem.h")
+(pre-include "sph-sp/sph-sp.h" "sph/filesystem.h")
 
 (pre-define
   (test-helper-test-one func) (begin (printf "%s\n" (pre-stringify func)) (status-require (func)))
@@ -91,13 +91,13 @@
     expected-carryover (array sp-sample-t (3) 27 18 0))
   (memreg-init 4)
   (set sample-count 5 b-len 3 result-len sample-count a-len sample-count carryover-len b-len)
-  (status-require (sph-helper-calloc (* result-len (sizeof sp-sample-t)) &result))
+  (status-require (sph-calloc (* result-len (sizeof sp-sample-t)) &result))
   (memreg-add result)
-  (status-require (sph-helper-calloc (* a-len (sizeof sp-sample-t)) &a))
+  (status-require (sph-calloc (* a-len (sizeof sp-sample-t)) &a))
   (memreg-add a)
-  (status-require (sph-helper-calloc (* b-len (sizeof sp-sample-t)) &b))
+  (status-require (sph-calloc (* b-len (sizeof sp-sample-t)) &b))
   (memreg-add b)
-  (status-require (sph-helper-calloc (* carryover-len (sizeof sp-sample-t)) &carryover))
+  (status-require (sph-calloc (* carryover-len (sizeof sp-sample-t)) &carryover))
   (memreg-add carryover)
   (sc-comment "prepare input/output data arrays")
   (array-set* a 2 3 4 5 6)
@@ -327,8 +327,8 @@
   status-declare
   (declare out-t sp-sample-t* out-s sp-sample-t* size sp-time-t)
   (set size 96000)
-  (status-require (sph-helper-calloc (* size (sizeof sp-sample-t*)) &out-t))
-  (status-require (sph-helper-calloc (* size (sizeof sp-sample-t*)) &out-s))
+  (status-require (sph-calloc (* size (sizeof sp-sample-t*)) &out-t))
+  (status-require (sph-calloc (* size (sizeof sp-sample-t*)) &out-s))
   (sp-for-each-index i size
     (set
       (array-get out-t i) (sp-triangle i (/ size 2) (/ size 2))
@@ -434,8 +434,8 @@
   (status-require (sp-group-add &g g1))
   (status-require (sp-group-add &g e3))
   (status-require (sp-event-memory-ensure &g 2))
-  (sp-event-memory-fixed-add &g m1)
-  (sp-event-memory-fixed-add &g m2)
+  (status-require (sp-event-memory-add &g m1))
+  (status-require (sp-event-memory-add &g m2))
   (status-require (g.prepare &g))
   (status-require (g.generate 0 50 &block &g))
   (set shifted (sp-block-with-offset block 50))

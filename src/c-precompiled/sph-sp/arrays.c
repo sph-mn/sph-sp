@@ -96,7 +96,7 @@ status_t sp_times_permutations(sp_time_t size, sp_time_t* set, sp_time_t set_siz
       };
       s[i] += 1;
       i = 0;
-      status_require((sph_helper_malloc((size * sizeof(sp_time_t)), (&b))));
+      status_require((sph_malloc((size * sizeof(sp_time_t)), (&b))));
       memcpy(b, a, (size * sizeof(sp_time_t)));
       temp_out[temp_out_used_size] = b;
       temp_out_used_size += 1;
@@ -158,9 +158,9 @@ status_t sp_times_compositions(sp_time_t sum, sp_time_t*** out, sp_time_t* out_s
   a = 0;
   k = 1;
   o_size = sp_time_expt(2, (sum - 1));
-  status_require((sph_helper_calloc(((1 + sum) * sizeof(sp_time_t)), (&a))));
-  status_require((sph_helper_calloc((o_size * sizeof(sp_time_t*)), (&o))));
-  status_require((sph_helper_calloc((o_size * sizeof(sp_time_t)), (&o_sizes))));
+  status_require((sph_calloc(((1 + sum) * sizeof(sp_time_t)), (&a))));
+  status_require((sph_calloc((o_size * sizeof(sp_time_t*)), (&o))));
+  status_require((sph_calloc((o_size * sizeof(sp_time_t)), (&o_sizes))));
   a[1] = sum;
   while (!(0 == k)) {
     x = (a[(k - 1)] + 1);
@@ -174,7 +174,7 @@ status_t sp_times_compositions(sp_time_t sum, sp_time_t*** out, sp_time_t* out_s
     };
     a[k] = (x + y);
     b_size = (k + 1);
-    status_require((sph_helper_malloc((b_size * sizeof(sp_time_t)), (&b))));
+    status_require((sph_malloc((b_size * sizeof(sp_time_t)), (&b))));
     memcpy(b, a, (b_size * sizeof(sp_time_t)));
     o[o_used] = b;
     o_sizes[o_used] = b_size;

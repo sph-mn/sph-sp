@@ -2,9 +2,7 @@
 /* event.free functions must set event.free to null.
    event.prepare and event.generate must be user replaceable.
    event.prepare is to be set to null by callers of event.prepare */
-
-#define sp_event_memory_growth_factor 2
-#define sp_event_memory_initial_size 4
+#include <sph/memory.c>
 void sp_event_list_display_element(sp_event_list_t* a) { printf("%lu %lu %lu event %lu %lu\n", (a->previous), a, (a->next), (a->event.start), (a->event.end)); }
 void sp_event_list_display(sp_event_list_t* a) {
   while (a) {
@@ -132,73 +130,6 @@ void sp_event_list_free(sp_event_list_t** events) {
     free(temp);
   };
   *events = 0;
-}
-
-/** event memory addition with automatic array expansion */
-status_t sp_event_memory_add_with_handler(sp_event_t* a, void* address, sp_memory_free_t handler) {
-  status_declare;
-  if (a->memory.data) {
-    if (!array3_unused_size((a->memory)) && sp_memory_resize((&(a->memory)), (sp_event_memory_growth_factor * array3_max_size((a->memory))))) {
-      sp_memory_error;
-    };
-  } else {
-    if (sp_memory_new(sp_event_memory_initial_size, (&(a->memory)))) {
-      sp_memory_error;
-    } else {
-      if (!a->free) {
-        a->free = sp_event_memory_free;
-      };
-    };
-  };
-  memreg2_t m;
-  m.address = address;
-  m.handler = handler;
-  sp_event_memory_array_add((a->memory), m);
-exit:
-  status_return;
-}
-
-/** ensures that event memory is initialized and can take $additional_size more elements */
-status_t sp_event_memory_ensure(sp_event_t* a, sp_time_t additional_size) {
-  status_declare;
-  if (a->memory.data) {
-    if ((additional_size > array3_unused_size((a->memory))) && sp_memory_resize((&(a->memory)), (array3_max_size((a->memory)) + (additional_size - array3_unused_size((a->memory)))))) {
-      sp_memory_error;
-    };
-  } else {
-    if (sp_memory_new(additional_size, (&(a->memory)))) {
-      sp_memory_error;
-    } else {
-      if (!a->free) {
-        a->free = sp_event_memory_free;
-      };
-    };
-  };
-exit:
-  status_return;
-}
-
-/** depends on the event memory array to already have enough free space.
-   no needed return status check, no free space checks or resizing */
-void sp_event_memory_fixed_add_with_handler(sp_event_t* a, void* address, sp_memory_free_t handler) {
-  memreg2_t m;
-  m.address = address;
-  m.handler = handler;
-  sp_event_memory_array_add((a->memory), m);
-}
-
-/** free all registered memory and unitialize the event-memory register */
-void sp_event_memory_free(sp_event_t* a) {
-  if (!a->memory.data) {
-    return;
-  };
-  memreg2_t m;
-  for (sp_size_t i = 0; (i < array3_size((a->memory))); i += 1) {
-    m = array3_get((a->memory), i);
-    (m.handler)((m.address));
-  };
-  array3_free((a->memory));
-  a->memory.data = 0;
 }
 
 /** calls generate for sub-blocks of at most size resolution */

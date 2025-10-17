@@ -1,6 +1,5 @@
 
 #include <sph-sp/sph-sp.h>
-#include <sph/string.h>
 #include <sph/filesystem.h>
 
 #define test_helper_test_one(func) \
@@ -98,13 +97,13 @@ status_t test_convolve_smaller() {
   result_len = sample_count;
   a_len = sample_count;
   carryover_len = b_len;
-  status_require((sph_helper_calloc((result_len * sizeof(sp_sample_t)), (&result))));
+  status_require((sph_calloc((result_len * sizeof(sp_sample_t)), (&result))));
   memreg_add(result);
-  status_require((sph_helper_calloc((a_len * sizeof(sp_sample_t)), (&a))));
+  status_require((sph_calloc((a_len * sizeof(sp_sample_t)), (&a))));
   memreg_add(a);
-  status_require((sph_helper_calloc((b_len * sizeof(sp_sample_t)), (&b))));
+  status_require((sph_calloc((b_len * sizeof(sp_sample_t)), (&b))));
   memreg_add(b);
-  status_require((sph_helper_calloc((carryover_len * sizeof(sp_sample_t)), (&carryover))));
+  status_require((sph_calloc((carryover_len * sizeof(sp_sample_t)), (&carryover))));
   memreg_add(carryover);
   /* prepare input/output data arrays */
   a[0] = 2;
@@ -361,8 +360,8 @@ status_t test_sp_triangle_square() {
   sp_sample_t* out_s;
   sp_time_t size;
   size = 96000;
-  status_require((sph_helper_calloc((size * sizeof(sp_sample_t*)), (&out_t))));
-  status_require((sph_helper_calloc((size * sizeof(sp_sample_t*)), (&out_s))));
+  status_require((sph_calloc((size * sizeof(sp_sample_t*)), (&out_t))));
+  status_require((sph_calloc((size * sizeof(sp_sample_t*)), (&out_s))));
   for (sp_size_t i = 0; (i < size); i += 1) {
     out_t[i] = sp_triangle(i, (size / 2), (size / 2));
     out_s[i] = sp_square(i, size);
@@ -480,8 +479,8 @@ status_t test_sp_group() {
   status_require((sp_group_add((&g), g1)));
   status_require((sp_group_add((&g), e3)));
   status_require((sp_event_memory_ensure((&g), 2)));
-  sp_event_memory_fixed_add((&g), m1);
-  sp_event_memory_fixed_add((&g), m2);
+  status_require((sp_event_memory_add((&g), m1)));
+  status_require((sp_event_memory_add((&g), m2)));
   status_require(((g.prepare)((&g))));
   status_require(((g.generate)(0, 50, (&block), (&g))));
   shifted = sp_block_with_offset(block, 50);

@@ -6,6 +6,7 @@
 #include <stddef.h>
 #include <stdio.h>
 #include <string.h>
+#include <sph/spline-path.h>
 
 #define spline_path_bezier_resolution 2
 #define linearly_interpolate(a, b, t) (a + (t * (b - a)))

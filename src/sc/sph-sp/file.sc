@@ -50,7 +50,7 @@
     file-data 0
     channel-count file:channel-count
     interleaved-size (* channel-count sample-count 4))
-  (srq (sph-helper-malloc interleaved-size &file-data))
+  (srq (sph-malloc interleaved-size &file-data))
   (for-each-index i sp-time-t
     sample-count
     (for-each-index j sp-channel-count-t
@@ -97,7 +97,7 @@
   status-declare
   (declare interleaved-count sp-time-t file-data float* read sp-time-t)
   (set file-data 0 interleaved-count (* file.channel-count sample-count))
-  (srq (sph-helper-malloc (* 4 interleaved-count) &file-data))
+  (srq (sph-malloc (* 4 interleaved-count) &file-data))
   (set read (fread file-data 4 interleaved-count file.file))
   (if (not (= interleaved-count read))
     (if (feof file.file) (if (not read) (sp-status-set-goto sp-s-id-file-eof))

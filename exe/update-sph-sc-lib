@@ -1,9 +1,7 @@
 #!/bin/sh
 
 sph_sc_root="$1"
-
-# why does this get a subfolder? conflict with globally installed libs?
-destination="$PWD/src/c/foreign/sph-sc-lib/sph"
+destination="$PWD/src/c/foreign/sph"
 
 if test -d "$destination"
 then
@@ -14,7 +12,7 @@ fi
 
 cd "$sph_sc_root/src/c-precompiled/sph"
 cp -t "$destination" status.h spline-path.h spline-path.c quicksort.h queue.h \
-   thread-pool.h thread-pool.c futures.h futures.c float.h float.c array3.h \
-   random.h random.c memreg.h helper.h helper.c
+   thread-pool.h thread-pool.c futures.h futures.c float.h float.c \
+   random.h random.c memreg.h memory.h memory.c array.h
 # only for testing
 cp -t "$destination" string.h filesystem.h

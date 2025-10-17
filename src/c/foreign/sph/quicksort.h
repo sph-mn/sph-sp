@@ -1,5 +1,8 @@
 
-/* depends on sys/types.h for ssize_t */
+#ifndef sph_quicksort_h
+#define sph_quicksort_h
+
+#include <sys/types.h>
 
 /** a generic quicksort implementation that works with any array type.
    less should return true if the first argument is < than the second.
@@ -38,3 +41,4 @@ void quicksort(uint8_t (*less_p)(void*, ssize_t, ssize_t), void (*swap)(void*, s
     quicksort(less_p, swap, array, l, right);
   };
 }
+#endif

@@ -3,8 +3,7 @@
 
 (pre-include "math.h" "errno.h"
   "arpa/inet.h" "nayuki-fft/fft.c" "../sph-sp/sph-sp.h"
-  "sph/spline-path.c" "sph/quicksort.h" "sph/random.c"
-  "sph/float.c" "sph/thread-pool.c" "sph/futures.c" "sph/helper.c")
+  "sph/spline-path.c" "sph/quicksort.h" "sph/random.c" "sph/float.c" "sph/futures.c" "sph/memory.c")
 
 (pre-define
   (sp-libc-s-id id) (if (< id 0) (status-set-goto sp-s-group-libc id))
@@ -58,7 +57,7 @@
         (sp-s-id-file-eof (set b "end of file"))
         (sp-s-id-invalid-argument (set b "invalid argument"))
         (else (set b ""))))
-    ((not (strcmp sp-s-group-sph a.group)) (set b (sph-helper-status-description a)))
+    ((not (strcmp sp-s-group-sph a.group)) (set b (sph-memory-status-description a)))
     (else (set b "")))
   (return b))
 
@@ -86,7 +85,7 @@
   (memreg-init channel-count)
   (declare channel sp-sample-t*)
   (sp-for-each-index i channel-count
-    (status-require (sph-helper-calloc (* size (sizeof sp-sample-t)) &channel))
+    (status-require (sph-calloc (* size (sizeof sp-sample-t)) &channel))
     (memreg-add channel)
     (set (array-get out:samples i) channel))
   (set out:size size out:channel-count channel-count)

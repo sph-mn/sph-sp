@@ -56,7 +56,7 @@ status_t sp_file_write(sp_file_t* file, sp_sample_t** samples, sp_time_t sample_
   file_data = 0;
   channel_count = file->channel_count;
   interleaved_size = (channel_count * sample_count * 4);
-  srq((sph_helper_malloc(interleaved_size, (&file_data))));
+  srq((sph_malloc(interleaved_size, (&file_data))));
   for (sp_time_t i = 0; (i < sample_count); i += 1) {
     for (sp_channel_count_t j = 0; (j < channel_count); j += 1) {
       file_data[((i * channel_count) + j)] = (samples[j])[i];
@@ -108,7 +108,7 @@ status_t sp_file_read(sp_file_t file, sp_time_t sample_count, sp_sample_t** samp
   sp_time_t read;
   file_data = 0;
   interleaved_count = (file.channel_count * sample_count);
-  srq((sph_helper_malloc((4 * interleaved_count), (&file_data))));
+  srq((sph_malloc((4 * interleaved_count), (&file_data))));
   read = fread(file_data, 4, interleaved_count, (file.file));
   if (!(interleaved_count == read)) {
     if (feof((file.file))) {

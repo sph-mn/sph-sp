@@ -34,12 +34,12 @@
         (begin
           (sc-comment "changed")
           (if (> ir-f-arguments-len state:ir-f-arguments-len)
-            (status-require (sph-helper-realloc ir-f-arguments-len &state:ir-f-arguments)))
+            (status-require (sph-realloc ir-f-arguments-len &state:ir-f-arguments)))
           (if state:ir (free state:ir)))))
     (begin
       (sc-comment "new")
-      (status-require (sph-helper-malloc (sizeof sp-convolution-filter-state-t) &state))
-      (status-require (sph-helper-malloc ir-f-arguments-len &state:ir-f-arguments))
+      (status-require (sph-malloc (sizeof sp-convolution-filter-state-t) &state))
+      (status-require (sph-malloc ir-f-arguments-len &state:ir-f-arguments))
       (memreg-add state)
       (memreg-add state:ir-f-arguments)
       (set
@@ -64,7 +64,7 @@
           (if (> carryover-alloc-len state:carryover-alloc-len)
             (begin
               (status-require
-                (sph-helper-realloc (* carryover-alloc-len (sizeof sp-sample-t)) &carryover))
+                (sph-realloc (* carryover-alloc-len (sizeof sp-sample-t)) &carryover))
               (set state:carryover-alloc-len carryover-alloc-len)))
           (sc-comment "in any case reset the extended area")
           (memset (+ (- state:ir-len 1) carryover) 0
@@ -119,7 +119,7 @@
 
 (define (sp-passthrough-ir out-ir out-len) (status-t sp-sample-t** sp-time-t*)
   status-declare
-  (status-require (sph-helper-malloc (sizeof sp-sample-t) out-ir))
+  (status-require (sph-malloc (sizeof sp-sample-t) out-ir))
   (set **out-ir 1 *out-len 1)
   (label exit status-return))
 
@@ -132,7 +132,7 @@
   status-declare
   (declare center-index sp-sample-t i sp-time-t ir sp-sample-t* len sp-time-t sum sp-sample-t)
   (set len (sp-windowed-sinc-lp-hp-ir-length transition) center-index (/ (- len 1.0) 2.0))
-  (status-require (sph-helper-malloc (* len (sizeof sp-sample-t)) &ir))
+  (status-require (sph-malloc (* len (sizeof sp-sample-t)) &ir))
   (sc-comment
     "set the windowed sinc"
     "nan can be set here if the freq and transition values are invalid")

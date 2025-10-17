@@ -1,7 +1,9 @@
 
-#include <stddef.h>
+#ifndef sph_futures
+#define sph_futures
 
-/* depends on thread-pool.c */
+#include <stddef.h>
+#include <sph/thread-pool.c>
 sph_thread_pool_t sph_futures_pool;
 uint8_t sph_futures_pool_is_initialized = 0;
 /** call once to initialize the future thread pool that persists for
@@ -59,3 +61,4 @@ void* sph_future_touch(sph_future_t* a) {
   };
   return ((a->task.data));
 }
+#endif

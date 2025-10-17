@@ -1,3 +1,5 @@
+(pre-include "sph/futures.h")
+
 (pre-define (sp-group-parallel-block-event event-pointer)
   (struct-pointer-set event-pointer
     prepare sp-group-prepare

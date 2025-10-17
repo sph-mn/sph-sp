@@ -2,7 +2,6 @@
   f128 (sc-insert "long double")
   f64 double
   sp-bool-t uint8-t
-  spline-path-value-t sp-sample-t
   sp-memory-error (status-set-goto sp-s-group-sp sp-s-id-memory)
   sp-noise sp-samples-random
   sp-random-state-t sph-random-state-t
@@ -48,11 +47,11 @@
   (sp-status-set _id) (set status.group sp-s-group-sp status.id _id)
   (sp-status-set-goto id) (begin (sp-status-set id) status-goto)
   (sp-malloc-type count type pointer-address)
-  (sph-helper-malloc (* count (sizeof type)) pointer-address)
+  (sph-malloc (* count (sizeof type)) pointer-address)
   (sp-calloc-type count type pointer-address)
-  (sph-helper-calloc (* count (sizeof type)) pointer-address)
+  (sph-calloc (* count (sizeof type)) pointer-address)
   (sp-realloc-type count type pointer-address)
-  (sph-helper-realloc (* count (sizeof type)) pointer-address)
+  (sph-realloc (* count (sizeof type)) pointer-address)
   (sp-malloc-type-srq count type pointer-address)
   (status-require (sp-malloc-type count type pointer-address))
   (sp-hz->samples x) (/ sp-rate x)

@@ -15,9 +15,8 @@
 #include <sph/quicksort.h>
 #include <sph/random.c>
 #include <sph/float.c>
-#include <sph/thread-pool.c>
 #include <sph/futures.c>
-#include <sph/helper.c>
+#include <sph/memory.c>
 
 #define sp_libc_s_id(id) \
   if (id < 0) { \
@@ -88,7 +87,7 @@ uint8_t* sp_status_description(status_t a) {
       b = "";
     };
   } else if (!strcmp(sp_s_group_sph, (a.group))) {
-    b = sph_helper_status_description(a);
+    b = sph_memory_status_description(a);
   } else {
     b = "";
   };
@@ -130,7 +129,7 @@ status_t sp_block_new(sp_channel_count_t channel_count, sp_time_t size, sp_block
   memreg_init(channel_count);
   sp_sample_t* channel;
   for (sp_size_t i = 0; (i < channel_count); i += 1) {
-    status_require((sph_helper_calloc((size * sizeof(sp_sample_t)), (&channel))));
+    status_require((sph_calloc((size * sizeof(sp_sample_t)), (&channel))));
     memreg_add(channel);
     (out->samples)[i] = channel;
   };

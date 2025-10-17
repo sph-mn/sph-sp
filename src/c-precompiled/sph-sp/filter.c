@@ -32,7 +32,7 @@ status_t sp_convolution_filter_state_set(sp_convolution_filter_ir_f_t ir_f, void
     } else {
       /* changed */
       if (ir_f_arguments_len > state->ir_f_arguments_len) {
-        status_require((sph_helper_realloc(ir_f_arguments_len, (&(state->ir_f_arguments)))));
+        status_require((sph_realloc(ir_f_arguments_len, (&(state->ir_f_arguments)))));
       };
       if (state->ir) {
         free((state->ir));
@@ -40,8 +40,8 @@ status_t sp_convolution_filter_state_set(sp_convolution_filter_ir_f_t ir_f, void
     };
   } else {
     /* new */
-    status_require((sph_helper_malloc((sizeof(sp_convolution_filter_state_t)), (&state))));
-    status_require((sph_helper_malloc(ir_f_arguments_len, (&(state->ir_f_arguments)))));
+    status_require((sph_malloc((sizeof(sp_convolution_filter_state_t)), (&state))));
+    status_require((sph_malloc(ir_f_arguments_len, (&(state->ir_f_arguments)))));
     memreg_add(state);
     memreg_add((state->ir_f_arguments));
     state->carryover_alloc_len = 0;
@@ -61,7 +61,7 @@ status_t sp_convolution_filter_state_set(sp_convolution_filter_ir_f_t ir_f, void
     carryover = state->carryover;
     if (ir_len > state->ir_len) {
       if (carryover_alloc_len > state->carryover_alloc_len) {
-        status_require((sph_helper_realloc((carryover_alloc_len * sizeof(sp_sample_t)), (&carryover))));
+        status_require((sph_realloc((carryover_alloc_len * sizeof(sp_sample_t)), (&carryover))));
         state->carryover_alloc_len = carryover_alloc_len;
       };
       /* in any case reset the extended area */
@@ -121,7 +121,7 @@ status_t sp_null_ir(sp_sample_t** out_ir, sp_time_t* out_len) {
 }
 status_t sp_passthrough_ir(sp_sample_t** out_ir, sp_time_t* out_len) {
   status_declare;
-  status_require((sph_helper_malloc((sizeof(sp_sample_t)), out_ir)));
+  status_require((sph_malloc((sizeof(sp_sample_t)), out_ir)));
   **out_ir = 1;
   *out_len = 1;
 exit:
@@ -141,7 +141,7 @@ status_t sp_windowed_sinc_lp_hp_ir(sp_sample_t cutoff, sp_sample_t transition, s
   sp_sample_t sum;
   len = sp_windowed_sinc_lp_hp_ir_length(transition);
   center_index = ((len - 1.0) / 2.0);
-  status_require((sph_helper_malloc((len * sizeof(sp_sample_t)), (&ir))));
+  status_require((sph_malloc((len * sizeof(sp_sample_t)), (&ir))));
   /* set the windowed sinc
   nan can be set here if the freq and transition values are invalid */
   for (i = 0; (i < len); i = (1 + i)) {

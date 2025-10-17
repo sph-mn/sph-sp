@@ -1,10 +1,13 @@
 
-/* depends on sph/string.c */
+#ifndef sph_filesystem_h
+#define sph_filesystem_h
+
 #include <unistd.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <libgen.h>
 #include <errno.h>
+#include <sph/string.h>
 #define file_exists(path) !(access(path, F_OK) == -1)
 
 /** like posix dirname, but never modifies its argument and always returns a new string */
@@ -24,3 +27,4 @@ uint8_t ensure_directory_structure(uint8_t* path, mode_t mkdir_mode) {
     return ((status && ((EEXIST == errno) || (0 == mkdir(path, mkdir_mode)))));
   };
 }
+#endif

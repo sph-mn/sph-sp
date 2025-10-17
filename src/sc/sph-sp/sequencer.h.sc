@@ -1,6 +1,9 @@
+(pre-include "sph/memory.h")
+
 (pre-define
   sp-seq-events-prepare sp-event-list-reverse
   sp-default-resolution (if* (< sp-rate 10000) sp-rate (/ sp-rate 1000))
+  sp-memory-t sph-memory-t
   (sp-event-reset x) (set x sp-null-event)
   (sp-declare-event id) (begin (define id sp-event-t (struct-literal 0)) (set id.memory.data 0))
   (sp-declare-event-list id) (define id sp-event-list-t* 0)
@@ -9,10 +12,10 @@
   (sp-event-free a) (if a.free (a.free &a))
   (sp-event-prepare-srq a) (begin (status-require (a.prepare &a)) (set a.prepare 0))
   (sp-event-prepare-optional-srq a) (if a.prepare (sp-event-prepare-srq a))
-  sp-event-memory-array-add array3-add
-  (sp-event-memory-add event address) (sp-event-memory-add-with-handler event address free)
-  (sp-event-memory-fixed-add event address)
-  (sp-event-memory-fixed-add-with-handler event address free)
+  (sp-event-memory-ensure event-pointer needed) (sph-memory-ensure &event-pointer:memory needed)
+  (sp-event-memory-add event-pointer address)
+  (sph-memory-add-with-handler &event-pointer:memory address free)
+  (sp-event-memory-free event-pointer) (sph-memory-destroy &event-pointer:memory)
   (sp-wave-event-config-new out) (sp-wave-event-config-new-n 1 out)
   (sp-map-event-config-new out) (sp-map-event-config-new-n 1 out)
   (sp-noise-event-config-new out) (sp-noise-event-config-new-n 1 out)
@@ -158,7 +161,7 @@
     (status-require (sp-event-memory-add event-pointer (pointer-get pointer-address))))
   (sp-event-malloc-srq event-pointer size pointer-address)
   (begin
-    (status-require (sph-helper-malloc size pointer-address))
+    (status-require (sph-malloc size pointer-address))
     (status-require (sp-event-memory-add event-pointer (pointer-get pointer-address))))
   (sp-event-malloc-type-n-srq event-pointer count type pointer-address)
   (sp-event-malloc-srq event-pointer (* count (sizeof type)) pointer-address)
@@ -172,10 +175,7 @@
   (sp-event-alloc-srq event-pointer sp-units-new size pointer-address)
   (sp-event-config-get a type) (pointer-get (convert-type a.config type*)))
 
-(array3-declare-type sp-memory memreg2-t)
-
 (declare
-  sp-memory-free-t (type (function-pointer void void*))
   sp-event-t struct
   sp-event-t
   (type
@@ -255,12 +255,6 @@
   (sp-event-list-remove a element) (void sp-event-list-t** sp-event-list-t*)
   (sp-event-list-reverse a) (void sp-event-list-t**)
   (sp-event-list-validate a) (void sp-event-list-t*)
-  (sp-event-memory-add-with-handler event address handler)
-  (status-t sp-event-t* void* sp-memory-free-t)
-  (sp-event-memory-ensure a additional-size) (status-t sp-event-t* sp-time-t)
-  (sp-event-memory-fixed-add-with-handler event address handler)
-  (void sp-event-t* void* sp-memory-free-t)
-  (sp-event-memory-free event) (void sp-event-t*)
   (sp-group-add a event) (status-t sp-event-t* sp-event-t)
   (sp-group-append a event) (status-t sp-event-t* sp-event-t)
   (sp-group-event-free a) (void sp-event-t*)

@@ -90,7 +90,7 @@
       in_out[i] = subtract((in_out[i]), value); \
     }; \
   } \
-  status_t sp_##type_name##_new(sp_size_t count, value_t** out) { return ((sph_helper_calloc((count * sizeof(value_t)), out))); } \
+  status_t sp_##type_name##_new(sp_size_t count, value_t** out) { return ((sph_calloc((count * sizeof(value_t)), out))); } \
   void sp_##type_name##_copy(value_t* in, sp_size_t count, value_t* out) { \
     for (sp_size_t i = 0; (i < count); i += 1) { \
       out[i] = in[i]; \
