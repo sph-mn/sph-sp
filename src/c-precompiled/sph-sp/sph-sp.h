@@ -5,8 +5,8 @@
 #include <byteswap.h>
 #include <inttypes.h>
 #include <sys/types.h>
-#include <sph/float.h>
-#include <sph/random.h>
+#include <sph-sp/sph/float.h>
+#include <sph-sp/sph/random.h>
 
 /* configuration. changes need recompilation of sph-sp shared library */
 
@@ -98,7 +98,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <sph/memory.h>
+#include <sph-sp/sph/memory.h>
 #include <sph-sp/main.h>
 #include <sph-sp/arrays.h>
 #include <sph-sp/distributions.h>

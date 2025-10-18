@@ -10,13 +10,13 @@
 #include <errno.h>
 #include <arpa/inet.h>
 #include <nayuki-fft/fft.c>
-#include "../sph-sp/sph-sp.h"
-#include <sph/spline-path.c>
-#include <sph/quicksort.h>
-#include <sph/random.c>
-#include <sph/float.c>
-#include <sph/futures.c>
-#include <sph/memory.c>
+#include <sph-sp/sph-sp.h>
+#include <sph-sp/sph/spline-path.c>
+#include <sph-sp/sph/quicksort.h>
+#include <sph-sp/sph/random.c>
+#include <sph-sp/sph/float.c>
+#include <sph-sp/sph/futures.c>
+#include <sph-sp/sph/memory.c>
 
 #define sp_libc_s_id(id) \
   if (id < 0) { \

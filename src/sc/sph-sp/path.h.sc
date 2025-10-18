@@ -3,7 +3,7 @@
   sp-path-point-count-t spline-path-segment-count-t
   sp-path-point-count-limit 24)
 
-(pre-include "sph/spline-path.h")
+(pre-include "sph-sp/sph/spline-path.h")
 
 (declare
   (sp-path-samples out length point-count x y c)

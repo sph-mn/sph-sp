@@ -1,5 +1,3 @@
-(pre-include "sph/memory.h")
-
 (pre-define
   sp-seq-events-prepare sp-event-list-reverse
   sp-default-resolution (if* (< sp-rate 10000) sp-rate (/ sp-rate 1000))

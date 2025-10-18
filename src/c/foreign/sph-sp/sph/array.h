@@ -2,7 +2,7 @@
 #ifndef sph_array_h
 #define sph_array_h
 
-#include <sph/status.h>
+#include <sph-sp/sph/status.h>
 
 #define sph_array_status_id_memory 1
 #define sph_array_status_group ((uint8_t*)("sph"))

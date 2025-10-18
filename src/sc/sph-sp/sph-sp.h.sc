@@ -1,5 +1,5 @@
 (pre-include-guard-begin sph-sp-h)
-(pre-include "byteswap.h" "inttypes.h" "sys/types.h" "sph/float.h" "sph/random.h")
+(pre-include "byteswap.h" "inttypes.h" "sys/types.h" "sph-sp/sph/float.h" "sph-sp/sph/random.h")
 (sc-comment "configuration. changes need recompilation of sph-sp shared library")
 
 (pre-define-if-not-defined
@@ -35,7 +35,7 @@
 (pre-define spline-path-value-t sp-sample-t)
 
 (pre-include "string.h" "stdio.h"
-  "stdlib.h" "sph/memory.h" "sph-sp/main.h"
+  "stdlib.h" "sph-sp/sph/memory.h" "sph-sp/main.h"
   "sph-sp/arrays.h" "sph-sp/distributions.h" "sph-sp/path.h"
   "sph-sp/filter.h" "sph-sp/sequencer.h" "sph-sp/parallel.h"
   "sph-sp/statistics.h" "sph-sp/plot.h" "sph-sp/main2.h")

@@ -3,7 +3,7 @@
 #define sph_float
 
 #include <math.h>
-#include <sph/float.h>
+#include <sph-sp/sph/float.h>
 
 /** approximate float comparison. margin is a factor and is low for low accepted differences */
 uint8_t sph_f64_nearly_equal(double a, double b, double margin) { return ((fabs((a - b)) < margin)); }

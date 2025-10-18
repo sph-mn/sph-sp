@@ -3,7 +3,7 @@
 #define sph_futures
 
 #include <stddef.h>
-#include <sph/thread-pool.c>
+#include <sph-sp/sph/thread-pool.c>
 sph_thread_pool_t sph_futures_pool;
 uint8_t sph_futures_pool_is_initialized = 0;
 /** call once to initialize the future thread pool that persists for

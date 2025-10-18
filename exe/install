@@ -12,10 +12,10 @@ sc_source="$PWD/src/sc/sph-sp/sc-macros.sc"
 lib_target="$prefix/usr/lib"
 header_target="$prefix/usr/include"
 sc_target="$prefix/usr/share/sph-sp"
-sph_sc_lib_source="$PWD/src/c/foreign/sph-sc-lib/sph-sp"
+sph_lib_source="$PWD/src/c/foreign/sph-sp/sph"
 
 # Create directories with proper permissions
-mkdir -p "$lib_target" "$header_target/sph-sp" "$sc_target"
+mkdir -p "$lib_target" "$header_target/sph-sp/sph" "$sc_target"
 chmod 755 "$lib_target" "$header_target" "$header_target/sph-sp" "$sc_target"
 
 # Define function for copy or symlink
@@ -34,8 +34,11 @@ install_file "$lib_source" "$lib_target/$lib_name"
 
 # Install header files
 install_file "$header_source/sph-sp.h" "$header_target/sph-sp.h"
-for header in "$header_source"/*.h "$sph_sc_lib_source"/*; do
+for header in "$header_source"/*.h; do
   install_file "$header" "$header_target/sph-sp/$(basename "$header")"
+done
+for header in "$sph_lib_source"/*; do
+  install_file "$header" "$header_target/sph-sp/sph/$(basename "$header")"
 done
 
 # Remove duplicate sph-sp.h in subdirectory

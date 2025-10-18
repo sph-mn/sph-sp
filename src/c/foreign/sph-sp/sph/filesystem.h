@@ -7,7 +7,7 @@
 #include <sys/types.h>
 #include <libgen.h>
 #include <errno.h>
-#include <sph/string.h>
+#include <sph-sp/sph/string.h>
 #define file_exists(path) !(access(path, F_OK) == -1)
 
 /** like posix dirname, but never modifies its argument and always returns a new string */

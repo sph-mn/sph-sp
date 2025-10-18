@@ -2,8 +2,9 @@
 (pre-define-if-not-defined _POSIX_C_SOURCE 199309L)
 
 (pre-include "math.h" "errno.h"
-  "arpa/inet.h" "nayuki-fft/fft.c" "../sph-sp/sph-sp.h"
-  "sph/spline-path.c" "sph/quicksort.h" "sph/random.c" "sph/float.c" "sph/futures.c" "sph/memory.c")
+  "arpa/inet.h" "nayuki-fft/fft.c" "sph-sp/sph-sp.h"
+  "sph-sp/sph/spline-path.c" "sph-sp/sph/quicksort.h" "sph-sp/sph/random.c"
+  "sph-sp/sph/float.c" "sph-sp/sph/futures.c" "sph-sp/sph/memory.c")
 
 (pre-define
   (sp-libc-s-id id) (if (< id 0) (status-set-goto sp-s-group-libc id))

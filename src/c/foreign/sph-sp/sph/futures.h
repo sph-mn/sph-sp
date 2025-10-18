@@ -8,7 +8,7 @@ manages the memory of thread-pool task objects */
 #include <inttypes.h>
 #include <time.h>
 #include <stdatomic.h>
-#include <sph/thread-pool.h>
+#include <sph-sp/sph/thread-pool.h>
 
 #ifndef sph_future_default_poll_interval
 #define sph_future_default_poll_interval { 0, 200000000 }

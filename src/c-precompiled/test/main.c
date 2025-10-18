@@ -1,6 +1,6 @@
 
 #include <sph-sp/sph-sp.h>
-#include <sph/filesystem.h>
+#include <sph-sp/sph/filesystem.h>
 
 #define test_helper_test_one(func) \
   printf("%s\n", #func); \

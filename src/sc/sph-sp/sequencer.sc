@@ -3,8 +3,6 @@
    event.prepare and event.generate must be user replaceable.
    event.prepare is to be set to null by callers of event.prepare")
 
-(pre-include "sph/memory.c")
-
 (define (sp-event-list-display-element a) (void sp-event-list-t*)
   (printf "%lu %lu %lu event %lu %lu\n" a:previous a a:next a:event.start a:event.end))
 

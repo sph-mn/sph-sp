@@ -1,6 +1,4 @@
 
-#include <sph/memory.h>
-
 #define sp_seq_events_prepare sp_event_list_reverse
 #define sp_default_resolution ((sp_rate < 10000) ? sp_rate : (sp_rate / 1000))
 #define sp_memory_t sph_memory_t

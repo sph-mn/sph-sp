@@ -4,7 +4,7 @@
 
 #include <stdlib.h>
 #include <stdio.h>
-#include <sph/memory.h>
+#include <sph-sp/sph/memory.h>
 uint8_t* sph_memory_status_description(status_t a) {
   uint8_t* b;
   if (sph_memory_status_id_memory == a.id) {

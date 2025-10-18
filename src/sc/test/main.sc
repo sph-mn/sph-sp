@@ -1,4 +1,4 @@
-(pre-include "sph-sp/sph-sp.h" "sph/filesystem.h")
+(pre-include "sph-sp/sph-sp.h" "sph-sp/sph/filesystem.h")
 
 (pre-define
   (test-helper-test-one func) (begin (printf "%s\n" (pre-stringify func)) (status-require (func)))

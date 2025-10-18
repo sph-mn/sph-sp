@@ -3,8 +3,8 @@
 #define sph_memory_h
 
 #include <inttypes.h>
-#include <sph/array.h>
-#include <sph/memreg.h>
+#include <sph-sp/sph/array.h>
+#include <sph-sp/sph/memreg.h>
 
 #define sph_memory_status_id_memory 1
 #define sph_memory_status_group ((uint8_t*)("sph"))

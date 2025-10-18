@@ -2,7 +2,6 @@
 /* event.free functions must set event.free to null.
    event.prepare and event.generate must be user replaceable.
    event.prepare is to be set to null by callers of event.prepare */
-#include <sph/memory.c>
 void sp_event_list_display_element(sp_event_list_t* a) { printf("%lu %lu %lu event %lu %lu\n", (a->previous), a, (a->next), (a->event.start), (a->event.end)); }
 void sp_event_list_display(sp_event_list_t* a) {
   while (a) {
