@@ -2,133 +2,62 @@
 /* event.free functions must set event.free to null.
    event.prepare and event.generate must be user replaceable.
    event.prepare is to be set to null by callers of event.prepare */
-void sp_event_list_display_element(sp_event_list_t* a) { printf("%lu %lu %lu event %lu %lu\n", (a->previous), a, (a->next), (a->event.start), (a->event.end)); }
-void sp_event_list_display(sp_event_list_t* a) {
-  while (a) {
-    sp_event_list_display_element(a);
-    a = a->next;
+void sp_event_list_display_element(sp_event_list_t* list) { printf(("%p <- %p -> %p event %zu %zu\n"), ((void*)(list->previous)), ((void*)(list)), ((void*)(list->next)), ((size_t)(list->value.start)), ((size_t)(list->value.end))); }
+void sp_event_list_remove(sp_event_list_t** head_pointer, sp_event_list_t* list) {
+  if (!list) {
+    return;
   };
+  sp_event_list_unlink(head_pointer, list);
+  if (list->value.free) {
+    (list->value.free)((&(list->value)));
+  };
+  free(list);
 }
-void sp_event_list_reverse(sp_event_list_t** a) {
-  sp_event_list_t* current;
-  sp_event_list_t* next;
-  next = *a;
-  while (next) {
-    current = next;
-    next = next->next;
-    current->next = current->previous;
-    current->previous = next;
-  };
-  *a = current;
-}
-void sp_event_list_find_duplicate(sp_event_list_t* a, sp_event_list_t* b) {
-  sp_time_t i = 0;
-  sp_time_t count = 0;
-  while (a) {
-    if (a == b) {
-      if (1 == count) {
-        printf("duplicate list entry %p at index %lu\n", a, i);
-        exit(1);
-      } else {
-        count += 1;
-      };
-    };
-    i += 1;
-    a = a->next;
-  };
-}
-void sp_event_list_validate(sp_event_list_t* a) {
-  sp_time_t i = 0;
-  sp_event_list_t* b = a;
-  sp_event_list_t* c = 0;
-  while (b) {
-    if (!(c == b->previous)) {
-      printf("link to previous is invalid at index %lu, element %p\n", i, b);
-      exit(1);
-    };
-    if ((b->next == b->previous) && !(0 == b->next)) {
-      printf("circular list entry at index %lu, element %p\n", i, b);
-      exit(1);
-    };
-    sp_event_list_find_duplicate(a, b);
-    i += 1;
-    c = b;
-    b = b->next;
-  };
-}
-
-/** removes the list element and frees the event, without having to search in the list.
-   updates the head of the list if element is the first element */
-void sp_event_list_remove(sp_event_list_t** a, sp_event_list_t* element) {
-  if (element->previous) {
-    element->previous->next = element->next;
-  } else {
-    *a = element->next;
-  };
-  if (element->next) {
-    element->next->previous = element->previous;
-  };
-  if (element->event.free) {
-    (element->event.free)((&(element->event)));
-  };
-  free(element);
-}
-
-/** insert sorted by start time descending. event-list might get updated with a new head element */
-status_t sp_event_list_add(sp_event_list_t** a, sp_event_t event) {
+status_t sp_event_list_add(sp_event_list_t** head_pointer, sp_event_t event) {
   status_declare;
   sp_event_list_t* current;
   sp_event_list_t* new;
   status_require((sp_malloc_type(1, sp_event_list_t, (&new))));
-  new->event = event;
-  current = *a;
-  if (!current) {
-    /* empty */
-    new->next = 0;
-    new->previous = 0;
-    *a = new;
-    goto exit;
-  };
-  if (current->event.start <= event.start) {
-    /* first */
-    new->previous = 0;
-    new->next = current;
-    current->previous = new;
-    *a = new;
-  } else {
-    while (current->next) {
-      current = current->next;
-      if (current->event.start <= event.start) {
-        /* middle */
-        new->previous = current->previous;
-        new->next = current;
-        current->previous->next = new;
-        current->previous = new;
-        goto exit;
+  new->value = event;
+  current = *head_pointer;
+  if (current) {
+    if (current->value.start <= event.start) {
+      new->previous = 0;
+      new->next = current;
+      current->previous = new;
+      *head_pointer = new;
+    } else {
+      while ((current->next && (current->next->value.start > event.start))) {
+        current = current->next;
       };
+      new->next = current->next;
+      new->previous = current;
+      if (current->next) {
+        current->next->previous = new;
+      };
+      current->next = new;
     };
-    /* last */
+  } else {
+    new->previous = 0;
     new->next = 0;
-    new->previous = current;
-    current->next = new;
+    *head_pointer = new;
   };
 exit:
   status_return;
 }
-
-/** free all list elements and the associated events. update the list head so it becomes the empty list.
-   needed if sp_seq will not further process and free currently incomplete events */
-void sp_event_list_free(sp_event_list_t** events) {
-  sp_event_list_t* temp;
+void sp_event_list_free(sp_event_list_t** head_pointer) {
   sp_event_list_t* current;
-  current = *events;
+  sp_event_list_t* next;
+  current = *head_pointer;
   while (current) {
-    sp_event_free((current->event));
-    temp = current;
-    current = current->next;
-    free(temp);
+    if (current->value.free) {
+      (current->value.free)((&(current->value)));
+    };
+    next = current->next;
+    free(current);
+    current = next;
   };
-  *events = 0;
+  *head_pointer = 0;
 }
 
 /** calls generate for sub-blocks of at most size resolution */
@@ -186,7 +115,7 @@ status_t sp_seq(sp_time_t start, sp_time_t end, void* out, sp_event_list_t** eve
   sp_block_t shifted;
   current = *events;
   while (current) {
-    ep = &(current->event);
+    ep = &(current->value);
     e = *ep;
     if (e.end <= start) {
       next = current->next;

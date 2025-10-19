@@ -20,12 +20,12 @@
     output-start sp-time-t)
   (set current *events count 0 futures 0)
   (while current
-    (if (<= end current:event.start) (set current 0)
-      (begin (if (> current:event.end start) (set+ count 1)) (set current current:next))))
+    (if (<= end current:value.start) (set current 0)
+      (begin (if (> current:value.end start) (set+ count 1)) (set current current:next))))
   (status-require (sp-calloc-type count sp-seq-future-t &futures))
   (set current *events index 0)
   (while current
-    (set ep &current:event e *ep)
+    (set ep &current:value e *ep)
     (if (<= e.end start)
       (begin (set next current:next) (sp-event-list-remove events current) (set current next))
       (if (<= end e.start) (set current 0)

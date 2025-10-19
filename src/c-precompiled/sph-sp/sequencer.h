@@ -155,11 +155,6 @@ typedef struct sp_event_t {
 typedef status_t (*sp_event_generate_t)(sp_time_t, sp_time_t, void*, sp_event_t*);
 typedef status_t (*sp_event_prepare_t)(sp_event_t*);
 typedef status_t (*sp_map_generate_t)(sp_time_t, sp_time_t, void*, void*, void*);
-typedef struct sp_event_list_struct {
-  struct sp_event_list_struct* previous;
-  struct sp_event_list_struct* next;
-  sp_event_t event;
-} sp_event_list_t;
 typedef status_t (*sp_event_block_generate_t)(sp_time_t, sp_time_t, sp_time_t, void*, sp_event_t*);
 typedef struct {
   void* config;
@@ -205,12 +200,11 @@ typedef struct {
   sp_noise_event_channel_config_t channel_config[sp_channel_count_limit];
 } sp_noise_event_config_t;
 sp_event_t sp_null_event = { 0 };
-status_t sp_event_list_add(sp_event_list_t** a, sp_event_t event);
-void sp_event_list_display(sp_event_list_t* a);
-void sp_event_list_free(sp_event_list_t** events);
-void sp_event_list_remove(sp_event_list_t** a, sp_event_list_t* element);
-void sp_event_list_reverse(sp_event_list_t** a);
-void sp_event_list_validate(sp_event_list_t* a);
+sph_dlist_declare_type(sp_event_list, sp_event_t);
+void sp_event_list_display_element(sp_event_list_t* list);
+void sp_event_list_remove(sp_event_list_t** head_pointer, sp_event_list_t* list);
+status_t sp_event_list_add(sp_event_list_t** head_pointer, sp_event_t event_value);
+void sp_event_list_free(sp_event_list_t** head_pointer);
 status_t sp_group_add(sp_event_t* a, sp_event_t event);
 status_t sp_group_append(sp_event_t* a, sp_event_t event);
 void sp_group_event_free(sp_event_t* a);

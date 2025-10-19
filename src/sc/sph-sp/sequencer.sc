@@ -3,78 +3,43 @@
    event.prepare and event.generate must be user replaceable.
    event.prepare is to be set to null by callers of event.prepare")
 
-(define (sp-event-list-display-element a) (void sp-event-list-t*)
-  (printf "%lu %lu %lu event %lu %lu\n" a:previous a a:next a:event.start a:event.end))
+(define (sp-event-list-display-element list) (void sp-event-list-t*)
+  (printf "%p <- %p -> %p event %zu %zu\n" (convert-type list:previous void*)
+    (convert-type list void*) (convert-type list:next void*) (convert-type list:value.start size-t)
+    (convert-type list:value.end size-t)))
 
-(define (sp-event-list-display a) (void sp-event-list-t*)
-  (while a (sp-event-list-display-element a) (set a a:next)))
+(define (sp-event-list-remove head-pointer list) (void sp-event-list-t** sp-event-list-t*)
+  (if (not list) return)
+  (sp-event-list-unlink head-pointer list)
+  (if list:value.free (list:value.free &list:value))
+  (free list))
 
-(define (sp-event-list-reverse a) (void sp-event-list-t**)
-  (declare current sp-event-list-t* next sp-event-list-t*)
-  (set next *a)
-  (while next (set current next next next:next current:next current:previous current:previous next))
-  (set *a current))
-
-(define (sp-event-list-find-duplicate a b) (void sp-event-list-t* sp-event-list-t*)
-  (define i sp-time-t 0 count sp-time-t 0)
-  (while a
-    (if (= a b)
-      (if (= 1 count) (begin (printf "duplicate list entry %p at index %lu\n" a i) (exit 1))
-        (set+ count 1)))
-    (set+ i 1)
-    (set a a:next)))
-
-(define (sp-event-list-validate a) (void sp-event-list-t*)
-  (define i sp-time-t 0 b sp-event-list-t* a c sp-event-list-t* 0)
-  (while b
-    (if (not (= c b:previous))
-      (begin (printf "link to previous is invalid at index %lu, element %p\n" i b) (exit 1)))
-    (if (and (= b:next b:previous) (not (= 0 b:next)))
-      (begin (printf "circular list entry at index %lu, element %p\n" i b) (exit 1)))
-    (sp-event-list-find-duplicate a b)
-    (set+ i 1)
-    (set c b b b:next)))
-
-(define (sp-event-list-remove a element) (void sp-event-list-t** sp-event-list-t*)
-  "removes the list element and frees the event, without having to search in the list.
-   updates the head of the list if element is the first element"
-  (if element:previous (set element:previous:next element:next) (set *a element:next))
-  (if element:next (set element:next:previous element:previous))
-  (if element:event.free (element:event.free &element:event))
-  (free element))
-
-(define (sp-event-list-add a event) (status-t sp-event-list-t** sp-event-t)
-  "insert sorted by start time descending. event-list might get updated with a new head element"
+(define (sp-event-list-add head-pointer event) (status_t sp-event-list-t** sp-event-t)
   status-declare
   (declare current sp-event-list-t* new sp-event-list-t*)
   (status-require (sp-malloc-type 1 sp-event-list-t &new))
-  (set new:event event current *a)
-  (if (not current) (begin (sc-comment "empty") (set new:next 0 new:previous 0 *a new) (goto exit)))
-  (if (<= current:event.start event.start)
-    (begin (sc-comment "first") (set new:previous 0 new:next current current:previous new *a new))
-    (begin
-      (while current:next
-        (set current current:next)
-        (if (<= current:event.start event.start)
-          (begin
-            (sc-comment "middle")
-            (set
-              new:previous current:previous
-              new:next current
-              current:previous:next new
-              current:previous new)
-            (goto exit))))
-      (sc-comment "last")
-      (set new:next 0 new:previous current current:next new)))
+  (set new:value event current *head-pointer)
+  (if current
+    (if (<= current:value.start event.start)
+      (set new:previous 0 new:next current current:previous new *head-pointer new)
+      (begin
+        (while (and current:next (> current:next:value.start event.start))
+          (set current current:next))
+        (set new:next current:next new:previous current)
+        (if current:next (set current:next:previous new))
+        (set current:next new)))
+    (set new:previous 0 new:next 0 *head-pointer new))
   (label exit status-return))
 
-(define (sp-event-list-free events) (void sp-event-list-t**)
-  "free all list elements and the associated events. update the list head so it becomes the empty list.
-   needed if sp_seq will not further process and free currently incomplete events"
-  (declare temp sp-event-list-t* current sp-event-list-t*)
-  (set current *events)
-  (while current (sp-event-free current:event) (set temp current current current:next) (free temp))
-  (set *events 0))
+(define (sp-event-list-free head-pointer) (void sp-event-list-t**)
+  (declare current sp-event-list-t* next sp-event-list-t*)
+  (set current *head-pointer)
+  (while current
+    (if current:value.free (current:value.free &current:value))
+    (set next current:next)
+    (free current)
+    (set current next))
+  (set *head-pointer 0))
 
 (define (sp-event-block-generate resolution generate start end out event)
   (status-t sp-time-t sp-event-block-generate-t sp-time-t sp-time-t void* sp-event-t*)
@@ -125,7 +90,7 @@
     shifted sp-block-t)
   (set current *events)
   (while current
-    (set ep &current:event e *ep)
+    (set ep &current:value e *ep)
     (cond
       ( (<= e.end start) (set next current:next) (sp-event-list-remove events current)
         (set current next) continue)

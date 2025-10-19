@@ -14,7 +14,7 @@ cd "$sph_sc_root/src/c-precompiled/sph"
 
 cp status.h spline-path.h spline-path.c quicksort.h queue.h \
   thread-pool.h thread-pool.c futures.h futures.c float.h float.c \
-  random.h random.c memreg.h memory.h memory.c array.h "$destination"
+  random.h random.c memreg.h memory.h memory.c array.h list.h "$destination"
 
 # only for testing
 cp string.h filesystem.h "$destination"

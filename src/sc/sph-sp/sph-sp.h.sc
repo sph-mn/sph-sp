@@ -35,9 +35,9 @@
 (pre-define spline-path-value-t sp-sample-t)
 
 (pre-include "string.h" "stdio.h"
-  "stdlib.h" "sph-sp/sph/memory.h" "sph-sp/main.h"
-  "sph-sp/arrays.h" "sph-sp/distributions.h" "sph-sp/path.h"
-  "sph-sp/filter.h" "sph-sp/sequencer.h" "sph-sp/parallel.h"
-  "sph-sp/statistics.h" "sph-sp/plot.h" "sph-sp/main2.h")
+  "stdlib.h" "sph-sp/sph/memory.h" "sph-sp/sph/list.h"
+  "sph-sp/main.h" "sph-sp/arrays.h" "sph-sp/distributions.h"
+  "sph-sp/path.h" "sph-sp/filter.h" "sph-sp/sequencer.h"
+  "sph-sp/parallel.h" "sph-sp/statistics.h" "sph-sp/plot.h" "sph-sp/main2.h")
 
 (pre-include-guard-end)

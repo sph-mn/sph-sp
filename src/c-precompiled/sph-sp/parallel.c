@@ -20,10 +20,10 @@ status_t sp_seq_parallel_generic(sp_time_t start, sp_time_t end, void* out, sp_e
   count = 0;
   futures = 0;
   while (current) {
-    if (end <= current->event.start) {
+    if (end <= current->value.start) {
       current = 0;
     } else {
-      if (current->event.end > start) {
+      if (current->value.end > start) {
         count += 1;
       };
       current = current->next;
@@ -33,7 +33,7 @@ status_t sp_seq_parallel_generic(sp_time_t start, sp_time_t end, void* out, sp_e
   current = *events;
   index = 0;
   while (current) {
-    ep = &(current->event);
+    ep = &(current->value);
     e = *ep;
     if (e.end <= start) {
       next = current->next;

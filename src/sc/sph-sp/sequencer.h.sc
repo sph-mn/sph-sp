@@ -190,13 +190,6 @@
   sp-event-generate-t (type (function-pointer status-t sp-time-t sp-time-t void* sp-event-t*))
   sp-event-prepare-t (type (function-pointer status-t sp-event-t*))
   sp-map-generate-t (type (function-pointer status-t sp-time-t sp-time-t void* void* void*))
-  sp-event-list-t
-  (type
-    (struct
-      sp-event-list-struct
-      (previous (struct sp-event-list-struct*))
-      (next (struct sp-event-list-struct*))
-      (event sp-event-t)))
   sp-event-block-generate-t
   (type (function-pointer status-t sp-time-t sp-time-t sp-time-t void* sp-event-t*))
   sp-map-event-config-t
@@ -245,14 +238,13 @@
       (channel-config (array sp-noise-event-channel-config-t sp-channel-count-limit)))))
 
 (define sp-null-event sp-event-t (struct-literal 0))
+(sph-dlist-declare-type sp-event-list sp-event-t)
 
 (declare
-  (sp-event-list-add a event) (status-t sp-event-list-t** sp-event-t)
-  (sp-event-list-display a) (void sp-event-list-t*)
-  (sp-event-list-free events) (void sp-event-list-t**)
-  (sp-event-list-remove a element) (void sp-event-list-t** sp-event-list-t*)
-  (sp-event-list-reverse a) (void sp-event-list-t**)
-  (sp-event-list-validate a) (void sp-event-list-t*)
+  (sp-event-list-display-element list) (void sp-event-list-t*)
+  (sp-event-list-remove head-pointer list) (void sp-event-list-t** sp-event-list-t*)
+  (sp-event-list-add head-pointer event-value) (status_t sp-event-list-t** sp-event-t)
+  (sp-event-list-free head-pointer) (void sp-event-list-t**)
   (sp-group-add a event) (status-t sp-event-t* sp-event-t)
   (sp-group-append a event) (status-t sp-event-t* sp-event-t)
   (sp-group-event-free a) (void sp-event-t*)

@@ -99,6 +99,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <sph-sp/sph/memory.h>
+#include <sph-sp/sph/list.h>
 #include <sph-sp/main.h>
 #include <sph-sp/arrays.h>
 #include <sph-sp/distributions.h>
