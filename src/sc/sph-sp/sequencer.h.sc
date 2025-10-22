@@ -183,7 +183,6 @@
       (end sp-time-t)
       (generate (function-pointer status-t sp-time-t sp-time-t void* (struct sp-event-t*)))
       (prepare (function-pointer status-t (struct sp-event-t*)))
-      (update (function-pointer status-t (struct sp-event-t*)))
       (free (function-pointer void (struct sp-event-t*)))
       (config void*)
       (memory sp-memory-t)))

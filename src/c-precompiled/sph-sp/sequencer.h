@@ -147,7 +147,6 @@ typedef struct sp_event_t {
   sp_time_t end;
   status_t (*generate)(sp_time_t, sp_time_t, void*, struct sp_event_t*);
   status_t (*prepare)(struct sp_event_t*);
-  status_t (*update)(struct sp_event_t*);
   void (*free)(struct sp_event_t*);
   void* config;
   sp_memory_t memory;
