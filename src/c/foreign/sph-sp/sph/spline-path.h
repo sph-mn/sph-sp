@@ -1,6 +1,6 @@
 
-#ifndef sph_spline_path_h
-#define sph_spline_path_h
+#ifndef sph_spline_path_h_included
+#define sph_spline_path_h_included
 
 /* * spline-path creates discrete 2d paths interpolated between some given points
  * maps from one independent value to one dependent continuous value
@@ -37,7 +37,7 @@
 #define spline_path_segment_count_t uint16_t
 #endif
 #ifndef spline_path_size_max
-#define spline_path_size_max (SIZE_MAX / 2)
+#define spline_path_size_max 9007199254740992.0
 #endif
 #ifndef spline_path_point_max
 #define spline_path_point_max 4
@@ -86,7 +86,7 @@ void spline_path_free(spline_path_t path);
 spline_path_point_t spline_path_perpendicular_point(spline_path_point_t p1, spline_path_point_t p2, spline_path_value_t distance_factor);
 spline_path_segment_t spline_path_move(spline_path_value_t x, spline_path_value_t y);
 spline_path_segment_t spline_path_line(spline_path_value_t x, spline_path_value_t y);
-spline_path_segment_t spline_path_constant();
+spline_path_segment_t spline_path_constant(void);
 spline_path_segment_t spline_path_path(spline_path_t path);
 spline_path_segment_t spline_path_bezier1(spline_path_value_t x1, spline_path_value_t y1, spline_path_value_t x2, spline_path_value_t y2);
 spline_path_segment_t spline_path_bezier2(spline_path_value_t x1, spline_path_value_t y1, spline_path_value_t x2, spline_path_value_t y2, spline_path_value_t x3, spline_path_value_t y3);

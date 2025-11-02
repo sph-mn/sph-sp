@@ -229,7 +229,7 @@ exit:
   sp_block_free((&temp_out));
   status_return;
 }
-sp_wave_event_config_t sp_wave_event_config_defaults() {
+sp_wave_event_config_t sp_wave_event_config_defaults(void) {
   sp_wave_event_config_t out = { 0 };
   out.channel_config->use = 1;
   out.channel_count = sp_channel_count_limit;
@@ -316,7 +316,7 @@ status_t sp_wave_event_generate(sp_time_t start, sp_time_t end, void* out, sp_ev
   };
   status_return;
 }
-sp_noise_event_config_t sp_noise_event_config_defaults() {
+sp_noise_event_config_t sp_noise_event_config_defaults(void) {
   sp_noise_event_config_t out = { 0 };
   out.channel_config->use = 1;
   out.channel_count = sp_channel_count_limit;

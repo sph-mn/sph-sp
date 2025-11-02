@@ -10,7 +10,7 @@
   (sp-event-free a) (if a.free (a.free &a))
   (sp-event-prepare-srq a) (begin (status-require (a.prepare &a)) (set a.prepare 0))
   (sp-event-prepare-optional-srq a) (if a.prepare (sp-event-prepare-srq a))
-  (sp-event-memory-ensure event-pointer needed) (sph-memory-ensure &event-pointer:memory needed)
+  (sp-event-memory-ensure event-pointer needed) (sph-memory-ensure needed &event-pointer:memory)
   (sp-event-memory-add event-pointer address)
   (sph-memory-add-with-handler &event-pointer:memory address free)
   (sp-event-memory-free event-pointer) (sph-memory-destroy &event-pointer:memory)
@@ -237,7 +237,7 @@
       (channel-config (array sp-noise-event-channel-config-t sp-channel-count-limit)))))
 
 (define sp-null-event sp-event-t (struct-literal 0))
-(sph-dlist-declare-type sp-event-list sp-event-t)
+(sc-no-semicolon (sph-dlist-declare-type sp-event-list sp-event-t))
 
 (declare
   (sp-event-list-display-element list) (void sp-event-list-t*)

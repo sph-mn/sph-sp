@@ -1,6 +1,6 @@
 
-#ifndef sph_status_h
-#define sph_status_h
+#ifndef sph_status_h_included
+#define sph_status_h_included
 
 /* return status as integer code with group identifier
 for exception handling with a local variable and a goto label
@@ -10,10 +10,10 @@ group ids are strings, used to categorise sets of errors codes from different li
 #include <inttypes.h>
 typedef struct {
   int id;
-  uint8_t* group;
+  char* group;
 } status_t;
 #define status_id_success 0
-#define status_group_undefined ((uint8_t*)(""))
+#define status_group_undefined ""
 #define status_declare status_t status = { status_id_success, status_group_undefined }
 #define status_is_success (status_id_success == status.id)
 #define status_is_failure !status_is_success
@@ -21,7 +21,7 @@ typedef struct {
 #define status_i_return return ((status.id))
 #define status_goto goto exit
 #define status_set(group_id, status_id) \
-  status.group = ((uint8_t*)(group_id)); \
+  status.group = group_id; \
   status.id = status_id
 #define status_set_goto(group_id, status_id) \
   status_set(group_id, status_id); \

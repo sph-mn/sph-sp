@@ -1,24 +1,22 @@
 
-#ifndef sph_memory
-#define sph_memory
+#ifndef sph_memory_c_included
+#define sph_memory_c_included
 
 #include <stdlib.h>
 #include <stdio.h>
 #include <sph-sp/sph/memory.h>
-uint8_t* sph_memory_status_description(status_t a) {
-  uint8_t* b;
+char* sph_memory_status_description(status_t a) {
   if (sph_memory_status_id_memory == a.id) {
-    b = "not enough memory or other memory allocation error";
+    return ("not enough memory or other memory allocation error");
   } else {
-    b = "";
+    return ("");
   };
 }
-uint8_t* sph_memory_status_name(status_t a) {
-  uint8_t* b;
+char* sph_memory_status_name(status_t a) {
   if (sph_memory_status_id_memory == a.id) {
-    b = "memory";
+    return ("memory");
   } else {
-    b = "unknown";
+    return ("unknown");
   };
 }
 status_t sph_memory_malloc(size_t size, void** result) {
@@ -35,9 +33,9 @@ exit:
 }
 
 /** like sph_malloc but allocates one extra byte that is set to zero */
-status_t sph_memory_malloc_string(size_t length, uint8_t** result) {
+status_t sph_memory_malloc_string(size_t length, char** result) {
   status_declare;
-  uint8_t* a;
+  char* a;
   status_require((sph_malloc((1 + length), (&a))));
   a[length] = 0;
   *result = a;
@@ -71,7 +69,7 @@ exit:
 /** event memory addition with automatic array expansion */
 status_t sph_memory_add_with_handler(sph_memory_t* a, void* address, void (*handler)(void*)) {
   status_declare;
-  status_require((sph_memory_ensure(a, 4)));
+  status_require((sph_memory_ensure(4, a)));
   sph_memory_add_directly(a, address, handler);
 exit:
   status_return;

@@ -1,12 +1,9 @@
 
-#ifndef _XOPEN_SOURCE
-#define _XOPEN_SOURCE
-#endif
-
-#ifndef _POSIX_C_SOURCE
-#define _POSIX_C_SOURCE 199309L
+#ifndef M_PI
+#define M_PI 3.141592653589793
 #endif
 #include <math.h>
+extern double j0(double);
 #include <errno.h>
 #include <arpa/inet.h>
 #include <nayuki-fft/fft.c>
@@ -62,8 +59,8 @@ sp_sample_t sp_sample_min(sp_sample_t a, sp_sample_t b) { return (((a > b) ? b :
 sp_time_t sp_time_min(sp_time_t a, sp_time_t b) { return (((a > b) ? b : a)); }
 
 /** get a string description for a status id in a status_t */
-uint8_t* sp_status_description(status_t a) {
-  uint8_t* b;
+char* sp_status_description(status_t a) {
+  char* b;
   if (!strcmp(sp_s_group_sp, (a.group))) {
     if (sp_s_id_eof == a.id) {
       b = "end of file";
@@ -95,8 +92,8 @@ uint8_t* sp_status_description(status_t a) {
 }
 
 /** get a one word identifier for status id in status_t */
-uint8_t* sp_status_name(status_t a) {
-  uint8_t* b;
+char* sp_status_name(status_t a) {
+  char* b;
   if (0 == strcmp(sp_s_group_sp, (a.group))) {
     if (sp_s_id_input_type == a.id) {
       b = "input-type";
@@ -329,7 +326,7 @@ sp_render_config_t sp_render_config(sp_channel_count_t channel_count, sp_time_t 
 }
 
 /** render an event with sp_seq to a file. the file is created or overwritten */
-status_t sp_render_range_file(sp_event_t event, sp_time_t start, sp_time_t end, sp_render_config_t config, uint8_t* path) {
+status_t sp_render_range_file(sp_event_t event, sp_time_t start, sp_time_t end, sp_render_config_t config, char* path) {
   status_declare;
   sp_time_t block_end;
   sp_time_t remainder;
@@ -344,7 +341,7 @@ status_t sp_render_range_file(sp_event_t event, sp_time_t start, sp_time_t end, 
   block_end = (config.block_size * ((end - start) / config.block_size));
   for (i = 0; (i < block_end); i += config.block_size) {
     if (config.display_progress) {
-      printf(("%.1f%\n"), (100 * (i / ((sp_sample_t)(block_end)))));
+      printf(("%.1f%%\n"), (100 * (i / ((sp_sample_t)(block_end)))));
     };
     status_require((sp_seq(i, (i + config.block_size), (&block), (&events))));
     status_require((sp_file_write((&file), (block.samples), (config.block_size))));
@@ -379,12 +376,12 @@ exit:
 
 /** render the full duration of event to file at path and write information to standard output.
    uses channel count from global variable sp_channel_count and block size sp_rate */
-status_t sp_render_file(sp_event_t event, uint8_t* path) {
+status_t sp_render_file(sp_event_t event, char* path) {
   status_declare;
   if (!event.end) {
     sp_event_prepare_optional_srq(event);
   };
-  printf("rendering %lu seconds to file %s\n", (event.end / sp_rate), path);
+  printf("rendering " sp_time_printf_format " seconds to file %s\n", (event.end / sp_rate), path);
   status_require((sp_render_range_file(event, 0, (event.end), (sp_render_config(sp_channel_count, sp_rate, (sp_render_block_seconds * sp_rate), 1)), path)));
 exit:
   status_return;
@@ -399,9 +396,9 @@ status_t sp_render_plot(sp_event_t event) {
     sp_event_prepare_optional_srq(event);
   };
   if (event.end && (event.end < sp_rate)) {
-    printf("rendering %lu milliseconds to plot\n", (event.end / sp_rate / 1000));
+    printf("rendering " sp_time_printf_format " milliseconds to plot\n", (event.end / sp_rate / 1000));
   } else {
-    printf("rendering %lu seconds to plot\n", (event.end / sp_rate));
+    printf("rendering " sp_time_printf_format " seconds to plot\n", (event.end / sp_rate));
   };
   status_require((sp_render_range_block(event, 0, (event.end), (sp_render_config(sp_channel_count, sp_rate, (sp_render_block_seconds * sp_rate), 1)), (&block))));
   sp_plot_samples(((block.samples)[0]), (event.end));
@@ -444,7 +441,7 @@ exit:
   };
   status_return;
 }
-void sp_deinitialize() {
+void sp_deinitialize(void) {
   if (sp_cpu_count) {
     sph_future_deinit();
   };
@@ -554,10 +551,10 @@ sp_size_t sp_permutations_max(sp_size_t set_size, sp_size_t selection_size) { re
 sp_size_t sp_compositions_max(sp_size_t sum) { return ((sp_time_expt(2, (sum - 1)))); }
 
 /** return a mask with the lower divisions bits set */
-static inline sp_scale_t sp_scale_mask(sp_time_t divisions) { return (((divisions >= ((sp_time_t)((8 * sizeof(sp_scale_t))))) ? ~((sp_scale_t)(0)) : ((((sp_scale_t)(1)) << divisions) - 1))); }
+inline sp_scale_t sp_scale_mask(sp_time_t divisions) { return (((divisions >= ((sp_time_t)((8 * sizeof(sp_scale_t))))) ? ~((sp_scale_t)(0)) : ((((sp_scale_t)(1)) << divisions) - 1))); }
 
 /** build a scale bitset from an array of pitch-class indices */
-static inline sp_scale_t sp_scale_make(sp_time_t* pitch_classes, sp_time_t count, sp_time_t divisions) {
+inline sp_scale_t sp_scale_make(sp_time_t* pitch_classes, sp_time_t count, sp_time_t divisions) {
   sp_scale_t scale = 0;
   for (sp_size_t i = 0; (i < count); i += 1) {
     scale = (scale | (((sp_scale_t)(1)) << (pitch_classes[i] % divisions)));
@@ -566,7 +563,7 @@ static inline sp_scale_t sp_scale_make(sp_time_t* pitch_classes, sp_time_t count
 }
 
 /** rotate (transpose) the scale by steps within divisions slots */
-static inline sp_scale_t sp_scale_rotate(sp_scale_t scale, sp_time_t steps, sp_time_t divisions) {
+inline sp_scale_t sp_scale_rotate(sp_scale_t scale, sp_time_t steps, sp_time_t divisions) {
   if (!divisions) {
     divisions = ((sp_time_t)((8 * sizeof(sp_scale_t))));
   };
@@ -581,7 +578,7 @@ static inline sp_scale_t sp_scale_rotate(sp_scale_t scale, sp_time_t steps, sp_t
 }
 
 /** count how many notes (bits) are set in the scale */
-static inline sp_time_t sp_scale_divisions(sp_scale_t scale) {
+inline sp_time_t sp_scale_divisions(sp_scale_t scale) {
   sp_time_t count = 0;
   while (scale) {
     scale = (scale & (scale - 1));
@@ -591,7 +588,7 @@ static inline sp_time_t sp_scale_divisions(sp_scale_t scale) {
 }
 
 /** return index of the least-significant set bit (first note) */
-static inline sp_time_t sp_scale_first_index(sp_scale_t scale) {
+inline sp_time_t sp_scale_first_index(sp_scale_t scale) {
   sp_time_t i = 0;
   while (!(scale & 1)) {
     scale = (scale >> 1);
@@ -601,4 +598,4 @@ static inline sp_time_t sp_scale_first_index(sp_scale_t scale) {
 }
 
 /** rotate so the first note sits at bit 0 (canonical form) */
-static inline sp_scale_t sp_scale_canonical(sp_scale_t scale, sp_time_t divisions) { return ((sp_scale_rotate(scale, (-1 * sp_scale_first_index(scale)), divisions))); }
+inline sp_scale_t sp_scale_canonical(sp_scale_t scale, sp_time_t divisions) { return ((sp_scale_rotate(scale, (-1 * sp_scale_first_index(scale)), divisions))); }

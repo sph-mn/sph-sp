@@ -19,6 +19,7 @@ status_t sp_seq_parallel_generic(sp_time_t start, sp_time_t end, void* out, sp_e
   current = *events;
   count = 0;
   futures = 0;
+  index = 0;
   while (current) {
     if (end <= current->value.start) {
       current = 0;
@@ -31,7 +32,6 @@ status_t sp_seq_parallel_generic(sp_time_t start, sp_time_t end, void* out, sp_e
   };
   status_require((sp_calloc_type(count, sp_seq_future_t, (&futures))));
   current = *events;
-  index = 0;
   while (current) {
     ep = &(current->value);
     e = *ep;

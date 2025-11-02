@@ -1,6 +1,6 @@
 
-#ifndef sph_thread_pool_h
-#define sph_thread_pool_h
+#ifndef sph_thread_pool_h_included
+#define sph_thread_pool_h_included
 
 #include <pthread.h>
 #include <inttypes.h>

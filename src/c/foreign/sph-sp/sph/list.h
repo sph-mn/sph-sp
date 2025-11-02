@@ -1,6 +1,6 @@
 
-#ifndef sph_list_h
-#define sph_list_h
+#ifndef sph_list_h_included
+#define sph_list_h_included
 
 #include <inttypes.h>
 #include <stdlib.h>

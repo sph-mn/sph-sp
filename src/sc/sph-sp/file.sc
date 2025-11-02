@@ -7,7 +7,7 @@
   wav-string-data (htonl 0x64617461))
 
 (define (sp-file-open-write path channel-count sample-rate file)
-  (status-t uint8-t* sp-channel-count-t sp-time-t sp-file-t*)
+  (status-t char* sp-channel-count-t sp-time-t sp-file-t*)
   status-declare
   (declare header (array uint8-t 44))
   (set
@@ -60,7 +60,7 @@
   (set+ file:data-size interleaved-size)
   (label exit (free file-data) status-return))
 
-(define (sp-file-open-read path file) (status-t uint8-t* sp-file-t*)
+(define (sp-file-open-read path file) (status-t char* sp-file-t*)
   status-declare
   (declare header (array uint8-t 44) subchunk-id uint32-t subchunk-size uint32-t)
   (set file:file (fopen path "r"))

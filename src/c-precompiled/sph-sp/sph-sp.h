@@ -1,6 +1,6 @@
 
-#ifndef sph_sp_h
-#define sph_sp_h
+#ifndef sph_sp_h_included
+#define sph_sp_h_included
 
 #include <byteswap.h>
 #include <inttypes.h>
@@ -78,6 +78,15 @@
 #endif
 #ifndef sp_time_t
 #define sp_time_t uint32_t
+#endif
+#ifndef sp_time_max_value
+#define sp_time_max_value UINT32_MAX
+#endif
+#ifndef sp_time_printf_format
+#define sp_time_printf_format "%" PRIu32
+#endif
+#ifndef sp_sample_printf_format
+#define sp_sample_printf_format "%.5f"
 #endif
 #ifndef sp_unit_random_primitive
 #define sp_unit_random_primitive sph_random_f64_0to1

@@ -1,6 +1,8 @@
 (pre-include "sph-sp/arrays-template.c")
 (sc-comment "times")
-(arrays-template sp-time-t time times sp-inline-no-underflow-subtract sp-inline-abs)
+
+(sc-no-semicolon
+  (arrays-template sp-time-t time times sp-inline-no-underflow-subtract sp-inline-abs))
 
 (define (sp-time-sum in size) (sp-time-t sp-time-t* sp-time-t)
   (define sum sp-time-t 0)
@@ -14,8 +16,9 @@
 
 (define (sp-times-display in count) (void sp-time-t* sp-size-t)
   "display a time array in one line"
-  (printf "%lu" (array-get in 0))
-  (for ((define i sp-size-t 1) (< i count) (set+ i 1)) (printf " %lu" (array-get in i)))
+  (printf sp-time-printf-format (array-get in 0))
+  (for ((define i sp-size-t 1) (< i count) (set+ i 1))
+    (printf (pre-concat-string " " sp-time-printf-format) (array-get in i)))
   (printf "\n"))
 
 (define (sp-times-random-discrete cudist cudist-size count out)
@@ -60,7 +63,7 @@
     temp-out sp-time-t**
     temp-out-used-size sp-time-t
     s sp-time-t*)
-  (set a 0 b 0 s 0 temp-out 0 i 0 temp-out-size (sp-time-factorial size))
+  (set a 0 b 0 s 0 temp-out 0 i 0 temp-out-size (sp-time-factorial size) temp-out-used-size 0)
   (srq (sp-times-new size &a))
   (srq (sp-times-new size &s))
   (srq (sp-calloc-type temp-out-size sp-time-t* &temp-out))
@@ -264,8 +267,8 @@
 (define (sp-times-make-seamless-left a a-count b b-count out)
   (void sp-time-t* sp-time-t sp-time-t* sp-time-t sp-time-t*)
   "untested. like sp_times_make_seamless_right but changing the first elements of $b to match the end of $a"
-  (declare start sp-time-t count sp-time-t i sp-time-t)
-  (set count (sp-inline-min b-count (/ a-count 2)) start (- a-count count))
+  (declare count sp-time-t i sp-time-t)
+  (set count (sp-inline-min b-count (/ a-count 2)))
   (sp-for-each-index i count
     (set (array-get out i)
       (sp-time-interpolate-linear (array-get b i) (array-get a (- a-count i)) (/ (+ 1 i) count))))
@@ -324,12 +327,13 @@
   (label exit status-return))
 
 (sc-comment "samples")
-(arrays-template sp-sample-t sample samples sp-subtract fabs)
+(sc-no-semicolon (arrays-template sp-sample-t sample samples sp-subtract fabs))
 
 (define (sp-samples-display in count) (void sp-sample-t* sp-size-t)
   "display a sample array in one line"
-  (printf "%.5f" (array-get in 0))
-  (for ((define i sp-size-t 1) (< i count) (set+ i 1)) (printf " %.5f" (array-get in i)))
+  (printf sp-sample-printf-format (array-get in 0))
+  (for ((define i sp-size-t 1) (< i count) (set+ i 1))
+    (printf (pre-concat-string " " sp-sample-printf-format) (array-get in i)))
   (printf "\n"))
 
 (define (sp-samples->times in count out) (void sp-sample-t* sp-size-t sp-time-t*)
@@ -435,4 +439,5 @@
         (+ (pointer-get (convert-type a uint32-t*))
           (bit-shift-left (convert-type (pointer-get (convert-type (+ 4 a) uint16-t*)) uint64-t) 32)
           (bit-shift-left (convert-type (array-get a 6) uint64-t) 48))))
-    (8 (return (pointer-get (convert-type a uint64-t*))))))
+    (8 (return (pointer-get (convert-type a uint64-t*))))
+    (else (return 0))))

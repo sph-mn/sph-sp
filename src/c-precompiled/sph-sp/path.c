@@ -44,14 +44,14 @@ exit:
     sp_sample_t y[2]; \
     y[0] = y1; \
     y[1] = y2; \
-    sp_path_##type_name(out, length, 2, 0, y, 0); \
+    return ((sp_path_##type_name(out, length, 2, 0, y, 0))); \
   } \
   status_t sp_path_##type_name##3(type * *out, sp_time_t length, sp_sample_t x1, sp_sample_t y1, sp_sample_t y2, sp_sample_t y3) { \
     sp_sample_t y[3]; \
     y[0] = y1; \
     y[1] = y2; \
     y[2] = y3; \
-    sp_path_##type_name(out, length, 3, (&x1), y, 0); \
+    return ((sp_path_##type_name(out, length, 3, (&x1), y, 0))); \
   } \
   status_t sp_path_##type_name##4(type * *out, sp_time_t length, sp_sample_t x1, sp_sample_t x2, sp_sample_t y1, sp_sample_t y2, sp_sample_t y3, sp_sample_t y4) { \
     sp_sample_t x[2]; \
@@ -62,7 +62,7 @@ exit:
     y[1] = y2; \
     y[2] = y3; \
     y[3] = y4; \
-    sp_path_##type_name(out, length, 4, x, y, 0); \
+    return ((sp_path_##type_name(out, length, 4, x, y, 0))); \
   } \
   status_t sp_path_##type_name##5(type * *out, sp_time_t length, sp_sample_t x1, sp_sample_t x2, sp_sample_t x3, sp_sample_t y1, sp_sample_t y2, sp_sample_t y3, sp_sample_t y4, sp_sample_t y5) { \
     sp_sample_t x[3]; \
@@ -75,13 +75,13 @@ exit:
     y[2] = y3; \
     y[3] = y4; \
     y[4] = y5; \
-    sp_path_##type_name(out, length, 5, x, y, 0); \
+    return ((sp_path_##type_name(out, length, 5, x, y, 0))); \
   } \
   status_t sp_path_##type_name##_curve##2(type * *out, sp_time_t length, sp_sample_t y1, sp_sample_t y2, sp_sample_t c1) { \
     sp_sample_t y[2]; \
     y[0] = y1; \
     y[1] = y2; \
-    sp_path_##type_name(out, length, 2, 0, y, (&c1)); \
+    return ((sp_path_##type_name(out, length, 2, 0, y, (&c1)))); \
   } \
   status_t sp_path_##type_name##_curve##3(type * *out, sp_time_t length, sp_sample_t x1, sp_sample_t y1, sp_sample_t y2, sp_sample_t y3, sp_sample_t c1, sp_sample_t c2) { \
     sp_sample_t y[3]; \
@@ -91,7 +91,7 @@ exit:
     y[2] = y3; \
     c[0] = c1; \
     c[1] = c2; \
-    sp_path_##type_name(out, length, 3, (&x1), y, c); \
+    return ((sp_path_##type_name(out, length, 3, (&x1), y, c))); \
   } \
   status_t sp_path_##type_name##_curve##4(type * *out, sp_time_t length, sp_sample_t x1, sp_sample_t x2, sp_sample_t y1, sp_sample_t y2, sp_sample_t y3, sp_sample_t y4, sp_sample_t c1, sp_sample_t c2, sp_sample_t c3) { \
     sp_sample_t x[2]; \
@@ -106,7 +106,7 @@ exit:
     c[0] = c1; \
     c[1] = c2; \
     c[2] = c3; \
-    sp_path_##type_name(out, length, 4, x, y, c); \
+    return ((sp_path_##type_name(out, length, 4, x, y, c))); \
   } \
   status_t sp_path_##type_name##_curve##5(type * *out, sp_time_t length, sp_sample_t x1, sp_sample_t x2, sp_sample_t x3, sp_sample_t y1, sp_sample_t y2, sp_sample_t y3, sp_sample_t y4, sp_sample_t y5, sp_sample_t c1, sp_sample_t c2, sp_sample_t c3, sp_sample_t c4) { \
     sp_sample_t x[3]; \
@@ -124,7 +124,7 @@ exit:
     c[1] = c2; \
     c[2] = c3; \
     c[3] = c4; \
-    sp_path_##type_name(out, length, 5, x, y, c); \
+    return ((sp_path_##type_name(out, length, 5, x, y, c))); \
   }
 sp_define_path_n(samples, sp_sample_t)
   sp_define_path_n(times, sp_time_t)

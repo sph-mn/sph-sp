@@ -1,6 +1,6 @@
 
-#ifndef sph_futures_h
-#define sph_futures_h
+#ifndef sph_futures_h_included
+#define sph_futures_h_included
 
 /* fine-grain parallelism based on sph/thread-pool.c.
 provides task objects with functions executed in threads that can be waited for to get a result value.
@@ -22,6 +22,6 @@ typedef struct {
 int sph_future_init(sph_thread_pool_size_t thread_count);
 void sph_future_eval(sph_thread_pool_task_t* task);
 void sph_future_new(sph_future_f_t f, void* data, sph_future_t* out);
-void sph_future_deinit();
+void sph_future_deinit(void);
 void* sph_future_touch(sph_future_t* a);
 #endif

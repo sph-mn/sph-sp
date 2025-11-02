@@ -46,8 +46,8 @@ sp_event_t test_helper_event(sp_time_t start, sp_time_t end, sp_time_t number) {
   return (e);
 }
 sp_sample_t error_margin = 0.1;
-uint8_t* test_file_path = "/tmp/test-sph-sp-file";
-status_t test_base() {
+char* test_file_path = "/tmp/test-sph-sp-file";
+status_t test_base(void) {
   status_declare;
   test_helper_assert(("input 0.5"), (sp_sample_nearly_equal((0.63662), (sp_sinc((0.5))), error_margin)));
   test_helper_assert("input 1", (sp_sample_nearly_equal((1.0), (sp_sinc(0)), error_margin)));
@@ -56,7 +56,7 @@ status_t test_base() {
 exit:
   status_return;
 }
-status_t test_spectral_inversion_ir() {
+status_t test_spectral_inversion_ir(void) {
   status_declare;
   sp_time_t a_len;
   sp_sample_t a[5] = { 0.1, -0.2, 0.3, -0.2, 0.1 };
@@ -66,7 +66,7 @@ status_t test_spectral_inversion_ir() {
 exit:
   status_return;
 }
-status_t test_spectral_reversal_ir() {
+status_t test_spectral_reversal_ir(void) {
   status_declare;
   sp_time_t a_len;
   sp_sample_t a[5] = { 0.1, -0.2, 0.3, -0.2, 0.1 };
@@ -78,7 +78,7 @@ exit:
 }
 
 /** test sp-convolve with a kernel smaller than input */
-status_t test_convolve_smaller() {
+status_t test_convolve_smaller(void) {
   status_declare;
   sp_sample_t* a;
   sp_time_t a_len;
@@ -144,7 +144,7 @@ exit:
 }
 
 /** test sp-convolve with a kernel larger than input and process more blocks */
-status_t test_convolve_larger() {
+status_t test_convolve_larger(void) {
   status_declare;
   sp_sample_t* in_a;
   sp_sample_t* in_b;
@@ -194,7 +194,7 @@ exit:
   memreg_free;
   status_return;
 }
-status_t test_moving_average() {
+status_t test_moving_average(void) {
   status_declare;
   sp_sample_t* in;
   sp_sample_t* out;
@@ -220,7 +220,7 @@ exit:
   memreg_free;
   status_return;
 }
-status_t test_windowed_sinc_continuity() {
+status_t test_windowed_sinc_continuity(void) {
   status_declare;
   sp_sample_t* in;
   sp_sample_t* out;
@@ -264,7 +264,7 @@ exit:
   sp_convolution_filter_state_free(state_control);
   status_return;
 }
-status_t test_windowed_sinc() {
+status_t test_windowed_sinc(void) {
   status_declare;
   sp_sample_t transition;
   sp_sample_t cutoff;
@@ -297,7 +297,7 @@ status_t test_windowed_sinc() {
 exit:
   status_return;
 }
-status_t test_file() {
+status_t test_file(void) {
   status_declare;
   sp_channel_count_t channel_count;
   sp_file_t file;
@@ -334,7 +334,7 @@ exit:
   sp_block_free((&block_read));
   status_return;
 }
-status_t test_fft() {
+status_t test_fft(void) {
   status_declare;
   sp_sample_t a_real[6] = { -0.6, 0.1, 0.4, 0.8, 0, 0 };
   sp_sample_t a_imag[6] = { 0, 0, 0, 0, 0, 0 };
@@ -347,14 +347,14 @@ exit:
 }
 
 /** better test separately as it opens gnuplot windows */
-status_t test_sp_plot() {
+status_t test_sp_plot(void) {
   status_declare;
   sp_sample_t a[9] = { 0.1, -0.2, 0.1, -0.4, 0.3, -0.4, 0.2, -0.2, 0.1 };
   sp_plot_samples(a, 9);
   sp_plot_spectrum(a, 9);
   status_return;
 }
-status_t test_sp_triangle_square() {
+status_t test_sp_triangle_square(void) {
   status_declare;
   sp_sample_t* out_t;
   sp_sample_t* out_s;
@@ -380,7 +380,7 @@ status_t test_sp_triangle_square() {
 exit:
   status_return;
 }
-status_t test_sp_random() {
+status_t test_sp_random(void) {
   status_declare;
   sp_random_state_t s;
   sp_sample_t out[20];
@@ -391,7 +391,7 @@ status_t test_sp_random() {
 exit:
   status_return;
 }
-status_t test_sp_noise_event() {
+status_t test_sp_noise_event(void) {
   status_declare;
   sp_block_t out;
   sp_time_t fmod[test_noise_duration];
@@ -434,7 +434,7 @@ exit:
   };
   status_return;
 }
-status_t test_sp_seq() {
+status_t test_sp_seq(void) {
   status_declare;
   sp_block_t out;
   sp_block_t shifted;
@@ -454,7 +454,7 @@ status_t test_sp_seq() {
 exit:
   status_return;
 }
-status_t test_sp_group() {
+status_t test_sp_group(void) {
   status_declare;
   sp_block_t block;
   sp_block_t shifted;
@@ -498,7 +498,7 @@ exit:
 
 /** sp wave values were taken from printing index and value of the result array.
    sp-plot-samples can plot the result */
-status_t test_sp_wave_event() {
+status_t test_sp_wave_event(void) {
   status_declare;
   sp_block_t out;
   sp_block_t shifted;
@@ -540,7 +540,7 @@ exit:
   };
   status_return;
 }
-status_t test_render_range_block() {
+status_t test_render_range_block(void) {
   status_declare;
   sp_block_t out;
   sp_time_t frq[test_wave_event_duration];
@@ -575,7 +575,7 @@ exit:
   };
   status_return;
 }
-status_t test_path() {
+status_t test_path(void) {
   sp_sample_t* samples;
   sp_time_t* times;
   sp_event_t event;
@@ -601,7 +601,7 @@ uint8_t u64_from_array_test(sp_time_t size) {
   bits_out = sp_u64_from_array(((uint8_t*)(&bits_in)), size);
   return ((0 == memcmp(((uint8_t*)(&bits_in)), ((uint8_t*)(&bits_out)), size)));
 }
-status_t test_times() {
+status_t test_times(void) {
   status_declare;
   sp_time_t size;
   sp_time_t* a_temp;
@@ -609,10 +609,8 @@ status_t test_times() {
   sp_time_t b[8] = { 0, 0, 0, 0, 0, 0, 0, 0 };
   sp_time_t b_size;
   sp_time_t* bits;
-  sp_random_state_t s;
   a_temp = 0;
   size = 8;
-  s = sp_random_state_new(123);
   sp_times_geometric(1, 3, size, a);
   test_helper_assert("multiplications", (81 == a[4]));
   sp_times_additions(1, 3, size, a);
@@ -627,17 +625,15 @@ status_t test_times() {
   free(bits);
   sp_times_geometric(1, 3, size, a);
   sp_times_shuffle(a, size);
-  s = sp_random_state_new(12);
   sp_times_random_binary(size, a);
   sp_times_geometric(1, 3, size, a);
-  s = sp_random_state_new(113);
   sp_times_select_random(a, size, b, (&b_size));
 exit:
   free(a_temp);
   status_return;
 }
 #define test_stats_a_size 8
-status_t test_statistics() {
+status_t test_statistics(void) {
   status_declare;
   sp_time_t size;
   sp_time_t a[test_stats_a_size] = { 1, 2, 3, 4, 5, 6, 7, 8 };
@@ -683,7 +679,7 @@ status_t test_statistics() {
 exit:
   status_return;
 }
-status_t test_simple_mappings() {
+status_t test_simple_mappings(void) {
   status_declare;
   sp_time_t size;
   sp_time_t a[4] = { 1, 1, 1, 1 };
@@ -720,7 +716,7 @@ status_t test_simple_mappings() {
 exit:
   status_return;
 }
-status_t test_random_discrete() {
+status_t test_random_discrete(void) {
   status_declare;
   sp_time_t i;
   sp_time_t size;
@@ -738,7 +734,7 @@ status_t test_random_discrete() {
 exit:
   status_return;
 }
-status_t test_compositions() {
+status_t test_compositions(void) {
   sp_time_t** out;
   sp_time_t out_size;
   sp_time_t* out_sizes;
@@ -754,7 +750,7 @@ status_t test_compositions() {
 exit:
   status_return;
 }
-status_t test_permutations() {
+status_t test_permutations(void) {
   status_declare;
   sp_time_t in[3] = { 1, 2, 3 };
   sp_size_t out_size;
@@ -770,7 +766,7 @@ exit:
 }
 
 /** sum 10 wave events */
-status_t test_sp_seq_parallel_block() {
+status_t test_sp_seq_parallel_block(void) {
   status_declare;
   sp_time_t i;
   sp_time_t step_size;
@@ -828,7 +824,7 @@ status_t test_sp_map_event_generate(sp_time_t start, sp_time_t end, void* in, vo
   sp_block_copy((*((sp_block_t*)(in))), (*((sp_block_t*)(out))));
   status_return;
 }
-status_t test_sp_map_event() {
+status_t test_sp_map_event(void) {
   status_declare;
   sp_time_t size;
   sp_block_t block;
@@ -871,7 +867,7 @@ exit:
   };
   status_return;
 }
-status_t test_sp_pan_to_amp() {
+status_t test_sp_pan_to_amp(void) {
   status_declare;
   test_helper_assert("value 0, channel 0", (sp_sample_nearly_equal(1, (sp_pan_to_amp(0, 0)), error_margin)));
   test_helper_assert("value 0, channel 1", (sp_sample_nearly_equal(0, (sp_pan_to_amp(0, 1)), error_margin)));
@@ -886,7 +882,7 @@ exit:
 }
 
 /** "goto exit" can skip events */
-int main() {
+int main(void) {
   status_declare;
   sp_initialize(3, 2, _sp_rate);
   test_helper_test_one(test_path);

@@ -1,6 +1,6 @@
 
-#ifndef sph_quicksort_h
-#define sph_quicksort_h
+#ifndef sph_quicksort_h_included
+#define sph_quicksort_h_included
 
 #include <sys/types.h>
 

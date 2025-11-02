@@ -1,5 +1,5 @@
 
-#include <sph/futures.h>
+#include <sph-sp/sph/futures.h>
 #define sp_group_parallel_block_event(event_pointer) \
   event_pointer->prepare = sp_group_prepare; \
   event_pointer->generate = sp_group_generate_parallel_block; \

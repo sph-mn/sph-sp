@@ -1,6 +1,6 @@
 
-#ifndef sph_memreg_h
-#define sph_memreg_h
+#ifndef sph_memreg_h_included
+#define sph_memreg_h_included
 
 /* memreg registers memory in a local variable, for example to free all memory allocated at point.
 the variables memreg_register and memreg_index will also be available.
@@ -62,7 +62,7 @@ usage:
     memreg2_index##_##register_id -= 1; \
     ((memreg2_register##_##register_id[memreg2_index##_##register_id]).handler)(((memreg2_register##_##register_id[memreg2_index##_##register_id]).address)); \
   }
-typedef struct {
+typedef struct memreg2 {
   void* address;
   void (*handler)(void*);
 } memreg2_t;

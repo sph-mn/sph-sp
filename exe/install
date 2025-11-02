@@ -1,51 +1,49 @@
-#!/bin/sh
-
-# usage: ./exe/install [path-prefix] [--symlink]
+#!/bin/sh -e
+# usage: ./exe/install [prefix] [--symlink]
 
 prefix="$1"
-option="$2"
+mode="$2"
 
 lib_name="libsph-sp.so"
-lib_source="$PWD/tmp/$lib_name"
-header_source="$PWD/src/c-precompiled/sph-sp"
-sc_source="$PWD/src/sc/sph-sp/sc-macros.sc"
-lib_target="$prefix/usr/lib"
-header_target="$prefix/usr/include"
-sc_target="$prefix/usr/share/sph-sp"
-sph_lib_source="$PWD/src/c/foreign/sph-sp/sph"
+lib_src="$PWD/tmp/$lib_name"
+hdr_src="$PWD/src/c-precompiled/sph-sp"
+sph_src="$PWD/src/c/foreign/sph-sp/sph"
+sc_src="$PWD/src/sc/sph-sp/sc-macros.sc"
 
-# Create directories with proper permissions
-mkdir -p "$lib_target" "$header_target/sph-sp/sph" "$sc_target"
-chmod 755 "$lib_target" "$header_target" "$header_target/sph-sp" "$header_target/sph-sp/sph" "$sc_target"
+# select musl or glibc targets
+if command -v musl-gcc >/dev/null; then
+  lib_root="$prefix/usr/lib/musl/lib"
+  inc_root="$prefix/usr/lib/musl/include"
+else
+  lib_root="$prefix/usr/lib"
+  inc_root="$prefix/usr/include"
+fi
+sc_root="$prefix/usr/share/sph-sp"
 
-# Define function for copy or symlink
-install_file() {
-  src="$1"
-  dest="$2"
-  if [ "$option" = "--symlink" ]; then
-    ln -sf "$src" "$dest"
-  else
-    cp "$src" "$dest"
-  fi
+# create dirs with proper permissions
+mkdir -p "$lib_root" "$inc_root/sph-sp/sph" "$sc_root"
+chmod 755 "$lib_root" "$inc_root" "$inc_root/sph-sp" "$inc_root/sph-sp/sph" "$sc_root"
+
+copy() { install -m "$3" "$1" "$2"; }
+link() { ln -sf "$1" "$2"; }
+
+put() {
+  src="$1"; dst="$2"; perm="$3"
+  if [ "$mode" = "--symlink" ]; then link "$src" "$dst"; else copy "$src" "$dst" "$perm"; fi
 }
 
-# Install library
-install_file "$lib_source" "$lib_target/$lib_name"
+# library
+put "$lib_src" "$lib_root/$lib_name" 755
 
-# Install header files
-install_file "$header_source/sph-sp.h" "$header_target/sph-sp.h"
-for header in "$header_source"/*.h; do
-  install_file "$header" "$header_target/sph-sp/$(basename "$header")"
+# headers
+put "$hdr_src/sph-sp.h" "$inc_root/sph-sp.h" 644
+for h in "$hdr_src"/*.h; do
+  [ "$(basename "$h")" = "sph-sp.h" ] && continue
+  put "$h" "$inc_root/sph-sp/$(basename "$h")" 644
 done
-for header in "$sph_lib_source"/*; do
-  install_file "$header" "$header_target/sph-sp/sph/$(basename "$header")"
+for h in "$sph_src"/*; do
+  put "$h" "$inc_root/sph-sp/sph/$(basename "$h")" 644
 done
 
-# Remove duplicate sph-sp.h in subdirectory
-rm -f "$header_target/sph-sp/sph-sp.h"
-
-# Install SC file
-install_file "$sc_source" "$sc_target/sc-macros.sc"
-
-# Adjust permissions
-chmod 644 "$lib_target/$lib_name" "$header_target"/sph-sp*.h "$sc_target/sc-macros.sc"
+# sc file
+put "$sc_src" "$sc_root/sc-macros.sc" 644

@@ -1,6 +1,6 @@
 
-#ifndef sph_futures
-#define sph_futures
+#ifndef sph_futures_c_included
+#define sph_futures_c_included
 
 #include <stddef.h>
 #include <sph-sp/sph/thread-pool.c>
@@ -46,7 +46,7 @@ void sph_future_new(sph_future_f_t f, void* data, sph_future_t* out) {
 
 /** can be called to stop and free the main thread-pool.
    waits till all active futures are finished */
-void sph_future_deinit() {
+void sph_future_deinit(void) {
   if (sph_futures_pool_is_initialized) {
     sph_thread_pool_finish((&sph_futures_pool), 0, 0);
     sph_futures_pool_is_initialized = 0;

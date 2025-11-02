@@ -2,8 +2,8 @@
 #include <sph-sp/arrays-template.c>
 
 /* times */
-arrays_template(sp_time_t, time, times, sp_inline_no_underflow_subtract, sp_inline_abs);
-sp_time_t sp_time_sum(sp_time_t* in, sp_time_t size) {
+arrays_template(sp_time_t, time, times, sp_inline_no_underflow_subtract, sp_inline_abs)
+  sp_time_t sp_time_sum(sp_time_t* in, sp_time_t size) {
   sp_time_t sum = 0;
   for (sp_size_t i = 0; (i < size); i += 1) {
     sum += in[i];
@@ -20,9 +20,9 @@ sp_time_t sp_times_sum(sp_time_t* a, sp_time_t size) {
 
 /** display a time array in one line */
 void sp_times_display(sp_time_t* in, sp_size_t count) {
-  printf("%lu", (in[0]));
+  printf(sp_time_printf_format, (in[0]));
   for (sp_size_t i = 1; (i < count); i += 1) {
-    printf(" %lu", (in[i]));
+    printf(" " sp_time_printf_format, (in[i]));
   };
   printf("\n");
 }
@@ -79,6 +79,7 @@ status_t sp_times_permutations(sp_time_t size, sp_time_t* set, sp_time_t set_siz
   temp_out = 0;
   i = 0;
   temp_out_size = sp_time_factorial(size);
+  temp_out_used_size = 0;
   srq((sp_times_new(size, (&a))));
   srq((sp_times_new(size, (&s))));
   srq((sp_calloc_type(temp_out_size, sp_time_t*, (&temp_out))));
@@ -361,11 +362,9 @@ void sp_times_make_seamless_right(sp_time_t* a, sp_time_t a_count, sp_time_t* b,
 
 /** untested. like sp_times_make_seamless_right but changing the first elements of $b to match the end of $a */
 void sp_times_make_seamless_left(sp_time_t* a, sp_time_t a_count, sp_time_t* b, sp_time_t b_count, sp_time_t* out) {
-  sp_time_t start;
   sp_time_t count;
   sp_time_t i;
   count = sp_inline_min(b_count, (a_count / 2));
-  start = (a_count - count);
   for (sp_size_t i = 0; (i < count); i += 1) {
     out[i] = sp_time_interpolate_linear((b[i]), (a[(a_count - i)]), ((1 + i) / count));
   };
@@ -444,12 +443,13 @@ exit:
 }
 
 /* samples */
-arrays_template(sp_sample_t, sample, samples, sp_subtract, fabs);
-/** display a sample array in one line */
-void sp_samples_display(sp_sample_t* in, sp_size_t count) {
-  printf(("%.5f"), (in[0]));
+arrays_template(sp_sample_t, sample, samples, sp_subtract, fabs)
+
+  /** display a sample array in one line */
+  void sp_samples_display(sp_sample_t* in, sp_size_t count) {
+  printf(sp_sample_printf_format, (in[0]));
   for (sp_size_t i = 1; (i < count); i += 1) {
-    printf((" %.5f"), (in[i]));
+    printf(" " sp_sample_printf_format, (in[i]));
   };
   printf("\n");
 }
@@ -581,5 +581,7 @@ uint64_t sp_u64_from_array(uint8_t* a, sp_time_t count) {
     return ((*((uint32_t*)(a)) + (((uint64_t)(*((uint16_t*)((4 + a))))) << 32) + (((uint64_t)(a[6])) << 48)));
   } else if (8 == count) {
     return ((*((uint64_t*)(a))));
+  } else {
+    return (0);
   };
 }

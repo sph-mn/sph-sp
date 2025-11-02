@@ -1,4 +1,4 @@
-(pre-include-guard-begin sph-sp-h)
+(pre-include-guard-begin sph-sp-h-included)
 (pre-include "byteswap.h" "inttypes.h" "sys/types.h" "sph-sp/sph/float.h" "sph-sp/sph/random.h")
 (sc-comment "configuration. changes need recompilation of sph-sp shared library")
 
@@ -26,6 +26,9 @@
   sp-times-random-bounded-primitive sph-random-u32-bounded-array
   sp-times-random-primitive sph-random-u32-array
   sp-time-t uint32-t
+  sp-time-max-value UINT32-MAX
+  sp-time-printf-format (pre-concat-string "%" PRIu32)
+  sp-sample-printf-format "%.5f"
   sp-unit-random-primitive sph-random-f64-0to1
   sp-units-random-primitive sph-random-f64-array-0to1
   sp-unit-t double

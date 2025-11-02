@@ -1,10 +1,11 @@
-(pre-define-if-not-defined _XOPEN_SOURCE)
-(pre-define-if-not-defined _POSIX_C_SOURCE 199309L)
+(pre-define-if-not-defined M-PI 3.141592653589793)
+(pre-include "math.h")
+(declare (j0) ((extern double) double))
 
-(pre-include "math.h" "errno.h"
-  "arpa/inet.h" "nayuki-fft/fft.c" "sph-sp/sph-sp.h"
-  "sph-sp/sph/spline-path.c" "sph-sp/sph/quicksort.h" "sph-sp/sph/random.c"
-  "sph-sp/sph/float.c" "sph-sp/sph/futures.c" "sph-sp/sph/memory.c")
+(pre-include "errno.h" "arpa/inet.h"
+  "nayuki-fft/fft.c" "sph-sp/sph-sp.h" "sph-sp/sph/spline-path.c"
+  "sph-sp/sph/quicksort.h" "sph-sp/sph/random.c" "sph-sp/sph/float.c"
+  "sph-sp/sph/futures.c" "sph-sp/sph/memory.c")
 
 (pre-define
   (sp-libc-s-id id) (if (< id 0) (status-set-goto sp-s-group-libc id))
@@ -42,9 +43,9 @@
 (define (sp-sample-min a b) (sp-sample-t sp-sample-t sp-sample-t) (return (if* (> a b) b a)))
 (define (sp-time-min a b) (sp-time-t sp-time-t sp-time-t) (return (if* (> a b) b a)))
 
-(define (sp-status-description a) (uint8-t* status-t)
+(define (sp-status-description a) (char* status-t)
   "get a string description for a status id in a status_t"
-  (declare b uint8-t*)
+  (declare b char*)
   (cond
     ( (not (strcmp sp-s-group-sp a.group))
       (case = a.id
@@ -62,9 +63,9 @@
     (else (set b "")))
   (return b))
 
-(define (sp-status-name a) (uint8-t* status-t)
+(define (sp-status-name a) (char* status-t)
   "get a one word identifier for status id in status_t"
-  (declare b uint8-t*)
+  (declare b char*)
   (cond
     ( (= 0 (strcmp sp-s-group-sp a.group))
       (case = a.id
@@ -179,8 +180,7 @@
   "discrete linear convolution.
    out must be all zeros, its length must be at least a-len + b-len - 1.
    out is owned and allocated by the caller"
-  (define a-index sp-time-t 0)
-  (define b-index sp-time-t 0)
+  (define a-index sp-time-t 0 b-index sp-time-t 0)
   (while (< a-index a-len)
     (while (< b-index b-len)
       (set+ (array-get out (+ a-index b-index)) (* (array-get a a-index) (array-get b b-index))
@@ -245,7 +245,7 @@
   (return a))
 
 (define (sp-render-range-file event start end config path)
-  (status-t sp-event-t sp-time-t sp-time-t sp-render-config-t uint8-t*)
+  (status-t sp-event-t sp-time-t sp-time-t sp-render-config-t char*)
   "render an event with sp_seq to a file. the file is created or overwritten"
   status-declare
   (declare block-end sp-time-t remainder sp-time-t i sp-time-t file sp-file-t)
@@ -259,7 +259,7 @@
     block-end (* config.block-size (/ (- end start) config.block-size)))
   (for ((set i 0) (< i block-end) (set+ i config.block-size))
     (if config.display-progress
-      (printf "%.1f%\n" (* 100 (/ i (convert-type block-end sp-sample-t)))))
+      (printf "%.1f%%\n" (* 100 (/ i (convert-type block-end sp-sample-t)))))
     (status-require (sp-seq i (+ i config.block-size) &block &events))
     (status-require (sp-file-write &file block.samples config.block-size))
     (sp-block-zero block))
@@ -285,12 +285,13 @@
   (set *out block)
   (label exit status-return))
 
-(define (sp-render-file event path) (status-t sp-event-t uint8-t*)
+(define (sp-render-file event path) (status-t sp-event-t char*)
   "render the full duration of event to file at path and write information to standard output.
    uses channel count from global variable sp_channel_count and block size sp_rate"
   status-declare
   (if (not event.end) (sp-event-prepare-optional-srq event))
-  (printf "rendering %lu seconds to file %s\n" (/ event.end sp-rate) path)
+  (printf (pre-concat-string "rendering " sp-time-printf-format " seconds to file %s\n")
+    (/ event.end sp-rate) path)
   (status-require
     (sp-render-range-file event 0
       event.end (sp-render-config sp-channel-count sp-rate (* sp-render-block-seconds sp-rate) #t)
@@ -304,8 +305,10 @@
   (declare block sp-block-t)
   (if (not event.end) (sp-event-prepare-optional-srq event))
   (if (and event.end (< event.end sp-rate))
-    (printf "rendering %lu milliseconds to plot\n" (/ event.end sp-rate 1000))
-    (printf "rendering %lu seconds to plot\n" (/ event.end sp-rate)))
+    (printf (pre-concat-string "rendering " sp-time-printf-format " milliseconds to plot\n")
+      (/ event.end sp-rate 1000))
+    (printf (pre-concat-string "rendering " sp-time-printf-format " seconds to plot\n")
+      (/ event.end sp-rate)))
   (status-require
     (sp-render-range-block event 0
       event.end (sp-render-config sp-channel-count sp-rate (* sp-render-block-seconds sp-rate) #t)
@@ -433,7 +436,7 @@
 
 (define (sp-compositions-max sum) (sp-size-t sp-size-t) (return (sp-time-expt 2 (- sum 1))))
 
-(define (sp-scale-mask divisions) ((static inline sp-scale-t) sp-time-t)
+(define (sp-scale-mask divisions) ((inline sp-scale-t) sp-time-t)
   "return a mask with the lower divisions bits set"
   (return
     (if* (>= divisions (convert-type (* 8 (sizeof sp-scale-t)) sp-time-t))
@@ -441,7 +444,7 @@
       (- (bit-shift-left (convert-type 1 sp-scale-t) divisions) 1))))
 
 (define (sp-scale-make pitch-classes count divisions)
-  ((static inline sp-scale-t) sp-time-t* sp-time-t sp-time-t)
+  ((inline sp-scale-t) sp-time-t* sp-time-t sp-time-t)
   "build a scale bitset from an array of pitch-class indices"
   (define scale sp-scale-t 0)
   (sp-for-each-index i count
@@ -451,7 +454,7 @@
   (return (bit-and scale (sp-scale-mask divisions))))
 
 (define (sp-scale-rotate scale steps divisions)
-  ((static inline sp-scale-t) sp-scale-t sp-time-t sp-time-t)
+  ((inline sp-scale-t) sp-scale-t sp-time-t sp-time-t)
   "rotate (transpose) the scale by steps within divisions slots"
   (if (not divisions) (set divisions (convert-type (* 8 (sizeof sp-scale-t)) sp-time-t)))
   (set steps (modulo (+ (modulo steps divisions) divisions) divisions))
@@ -464,18 +467,18 @@
     (bit-and (bit-or (bit-shift-left scale steps) (bit-shift-right scale (- divisions steps)))
       (sp-scale-mask divisions))))
 
-(define (sp-scale-divisions scale) ((static inline sp-time-t) sp-scale-t)
+(define (sp-scale-divisions scale) ((inline sp-time-t) sp-scale-t)
   "count how many notes (bits) are set in the scale"
   (define count sp-time-t 0)
   (while scale (set scale (bit-and scale (- scale 1))) (set+ count 1))
   (return count))
 
-(define (sp-scale-first-index scale) ((static inline sp-time-t) sp-scale-t)
+(define (sp-scale-first-index scale) ((inline sp-time-t) sp-scale-t)
   "return index of the least-significant set bit (first note)"
   (define i sp-time-t 0)
   (while (not (bit-and scale 1)) (set scale (bit-shift-right scale 1)) (set+ i 1))
   (return i))
 
-(define (sp-scale-canonical scale divisions) ((static inline sp-scale-t) sp-scale-t sp-time-t)
+(define (sp-scale-canonical scale divisions) ((inline sp-scale-t) sp-scale-t sp-time-t)
   "rotate so the first note sits at bit 0 (canonical form)"
   (return (sp-scale-rotate scale (* -1 (sp-scale-first-index scale)) divisions)))

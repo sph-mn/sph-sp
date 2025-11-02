@@ -1,6 +1,6 @@
 
-#ifndef sph_thread_pool
-#define sph_thread_pool
+#ifndef sph_thread_pool_c_included
+#define sph_thread_pool_c_included
 
 #include <errno.h>
 #include <stdlib.h>

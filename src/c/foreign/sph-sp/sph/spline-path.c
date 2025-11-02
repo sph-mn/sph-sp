@@ -15,7 +15,7 @@
 #define spline_path_declare_segment(id) spline_path_segment_t id = { 0 }
 #define spline_path_points_get_with_offset(points, index, field_offset) *((spline_path_value_t*)((field_offset + ((uint8_t*)((points + index))))))
 void spline_path_debug_print(spline_path_t* path, uint8_t indent) {
-  uint8_t* type = 0;
+  const char* type = 0;
   uint8_t pad[32];
   memset(pad, ' ', (sizeof(pad)));
   pad[((indent < 30) ? indent : 30)] = 0;
@@ -43,7 +43,7 @@ void spline_path_debug_print(spline_path_t* path, uint8_t indent) {
     } else {
       type = "custom";
     };
-    printf(("%s  %s %.3f %.3f -> %.3f %.3f\n"), pad, ((char*)(type)), (p0->x), (p0->y), (p1->x), (p1->y));
+    printf(("%s  %s %.3f %.3f -> %.3f %.3f\n"), pad, type, (p0->x), (p0->y), (p1->x), (p1->y));
     if ((s->generate == spline_path_path_generate) && s->data) {
       spline_path_t* sub = ((spline_path_t*)(s->data));
       spline_path_debug_print(sub, (indent + 2));
@@ -124,8 +124,8 @@ void spline_path_get(spline_path_t* path, size_t start, size_t end, spline_path_
   size_t out_start;
   for (spline_path_segment_count_t i = ((start < path->previous_start) ? 0 : path->current_segment_index); (i < path->segments_count); path->current_segment_index = i, i += 1) {
     s = (path->segments + i);
-    s_start = ((s->points)[0]).x;
-    s_end = ((s->points)[(s->points_count - 1)]).x;
+    s_start = ((size_t)(((s->points)[0]).x));
+    s_end = ((size_t)(((s->points)[(s->points_count - 1)]).x));
     path->previous_start = start;
     if (s_start > end) {
       break;
@@ -152,9 +152,8 @@ spline_path_point_t spline_path_end(spline_path_t path) {
   return (((spline_path_size_max == p.x) ? (s->points)[0] : p));
 }
 size_t spline_path_size(spline_path_t path) {
-  spline_path_point_t p;
-  p = spline_path_end(path);
-  return ((p.x));
+  spline_path_point_t p = spline_path_end(path);
+  return (((size_t)(p.x)));
 }
 uint8_t spline_path_path_prepare(spline_path_segment_t* s) {
   spline_path_point_t path_end = spline_path_end((*((spline_path_t*)(s->data))));
@@ -297,7 +296,7 @@ void spline_path_beziern_generate(spline_path_value_t (*interpolator)(spline_pat
     if (start < x_previous) {
       y_previous = out[(x_previous - start)];
     } else {
-      /* gap at the beginning. find value for x before start */
+      /* gap at the beginning. find value before start */
       t_prev = 0;
       mt_prev = 1;
       for (j = i; j; j -= 1) {
@@ -313,9 +312,10 @@ void spline_path_beziern_generate(spline_path_value_t (*interpolator)(spline_pat
       };
       if (j) {
         y_previous = interpolator(t_prev, mt_prev, (s->points), (offsetof(spline_path_point_t, y)));
-      } else {
         y_previous = p_start.y;
         x_previous = p_start.x;
+      } else {
+        y_previous = p_start.y;
       };
     };
     j_start = 1;
@@ -398,7 +398,7 @@ spline_path_segment_t spline_path_line(spline_path_value_t x, spline_path_value_
   ((s.points)[1]).y = y;
   return (s);
 }
-spline_path_segment_t spline_path_constant() {
+spline_path_segment_t spline_path_constant(void) {
   spline_path_declare_segment(s);
   s.generate = spline_path_constant_generate;
   s.prepare = spline_path_constant_prepare;
@@ -448,77 +448,19 @@ spline_path_segment_t spline_path_bezier2(spline_path_value_t x1, spline_path_va
    distance -1 and 1 are the bounds of a rectangle where p1 and p2 are diagonally opposed edges */
 spline_path_point_t spline_path_perpendicular_point(spline_path_point_t p1, spline_path_point_t p2, spline_path_value_t distance) {
   spline_path_point_t c;
-  spline_path_point_t d;
-  spline_path_point_t b1;
-  spline_path_point_t b2;
-  spline_path_point_t t1;
-  spline_path_point_t t2;
-  spline_path_point_t i1;
-  spline_path_point_t i2;
-  spline_path_value_t m;
-  spline_path_point_t result;
-  /* center point */
-  c.x = ((p1.x + p2.x) / 2);
-  c.y = ((p1.y + p2.y) / 2);
-  if (0 == distance) {
+  spline_path_point_t r;
+  spline_path_value_t dx;
+  spline_path_value_t dy;
+  c.x = ((p1.x + p2.x) / 2.0);
+  c.y = ((p1.y + p2.y) / 2.0);
+  if (distance == 0.0) {
     return (c);
   };
-  /* perpendicular direction vector */
-  d.x = (-1 * (p2.y - p1.y));
-  d.y = (p2.x - p1.x);
-  /* vertical, horizontal or else */
-  if (0 == d.x) {
-    i1.x = c.x;
-    i1.y = 0;
-    i2.x = c.x;
-    i2.y = p2.y;
-  } else if (0 == d.y) {
-    i1.x = 0;
-    i1.y = c.y;
-    i2.x = p2.x;
-    i2.y = c.y;
-  } else {
-    /* border points */
-    if (d.x > 0) {
-      b1.x = p2.x;
-      b2.x = p1.x;
-    } else {
-      b1.x = p1.x;
-      b2.x = p2.x;
-    };
-    if (d.y > 0) {
-      b1.y = p2.y;
-      b2.y = p1.y;
-    } else {
-      b1.y = p1.y;
-      b2.y = p2.y;
-    };
-    t1.x = ((b1.x - c.x) / d.x);
-    t1.y = ((b1.y - c.y) / d.y);
-    t2.x = ((b2.x - c.x) / d.x);
-    t2.y = ((b2.y - c.y) / d.y);
-    if (t1.x <= t1.y) {
-      i1.x = b1.x;
-      i1.y = (c.y + (t1.x * d.y));
-    } else {
-      i1.y = b1.y;
-      i1.x = (c.x + (t1.y * d.x));
-    };
-    if (t2.x >= t2.y) {
-      i2.x = b2.x;
-      i2.y = (c.y + (t2.x * d.y));
-    } else {
-      i2.y = b2.y;
-      i2.x = (c.x + (t2.y * d.x));
-    };
-  };
-  /* normalized direction vector */
-  m = spline_path_sqrt(((d.x * d.x) + (d.y * d.y)));
-  d.x = ((i2.x - i1.x) / m);
-  d.y = ((i2.y - i1.y) / m);
-  result.x = (c.x + (0.5 * distance * m * d.x));
-  result.y = (c.y + (0.5 * distance * m * d.y));
-  return (result);
+  dx = (p2.x - p1.x);
+  dy = (p2.y - p1.y);
+  r.x = (c.x + (0.5 * distance * dx));
+  r.y = (c.y - (0.5 * distance * dy));
+  return (r);
 }
 uint8_t spline_path_bezier_arc_prepare(spline_path_segment_t* s) {
   (s->points)[1] = spline_path_perpendicular_point(((s->points)[0]), ((s->points)[2]), (((s->points)[1]).y));
@@ -530,11 +472,7 @@ uint8_t spline_path_bezier_arc_prepare(spline_path_segment_t* s) {
    interpolates with a quadratic bezier with a midpoint sagitta proportional to chord length */
 spline_path_segment_t spline_path_bezier_arc(spline_path_value_t x, spline_path_value_t y, spline_path_value_t curvature) {
   spline_path_segment_t s;
-  if (0.0 == curvature) {
-    s = spline_path_line(x, y);
-  } else {
-    s = spline_path_bezier1(0, curvature, x, y);
-    s.prepare = spline_path_bezier_arc_prepare;
-  };
+  s = spline_path_bezier1(0, curvature, x, y);
+  s.prepare = spline_path_bezier_arc_prepare;
   return (s);
 }

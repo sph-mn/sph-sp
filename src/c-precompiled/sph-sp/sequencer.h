@@ -20,7 +20,7 @@
   if (a.prepare) { \
     sp_event_prepare_srq(a); \
   }
-#define sp_event_memory_ensure(event_pointer, needed) sph_memory_ensure((&(event_pointer->memory)), needed)
+#define sp_event_memory_ensure(event_pointer, needed) sph_memory_ensure(needed, (&(event_pointer->memory)))
 #define sp_event_memory_add(event_pointer, address) sph_memory_add_with_handler((&(event_pointer->memory)), address, free)
 #define sp_event_memory_free(event_pointer) sph_memory_destroy((&(event_pointer->memory)))
 #define sp_wave_event_config_new(out) sp_wave_event_config_new_n(1, out)
@@ -199,8 +199,7 @@ typedef struct {
   sp_noise_event_channel_config_t channel_config[sp_channel_count_limit];
 } sp_noise_event_config_t;
 sp_event_t sp_null_event = { 0 };
-sph_dlist_declare_type(sp_event_list, sp_event_t);
-void sp_event_list_display_element(sp_event_list_t* list);
+sph_dlist_declare_type(sp_event_list, sp_event_t) void sp_event_list_display_element(sp_event_list_t* list);
 void sp_event_list_remove(sp_event_list_t** head_pointer, sp_event_list_t* list);
 status_t sp_event_list_add(sp_event_list_t** head_pointer, sp_event_t event_value);
 void sp_event_list_free(sp_event_list_t** head_pointer);
@@ -216,13 +215,13 @@ void sp_map_event_free(sp_event_t* event);
 status_t sp_map_event_generate(sp_time_t start, sp_time_t end, void* out, sp_event_t* event);
 status_t sp_map_event_isolated_generate(sp_time_t start, sp_time_t end, void* out, sp_event_t* event);
 status_t sp_map_event_prepare(sp_event_t* event);
-sp_noise_event_config_t sp_noise_event_config_defaults();
+sp_noise_event_config_t sp_noise_event_config_defaults(void);
 status_t sp_noise_event_config_new_n(sp_time_t count, sp_noise_event_config_t** out);
 void sp_noise_event_free(sp_event_t* event);
 status_t sp_noise_event_generate(sp_time_t start, sp_time_t end, void* out, sp_event_t* event);
 status_t sp_noise_event_prepare(sp_event_t* event);
 status_t sp_seq(sp_time_t start, sp_time_t end, void* out, sp_event_list_t** events);
-sp_wave_event_config_t sp_wave_event_config_defaults();
+sp_wave_event_config_t sp_wave_event_config_defaults(void);
 status_t sp_wave_event_config_new_n(sp_time_t count, sp_wave_event_config_t** out);
 status_t sp_wave_event_generate(sp_time_t start, sp_time_t end, void* out, sp_event_t* event);
 status_t sp_wave_event_prepare(sp_event_t* event);

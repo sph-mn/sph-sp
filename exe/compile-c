@@ -5,24 +5,32 @@ target_dir=tmp
 c=src/c
 c_sc=src/c-precompiled
 root="$PWD"
-warnings="-Wunused-label -Wunused-value -Wunused-variable"
-gcc_options="-funsigned-char -std=c17 -Wfatal-errors -Wno-pointer-sign $warnings -I$c/foreign -I$c_sc -fno-math-errno -lm"
+
+if command -v musl-gcc >/dev/null; then
+  compiler=musl-gcc
+else
+  compiler=gcc
+fi
+
+warnings="-Wall -Wfatal-errors"
+gcc_options="-std=c17 -pedantic-errors -D_POSIX_C_SOURCE=200809L -D_FILE_OFFSET_BITS=64 $warnings -fno-common -fno-math-errno -fPIC -O$optimisation -pthread -I$c/foreign -I$c_sc"
 
 debug_preprocess_sph_sp() {
   target="$target_dir/sph-sp.c"
   source="$c_sc/sph-sp/main.c"
-  gcc "$source" $gcc_options -o "$target" -lpthread -E
+  $compiler $gcc_options -E "$source" -o "$target"
 }
 
 compile_sph_sp() {
-  target="$target_dir/libsph-sp.so"
-  source="$c_sc/sph-sp/main.c"
-  gcc "$source" $gcc_options -o "$target" -shared -lpthread -fno-builtin -fpic -O$optimisation
+  src="$c_sc/sph-sp/main.c"
+  obj="$target_dir/sph-sp.o"
+  lib="$target_dir/libsph-sp.so"
+  $compiler $gcc_options -c "$src" -o "$obj"
+  $compiler $gcc_options -shared "$obj" -lm -o "$lib"
 }
 
 compile_test_sph_sp() {
-  export LIBRARY_PATH="$root/tmp"
-  gcc "$c_sc/test/main.c" -o tmp/test-libsph-sp $gcc_options -lsph-sp -Og
+  $compiler $gcc_options -O0 "$c_sc/test/main.c" -L"$root/$target_dir" -lsph-sp -o "$target_dir/test-libsph-sp"
 }
 
 mkdir -p "$target_dir"

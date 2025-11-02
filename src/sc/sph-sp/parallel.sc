@@ -18,12 +18,12 @@
     relative-start sp-time-t
     relative-end sp-time-t
     output-start sp-time-t)
-  (set current *events count 0 futures 0)
+  (set current *events count 0 futures 0 index 0)
   (while current
     (if (<= end current:value.start) (set current 0)
       (begin (if (> current:value.end start) (set+ count 1)) (set current current:next))))
   (status-require (sp-calloc-type count sp-seq-future-t &futures))
-  (set current *events index 0)
+  (set current *events)
   (while current
     (set ep &current:value e *ep)
     (if (<= e.end start)

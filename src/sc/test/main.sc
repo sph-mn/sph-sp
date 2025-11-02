@@ -36,7 +36,7 @@
   (return e))
 
 (define error-margin sp-sample-t 0.1)
-(define test-file-path uint8-t* "/tmp/test-sph-sp-file")
+(define test-file-path char* "/tmp/test-sph-sp-file")
 
 (define (test-base) status-t
   status-declare
@@ -546,9 +546,8 @@
     a (array sp-time-t 8 1 2 3 4 5 6 7 8)
     b (array sp-time-t 8 0 0 0 0 0 0 0 0)
     b-size sp-time-t
-    bits sp-time-t*
-    s sp-random-state-t)
-  (set a-temp 0 size 8 s (sp-random-state-new 123))
+    bits sp-time-t*)
+  (set a-temp 0 size 8)
   (sp-times-geometric 1 3 size a)
   (test-helper-assert "multiplications" (= 81 (array-get a 4)))
   (sp-times-additions 1 3 size a)
@@ -566,10 +565,8 @@
   (free bits)
   (sp-times-geometric 1 3 size a)
   (sp-times-shuffle a size)
-  (set s (sp-random-state-new 12))
   (sp-times-random-binary size a)
   (sp-times-geometric 1 3 size a)
-  (set s (sp-random-state-new 113))
   (sp-times-select-random a size b &b-size)
   (label exit (free a-temp) status-return))
 

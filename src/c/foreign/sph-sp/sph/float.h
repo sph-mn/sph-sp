@@ -1,6 +1,6 @@
 
-#ifndef sph_float_h
-#define sph_float_h
+#ifndef sph_float_h_included
+#define sph_float_h_included
 
 #include <inttypes.h>
 #define sph_define_float_sum(prefix, type) \

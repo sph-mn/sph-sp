@@ -1,6 +1,6 @@
 
-#ifndef sph_random_h
-#define sph_random_h
+#ifndef sph_random_h_included
+#define sph_random_h_included
 
 #include <inttypes.h>
 typedef struct {
