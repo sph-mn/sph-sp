@@ -212,13 +212,13 @@ void sp_sine_lfo(sp_time_t size, sp_sample_t amp, sp_sample_t* amod, sp_time_t f
 sp_sample_t sp_sinc(sp_sample_t a) { return (((0 == a) ? 1 : (sin((M_PI * a)) / (M_PI * a)))); }
 
 /** all arrays should be input-len and are managed by the caller */
-int sp_fft(sp_time_t input_len, double* input_or_output_real, double* input_or_output_imag) { return ((!Fft_transform(input_or_output_real, input_or_output_imag, input_len))); }
+int sp_fft(sp_time_t n, double* real, double* imaginary) { return ((!Fft_transform(real, imaginary, n))); }
 
 /** [[real, imaginary], ...]:complex-numbers -> real-numbers
    input-length > 0
    output-length = input-length
    output is allocated and owned by the caller */
-int sp_ffti(sp_time_t input_len, double* input_or_output_real, double* input_or_output_imag) { return ((!(1 == Fft_inverseTransform(input_or_output_real, input_or_output_imag, input_len)))); }
+int sp_ffti(sp_time_t n, double* real, double* imaginary) { return ((!(1 == Fft_inverseTransform(real, imaginary, n)))); }
 
 /** modify an impulse response kernel for spectral inversion.
    a-len must be odd and "a" must have left-right symmetry.
@@ -257,61 +257,8 @@ void sp_convolve_one(sp_sample_t* a, sp_time_t a_len, sp_sample_t* b, sp_time_t 
     a_index += 1;
   };
 }
-
-/** discrete linear convolution for sample arrays, possibly of a continuous stream. maps segments (a, a-len) to out
-   using (b, b-len) as the impulse response. b-len must be greater than zero.
-   all heap memory is owned and allocated by the caller.
-   out length is a-len.
-   carryover is previous carryover or an empty array.
-   carryover length must at least b-len - 1.
-   carryover-len should be zero for the first call or its content should be zeros.
-   carryover-len for subsequent calls should be b-len - 1.
-   if b-len changed it should be b-len - 1 from the previous call for the first call with the changed b-len.
-   if b-len is one then there is no carryover.
-   if a-len is smaller than b-len then, with the current implementation, additional performance costs ensue from shifting the carryover array each call.
-   carryover is the extension of out for generated values that dont fit into out,
-   as a and b are always fully convolved */
-void sp_convolve(sp_sample_t* a, sp_time_t a_len, sp_sample_t* b, sp_time_t b_len, sp_time_t carryover_len, sp_sample_t* carryover, sp_sample_t* out) {
-  sp_time_t size;
-  sp_time_t a_index;
-  sp_time_t b_index;
-  sp_time_t c_index;
-  /* prepare out and carryover */
-  if (carryover_len) {
-    if (carryover_len <= a_len) {
-      /* copy all entries to out and reset */
-      memcpy(out, carryover, (carryover_len * sizeof(sp_sample_t)));
-      sp_samples_zero(carryover, carryover_len);
-      sp_samples_zero((carryover_len + out), (a_len - carryover_len));
-    } else {
-      /* carryover is larger. move all carryover entries that fit into out */
-      memcpy(out, carryover, (a_len * sizeof(sp_sample_t)));
-      memmove(carryover, (a_len + carryover), ((carryover_len - a_len) * sizeof(sp_sample_t)));
-      sp_samples_zero(((carryover_len - a_len) + carryover), a_len);
-    };
-  } else {
-    sp_samples_zero(out, a_len);
-  };
-  /* process values that dont lead to carryover */
-  size = ((a_len < b_len) ? 0 : (a_len - (b_len - 1)));
-  if (size) {
-    sp_convolve_one(a, size, b, b_len, out);
-  };
-  /* process values with carryover */
-  for (a_index = size; (a_index < a_len); a_index += 1) {
-    for (b_index = 0; (b_index < b_len); b_index += 1) {
-      c_index = (a_index + b_index);
-      if (c_index < a_len) {
-        out[c_index] += (a[a_index] * b[b_index]);
-      } else {
-        c_index = (c_index - a_len);
-        carryover[c_index] += (a[a_index] * b[b_index]);
-      };
-    };
-  };
-}
 #include <sph-sp/plot.c>
-#include <sph-sp/filter.c>
+#include <sph-sp/resonator.c>
 #include <sph-sp/sequencer.c>
 #include <sph-sp/parallel.c>
 #include <sph-sp/statistics.c>
@@ -401,7 +348,9 @@ status_t sp_render_plot(sp_event_t event) {
     printf("rendering " sp_time_printf_format " seconds to plot\n", (event.end / sp_rate));
   };
   status_require((sp_render_range_block(event, 0, (event.end), (sp_render_config(sp_channel_count, sp_rate, (sp_render_block_seconds * sp_rate), 1)), (&block))));
-  sp_plot_samples(((block.samples)[0]), (event.end));
+  for (sp_size_t i = 0; (i < block.channel_count); i += 1) {
+    sp_plot_samples(((block.samples)[i]), (event.end));
+  };
 exit:
   status_return;
 }
@@ -599,3 +548,46 @@ inline sp_time_t sp_scale_first_index(sp_scale_t scale) {
 
 /** rotate so the first note sits at bit 0 (canonical form) */
 inline sp_scale_t sp_scale_canonical(sp_scale_t scale, sp_time_t divisions) { return ((sp_scale_rotate(scale, (-1 * sp_scale_first_index(scale)), divisions))); }
+
+/** centered moving average balanced for complete data arrays and seamless for continuous data.
+   width: radius * 2 + 1.
+   width must be smaller than in-size.
+   prev can be 0 or an array with size equal to in-size.
+   next can be 0 or an array with size of at least radius.
+   for outside values where prev/next is not available, reflections over the x and y axis are used
+   so that the first/last value stay the same. for example, [0 1 2 3 0] without prev and
+   without next would be interpreted as [-0 -3 -2 -1 0 1 2 3 0 -3 -2 -1 -0]. if only zero were used
+   then middle values would have stronger influence on edge values.
+   use case: smoothing time domain data arrays, for example amplitude envelopes or input control data */
+void sp_moving_average(sp_sample_t* in, sp_time_t in_size, sp_sample_t* prev, sp_sample_t* next, sp_time_t radius, sp_sample_t* out) {
+  /* offsets to calculate outside values include an increment to account for the first or last index,
+       across which values are reflected.
+       the for loops correspond to: initial sum, with preceeding outside values, middle values, with succeeding outside values.
+       the subtracted value is the first value of the previous window and is therefore
+       at an index one less than the first value of the current window */
+  sp_time_t i;
+  sp_sample_t sum;
+  sp_time_t width;
+  width = ((radius * 2) + 1);
+  sum = in[0];
+  if (prev) {
+    for (i = 0; (i < radius); i += 1) {
+      sum += (prev[(in_size - i - 1)] + in[(i + 1)]);
+    };
+  } else {
+    sum = in[0];
+  };
+  out[0] = (sum / width);
+  for (i = 1; (i <= radius); i += 1) {
+    sum = ((sum + in[(i + radius)]) - (prev ? prev[((in_size - radius - 1) + i)] : (in[((radius - i) + 1)] * -1)));
+    out[i] = (sum / width);
+  };
+  for (i = (radius + 1); (i < (in_size - radius)); i += 1) {
+    sum = ((sum + in[(i + radius)]) - in[(i - radius - 1)]);
+    out[i] = (sum / width);
+  };
+  for (i = (in_size - radius); (i < in_size); i += 1) {
+    sum = ((sum + (next ? next[(i - (in_size - radius))] : (in[((i + radius + 1) - in_size)] * -1))) - in[(i - radius - 1)]);
+    out[i] = (sum / width);
+  };
+}

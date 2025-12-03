@@ -149,16 +149,16 @@
   "the normalised sinc function"
   (return (if* (= 0 a) 1 (/ (sin (* M_PI a)) (* M_PI a)))))
 
-(define (sp-fft input-len input/output-real input/output-imag) (int sp-time-t double* double*)
+(define (sp-fft n real imaginary) (int sp-time-t double* double*)
   "all arrays should be input-len and are managed by the caller"
-  (return (not (Fft_transform input/output-real input/output-imag input-len))))
+  (return (not (Fft_transform real imaginary n))))
 
-(define (sp-ffti input-len input/output-real input/output-imag) (int sp-time-t double* double*)
+(define (sp-ffti n real imaginary) (int sp-time-t double* double*)
   "[[real, imaginary], ...]:complex-numbers -> real-numbers
    input-length > 0
    output-length = input-length
    output is allocated and owned by the caller"
-  (return (not (= 1 (Fft_inverseTransform input/output-real input/output-imag input-len)))))
+  (return (not (= 1 (Fft_inverseTransform real imaginary n)))))
 
 (define (sp-spectral-inversion-ir a a-len) (void sp-sample-t* sp-time-t)
   "modify an impulse response kernel for spectral inversion.
@@ -188,50 +188,7 @@
     (set b-index 0)
     (set+ a-index 1)))
 
-(define (sp-convolve a a-len b b-len carryover-len carryover out)
-  (void sp-sample-t* sp-time-t sp-sample-t* sp-time-t sp-time-t sp-sample-t* sp-sample-t*)
-  "discrete linear convolution for sample arrays, possibly of a continuous stream. maps segments (a, a-len) to out
-   using (b, b-len) as the impulse response. b-len must be greater than zero.
-   all heap memory is owned and allocated by the caller.
-   out length is a-len.
-   carryover is previous carryover or an empty array.
-   carryover length must at least b-len - 1.
-   carryover-len should be zero for the first call or its content should be zeros.
-   carryover-len for subsequent calls should be b-len - 1.
-   if b-len changed it should be b-len - 1 from the previous call for the first call with the changed b-len.
-   if b-len is one then there is no carryover.
-   if a-len is smaller than b-len then, with the current implementation, additional performance costs ensue from shifting the carryover array each call.
-   carryover is the extension of out for generated values that dont fit into out,
-   as a and b are always fully convolved"
-  (declare size sp-time-t a-index sp-time-t b-index sp-time-t c-index sp-time-t)
-  (sc-comment "prepare out and carryover")
-  (if carryover-len
-    (if (<= carryover-len a-len)
-      (begin
-        (sc-comment "copy all entries to out and reset")
-        (memcpy out carryover (* carryover-len (sizeof sp-sample-t)))
-        (sp-samples-zero carryover carryover-len)
-        (sp-samples-zero (+ carryover-len out) (- a-len carryover-len)))
-      (begin
-        (sc-comment "carryover is larger. move all carryover entries that fit into out")
-        (memcpy out carryover (* a-len (sizeof sp-sample-t)))
-        (memmove carryover (+ a-len carryover) (* (- carryover-len a-len) (sizeof sp-sample-t)))
-        (sp-samples-zero (+ (- carryover-len a-len) carryover) a-len)))
-    (sp-samples-zero out a-len))
-  (sc-comment "process values that dont lead to carryover")
-  (set size (if* (< a-len b-len) 0 (- a-len (- b-len 1))))
-  (if size (sp-convolve-one a size b b-len out))
-  (sc-comment "process values with carryover")
-  (for ((set a-index size) (< a-index a-len) (set+ a-index 1))
-    (for ((set b-index 0) (< b-index b-len) (set+ b-index 1))
-      (set c-index (+ a-index b-index))
-      (if (< c-index a-len)
-        (set+ (array-get out c-index) (* (array-get a a-index) (array-get b b-index)))
-        (begin
-          (set c-index (- c-index a-len))
-          (set+ (array-get carryover c-index) (* (array-get a a-index) (array-get b b-index))))))))
-
-(pre-include "sph-sp/plot.c" "sph-sp/filter.c"
+(pre-include "sph-sp/plot.c" "sph-sp/resonator.c"
   "sph-sp/sequencer.c" "sph-sp/parallel.c" "sph-sp/statistics.c" "sph-sp/file.c")
 
 (define (sp-render-config channel-count rate block-size display-progress)
@@ -313,7 +270,7 @@
     (sp-render-range-block event 0
       event.end (sp-render-config sp-channel-count sp-rate (* sp-render-block-seconds sp-rate) #t)
       &block))
-  (sp-plot-samples (array-get block.samples 0) event.end)
+  (sp-for-each-index i block.channel-count (sp-plot-samples (array-get block.samples i) event.end))
   (label exit status-return))
 
 (define (sp-random-state-new seed) (sp-random-state-t sp-time-t)
@@ -482,3 +439,49 @@
 (define (sp-scale-canonical scale divisions) ((inline sp-scale-t) sp-scale-t sp-time-t)
   "rotate so the first note sits at bit 0 (canonical form)"
   (return (sp-scale-rotate scale (* -1 (sp-scale-first-index scale)) divisions)))
+
+(define (sp-moving-average in in-size prev next radius out)
+  (void sp-sample-t* sp-time-t sp-sample-t* sp-sample-t* sp-time-t sp-sample-t*)
+  "centered moving average balanced for complete data arrays and seamless for continuous data.
+   width: radius * 2 + 1.
+   width must be smaller than in-size.
+   prev can be 0 or an array with size equal to in-size.
+   next can be 0 or an array with size of at least radius.
+   for outside values where prev/next is not available, reflections over the x and y axis are used
+   so that the first/last value stay the same. for example, [0 1 2 3 0] without prev and
+   without next would be interpreted as [-0 -3 -2 -1 0 1 2 3 0 -3 -2 -1 -0]. if only zero were used
+   then middle values would have stronger influence on edge values.
+   use case: smoothing time domain data arrays, for example amplitude envelopes or input control data"
+  (sc-comment
+    "offsets to calculate outside values include an increment to account for the first or last index,
+     across which values are reflected.
+     the for loops correspond to: initial sum, with preceeding outside values, middle values, with succeeding outside values.
+     the subtracted value is the first value of the previous window and is therefore
+     at an index one less than the first value of the current window")
+  (declare i sp-time-t sum sp-sample-t width sp-time-t)
+  (set width (+ (* radius 2) 1) sum (array-get in 0))
+  (if prev
+    (for ((set i 0) (< i radius) (set+ i 1))
+      (set+ sum (+ (array-get prev (- in-size i 1)) (array-get in (+ i 1)))))
+    (set sum (array-get in 0)))
+  (set (array-get out 0) (/ sum width))
+  (for ((set i 1) (<= i radius) (set+ i 1))
+    (set
+      sum
+      (- (+ sum (array-get in (+ i radius)))
+        (if* prev (array-get prev (+ (- in-size radius 1) i))
+          (* (array-get in (+ (- radius i) 1)) -1)))
+      (array-get out i) (/ sum width)))
+  (for ((set i (+ radius 1)) (< i (- in-size radius)) (set+ i 1))
+    (set
+      sum (- (+ sum (array-get in (+ i radius))) (array-get in (- i radius 1)))
+      (array-get out i) (/ sum width)))
+  (for ((set i (- in-size radius)) (< i in-size) (set+ i 1))
+    (set
+      sum
+      (-
+        (+ sum
+          (if* next (array-get next (- i (- in-size radius)))
+            (* (array-get in (- (+ i radius 1) in-size)) -1)))
+        (array-get in (- i radius 1)))
+      (array-get out i) (/ sum width))))

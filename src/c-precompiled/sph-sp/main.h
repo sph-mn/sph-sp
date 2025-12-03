@@ -1,6 +1,4 @@
 
-#define f128 long double
-#define f64 double
 #define sp_bool_t uint8_t
 #define sp_memory_error status_set_goto(sp_s_group_sp, sp_s_id_memory)
 #define sp_noise sp_samples_random
@@ -130,8 +128,8 @@ void sp_block_zero(sp_block_t a);
 void sp_convolve(sp_sample_t* a, sp_time_t a_len, sp_sample_t* b, sp_time_t b_len, sp_time_t result_carryover_len, sp_sample_t* result_carryover, sp_sample_t* result_samples);
 void sp_convolve_one(sp_sample_t* a, sp_time_t a_len, sp_sample_t* b, sp_time_t b_len, sp_sample_t* result_samples);
 void sp_deinitialize(void);
-int sp_ffti(sp_time_t input_len, double* input_or_output_real, double* input_or_output_imag);
-int sp_fft(sp_time_t input_len, double* input_or_output_real, double* input_or_output_imag);
+int sp_ffti(sp_time_t n, double* real, double* imaginary);
+int sp_fft(sp_time_t n, double* real, double* imaginary);
 void sp_file_close_read(sp_file_t file);
 void sp_file_close_write(sp_file_t* file);
 status_t sp_file_open_read(char* path, sp_file_t* file);
@@ -159,7 +157,6 @@ sp_time_t sp_time_factorial(sp_time_t a);
 sp_time_t sp_time_max(sp_time_t a, sp_time_t b);
 sp_time_t sp_time_min(sp_time_t a, sp_time_t b);
 void sp_wave(sp_time_t size, sp_sample_t* wvf, sp_time_t wvf_size, sp_sample_t amp, sp_sample_t* amod, sp_time_t frq, sp_time_t* fmod, sp_time_t* phs_state, sp_sample_t* out);
-sp_sample_t sp_window_blackman(sp_sample_t a, sp_time_t width);
 /* extra */
 sp_sample_t sp_triangle(sp_time_t t, sp_time_t a, sp_time_t b);
 sp_sample_t sp_square(sp_time_t t, sp_time_t size);
@@ -179,3 +176,4 @@ sp_scale_t sp_scale_rotate(sp_scale_t scale, sp_time_t steps, sp_time_t division
 sp_time_t sp_scale_divisions(sp_scale_t scale);
 sp_time_t sp_scale_first_index(sp_scale_t scale);
 sp_scale_t sp_scale_canonical(sp_scale_t scale, sp_time_t divisions);
+void sp_moving_average(sp_sample_t* in, sp_time_t in_size, sp_sample_t* prev, sp_sample_t* next, sp_time_t radius, sp_sample_t* out);

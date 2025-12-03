@@ -23,19 +23,14 @@
 #define sp_event_memory_ensure(event_pointer, needed) sph_memory_ensure(needed, (&(event_pointer->memory)))
 #define sp_event_memory_add(event_pointer, address) sph_memory_add_with_handler((&(event_pointer->memory)), address, free)
 #define sp_event_memory_free(event_pointer) sph_memory_destroy((&(event_pointer->memory)))
-#define sp_wave_event_config_new(out) sp_wave_event_config_new_n(1, out)
 #define sp_map_event_config_new(out) sp_map_event_config_new_n(1, out)
-#define sp_noise_event_config_new(out) sp_noise_event_config_new_n(1, out)
+#define sp_resonator_event_config_new(out) sp_resonator_event_config_new_n(1, out)
 
 /** use case: event variables defined at the top-level */
 #define sp_define_event(name, _prepare, duration) sp_event_t name = { .prepare = _prepare, .start = 0, .end = duration, .config = 0, .memory = { 0 } }
-#define sp_wave_event(event_pointer, _config) \
-  event_pointer->prepare = sp_wave_event_prepare; \
-  event_pointer->generate = sp_wave_event_generate; \
-  event_pointer->config = _config
-#define sp_noise_event(event_pointer, _config) \
-  event_pointer->prepare = sp_noise_event_prepare; \
-  event_pointer->generate = sp_noise_event_generate; \
+#define sp_resonator_event(event_pointer, _config) \
+  event_pointer->prepare = sp_resonator_event_prepare; \
+  event_pointer->generate = sp_resonator_event_generate; \
   event_pointer->config = _config
 #define sp_map_event(event_pointer, _config) \
   event_pointer->prepare = sp_map_event_prepare; \
@@ -161,43 +156,6 @@ typedef struct {
   sp_map_generate_t map_generate;
   sp_bool_t isolate;
 } sp_map_event_config_t;
-typedef struct {
-  sp_sample_t* amod;
-  sp_sample_t amp;
-  sp_channel_count_t channel;
-  sp_time_t* fmod;
-  sp_frq_t frq;
-  sp_time_t phs;
-  sp_time_t* pmod;
-  sp_bool_t use;
-} sp_wave_event_channel_config_t;
-typedef struct {
-  sp_sample_t* wvf;
-  sp_time_t wvf_size;
-  sp_channel_count_t channel_count;
-  sp_wave_event_channel_config_t channel_config[sp_channel_count_limit];
-} sp_wave_event_config_t;
-typedef struct {
-  sp_sample_t amp;
-  sp_sample_t* amod;
-  sp_channel_count_t channel;
-  sp_convolution_filter_state_t* filter_state;
-  sp_frq_t frq;
-  sp_time_t* fmod;
-  sp_frq_t wdt;
-  sp_time_t* wmod;
-  sp_frq_t trnl;
-  sp_frq_t trnh;
-  sp_bool_t use;
-} sp_noise_event_channel_config_t;
-typedef struct {
-  sp_bool_t is_reject;
-  sp_random_state_t random_state;
-  sp_time_t resolution;
-  sp_sample_t* temp[3];
-  sp_channel_count_t channel_count;
-  sp_noise_event_channel_config_t channel_config[sp_channel_count_limit];
-} sp_noise_event_config_t;
 sp_event_t sp_null_event = { 0 };
 sph_dlist_declare_type(sp_event_list, sp_event_t) void sp_event_list_display_element(sp_event_list_t* list);
 void sp_event_list_remove(sp_event_list_t** head_pointer, sp_event_list_t* list);
@@ -215,14 +173,35 @@ void sp_map_event_free(sp_event_t* event);
 status_t sp_map_event_generate(sp_time_t start, sp_time_t end, void* out, sp_event_t* event);
 status_t sp_map_event_isolated_generate(sp_time_t start, sp_time_t end, void* out, sp_event_t* event);
 status_t sp_map_event_prepare(sp_event_t* event);
-sp_noise_event_config_t sp_noise_event_config_defaults(void);
-status_t sp_noise_event_config_new_n(sp_time_t count, sp_noise_event_config_t** out);
-void sp_noise_event_free(sp_event_t* event);
-status_t sp_noise_event_generate(sp_time_t start, sp_time_t end, void* out, sp_event_t* event);
-status_t sp_noise_event_prepare(sp_event_t* event);
 status_t sp_seq(sp_time_t start, sp_time_t end, void* out, sp_event_list_t** events);
-sp_wave_event_config_t sp_wave_event_config_defaults(void);
-status_t sp_wave_event_config_new_n(sp_time_t count, sp_wave_event_config_t** out);
-status_t sp_wave_event_generate(sp_time_t start, sp_time_t end, void* out, sp_event_t* event);
-status_t sp_wave_event_prepare(sp_event_t* event);
 sp_event_t sp_event_schedule(sp_event_t event, sp_time_t onset, sp_time_t duration, void* config);
+typedef struct {
+  sp_sample_t* amod;
+  sp_sample_t amp;
+  sp_channel_count_t channel;
+  sp_convolution_filter_state_t* filter_state;
+  sp_frq_t frq;
+  sp_time_t* fmod;
+  sp_frq_t bandwidth;
+  sp_time_t* bwmod;
+  sp_time_t phs;
+  sp_time_t* pmod;
+  sp_sample_t* wvf;
+  sp_time_t wvf_size;
+  sp_bool_t use;
+} sp_resonator_event_channel_config_t;
+typedef struct {
+  sp_random_state_t random_state;
+  sp_time_t resolution;
+  sp_sample_t* noise_in;
+  sp_sample_t* noise_out;
+  sp_sample_t bandwidth_threshold;
+  sp_channel_count_t channel_count;
+  sp_resonator_event_channel_config_t channel_config[sp_channel_count_limit];
+} sp_resonator_event_config_t;
+sp_resonator_event_config_t sp_resonator_event_config_defaults(void);
+status_t sp_resonator_event_config_new_n(sp_time_t count, sp_resonator_event_config_t** out);
+status_t sp_resonator_event_prepare(sp_event_t* event);
+status_t sp_resonator_event_generate_block(sp_time_t duration, sp_time_t block_i, sp_time_t event_i, void* out, sp_event_t* event);
+status_t sp_resonator_event_generate(sp_time_t start, sp_time_t end, void* out, sp_event_t* event);
+void sp_resonator_event_free(sp_event_t* event);

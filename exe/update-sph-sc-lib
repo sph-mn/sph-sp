@@ -17,7 +17,7 @@ cp status.h spline-path.h spline-path.c quicksort.h queue.h \
   random.h random.c memreg.h memory.h memory.c array.h list.h "$destination"
 
 # only for testing
-cp string.h filesystem.h "$destination"
+cp test.h string.h filesystem.h "$destination"
 
 # replace include paths in copied files
 sed -i 's@#include <sph/@#include <sph-sp/sph/@g' "$destination"/*

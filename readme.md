@@ -9,51 +9,50 @@ c code and shared library for sound synthesis and sequencing. the sound processo
   * 32 bit float wav file output and input
   * plotting of samples and sound spectra using gnuplot
   * fast fourier transform (fft) and inverse fast fourier transform (ifft)
-* processors that work seamlessly on blocks of continuous data streams
-  * windowed-sinc low-pass, high-pass, band-pass and band-reject filters
   * convolution
   * moving average filter
+  * processors work seamlessly on blocks of continuous data streams
 * synthesis
   * linear and bezier interpolation between points for envelopes and other control data
   * lookup-table oscillator for sinusoids and other wave shapes with a stable phase and time-dependent frequency and amplitude changes provided by arrays
   * white noise generator
+  * sine and noise resonator
 * sequencing
   * event renderer for parallel block processing with custom routines
-  * events for sines and filtered noise
-  * composable event groups for instruments, riffs and songs
+  * composable events for instruments, riffs and songs
   * per channel configuration and channel delay
-* array processing
-  * arithmetic, combinations, statistics, and more
+* extras: array processing for arithmetic, combinations, statistics
 
 # code example
 see [other/examples/example.c](other/examples/example.c).
-
-alternative c syntax: [wisp-sc](other/examples/example.scw), [sc](other/examples/example.sc)
 
 # sound example
 these files came about during testing in development: [1](https://sph.mn/auditive_visual/sound/2022/2022-12-10.15814.flac), [2](https://sph.mn/auditive_visual/sound/2022/2022-12-10.07345.flac), [3](https://sph.mn/auditive_visual/sound/2022/2022-12-10.09439.flac), [4](https://sph.mn/auditive_visual/sound/2022/2021-04-12.05370.flac) (one stream of non-repeating patterns per channel).
 
 # documentation
+note: the wave and noise events have recently been unified by the resonator event.
+
 * [c manual](other/documentation/c-manual.md)
 * [sc manual](other/documentation/sc-manual.md)
 * [api listing](other/documentation/api.md)
 
 # dependencies
-* linux or compatible (libc)
+* libc (glibc or musl)
 * gcc and shell for the provided compile script
 * optional: gnuplot
-* optional: [sph-sc](https://github.com/sph-mn/sph-sc), for development on sph-sp itself or for using the sc macros
+* optional: [sph-sc](https://github.com/sph-mn/sph-sc), for using the macros in sc
 
 # setup
-* install dependencies as needed
-* execute the following from the project directory
-
+1. install dependencies as needed.
+2. compile the code
 ```
 ./exe/compile-c
-./exe/install
 ```
 
-the first argument to `exe/install` can be the destination path prefix, for example `./exe/install /tmp`.
+3. install files. needs filesystem permissions to write to the given target prefix, / (-> /usr/bin) by default.
+~~~
+./exe/install /
+~~~
 
 installed files
 * /usr/include/sph-sp.h
@@ -61,10 +60,13 @@ installed files
 * /usr/lib/libsph-sp.so
 * /usr/share/sph-sp/sc-macros.sc
 
+# platform
+c17, posix.1-2008, lp64, little endian. primary target: x86_64 linux.
+
 # compile-time configuration options
 the `ifndef`s at the top of `source/c-precompiled/sph-sp/sph-sp.h` can be customised before compilation. custom preprocessor variables can be set before including the header when embedding the full code, or a customized header must be used when using a shared library that has been compiled with the same configuration.
 
-some options that can be configured:
+some of the options that can be configured:
 
 | name | default | description |
 | --- | --- | --- |
@@ -87,9 +89,6 @@ gcc -lsph-sp main.c
 # license
 * files under `source/c/foreign/nayuki-fft`: mit license
 * rest: lgpl3+
-
-# possible enhancements
-* further optimizations of numerical stability
 
 # thanks to
 * [tom roelandts](https://tomroelandts.com/) on whose information the windowed sinc filters are based on

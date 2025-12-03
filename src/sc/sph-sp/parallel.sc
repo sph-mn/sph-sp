@@ -91,16 +91,44 @@
 (define (sp-block-merge-all start end parent-out futures count context)
   (status-t sp-time-t sp-time-t void* sp-seq-future-t* sp-size-t void*)
   status-declare
-  (declare out-block sp-block-t*)
-  (set out-block parent-out)
-  (sp-for-each-index k count
-    (declare f sp-seq-future-t* b sp-block-t*)
-    (set f (+ futures k) b f:out)
-    (sp-for-each-index ci out-block:channel-count
-      (sp-for-each-index i b:size
-        (set (array-get (array-get out-block:samples ci) (+ f:out-start i))
-          (+ (array-get (array-get out-block:samples ci) (+ f:out-start i))
-            (array-get (array-get b:samples ci) i))))))
+  (declare
+    out-block sp-block-t*
+    out-channel sp-sample-t*
+    in-channel sp-sample-t*
+    out-size sp-size-t
+    sum sp-sample-t
+    compensation sp-sample-t
+    value sp-sample-t
+    temp sp-sample-t
+    abs-sum sp-sample-t
+    abs-value sp-sample-t
+    f sp-seq-future-t*
+    b sp-block-t*
+    relative-index sp-size-t)
+  (set out-block (convert-type parent-out sp-block-t*) out-size out-block:size)
+  (for-each-index ci sp-size-t
+    out-block:channel-count (set out-channel (array-get out-block:samples ci))
+    (for-each-index i sp-size-t
+      out-size (set sum (array-get out-channel i) compensation 0.0)
+      (for-each-index k sp-size-t
+        count (set f (+ futures k))
+        (if (< i f:out-start) (begin)
+          (begin
+            (set relative-index (- i f:out-start) b f:out)
+            (if (< relative-index b:size)
+              (begin
+                (set
+                  in-channel (array-get b:samples ci)
+                  value (array-get in-channel relative-index)
+                  temp (+ sum value)
+                  abs-sum sum)
+                (if (< abs-sum 0.0) (set* abs-sum -1.0))
+                (set abs-value value)
+                (if (< abs-value 0.0) (set* abs-value -1.0))
+                (if (>= abs-sum abs-value) (set+ compensation (+ (- sum temp) value))
+                  (set+ compensation (+ (- value temp) sum)))
+                (set sum temp))))))
+      (set (array-get out-channel i) (+ sum compensation))))
   status-return)
 
 (define (sp-seq-parallel-block start end out events)

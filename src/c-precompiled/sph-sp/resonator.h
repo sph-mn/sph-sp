@@ -1,0 +1,21 @@
+typedef status_t (*sp_convolution_filter_ir_f_t)(void*, sp_sample_t**, sp_time_t*);
+typedef struct {
+  sp_sample_t* carryover;
+  sp_time_t carryover_len;
+  sp_time_t carryover_alloc_len;
+  sp_sample_t* ir;
+  sp_convolution_filter_ir_f_t ir_f;
+  void* ir_f_arguments;
+  uint8_t ir_f_arguments_len;
+  sp_time_t ir_len;
+} sp_convolution_filter_state_t;
+status_t sp_convolution_filter_state_set(sp_convolution_filter_ir_f_t ir_f, void* ir_f_arguments, uint8_t ir_f_arguments_len, sp_convolution_filter_state_t** out_state);
+status_t sp_convolution_filter(sp_sample_t* in, sp_time_t in_len, sp_convolution_filter_ir_f_t ir_f, void* ir_f_arguments, uint8_t ir_f_arguments_len, sp_convolution_filter_state_t** out_state, sp_sample_t* out_samples);
+void sp_convolution_filter_state_free(sp_convolution_filter_state_t* state);
+sp_sample_t sp_bessel_i0(sp_sample_t value);
+sp_sample_t sp_kaiser_window(sp_time_t sample_index, sp_time_t window_length, sp_sample_t beta_value);
+sp_time_t sp_kaiser_window_length(sp_sample_t transition_width, sp_sample_t beta_value);
+void sp_force_center_unity(sp_sample_t* impulse_response, sp_time_t sample_count);
+status_t sp_sinc_make_minimum_phase(sp_sample_t* impulse_response, sp_time_t sample_count);
+status_t sp_resonator_ir(sp_sample_t cutoff_low, sp_sample_t cutoff_high, sp_sample_t transition, sp_sample_t** out_ir, sp_time_t* out_len);
+status_t sp_resonator_ir_f(void* arguments, sp_sample_t** out_ir, sp_time_t* out_len);

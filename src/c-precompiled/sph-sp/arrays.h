@@ -5,7 +5,6 @@
   value_t sp_##value_type_name##_round_to_multiple(value_t a, value_t base); \
   value_t sp_##type_name##_min(value_t* in, sp_size_t count); \
   value_t sp_##type_name##_max(value_t* in, sp_size_t count); \
-  value_t sp_##type_name##_absolute_max(value_t* in, sp_size_t count); \
   void sp_##type_name##_reverse(value_t* in, sp_size_t count, value_t* out); \
   sp_bool_t sp_##type_name##_equal(value_t* in, sp_size_t count, value_t value); \
   void sp_##type_name##_square(value_t* in, sp_size_t count); \
@@ -77,6 +76,7 @@ void sp_times_insert_space(sp_time_t* in, sp_time_t size, sp_time_t index, sp_ti
 void sp_times_subdivide_difference(sp_time_t* a, sp_time_t size, sp_time_t index, sp_time_t count, sp_time_t* out);
 void sp_times_to_samples(sp_time_t* in, sp_size_t count, sp_sample_t* out);
 status_t sp_times_to_samples_replace(sp_time_t* in, sp_size_t count, sp_sample_t** out);
+sp_time_t sp_times_absolute_max(sp_time_t* in, sp_size_t count);
 /* samples */
 arrays_template_h(sp_sample_t, sample, samples);
 void sp_samples_display(sp_sample_t* in, sp_size_t count);
@@ -91,3 +91,4 @@ void sp_samples_scale_y(sp_sample_t* in, sp_time_t count, sp_sample_t target_y);
 void sp_samples_scale_sum(sp_sample_t* in, sp_size_t count, sp_sample_t target_y, sp_sample_t* out);
 void sp_samples_blend(sp_sample_t* a, sp_sample_t* b, sp_sample_t fraction, sp_time_t size, sp_sample_t* out);
 void sp_samples_limit_abs(sp_sample_t* in, sp_time_t count, sp_sample_t limit, sp_sample_t* out);
+sp_sample_t sp_samples_absolute_max(sp_sample_t* in, sp_size_t count);

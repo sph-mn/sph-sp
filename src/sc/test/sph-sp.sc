@@ -1,29 +1,42 @@
-(pre-include "sph-sp/sph-sp.h" "sph-sp/sph/filesystem.h")
+(pre-include "sph-sp/sph-sp.h" "sph-sp/sph/filesystem.h" "sph-sp/sph/test.h" "math.h")
 
 (pre-define
-  (test-helper-test-one func) (begin (printf "%s\n" (pre-stringify func)) (status-require (func)))
-  (test-helper-assert description expression)
-  (if (not expression) (begin (printf "%s failed\n" description) (status-set-goto "sph-sp" 1)))
-  (test-helper-display-summary)
+  sp-test-helper-display-summary
   (if status-is-success (printf "--\ntests finished successfully.\n")
     (printf "\ntests failed. %d %s\n" status.id (sp-status-description status)))
   (feq a b) (sp-sample-nearly-equal a b 0.01)
   _sp-rate 960
-  sp-seq-event-count 2)
+  sp-seq-event-count 2
+  test-resonator-event-duration 100
+  test-stats-a-size 8)
 
-(sc-comment "previous segfault when noise-event duration was unequal sp-rate")
-(pre-define test-noise-duration (+ _sp-rate 20))
+(define error-margin sp-sample-t 0.1 test-file-path char* "/tmp/test-sph-sp-file")
 
 (define (test-helper-event-generate start end out event)
   (status-t sp-time-t sp-time-t void* sp-event-t*)
   status-declare
-  (declare i sp-time-t ci sp-channel-count-t value uint64-t out-block sp-block-t)
+  (declare
+    sample-index sp-time-t
+    channel-index sp-channel-count-t
+    raw-value uint64-t
+    base-value sp-sample-t
+    out-block sp-block-t*
+    local-index sp-time-t
+    sample-value sp-sample-t)
   (set
-    out-block (pointer-get (convert-type out sp-block-t*))
-    value (convert-type (convert-type event:config uint64-t) sp-time-t))
-  (for ((set i start) (< i end) (set+ i 1))
-    (for ((set ci 0) (< ci out-block.channel-count) (set+ ci 1))
-      (set (array-get out-block.samples ci (- i start)) value)))
+    out-block (convert-type out sp-block-t*)
+    raw-value (convert-type event:config uint64-t)
+    base-value (convert-type raw-value sp-sample-t)
+    sample-index start)
+  (while (< sample-index end)
+    (set
+      local-index (- sample-index start)
+      sample-value (* base-value (convert-type (+ sample-index 1) sp-sample-t))
+      channel-index 0)
+    (while (< channel-index out-block:channel-count)
+      (set+ (array-get out-block:samples channel-index local-index) sample-value)
+      (set channel-index (+ channel-index 1)))
+    (set sample-index (+ sample-index 1)))
   status-return)
 
 (define (test-helper-event start end number) (sp-event-t sp-time-t sp-time-t sp-time-t)
@@ -35,17 +48,10 @@
     e.config (convert-type (convert-type number uint64-t) void*))
   (return e))
 
-(define error-margin sp-sample-t 0.1)
-(define test-file-path char* "/tmp/test-sph-sp-file")
-
 (define (test-base) status-t
   status-declare
   (test-helper-assert "input 0.5" (sp-sample-nearly-equal 0.63662 (sp-sinc 0.5) error-margin))
   (test-helper-assert "input 1" (sp-sample-nearly-equal 1.0 (sp-sinc 0) error-margin))
-  (test-helper-assert "window-blackman 0 51"
-    (sp-sample-nearly-equal 0 (sp-window-blackman 0 51) error-margin))
-  (test-helper-assert "window-blackman 25 51"
-    (sp-sample-nearly-equal 1 (sp-window-blackman 25 51) error-margin))
   (label exit status-return))
 
 (define (test-spectral-inversion-ir) status-t
@@ -134,7 +140,7 @@
     in-b-length sp-time-t
     block-size sp-time-t
     block-count sp-time-t)
-  (memreg-init 4)
+  (memreg-init 5)
   (set
     in-a 0
     in-b 0
@@ -168,6 +174,234 @@
     (sp-samples-nearly-equal out in-a-length out-control in-a-length 0.01))
   (label exit memreg-free status-return))
 
+(define (test-sinc-make-minimum-phase) status-t
+  status-declare
+  (declare
+    length sp-time-t
+    center-index sp-time-t
+    index sp-time-t
+    cutoff-factor sp-sample-t
+    impulse-linear (array sp-sample-t 63)
+    impulse-minimum (array sp-sample-t 63)
+    real-linear (array sp-sample-t 63)
+    imag-linear (array sp-sample-t 63)
+    real-minimum (array sp-sample-t 63)
+    imag-minimum (array sp-sample-t 63)
+    energy-linear sp-sample-t
+    energy-minimum sp-sample-t
+    cumulative-energy-linear sp-sample-t
+    cumulative-energy-minimum sp-sample-t
+    energy-index-linear sp-time-t
+    energy-index-minimum sp-time-t
+    tolerance-energy sp-sample-t
+    tolerance-magnitude sp-sample-t
+    magnitude-linear sp-sample-t
+    magnitude-minimum sp-sample-t
+    delta-index sp-sample-t)
+  (set
+    length 63
+    center-index (/ (- length 1) 2)
+    cutoff-factor 0.1
+    tolerance-energy 1.0e-6
+    tolerance-magnitude 1.0e-4
+    index 0)
+  (while (< index length)
+    (set
+      delta-index (- (convert-type index sp-sample-t) (convert-type center-index sp-sample-t))
+      (array-get impulse-linear index)
+      (* 2.0 cutoff-factor (sp-sinc (* 2.0 cutoff-factor delta-index)))
+      (array-get impulse-minimum index) (array-get impulse-linear index)
+      index (+ index 1)))
+  (status-require (sp-sinc-make-minimum-phase impulse-minimum length))
+  (set index 0)
+  (while (< index length)
+    (set
+      (array-get real-linear index) (array-get impulse-linear index)
+      (array-get imag-linear index) 0.0
+      (array-get real-minimum index) (array-get impulse-minimum index)
+      (array-get imag-minimum index) 0.0
+      index (+ index 1)))
+  (status-i-require (sp-fft length real-linear imag-linear))
+  (status-i-require (sp-fft length real-minimum imag-minimum))
+  (set energy-linear 0.0 energy-minimum 0.0 index 0)
+  (while (< index length)
+    (set
+      energy-linear
+      (+ energy-linear (* (array-get impulse-linear index) (array-get impulse-linear index)))
+      energy-minimum
+      (+ energy-minimum (* (array-get impulse-minimum index) (array-get impulse-minimum index)))
+      index (+ index 1)))
+  (test-helper-assert "sinc_minphase_energy_preserved"
+    (<= (fabs (- energy-linear energy-minimum)) tolerance-energy))
+  (set index 0)
+  (while (< index length)
+    (set
+      magnitude-linear
+      (sqrt
+        (+ (* (array-get real-linear index) (array-get real-linear index))
+          (* (array-get imag-linear index) (array-get imag-linear index))))
+      magnitude-minimum
+      (sqrt
+        (+ (* (array-get real-minimum index) (array-get real-minimum index))
+          (* (array-get imag-minimum index) (array-get imag-minimum index)))))
+    (test-helper-assert "sinc_minphase_magnitude_equal"
+      (<= (fabs (- magnitude-linear magnitude-minimum)) tolerance-magnitude))
+    (set index (+ index 1)))
+  (set
+    cumulative-energy-linear 0.0
+    cumulative-energy-minimum 0.0
+    energy-index-linear (- length 1)
+    energy-index-minimum (- length 1)
+    index 0)
+  (while (< index length)
+    (set
+      cumulative-energy-linear
+      (+ cumulative-energy-linear
+        (* (array-get impulse-linear index) (array-get impulse-linear index)))
+      cumulative-energy-minimum
+      (+ cumulative-energy-minimum
+        (* (array-get impulse-minimum index) (array-get impulse-minimum index))))
+    (if
+      (and (>= cumulative-energy-linear (* 0.5 energy-linear)) (= energy-index-linear (- length 1)))
+      (set energy-index-linear index))
+    (if
+      (and (>= cumulative-energy-minimum (* 0.5 energy-minimum))
+        (= energy-index-minimum (- length 1)))
+      (set energy-index-minimum index))
+    (set index (+ index 1)))
+  (test-helper-assert "sinc_minphase_energy_earlier" (<= energy-index-minimum energy-index-linear))
+  (label exit status-return))
+
+(define (test-resonator-filter-continuity) (status-t void)
+  status-declare
+  (declare
+    in sp-sample-t*
+    out sp-sample-t*
+    out-control sp-sample-t*
+    state sp-convolution-filter-state-t*
+    state-control sp-convolution-filter-state-t*
+    size sp-time-t
+    block-size sp-time-t
+    block-count sp-time-t
+    cutoff-low sp-sample-t
+    cutoff-high sp-sample-t
+    transition sp-sample-t
+    arguments-buffer (array uint8-t ((* 3 (sizeof sp-sample-t))))
+    arguments-length uint8-t
+    sample-index sp-size-t
+    block-index sp-size-t
+    offset sp-time-t)
+  (memreg-init 3)
+  (set
+    size 100
+    block-size 10
+    block-count 10
+    state 0
+    state-control 0
+    cutoff-low 0.1
+    cutoff-high 0.3
+    transition 0.1)
+  (status-require (sp-samples-new size &in))
+  (memreg-add in)
+  (status-require (sp-samples-new size &out))
+  (memreg-add out)
+  (status-require (sp-samples-new size &out-control))
+  (memreg-add out-control)
+  (set sample-index 0)
+  (while (< sample-index size)
+    (set
+      (array-get in sample-index) (convert-type sample-index sp-sample-t)
+      sample-index (+ sample-index 1)))
+  (set
+    arguments-length (* 3 (sizeof sp-sample-t))
+    (pointer-get (convert-type arguments-buffer sp-sample-t*)) cutoff-low
+    (pointer-get (+ (convert-type arguments-buffer sp-sample-t*) 1)) cutoff-high
+    (pointer-get (+ (convert-type arguments-buffer sp-sample-t*) 2)) transition)
+  (status-require
+    (sp-convolution-filter in size
+      sp-resonator-ir-f arguments-buffer arguments-length &state-control out-control))
+  (set block-index 0)
+  (while (< block-index block-count)
+    (set offset (* block-index block-size))
+    (status-require
+      (sp-convolution-filter (+ in offset) block-size
+        sp-resonator-ir-f arguments-buffer arguments-length &state (+ out offset)))
+    (set block-index (+ block-index 1)))
+  (test-helper-assert "resonator continuity"
+    (sp-samples-nearly-equal out size out-control size 0.01))
+  memreg-free
+  (sp-convolution-filter-state-free state)
+  (sp-convolution-filter-state-free state-control)
+  (label exit status-return))
+
+(define (test-resonator-ir-and-filter) (status-t void)
+  status-declare
+  (declare
+    cutoff-low sp-sample-t
+    cutoff-high sp-sample-t
+    transition sp-sample-t
+    ir sp-sample-t*
+    ir-len sp-time-t
+    state sp-convolution-filter-state-t*
+    source (array sp-sample-t 10)
+    result (array sp-sample-t 10)
+    arguments-buffer (array uint8-t ((* 3 (sizeof sp-sample-t))))
+    arguments-length uint8-t)
+  (set
+    state 0
+    (array-get source 0) 3
+    (array-get source 1) 4
+    (array-get source 2) 5
+    (array-get source 3) 6
+    (array-get source 4) 7
+    (array-get source 5) 8
+    (array-get source 6) 9
+    (array-get source 7) 0
+    (array-get source 8) 1
+    (array-get source 9) 2
+    (array-get result 0) 0
+    (array-get result 1) 0
+    (array-get result 2) 0
+    (array-get result 3) 0
+    (array-get result 4) 0
+    (array-get result 5) 0
+    (array-get result 6) 0
+    (array-get result 7) 0
+    (array-get result 8) 0
+    (array-get result 9) 0)
+  (sc-comment "direct IR construction: normal parameters")
+  (set cutoff-low 0.1 cutoff-high 0.3 transition 0.05)
+  (status-require (sp-resonator-ir cutoff-low cutoff-high transition &ir &ir-len))
+  (test-helper-assert "resonator ir length positive" (> ir-len 0))
+  (free ir)
+  (sc-comment "direct IR construction: clamping branches (low < 0, high > 0.5, transition <= 0)")
+  (set cutoff-low -0.1 cutoff-high 0.6 transition 0.0)
+  (status-require (sp-resonator-ir cutoff-low cutoff-high transition &ir &ir-len))
+  (test-helper-assert "resonator ir clamped length positive" (> ir-len 0))
+  (free ir)
+  (sc-comment "IR through ir_f adapter")
+  (set
+    cutoff-low 0.05
+    cutoff-high 0.2
+    transition 0.03
+    arguments-length (* 3 (sizeof sp-sample-t))
+    (pointer-get (convert-type arguments-buffer sp-sample-t*)) cutoff-low
+    (pointer-get (+ (convert-type arguments-buffer sp-sample-t*) 1)) cutoff-high
+    (pointer-get (+ (convert-type arguments-buffer sp-sample-t*) 2)) transition)
+  (status-require (sp-resonator-ir-f arguments-buffer &ir &ir-len))
+  (test-helper-assert "resonator ir_f length positive" (> ir-len 0))
+  (free ir)
+  (sc-comment "filter through convolution: one call to create state and IR")
+  (status-require
+    (sp-convolution-filter source 10
+      sp-resonator-ir-f arguments-buffer arguments-length &state result))
+  (sc-comment "second call with identical arguments: exercises state reuse path")
+  (status-require
+    (sp-convolution-filter source 10
+      sp-resonator-ir-f arguments-buffer arguments-length &state result))
+  (if state (sp-convolution-filter-state-free state))
+  (label exit status-return))
+
 (define (test-moving-average) status-t
   status-declare
   (declare in sp-sample-t* out sp-sample-t* radius sp-time-t size sp-time-t)
@@ -194,83 +428,6 @@
       (sp-sample-nearly-equal 5.5 (array-get out 5) error-margin)
       (sp-sample-nearly-equal 2.11 (array-get out 9) error-margin)))
   (label exit memreg-free status-return))
-
-(define (test-windowed-sinc-continuity) status-t
-  status-declare
-  (declare
-    in sp-sample-t*
-    out sp-sample-t*
-    out-control sp-sample-t*
-    state sp-convolution-filter-state-t*
-    state-control sp-convolution-filter-state-t*
-    size sp-time-t
-    block-size sp-time-t
-    block-count sp-time-t
-    frql sp-sample-t
-    frqh sp-sample-t
-    trnl sp-sample-t
-    trnh sp-sample-t)
-  (memreg-init 3)
-  (set
-    size 100
-    block-size 10
-    block-count 10
-    state 0
-    state-control 0
-    frql 0.001
-    frqh 0.03
-    trnl 0.07
-    trnh 0.07)
-  (status-require (sp-samples-new size &in))
-  (memreg-add in)
-  (status-require (sp-samples-new size &out))
-  (memreg-add out)
-  (status-require (sp-samples-new size &out-control))
-  (memreg-add out-control)
-  (sp-for-each-index i size (set (array-get in i) i))
-  (status-require (sp-windowed-sinc-bp-br in size frql frqh trnl trnh 0 &state-control out-control))
-  (sp-for-each-index i block-count
-    (status-require
-      (sp-windowed-sinc-bp-br (+ (* i block-size) in) block-size
-        frql frqh trnl trnh 0 &state (+ (* i block-size) out))))
-  (test-helper-assert "equal to block processing result"
-    (sp-samples-nearly-equal out size out-control size 0.01))
-  (label exit
-    memreg-free
-    (sp-convolution-filter-state-free state)
-    (sp-convolution-filter-state-free state-control)
-    status-return))
-
-(define (test-windowed-sinc) status-t
-  status-declare
-  (declare
-    transition sp-sample-t
-    cutoff sp-sample-t
-    ir sp-sample-t*
-    ir-len sp-time-t
-    state sp-convolution-filter-state-t*
-    source (array sp-sample-t 10 3 4 5 6 7 8 9 0 1 2)
-    result (array sp-sample-t 10 0 0 0 0 0 0 0 0 0 0))
-  (set state 0 cutoff 0.1 transition 0.08)
-  (sc-comment "ir functions")
-  (status-require (sp-windowed-sinc-lp-hp-ir cutoff transition #f &ir &ir-len))
-  (test-helper-assert "ir" (sp-sample-nearly-equal 0.0952 (array-get ir 28) error-margin))
-  (status-require (sp-windowed-sinc-bp-br-ir 0.1 0.4 0.08 0.08 #f &ir &ir-len))
-  (status-require (sp-windowed-sinc-lp-hp-ir cutoff transition #t &ir &ir-len))
-  (status-require (sp-windowed-sinc-bp-br-ir cutoff cutoff transition transition #t &ir &ir-len))
-  (sc-comment "filter functions")
-  (status-require (sp-windowed-sinc-lp-hp source 10 0.1 0.08 #f &state result))
-  (sp-convolution-filter-state-free state)
-  (set state 0)
-  (status-require (sp-windowed-sinc-lp-hp source 10 0.1 0.08 #t &state result))
-  (sp-convolution-filter-state-free state)
-  (set state 0)
-  (status-require (sp-windowed-sinc-bp-br source 10 0.1 0.4 0.08 0.08 #f &state result))
-  (sp-convolution-filter-state-free state)
-  (set state 0)
-  (status-require (sp-windowed-sinc-bp-br source 10 0.1 0.4 0.08 0.08 #t &state result))
-  (sp-convolution-filter-state-free state)
-  (label exit status-return))
 
 (define (test-file) status-t
   status-declare
@@ -304,15 +461,54 @@
   (sp-file-close-read file)
   (label exit (sp-block-free &block-write) (sp-block-free &block-read) status-return))
 
-(define (test-fft) status-t
+(define (test-fft) (status-t)
   status-declare
   (declare
-    a-real (array sp-sample-t 6 -0.6 0.1 0.4 0.8 0 0)
-    a-imag (array sp-sample-t 6 0 0 0 0 0 0)
-    a-len sp-time-t)
-  (set a-len 6)
-  (status-i-require (sp-fft a-len a-real a-imag))
-  (status-i-require (sp-ffti a-len a-real a-imag))
+    real-values (array sp-sample-t 8)
+    imag-values (array sp-sample-t 8)
+    real-values-original (array sp-sample-t 8)
+    imag-values-original (array sp-sample-t 8)
+    impulse-real (array sp-sample-t 8)
+    impulse-imag (array sp-sample-t 8)
+    length sp-time-t
+    index sp-time-t
+    tolerance sp-sample-t)
+  (set length 8 tolerance 1.0e-9 index 0)
+  (while (< index length)
+    (set
+      (array-get real-values index) (+ (* (convert-type index sp-sample-t) 0.1) 0.05)
+      (array-get imag-values index) (* (convert-type (- length index) sp-sample-t) 0.01)
+      (array-get real-values-original index) (array-get real-values index)
+      (array-get imag-values-original index) (array-get imag-values index)
+      index (+ index 1)))
+  (status-i-require (sp-fft length real-values imag-values))
+  (status-i-require (sp-ffti length real-values imag-values))
+  (set index 0)
+  (while (< index length)
+    (test-helper-assert "fft_roundtrip_real"
+      (<=
+        (fabs
+          (- (/ (array-get real-values index) (convert-type length sp-sample-t))
+            (array-get real-values-original index)))
+        tolerance))
+    (test-helper-assert "fft_roundtrip_imag"
+      (<=
+        (fabs
+          (- (/ (array-get imag-values index) (convert-type length sp-sample-t))
+            (array-get imag-values-original index)))
+        tolerance))
+    (set index (+ index 1)))
+  (set index 0)
+  (while (< index length)
+    (set (array-get impulse-real index) 0.0 (array-get impulse-imag index) 0.0 index (+ index 1)))
+  (set (array-get impulse-real 0) 1.0)
+  (status-i-require (sp-fft length impulse-real impulse-imag))
+  (set index 0)
+  (while (< index length)
+    (test-helper-assert "fft_impulse_real"
+      (<= (fabs (- (array-get impulse-real index) 1.0)) tolerance))
+    (test-helper-assert "fft_impulse_imag" (<= (fabs (array-get impulse-imag index)) tolerance))
+    (set index (+ index 1)))
   (label exit status-return))
 
 (define (test-sp-plot) status-t
@@ -356,44 +552,6 @@
     (sp-sample-nearly-equal -0.553401 (array-get out 19) error-margin))
   (label exit status-return))
 
-(define (test-sp-noise-event) status-t
-  status-declare
-  (declare
-    out sp-block-t
-    fmod (array sp-time-t test-noise-duration)
-    wmod (array sp-time-t test-noise-duration)
-    amod (array sp-sample-t test-noise-duration)
-    config sp-noise-event-config-t*)
-  (sp-declare-event event)
-  (sp-declare-event-list events)
-  (error-memory-init 2)
-  (status-require (sp-noise-event-config-new &config))
-  (error-memory-add config)
-  (status-require (sp-block-new 2 test-noise-duration &out))
-  (error-memory-add2 &out sp-block-free)
-  (sp-for-each-index i test-noise-duration
-    (set
-      (array-get fmod i) (sp-factor->hz 0.01)
-      (array-get wmod i) (- (sp-factor->hz 0.3) (array-get fmod i))
-      (array-get amod i) 0.8))
-  (set config:channel-count 2)
-  (struct-pointer-set config:channel-config fmod fmod wmod wmod amod amod amp 1)
-  (struct-pointer-set (+ 1 config:channel-config)
-    use 1
-    fmod fmod
-    wmod wmod
-    trnl 4000
-    amod amod
-    amp 1)
-  (struct-set event start 0 end test-noise-duration)
-  (sp-noise-event &event config)
-  (status-require (sp-event-list-add &events event))
-  (status-require (sp-seq 0 test-noise-duration &out &events))
-  (test-helper-assert "in range -1..1"
-    (>= 1.0 (sp-samples-absolute-max (array-get out.samples 0) test-noise-duration)))
-  (sp-block-free &out)
-  (label exit (if status-is-failure error-memory-free) status-return))
-
 (define (test-sp-seq) status-t
   status-declare
   (declare out sp-block-t shifted sp-block-t)
@@ -406,10 +564,10 @@
   (set shifted (sp-block-with-offset out 50))
   (sp-seq 50 100 &shifted &events)
   (test-helper-assert "block contents 1 event 1"
-    (and (= 1 (array-get out.samples 0 0)) (= 1 (array-get out.samples 0 39))))
+    (and (= 1 (array-get out.samples 0 0)) (= 40 (array-get out.samples 0 39))))
   (test-helper-assert "block contents 1 gap" (= 0 (array-get out.samples 0 40)))
   (test-helper-assert "block contents 1 event 2"
-    (and (= 2 (array-get out.samples 0 41)) (= 2 (array-get out.samples 0 99))))
+    (and (= 2 (array-get out.samples 0 41)) (= 118 (array-get out.samples 0 99))))
   (sp-event-list-free &events)
   (sp-block-free &out)
   (label exit status-return))
@@ -442,80 +600,15 @@
   (status-require (g.generate 50 100 &shifted &g))
   (g.free &g)
   (test-helper-assert "block contents event 1"
-    (and (= 1 (array-get block.samples 0 10)) (= 1 (array-get block.samples 0 29))))
+    (and (= 1 (array-get block.samples 0 10)) (= 20 (array-get block.samples 0 29))))
   (test-helper-assert "block contents event 2"
-    (and (= 2 (array-get block.samples 0 30)) (= 2 (array-get block.samples 0 39))))
+    (and (= 2 (array-get block.samples 0 30)) (= 20 (array-get block.samples 0 39))))
   (test-helper-assert "block contents gap"
-    (and (> 1 (array-get block.samples 0 40)) (> 1 (array-get block.samples 0 49))))
+    (and (= 0 (array-get block.samples 0 40)) (= 0 (array-get block.samples 0 49))))
   (test-helper-assert "block contents event 3"
-    (and (= 3 (array-get block.samples 0 50)) (= 3 (array-get block.samples 0 99))))
+    (and (= 3 (array-get block.samples 0 50)) (= 150 (array-get block.samples 0 99))))
   (sp-block-free &block)
   (label exit status-return))
-
-(pre-define test-wave-event-duration 100)
-
-(define (test-sp-wave-event) status-t
-  "sp wave values were taken from printing index and value of the result array.
-   sp-plot-samples can plot the result"
-  status-declare
-  (declare
-    out sp-block-t
-    shifted sp-block-t
-    fmod (array sp-time-t test-wave-event-duration)
-    amod1 (array sp-sample-t test-wave-event-duration)
-    amod2 (array sp-sample-t test-wave-event-duration)
-    config sp-wave-event-config-t*)
-  (sp-declare-event event)
-  (error-memory-init 2)
-  (status-require (sp-wave-event-config-new &config))
-  (error-memory-add config)
-  (status-require (sp-block-new 2 test-wave-event-duration &out))
-  (error-memory-add2 &out sp-block-free)
-  (sp-for-each-index i test-wave-event-duration
-    (set (array-get fmod i) 2000 (array-get amod1 i) 0.9 (array-get amod2 i) 0.8))
-  (struct-set (array-get config:channel-config 0) amp 1 amod amod1 fmod fmod)
-  (struct-set (array-get config:channel-config 1) use 1 amp 0.5 amod amod2 fmod fmod)
-  (set event.end test-wave-event-duration)
-  (sp-wave-event &event config)
-  (status-require (event.prepare &event))
-  (status-require (event.generate 0 30 &out &event))
-  (set shifted (sp-block-with-offset out 30))
-  (status-require (event.generate 30 test-wave-event-duration &shifted &event))
-  (test-helper-assert "amod applied channel 0"
-    (feq 0.9 (sp-samples-max (array-get out.samples 0) test-wave-event-duration)))
-  (test-helper-assert "amod applied channel 1"
-    (feq 0.4 (sp-samples-max (array-get out.samples 1) test-wave-event-duration)))
-  (sc-comment (sp-plot-samples (array-get out.samples 1) test-wave-event-duration))
-  (sp-block-free &out)
-  (label exit (if status-is-failure error-memory-free) status-return))
-
-(define (test-render-range-block) status-t
-  status-declare
-  (declare
-    out sp-block-t
-    frq (array sp-time-t test-wave-event-duration)
-    amod (array sp-sample-t test-wave-event-duration)
-    i sp-time-t
-    rc sp-render-config-t
-    config sp-wave-event-config-t*)
-  (sp-declare-event event)
-  (error-memory-init 2)
-  (set rc (sp-render-config sp-channel-count sp-rate sp-rate #f) rc.block-size 40)
-  (for ((set i 0) (< i test-wave-event-duration) (set+ i 1))
-    (set (array-get frq i) 1500 (array-get amod i) 1))
-  (status-require (sp-wave-event-config-new &config))
-  (error-memory-add config)
-  (status-require (sp-block-new 1 test-wave-event-duration &out))
-  (error-memory-add2 &out sp-block-free)
-  (struct-pointer-set config channel-count 1)
-  (struct-set (array-get config:channel-config 0) fmod frq amod amod)
-  (set event.end test-wave-event-duration)
-  (sp-wave-event &event config)
-  (sc-comment (sp-render-range-file event test-wave-event-duration rc "/tmp/sp-test.wav"))
-  (sp-render-range-block event 0 test-wave-event-duration rc &out)
-  (sc-comment (sp-block-plot-1 out))
-  (sp-block-free &out)
-  (label exit (if status-is-failure error-memory-free) status-return))
 
 (define (test-path) status-t
   (declare samples sp-sample-t* times sp-time-t* event sp-event-t)
@@ -570,8 +663,6 @@
   (sp-times-select-random a size b &b-size)
   (label exit (free a-temp) status-return))
 
-(pre-define test-stats-a-size 8)
-
 (define (test-statistics) status-t
   status-declare
   (declare
@@ -617,6 +708,30 @@
   (test-helper-assert "inharmonicity 1" (feq 0.0 (array-get inhar-results 0)))
   (test-helper-assert "inharmonicity 2" (feq 0.0625 (array-get inhar-results 1)))
   (test-helper-assert "inharmonicity 3" (feq 0.125 (array-get inhar-results 2)))
+  (label exit status-return))
+
+(define (test-render-range-block) (status-t void)
+  status-declare
+  (declare out sp-block-t render-config sp-render-config-t)
+  (sp-declare-event event)
+  (error-memory-init 1)
+  (set
+    render-config (sp-render-config sp-channel-count sp-rate sp-rate 0)
+    render-config.block-size 40)
+  (status-require (sp-block-new 1 test-resonator-event-duration &out))
+  (error-memory-add2 &out sp-block-free)
+  (set
+    event.start 0
+    event.end test-resonator-event-duration
+    event.config (convert-type 1 void*)
+    event.prepare 0
+    event.generate test-helper-event-generate
+    event.free 0)
+  (sp-render-range-block event 0 test-resonator-event-duration render-config &out)
+  (test-helper-assert "render range block nonzero"
+    (> (sp-samples-max (array-get out.samples 0) test-resonator-event-duration) 0.0))
+  (sp-block-free &out)
+  (if status-is-failure error-memory-free)
   (label exit status-return))
 
 (define (test-simple-mappings) status-t
@@ -689,57 +804,53 @@
   (free out)
   (label exit status-return))
 
-(define (test-sp-seq-parallel-block) status-t
-  "sum 10 wave events"
+(define (test-sp-resonator-event) (status-t void)
   status-declare
   (declare
-    i sp-time-t
-    step-size sp-time-t
-    amod sp-sample-t*
-    fmod sp-time-t*
-    size sp-time-t
-    block sp-block-t
-    shifted sp-block-t
-    config sp-wave-event-config-t*
-    event-count sp-time-t)
+    out sp-block-t
+    amod1 (array sp-sample-t test-resonator-event-duration)
+    amod2 (array sp-sample-t test-resonator-event-duration)
+    config sp-resonator-event-config-t*
+    sample-index sp-size-t
+    channel-config sp-resonator-event-channel-config-t*)
   (sp-declare-event event)
-  (sp-declare-event-list events)
-  (set size 10000 event-count 10)
-  (error-memory-init 4)
-  (status-require (sp-wave-event-config-new-n event-count &config))
+  (error-memory-init 2)
+  (status-require (sp-resonator-event-config-new &config))
   (error-memory-add config)
-  (status-require (sp-path-samples2 &amod size 1.0 1.0))
-  (error-memory-add amod)
-  (status-require (sp-path-times2 &fmod size 250 250))
-  (error-memory-add fmod)
-  (struct-set event start 0 end size)
-  (for ((set i 0) (< i event-count) (set+ i 1))
-    (struct-pointer-set (struct-pointer-get (+ config i) channel-config) fmod fmod amp 1 amod amod)
-    (sp-wave-event &event (+ config i))
-    (status-require (sp-event-list-add &events event)))
-  (status-require (sp-block-new 2 size &block))
-  (sp-seq-events-prepare &events)
-  (set step-size (/ size 10))
-  (for ((set i 0) (< i size) (set+ i step-size))
-    (set shifted (sp-block-with-offset block i))
-    (sp-seq-parallel-block i (+ i step-size) shifted &events))
-  (test-helper-assert "first 1"
-    (and (sp-sample-nearly-equal 0 (array-get block.samples 0 0) 0.001)
-      (sp-sample-nearly-equal 0 (array-get block.samples 1 0) 0.001)))
-  (test-helper-assert "last 1"
-    (and (sp-sample-nearly-equal 8.314696 (array-get block.samples 0 (- step-size 1)) 0.001)
-      (sp-sample-nearly-equal 8.314696 (array-get block.samples 1 (- step-size 1)) 0.001)))
-  (test-helper-assert "first 2"
-    (and (sp-sample-nearly-equal 5.0 (array-get block.samples 0 step-size) 0.001)
-      (sp-sample-nearly-equal 5.0 (array-get block.samples 1 step-size) 0.001)))
-  (test-helper-assert "last 2"
-    (and (sp-sample-nearly-equal -4.422887 (array-get block.samples 0 (- (* 2 step-size) 1)) 0.001)
-      (sp-sample-nearly-equal -4.422887 (array-get block.samples 1 (- (* 2 step-size) 1)) 0.001)))
-  (sp-event-list-free &events)
-  (free amod)
-  (free fmod)
-  (free config)
-  (sp-block-free &block)
+  (status-require (sp-block-new 2 test-resonator-event-duration &out))
+  (error-memory-add2 &out sp-block-free)
+  (set sample-index 0)
+  (while (< sample-index test-resonator-event-duration)
+    (set (array-get amod1 sample-index) 0.9 (array-get amod2 sample-index) 0.8)
+    (set+ sample-index 1))
+  (set
+    config:channel-count 2
+    config:bandwidth-threshold 50.0
+    channel-config (+ config:channel-config 0)
+    channel-config:use 1
+    channel-config:amp 1.0
+    channel-config:amod amod1
+    channel-config:frq 2000.0
+    channel-config:bandwidth 10.0
+    channel-config (+ config:channel-config 1)
+    channel-config:use 1
+    channel-config:amp 0.5
+    channel-config:amod amod2
+    channel-config:frq 2000.0
+    channel-config:bandwidth 200.0
+    event.start 0
+    event.end test-resonator-event-duration)
+  (sp-resonator-event &event config)
+  (status-require (event.prepare &event))
+  (status-require (event.generate 0 30 &out &event))
+  (status-require (event.generate 30 test-resonator-event-duration &out &event))
+  (test-helper-assert "resonator amod applied channel 0"
+    (feq 0.9 (sp-samples-max (array-get out.samples 0) test-resonator-event-duration)))
+  (test-helper-assert "resonator channel 1 in range"
+    (>= 1.0 (sp-samples-absolute-max (array-get out.samples 1) test-resonator-event-duration)))
+  (test-helper-assert "resonator channel 1 nonzero"
+    (> (sp-samples-absolute-max (array-get out.samples 1) test-resonator-event-duration) 0.0))
+  (sp-block-free &out)
   (label exit (if status-is-failure error-memory-free) status-return))
 
 (define (test-sp-map-event-generate start end in out state)
@@ -749,41 +860,81 @@
     (pointer-get (convert-type out sp-block-t*)))
   status-return)
 
-(define (test-sp-map-event) status-t
+(define (test-sp-map-event) (status-t void)
   status-declare
-  (declare
-    size sp-time-t
-    block sp-block-t
-    amod sp-sample-t*
-    config sp-wave-event-config-t*
-    map-event-config sp-map-event-config-t*)
+  (declare size sp-time-t block sp-block-t map-event-config sp-map-event-config-t*)
   (sp-declare-event parent)
   (sp-declare-event child)
-  (error-memory-init 2)
-  (status-require (sp-wave-event-config-new &config))
-  (error-memory-add config)
+  (error-memory-init 1)
   (status-require (sp-map-event-config-new &map-event-config))
   (error-memory-add map-event-config)
-  (set size (* 10 _sp-rate))
-  (status-require (sp-path-samples2 &amod size 1.0 1.0))
-  (struct-pointer-set config channel-count 1)
-  (struct-pointer-set config:channel-config frq 300 fmod 0 amp 1 amod amod)
-  (struct-set child start 0 end size)
-  (sp-wave-event &child config)
+  (set size (* 10 _sp-rate) child (test-helper-event 0 size 3))
   (status-require (sp-block-new 1 size &block))
-  (struct-pointer-set map-event-config
-    event child
-    map-generate test-sp-map-event-generate
-    isolate #t)
-  (struct-set parent start child.start end child.end)
+  (set
+    map-event-config:event child
+    map-event-config:map-generate test-sp-map-event-generate
+    map-event-config:isolate 1
+    parent.start child.start
+    parent.end child.end)
   (sp-map-event &parent map-event-config)
   (status-require (parent.prepare &parent))
   (status-require (parent.generate 0 (/ size 2) &block &parent))
   (status-require (parent.generate (/ size 2) size &block &parent))
   (parent.free &parent)
   (sp-block-free &block)
-  (free amod)
-  (label exit (if status-is-failure error-memory-free) status-return))
+  (if status-is-failure error-memory-free)
+  (label exit status-return))
+
+(define (test-sp-seq-parallel-block) (status-t void)
+  status-declare
+  (declare
+    size sp-time-t
+    step-size sp-time-t
+    event-count sp-time-t
+    event-index sp-time-t
+    position sp-time-t
+    block sp-block-t
+    shifted sp-block-t
+    event-sum sp-sample-t
+    sample-index sp-time-t
+    expected-value sp-sample-t
+    sample-value-ch0 sp-sample-t
+    sample-value-ch1 sp-sample-t)
+  (sp-declare-event event)
+  (sp-declare-event-list events)
+  (set size 1000 event-count 10 step-size (/ size 10))
+  (status-require (sp-block-new 2 size &block))
+  (set
+    event.start 0
+    event.end size
+    event.prepare 0
+    event.generate test-helper-event-generate
+    event.free 0
+    event-index 0)
+  (while (< event-index event-count)
+    (set event.config (convert-type (convert-type (+ event-index 1) uintptr-t) void*))
+    (status-require (sp-event-list-add &events event))
+    (set+ event-index 1))
+  (sp-seq-events-prepare &events)
+  (set position 0)
+  (while (< position size)
+    (set shifted (sp-block-with-offset block position))
+    (sp-seq-parallel-block position (+ position step-size) shifted &events)
+    (set position (+ position step-size)))
+  (set event-sum (convert-type (/ (* event-count (+ event-count 1)) 2) sp-sample-t) sample-index 0)
+  (while (< sample-index size)
+    (set
+      expected-value (* event-sum (convert-type (+ sample-index 1) sp-sample-t))
+      sample-value-ch0 (array-get block.samples 0 sample-index)
+      sample-value-ch1 (array-get block.samples 1 sample-index))
+    (test-helper-assert "seq_parallel_block ch0"
+      (sp-sample-nearly-equal expected-value sample-value-ch0 0.001))
+    (test-helper-assert "seq_parallel_block ch1"
+      (sp-sample-nearly-equal expected-value sample-value-ch1 0.001))
+    (set sample-index (+ sample-index 1)))
+  (sp-event-list-free &events)
+  (sp-block-free &block)
+  (label exit status-return))
 
 (define (test-sp-pan->amp) status-t
   status-declare
@@ -805,36 +956,90 @@
     (sp-sample-nearly-equal 0.5 (sp-pan->amp 0.25 1) error-margin))
   (label exit status-return))
 
+(define (test-resonator-continuity-2) (status-t)
+  status-declare
+  (declare
+    in sp-sample-t*
+    out sp-sample-t*
+    out-control sp-sample-t*
+    state sp-convolution-filter-state-t*
+    state-control sp-convolution-filter-state-t*
+    size sp-time-t
+    duration-a sp-time-t
+    duration-b sp-time-t
+    cutoff-low sp-sample-t
+    cutoff-high sp-sample-t
+    transition sp-sample-t
+    arguments-buffer (array uint8-t ((* 3 (sizeof sp-sample-t))))
+    arguments-length uint8-t)
+  (set
+    size 100
+    duration-a 30
+    duration-b 70
+    state 0
+    state-control 0
+    cutoff-low 0.1
+    cutoff-high 0.3
+    transition 0.1)
+  (status-require (sp-samples-new size &in))
+  (status-require (sp-samples-new size &out))
+  (status-require (sp-samples-new size &out-control))
+  (for-each-index i sp-size-t size (set (array-get in i) (convert-type i sp-sample-t)))
+  (set
+    arguments-length (* 3 (sizeof sp-sample-t))
+    (array-get (convert-type arguments-buffer sp-sample-t*) 0) cutoff-low
+    (array-get (convert-type arguments-buffer sp-sample-t*) 1) cutoff-high
+    (array-get (convert-type arguments-buffer sp-sample-t*) 2) transition)
+  (status-require
+    (sp-convolution-filter in size
+      sp-resonator-ir-f arguments-buffer arguments-length &state-control out-control))
+  (status-require
+    (sp-convolution-filter in duration-a
+      sp-resonator-ir-f arguments-buffer arguments-length &state out))
+  (status-require
+    (sp-convolution-filter (+ in duration-a) duration-b
+      sp-resonator-ir-f arguments-buffer arguments-length &state (+ out duration-a)))
+  (test-helper-assert "resonator two-segment continuity"
+    (sp-samples-nearly-equal out size out-control size 0.01))
+  (sp-convolution-filter-state-free state)
+  (sp-convolution-filter-state-free state-control)
+  (free in)
+  (free out)
+  (free out-control)
+  (label exit status-return))
+
 (define (main) int
   "\"goto exit\" can skip events"
   status-declare
   (sp-initialize 3 2 _sp-rate)
+  (test-helper-test-one test-fft)
+  (test-helper-test-one test-sinc-make-minimum-phase)
+  (test-helper-test-one test-sp-resonator-event)
   (test-helper-test-one test-path)
   (test-helper-test-one test-moving-average)
   (test-helper-test-one test-statistics)
   (test-helper-test-one test-sp-pan->amp)
-  (test-helper-test-one test-windowed-sinc-continuity)
-  (test-helper-test-one test-convolve-smaller)
-  (test-helper-test-one test-convolve-larger)
   (test-helper-test-one test-base)
   (test-helper-test-one test-sp-random)
   (test-helper-test-one test-sp-triangle-square)
-  (test-helper-test-one test-fft)
   (test-helper-test-one test-spectral-inversion-ir)
   (test-helper-test-one test-spectral-reversal-ir)
-  (test-helper-test-one test-windowed-sinc)
   (test-helper-test-one test-compositions)
   (test-helper-test-one test-times)
   (test-helper-test-one test-simple-mappings)
   (test-helper-test-one test-random-discrete)
   (test-helper-test-one test-file)
   (test-helper-test-one test-permutations)
-  (sc-comment "sequencing")
-  (test-helper-test-one test-sp-wave-event)
+  (test-helper-test-one test-render-range-block)
+  (sc-comment "resonator")
+  (test-helper-test-one test-convolve-smaller)
+  (test-helper-test-one test-convolve-larger)
+  (test-helper-test-one test-resonator-ir-and-filter)
+  (test-helper-test-one test-resonator-filter-continuity)
+  (test-helper-test-one test-resonator-continuity-2)
+  (sc-comment "sequencer")
   (test-helper-test-one test-sp-group)
   (test-helper-test-one test-sp-seq)
-  (test-helper-test-one test-sp-map-event)
-  (test-helper-test-one test-render-range-block)
-  (test-helper-test-one test-sp-noise-event)
   (test-helper-test-one test-sp-seq-parallel-block)
-  (label exit (sp-deinitialize) (test-helper-display-summary) (return status.id)))
+  (test-helper-test-one test-sp-map-event)
+  (label exit (sp-deinitialize) sp-test-helper-display-summary (return status.id)))

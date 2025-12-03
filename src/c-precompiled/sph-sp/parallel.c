@@ -130,16 +130,53 @@ exit:
 status_t sp_block_merge_all(sp_time_t start, sp_time_t end, void* parent_out, sp_seq_future_t* futures, sp_size_t count, void* context) {
   status_declare;
   sp_block_t* out_block;
-  out_block = parent_out;
-  for (sp_size_t k = 0; (k < count); k += 1) {
-    sp_seq_future_t* f;
-    sp_block_t* b;
-    f = (futures + k);
-    b = f->out;
-    for (sp_size_t ci = 0; (ci < out_block->channel_count); ci += 1) {
-      for (sp_size_t i = 0; (i < b->size); i += 1) {
-        ((out_block->samples)[ci])[(f->out_start + i)] = (((out_block->samples)[ci])[(f->out_start + i)] + ((b->samples)[ci])[i]);
+  sp_sample_t* out_channel;
+  sp_sample_t* in_channel;
+  sp_size_t out_size;
+  sp_sample_t sum;
+  sp_sample_t compensation;
+  sp_sample_t value;
+  sp_sample_t temp;
+  sp_sample_t abs_sum;
+  sp_sample_t abs_value;
+  sp_seq_future_t* f;
+  sp_block_t* b;
+  sp_size_t relative_index;
+  out_block = ((sp_block_t*)(parent_out));
+  out_size = out_block->size;
+  for (sp_size_t ci = 0; (ci < out_block->channel_count); ci += 1) {
+    out_channel = (out_block->samples)[ci];
+    for (sp_size_t i = 0; (i < out_size); i += 1) {
+      sum = out_channel[i];
+      compensation = 0.0;
+      for (sp_size_t k = 0; (k < count); k += 1) {
+        f = (futures + k);
+        if (i < f->out_start) {
+        } else {
+          relative_index = (i - f->out_start);
+          b = f->out;
+          if (relative_index < b->size) {
+            in_channel = (b->samples)[ci];
+            value = in_channel[relative_index];
+            temp = (sum + value);
+            abs_sum = sum;
+            if (abs_sum < 0.0) {
+              abs_sum *= -1.0;
+            };
+            abs_value = value;
+            if (abs_value < 0.0) {
+              abs_value *= -1.0;
+            };
+            if (abs_sum >= abs_value) {
+              compensation += ((sum - temp) + value);
+            } else {
+              compensation += ((value - temp) + sum);
+            };
+            sum = temp;
+          };
+        };
       };
+      out_channel[i] = (sum + compensation);
     };
   };
   status_return;

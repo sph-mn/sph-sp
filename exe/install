@@ -9,15 +9,8 @@ lib_src="$PWD/tmp/$lib_name"
 hdr_src="$PWD/src/c-precompiled/sph-sp"
 sph_src="$PWD/src/c/foreign/sph-sp/sph"
 sc_src="$PWD/src/sc/sph-sp/sc-macros.sc"
-
-# select musl or glibc targets
-if command -v musl-gcc >/dev/null; then
-  lib_root="$prefix/usr/lib/musl/lib"
-  inc_root="$prefix/usr/lib/musl/include"
-else
-  lib_root="$prefix/usr/lib"
-  inc_root="$prefix/usr/include"
-fi
+lib_root="$prefix/usr/lib"
+inc_root="$prefix/usr/include"
 sc_root="$prefix/usr/share/sph-sp"
 
 # create dirs with proper permissions

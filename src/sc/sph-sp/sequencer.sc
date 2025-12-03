@@ -183,236 +183,200 @@
   (status-require (c:map-generate start end &temp-out out c:config))
   (label exit (sp-block-free &temp-out) status-return))
 
-(define (sp-wave-event-config-defaults) sp-wave-event-config-t
-  (define out sp-wave-event-config-t (struct-literal 0))
-  (struct-set out
-    channel-config:use 1
-    channel-count sp-channel-count-limit
-    wvf sp-sine-table
-    wvf-size sp-rate)
-  (sp-for-each-index i sp-channel-count-limit
-    (struct-set (array-get out.channel-config i) amp 1 channel i))
+(define (sp-resonator-event-config-defaults) sp-resonator-event-config-t
+  (declare
+    out sp-resonator-event-config-t
+    channel-index sp-size-t
+    channel-config sp-resonator-event-channel-config-t*)
+  (set
+    out.random-state (sp-random-state-new (sp-time-random-primitive &sp-random-state))
+    out.resolution sp-default-resolution
+    out.noise-in 0
+    out.noise-out 0
+    out.bandwidth-threshold 0.0
+    out.channel-count sp-channel-count-limit
+    channel-index 0)
+  (while (< channel-index sp-channel-count-limit)
+    (set
+      channel-config (+ out.channel-config channel-index)
+      channel-config:amod 0
+      channel-config:amp 1.0
+      channel-config:channel channel-index
+      channel-config:filter-state 0
+      channel-config:frq 0.0
+      channel-config:fmod 0
+      channel-config:bandwidth 0.0
+      channel-config:bwmod 0
+      channel-config:phs 0
+      channel-config:pmod 0
+      channel-config:wvf sp-sine-table
+      channel-config:wvf-size sp-rate
+      channel-config:use (= channel-index 0)
+      channel-index (+ channel-index 1)))
   (return out))
 
-(define (sp-wave-event-config-new-n count out) (status-t sp-time-t sp-wave-event-config-t**)
-  "allocate sp_wave_event_config_t and set to defaults"
+(define (sp-resonator-event-config-new-n count out)
+  (status-t sp-time-t sp-resonator-event-config-t**)
   status-declare
-  (define defaults sp-wave-event-config-t (sp-wave-event-config-defaults))
-  (status-require (sp-malloc-type count sp-wave-event-config-t out))
-  (sp-for-each-index i count (set (array-get *out i) defaults))
+  (declare defaults-value sp-resonator-event-config-t index sp-time-t)
+  (set defaults-value (sp-resonator-event-config-defaults))
+  (status-require (sp-malloc-type count sp-resonator-event-config-t out))
+  (set index 0)
+  (while (< index count) (set (array-get *out index) defaults-value index (+ index 1)))
   (label exit status-return))
 
-(define (sp-wave-event-prepare event) (status-t sp-event-t*)
-  "prepare an event playing waveforms from an array.
-   event end will be longer if channel config delay is used.
-   expects sp_wave_event_config_t at event.config.
-   config:
-   * frq (frequency): fixed base frequency. added to fmod if fmod is set
-   * fmod (frequency): array with hertz values that will add to frq. note that it currently does not support negative frequencies
-   * wvf (waveform): array with waveform samples
-   * wvf-size: count of waveform samples
-   * phs (phase): initial phase offset
-   * pmod (phase): phase offset per sample
-   * amp (amplitude): multiplied with amod
-   * amod (amplitude): array with sample values"
-  status-declare
-  (declare c sp-wave-event-config-t* cc sp-wave-event-channel-config-t* ci sp-channel-count-t)
-  (set c event:config)
-  (for ((define i sp-channel-count-t 1) (< i c:channel-count) (set+ i 1))
-    (set cc (+ c:channel-config i))
-    (if cc:use
+(define (sp-resonator-event-free event) (void sp-event-t*)
+  (declare
+    config sp-resonator-event-config-t*
+    channel-config sp-resonator-event-channel-config-t*
+    channel-index sp-channel-count-t)
+  (set config event:config)
+  (if (not config) (return))
+  (set channel-index 0)
+  (while (< channel-index config:channel-count)
+    (set channel-config (+ config:channel-config channel-index))
+    (if channel-config:filter-state
       (begin
-        (sp-inline-default cc:amod c:channel-config:amod)
-        (sp-inline-default cc:pmod c:channel-config:pmod)
-        (sp-inline-default cc:fmod c:channel-config:fmod)
-        (sp-inline-default cc:frq c:channel-config:frq))
-      (set ci cc:channel *cc *c:channel-config cc:channel ci)))
-  status-return)
+        (sp-convolution-filter-state-free channel-config:filter-state)
+        (set channel-config:filter-state 0)))
+    (set channel-index (+ channel-index 1)))
+  (if config:noise-in (begin (free config:noise-in) (set config:noise-in 0)))
+  (if config:noise-out (begin (free config:noise-out) (set config:noise-out 0))))
 
-(define (sp-wave-event-generate start end out event)
-  (status-t sp-time-t sp-time-t void* sp-event-t*)
+(define (sp-resonator-event-prepare event) (status-t sp-event-t*)
   status-declare
   (declare
-    c sp-wave-event-config-t*
-    cc sp-wave-event-channel-config-t
-    ccp sp-wave-event-channel-config-t*
-    phsn sp-time-t)
-  (set c event:config)
-  (for ((define cci sp-channel-count-t 0) (< cci c:channel-count) (set+ cci 1))
-    (set ccp (+ c:channel-config cci) cc *ccp)
-    (for ((define i sp-time-t start) (< i end) (set+ i 1))
-      (if cc.pmod
-        (begin
-          (set phsn (+ cc.phs (array-get cc.pmod i)))
-          (if (>= phsn c:wvf-size) (set phsn (modulo phsn c:wvf-size))))
-        (set phsn cc.phs))
-      (set+
-        (array-get (struct-pointer-get (convert-type out sp-block-t*) samples) cc.channel
-          (- i start))
-        (* cc.amp (array-get cc.amod i) (array-get c:wvf phsn)) cc.phs
-        (if* cc.fmod (+ cc.frq (array-get cc.fmod i)) cc.frq))
-      (if (>= cc.phs c:wvf-size) (set cc.phs (modulo cc.phs c:wvf-size))))
-    (set ccp:phs cc.phs))
-  status-return)
-
-(define (sp-noise-event-config-defaults) sp-noise-event-config-t
-  (define out sp-noise-event-config-t (struct-literal 0))
-  (struct-set out
-    channel-config:use 1
-    channel-count sp-channel-count-limit
-    resolution sp-default-resolution)
-  (sp-for-each-index i sp-channel-count-limit
-    (struct-set (array-get out.channel-config i)
-      amp 1
-      channel i
-      wdt sp-max-frq
-      trnl (* sp-rate 0.08)
-      trnh (* sp-rate 0.08)))
-  (return out))
-
-(define (sp-noise-event-config-new-n count out) (status-t sp-time-t sp-noise-event-config-t**)
-  status-declare
-  (define defaults sp-noise-event-config-t (sp-noise-event-config-defaults))
-  (status-require (sp-malloc-type count sp-noise-event-config-t out))
-  (sp-for-each-index i count (set (array-get *out i) defaults))
-  (label exit status-return))
-
-(define (sp-noise-event-filter-state c cc ir-length)
-  (status-t sp-noise-event-config-t* sp-noise-event-channel-config-t* sp-time-t)
-  "the initial filter output shows a small delay of circa 40 samples for transition 0.07. the size seems to be related to ir-len.
-   the filter state is initialized with one unused call to skip the delay."
-  (declare frqn sp-frq-t)
-  (sp-samples-random-primitive &c:random-state ir-length *c:temp)
-  (set frqn (sp-optional-array-get cc:fmod cc:frq 0))
-  (return
-    (sp-windowed-sinc-bp-br *c:temp ir-length
-      (sp-hz->factor frqn) (sp-hz->factor (+ frqn (sp-optional-array-get cc:wmod cc:wdt 0)))
-      (sp-hz->factor cc:trnl) (sp-hz->factor cc:trnh) c:is-reject
-      &cc:filter-state (array-get c:temp 1))))
-
-(define (sp-noise-event-free event) (void sp-event-t*)
-  (declare c sp-noise-event-config-t* cc sp-noise-event-channel-config-t*)
-  (set event:free 0 c event:config)
-  (sp-for-each-index i c:channel-count
-    (set cc (+ c:channel-config i))
-    (if cc:filter-state (sp-convolution-filter-state-free cc:filter-state)))
-  (free (array-get c:temp 0))
-  (free (array-get c:temp 1))
-  (free (array-get c:temp 2))
-  (sp-event-memory-free event))
-
-(define (sp-noise-event-prepare event) (status-t sp-event-t*)
-  "an event for noise filtered by a windowed-sinc filter.
-   very processing intensive if parameters change with low resolution.
-   event:config.resolution is how often the filter parameters should be updated.
-   filter parameters are updated at least for each generate call"
-  status-declare
-  (declare
-    cc sp-noise-event-channel-config-t*
-    ci sp-channel-count-t
-    c sp-noise-event-config-t*
+    config sp-resonator-event-config-t*
+    base-channel sp-resonator-event-channel-config-t*
+    channel-config sp-resonator-event-channel-config-t*
+    channel-index sp-channel-count-t
     duration sp-time-t
-    filter-mod sp-bool-t
-    filter-states sp-bool-t
-    ir-lengths (array sp-time-t sp-channel-count-limit 0)
-    temp-length sp-time-t)
-  (error-memory-init (+ 3 sp-channel-count-limit))
-  (set
-    c event:config
-    c:random-state (sp-random-state-new (sp-time-random-primitive &sp-random-state))
-    cc c:channel-config
-    duration (- event:end event:start)
-    filter-mod (or cc:fmod cc:wmod)
-    filter-states 0
-    temp-length (sp-windowed-sinc-lp-hp-ir-length (sp-hz->factor (sp-inline-min cc:trnl cc:trnh)))
-    (array-get ir-lengths 0) temp-length)
-  (sc-comment "the first channel is always required")
-  (if (not c:channel-config:amod) (sp-status-set-goto sp-s-id-invalid-argument))
-  (sc-comment "set channel defaults and collect size information for temporary buffers")
-  (for ((define cci sp-channel-count-t 1) (< cci c:channel-count) (set+ cci 1))
-    (set cc (+ c:channel-config cci))
-    (if cc:use
+    temp-length sp-time-t
+    keep-channel sp-channel-count-t)
+  (set config event:config base-channel config:channel-config)
+  (if (or (not base-channel:amod) (not base-channel:wvf) (<= base-channel:wvf-size 0))
+    (sp-status-set-goto sp-s-id-invalid-argument))
+  (set duration (- event:end event:start))
+  (if (<= config:resolution 0) (set config:resolution duration))
+  (set temp-length config:resolution)
+  (if (> temp-length (convert-type (* sp-render-block-seconds sp-rate) sp-time-t))
+    (set temp-length (convert-type (* sp-render-block-seconds sp-rate) sp-time-t)))
+  (if (<= temp-length 0) (set temp-length 1))
+  (set config:random-state (sp-random-state-new (sp-time-random-primitive &sp-random-state)))
+  (status-require (sp-malloc-type temp-length sp-sample-t &config:noise-in))
+  (status-require (sp-malloc-type temp-length sp-sample-t &config:noise-out))
+  (set channel-index 0)
+  (while (< channel-index config:channel-count)
+    (set channel-config (+ config:channel-config channel-index))
+    (if (not channel-config:use)
+      (set
+        keep-channel channel-config:channel
+        *channel-config *base-channel
+        channel-config:channel keep-channel)
       (begin
-        (if (not cc:amod) (set cc:amod c:channel-config:amod))
-        (if (or cc:frq cc:wdt cc:fmod cc:wmod cc:trnl cc:trnh)
-          (begin
-            (set filter-states 1)
-            (if (or cc:fmod cc:wmod) (set filter-mod 1))
-            (if (not cc:fmod) (set cc:fmod c:channel-config:fmod))
-            (if (not cc:trnh) (set cc:trnh c:channel-config:trnh))
-            (if (not cc:trnl) (set cc:trnl c:channel-config:trnl))
-            (if (not cc:wdt) (set cc:wdt c:channel-config:wdt))
-            (if (not cc:wmod) (set cc:wmod c:channel-config:wmod))
-            (set (array-get ir-lengths cci)
-              (sp-windowed-sinc-lp-hp-ir-length (sp-hz->factor (sp-inline-min cc:trnl cc:trnh))))
-            (if (< temp-length (array-get ir-lengths cci))
-              (set temp-length (array-get ir-lengths cci))))))
-      (set ci cc:channel *cc *c:channel-config cc:channel ci)))
-  (sc-comment "no updates necessary if parameters do not change")
-  (if (not filter-mod) (set c:resolution duration))
-  (sc-comment "this limits the largest block that can be safely requested")
-  (set
-    temp-length (sp-inline-max temp-length c:resolution)
-    temp-length (sp-inline-min temp-length (* sp-render-block-seconds sp-rate)))
-  (sc-comment
-    "three buffers: one for the white noise, one for the first channel filter result that may be shared with other channels,
-     and one for other channel filter results")
-  (status-require (sp-malloc-type temp-length sp-sample-t c:temp))
-  (error-memory-add (array-get c:temp 0))
-  (status-require (sp-malloc-type temp-length sp-sample-t (+ 1 c:temp)))
-  (error-memory-add (array-get c:temp 1))
-  (sc-comment "allocate and initialize the filter-states using the buffers allocated above")
-  (set cc c:channel-config)
-  (status-require (sp-noise-event-filter-state c cc (array-get ir-lengths 0)))
-  (error-memory-add2 cc:filter-state sp-convolution-filter-state-free)
-  (if filter-states
-    (begin
-      (status-require (sp-malloc-type temp-length sp-sample-t (+ 2 c:temp)))
-      (error-memory-add (array-get c:temp 2))
-      (for ((define cci sp-channel-count-t 1) (< cci c:channel-count) (set+ cci 1))
-        (set cc (+ c:channel-config cci))
-        (if (array-get ir-lengths cci)
-          (begin
-            (status-require (sp-noise-event-filter-state c cc (array-get ir-lengths cci)))
-            (error-memory-add2 cc:filter-state sp-convolution-filter-state-free))))))
-  (label exit (if status-is-failure error-memory-free) status-return))
+        (if (not channel-config:amod) (set channel-config:amod base-channel:amod))
+        (if (not channel-config:wvf)
+          (set channel-config:wvf base-channel:wvf channel-config:wvf-size base-channel:wvf-size))
+        (if (<= channel-config:wvf-size 0)
+          (set channel-config:wvf base-channel:wvf channel-config:wvf-size base-channel:wvf-size))
+        (if (not channel-config:fmod) (set channel-config:fmod base-channel:fmod))
+        (if (not channel-config:bwmod) (set channel-config:bwmod base-channel:bwmod))
+        (if (not channel-config:pmod) (set channel-config:pmod base-channel:pmod))))
+    (set channel-config:filter-state 0 channel-index (+ channel-index 1)))
+  (label exit status-return))
 
-(define (sp-noise-event-generate-block duration block-i event-i out event)
+(define (sp-resonator-event-generate-block duration block-i event-i out event)
   (status-t sp-time-t sp-time-t sp-time-t void* sp-event-t*)
   status-declare
   (declare
-    c sp-noise-event-config-t*
-    cc sp-noise-event-channel-config-t
-    ccp sp-noise-event-channel-config-t*
-    frqn sp-frq-t
-    outn sp-sample-t
-    temp sp-sample-t*)
-  (set c event:config)
-  (sp-samples-random-primitive &c:random-state duration *c:temp)
-  (for ((define cci sp-channel-count-t 0) (< cci c:channel-count) (set+ cci 1))
-    (set ccp (+ c:channel-config cci) cc *ccp)
-    (if (and cc.use cc.filter-state)
+    config sp-resonator-event-config-t*
+    channel-config sp-resonator-event-channel-config-t*
+    channel-value sp-resonator-event-channel-config-t
+    channel-index sp-channel-count-t
+    noise-in sp-sample-t*
+    noise-out sp-sample-t*
+    frq-value sp-frq-t
+    bandwidth-value sp-frq-t
+    cutoff-low-factor sp-sample-t
+    cutoff-high-factor sp-sample-t
+    transition-factor sp-sample-t
+    arguments-buffer (array uint8-t ((* 3 (sizeof sp-sample-t))))
+    arguments-length uint8-t
+    sample-index sp-time-t
+    phase-value sp-time-t
+    amplitude-value sp-sample-t
+    sine-value sp-sample-t
+    noise-value sp-sample-t
+    out-value sp-sample-t)
+  (set config event:config noise-in config:noise-in noise-out config:noise-out)
+  (sp-samples-random-primitive &config:random-state duration noise-in)
+  (set channel-index 0)
+  (while (< channel-index config:channel-count)
+    (set channel-config (+ config:channel-config channel-index) channel-value *channel-config)
+    (if (not channel-value.use) (begin (set+ channel-index 1) continue))
+    (set
+      frq-value (sp-optional-array-get channel-value.fmod channel-value.frq event-i)
+      bandwidth-value (sp-optional-array-get channel-value.bwmod channel-value.bandwidth event-i))
+    (if (< bandwidth-value config:bandwidth-threshold)
+      (begin
+        (set sample-index 0)
+        (while (< sample-index duration)
+          (set phase-value channel-value.phs)
+          (if channel-value.pmod
+            (begin
+              (set+ phase-value (array-get channel-value.pmod (+ event-i sample-index)))
+              (if (>= phase-value channel-value.wvf-size)
+                (set- phase-value
+                  (* channel-value.wvf-size (floor (/ phase-value channel-value.wvf-size)))))))
+          (set
+            amplitude-value
+            (* channel-value.amp (array-get channel-value.amod (+ event-i sample-index)))
+            sine-value (array-get channel-value.wvf (convert-type phase-value sp-time-t))
+            out-value (* amplitude-value sine-value))
+          (set+
+            (array-get (struct-pointer-get (convert-type out sp-block-t*) samples)
+              channel-value.channel (+ block-i sample-index))
+            (sp-inline-limit out-value -1 1))
+          (set channel-value.phs (+ channel-value.phs frq-value))
+          (if (>= channel-value.phs channel-value.wvf-size)
+            (set- channel-value.phs
+              (* channel-value.wvf-size (floor (/ channel-value.phs channel-value.wvf-size)))))
+          (set+ sample-index 1))
+        (set channel-config:phs channel-value.phs))
       (begin
         (set
-          temp (array-get c:temp (+ 1 (< 0 cci)))
-          frqn (sp-optional-array-get cc.fmod cc.frq event-i))
+          cutoff-low-factor (sp-hz-to-factor (- frq-value (* 0.5 bandwidth-value)))
+          cutoff-high-factor (sp-hz-to-factor (+ frq-value (* 0.5 bandwidth-value))))
+        (if (< cutoff-low-factor 0.0) (set cutoff-low-factor 0.0))
+        (if (> cutoff-high-factor 0.5) (set cutoff-high-factor 0.5))
+        (set
+          transition-factor (* 0.5 (sp-hz-to-factor bandwidth-value))
+          arguments-length (* 3 (sizeof sp-sample-t))
+          (pointer-get (convert-type arguments-buffer sp-sample-t*)) cutoff-low-factor
+          (pointer-get (+ (convert-type arguments-buffer sp-sample-t*) 1)) cutoff-high-factor
+          (pointer-get (+ (convert-type arguments-buffer sp-sample-t*) 2)) transition-factor)
         (status-require
-          (sp-windowed-sinc-bp-br *c:temp duration
-            (sp-hz->factor frqn)
-            (sp-hz->factor (+ frqn (sp-optional-array-get cc.wmod cc.wdt event-i)))
-            (sp-hz->factor cc.trnl) (sp-hz->factor cc.trnh) c:is-reject &ccp:filter-state temp)))
-      (set temp (array-get c:temp 1)))
-    (sp-for-each-index i duration
-      (set outn (* cc.amp (array-get cc.amod (+ event-i i)) (array-get temp i)))
-      (set+
-        (array-get (struct-pointer-get (convert-type out sp-block-t*) samples) cc.channel
-          (+ block-i i))
-        (sp-inline-limit outn -1 1))))
+          (sp-convolution-filter noise-in duration
+            sp-resonator-ir-f arguments-buffer arguments-length
+            &channel-config:filter-state noise-out))
+        (set sample-index 0)
+        (while (< sample-index duration)
+          (set
+            amplitude-value
+            (* channel-value.amp (array-get channel-value.amod (+ event-i sample-index)))
+            noise-value (array-get noise-out sample-index)
+            out-value (* amplitude-value noise-value))
+          (set+
+            (array-get (struct-pointer-get (convert-type out sp-block-t*) samples)
+              channel-value.channel (+ block-i sample-index))
+            (sp-inline-limit out-value -1 1))
+          (set+ sample-index 1))))
+    (set+ channel-index 1))
   (label exit status-return))
 
-(define (sp-noise-event-generate start end out event)
+(define (sp-resonator-event-generate start end out event)
   (status-t sp-time-t sp-time-t void* sp-event-t*)
   (return
     (sp-event-block-generate
-      (struct-pointer-get (convert-type event:config sp-noise-event-config-t*) resolution)
-      sp-noise-event-generate-block start end out event)))
+      (struct-pointer-get (convert-type event:config sp-resonator-event-config-t*) resolution)
+      sp-resonator-event-generate-block start end out event)))

@@ -14,9 +14,8 @@
   (sp-event-memory-add event-pointer address)
   (sph-memory-add-with-handler &event-pointer:memory address free)
   (sp-event-memory-free event-pointer) (sph-memory-destroy &event-pointer:memory)
-  (sp-wave-event-config-new out) (sp-wave-event-config-new-n 1 out)
   (sp-map-event-config-new out) (sp-map-event-config-new-n 1 out)
-  (sp-noise-event-config-new out) (sp-noise-event-config-new-n 1 out)
+  (sp-resonator-event-config-new out) (sp-resonator-event-config-new-n 1 out)
   (sp-define-event name _prepare duration)
   (begin
     "use case: event variables defined at the top-level"
@@ -24,15 +23,10 @@
       name sp-event-t
       (struct-literal (prepare _prepare) (start 0)
         (end duration) (config 0) (memory (struct-literal 0)))))
-  (sp-wave-event event-pointer _config)
+  (sp-resonator-event event-pointer _config)
   (struct-pointer-set event-pointer
-    prepare sp-wave-event-prepare
-    generate sp-wave-event-generate
-    config _config)
-  (sp-noise-event event-pointer _config)
-  (struct-pointer-set event-pointer
-    prepare sp-noise-event-prepare
-    generate sp-noise-event-generate
+    prepare sp-resonator-event-prepare
+    generate sp-resonator-event-generate
     config _config)
   (sp-map-event event-pointer _config)
   (struct-pointer-set event-pointer
@@ -156,11 +150,11 @@
   (sp-event-alloc-srq event-pointer allocator size pointer-address)
   (begin
     (status-require (allocator size pointer-address))
-    (status-require (sp-event-memory-add event-pointer (pointer-get pointer-address))))
+    (status-require (sp-event-memory-add event-pointer *pointer-address)))
   (sp-event-malloc-srq event-pointer size pointer-address)
   (begin
     (status-require (sph-malloc size pointer-address))
-    (status-require (sp-event-memory-add event-pointer (pointer-get pointer-address))))
+    (status-require (sp-event-memory-add event-pointer *pointer-address)))
   (sp-event-malloc-type-n-srq event-pointer count type pointer-address)
   (sp-event-malloc-srq event-pointer (* count (sizeof type)) pointer-address)
   (sp-event-malloc-type-srq event-pointer type pointer-address)
@@ -193,48 +187,7 @@
   (type (function-pointer status-t sp-time-t sp-time-t sp-time-t void* sp-event-t*))
   sp-map-event-config-t
   (type
-    (struct (config void*) (event sp-event-t) (map-generate sp-map-generate-t) (isolate sp-bool-t)))
-  sp-wave-event-channel-config-t
-  (type
-    (struct
-      (amod sp-sample-t*)
-      (amp sp-sample-t)
-      (channel sp-channel-count-t)
-      (fmod sp-time-t*)
-      (frq sp-frq-t)
-      (phs sp-time-t)
-      (pmod sp-time-t*)
-      (use sp-bool-t)))
-  sp-wave-event-config-t
-  (type
-    (struct
-      (wvf sp-sample-t*)
-      (wvf-size sp-time-t)
-      (channel-count sp-channel-count-t)
-      (channel-config (array sp-wave-event-channel-config-t sp-channel-count-limit))))
-  sp-noise-event-channel-config-t
-  (type
-    (struct
-      (amp sp-sample-t)
-      (amod sp-sample-t*)
-      (channel sp-channel-count-t)
-      (filter-state sp-convolution-filter-state-t*)
-      (frq sp-frq-t)
-      (fmod sp-time-t*)
-      (wdt sp-frq-t)
-      (wmod sp-time-t*)
-      (trnl sp-frq-t)
-      (trnh sp-frq-t)
-      (use sp-bool-t)))
-  sp-noise-event-config-t
-  (type
-    (struct
-      (is-reject sp-bool-t)
-      (random-state sp-random-state-t)
-      (resolution sp-time-t)
-      (temp (array sp-sample-t* 3))
-      (channel-count sp-channel-count-t)
-      (channel-config (array sp-noise-event-channel-config-t sp-channel-count-limit)))))
+    (struct (config void*) (event sp-event-t) (map-generate sp-map-generate-t) (isolate sp-bool-t))))
 
 (define sp-null-event sp-event-t (struct-literal 0))
 (sc-no-semicolon (sph-dlist-declare-type sp-event-list sp-event-t))
@@ -257,14 +210,38 @@
   (sp-map-event-isolated-generate start end out event)
   (status-t sp-time-t sp-time-t void* sp-event-t*)
   (sp-map-event-prepare event) (status-t sp-event-t*)
-  (sp-noise-event-config-defaults) sp-noise-event-config-t
-  (sp-noise-event-config-new-n count out) (status-t sp-time-t sp-noise-event-config-t**)
-  (sp-noise-event-free event) (void sp-event-t*)
-  (sp-noise-event-generate start end out event) (status-t sp-time-t sp-time-t void* sp-event-t*)
-  (sp-noise-event-prepare event) (status-t sp-event-t*)
   (sp-seq start end out events) (status-t sp-time-t sp-time-t void* sp-event-list-t**)
-  (sp-wave-event-config-defaults) sp-wave-event-config-t
-  (sp-wave-event-config-new-n count out) (status-t sp-time-t sp-wave-event-config-t**)
-  (sp-wave-event-generate start end out event) (status-t sp-time-t sp-time-t void* sp-event-t*)
-  (sp-wave-event-prepare event) (status-t sp-event-t*)
-  (sp-event-schedule event onset duration config) (sp-event-t sp-event-t sp-time-t sp-time-t void*))
+  (sp-event-schedule event onset duration config) (sp-event-t sp-event-t sp-time-t sp-time-t void*)
+  sp-resonator-event-channel-config-t
+  (type
+    (struct
+      (amod sp-sample-t*)
+      (amp sp-sample-t)
+      (channel sp-channel-count-t)
+      (filter-state sp-convolution-filter-state-t*)
+      (frq sp-frq-t)
+      (fmod sp-time-t*)
+      (bandwidth sp-frq-t)
+      (bwmod sp-time-t*)
+      (phs sp-time-t)
+      (pmod sp-time-t*)
+      (wvf sp-sample-t*)
+      (wvf-size sp-time-t)
+      (use sp-bool-t)))
+  sp-resonator-event-config-t
+  (type
+    (struct
+      (random-state sp-random-state-t)
+      (resolution sp-time-t)
+      (noise-in sp-sample-t*)
+      (noise-out sp-sample-t*)
+      (bandwidth-threshold sp-sample-t)
+      (channel-count sp-channel-count-t)
+      (channel-config (array sp-resonator-event-channel-config-t sp-channel-count-limit))))
+  (sp-resonator-event-config-defaults) (sp-resonator-event-config-t)
+  (sp-resonator-event-config-new-n count out) (status-t sp-time-t sp-resonator-event-config-t**)
+  (sp-resonator-event-prepare event) (status-t sp-event-t*)
+  (sp-resonator-event-generate-block duration block-i event-i out event)
+  (status-t sp-time-t sp-time-t sp-time-t void* sp-event-t*)
+  (sp-resonator-event-generate start end out event) (status-t sp-time-t sp-time-t void* sp-event-t*)
+  (sp-resonator-event-free event) (void sp-event-t*))

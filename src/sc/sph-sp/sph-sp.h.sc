@@ -32,6 +32,7 @@
   sp-unit-random-primitive sph-random-f64-0to1
   sp-units-random-primitive sph-random-f64-array-0to1
   sp-unit-t double
+  sp-pi 3.141592653589793
   sp-pow pow
   sp-exp exp)
 
@@ -40,7 +41,7 @@
 (pre-include "string.h" "stdio.h"
   "stdlib.h" "sph-sp/sph/memory.h" "sph-sp/sph/list.h"
   "sph-sp/main.h" "sph-sp/arrays.h" "sph-sp/distributions.h"
-  "sph-sp/path.h" "sph-sp/filter.h" "sph-sp/sequencer.h"
-  "sph-sp/parallel.h" "sph-sp/statistics.h" "sph-sp/plot.h" "sph-sp/main2.h")
+  "sph-sp/path.h" "sph-sp/resonator.h" "sph-sp/sequencer.h"
+  "sph-sp/parallel.h" "sph-sp/statistics.h" "sph-sp/plot.h" "sph-sp/render.h")
 
 (pre-include-guard-end)
