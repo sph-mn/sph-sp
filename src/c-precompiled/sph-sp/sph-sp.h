@@ -97,6 +97,9 @@
 #ifndef sp_unit_t
 #define sp_unit_t double
 #endif
+#ifndef sp_pi
+#define sp_pi 3.141592653589793
+#endif
 #ifndef sp_pow
 #define sp_pow pow
 #endif
@@ -113,10 +116,10 @@
 #include <sph-sp/arrays.h>
 #include <sph-sp/distributions.h>
 #include <sph-sp/path.h>
-#include <sph-sp/filter.h>
+#include <sph-sp/resonator.h>
 #include <sph-sp/sequencer.h>
 #include <sph-sp/parallel.h>
 #include <sph-sp/statistics.h>
 #include <sph-sp/plot.h>
-#include <sph-sp/main2.h>
+#include <sph-sp/render.h>
 #endif

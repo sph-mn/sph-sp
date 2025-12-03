@@ -442,11 +442,39 @@ exit:
   status_return;
 }
 
+/** get the maximum value in samples array, disregarding sign */
+sp_time_t sp_times_absolute_max(sp_time_t* in, sp_size_t count) {
+  sp_time_t temp;
+  sp_time_t max;
+  max = 0;
+  for (sp_size_t i = 0; (i < count); i += 1) {
+    temp = sp_inline_abs((in[i]));
+    if (temp > max) {
+      max = temp;
+    };
+  };
+  return (max);
+}
+
 /* samples */
 arrays_template(sp_sample_t, sample, samples, sp_subtract, fabs)
 
-  /** display a sample array in one line */
-  void sp_samples_display(sp_sample_t* in, sp_size_t count) {
+  /** get the maximum value in samples array, disregarding sign */
+  sp_sample_t sp_samples_absolute_max(sp_sample_t* in, sp_size_t count) {
+  sp_sample_t temp;
+  sp_sample_t max;
+  max = 0;
+  for (sp_size_t i = 0; (i < count); i += 1) {
+    temp = fabs((in[i]));
+    if (temp > max) {
+      max = temp;
+    };
+  };
+  return (max);
+}
+
+/** display a sample array in one line */
+void sp_samples_display(sp_sample_t* in, sp_size_t count) {
   printf(sp_sample_printf_format, (in[0]));
   for (sp_size_t i = 1; (i < count); i += 1) {
     printf(" " sp_sample_printf_format, (in[i]));

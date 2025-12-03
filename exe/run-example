@@ -2,6 +2,6 @@
 
 target=tmp/example
 
-gcc -lsph-sp other/examples/example.c -o $target
+gcc -lsph-sp -lm other/examples/example.c -o $target
 chmod +x $target
 ./$target

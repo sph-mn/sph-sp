@@ -326,8 +326,24 @@
   (set *out temp)
   (label exit status-return))
 
+(define (sp-times-absolute-max in count) (sp-time-t sp-time-t* sp-size-t)
+  "get the maximum value in samples array, disregarding sign"
+  (declare temp sp-time-t max sp-time-t)
+  (set max 0)
+  (sp-for-each-index i count
+    (set temp (sp-inline-abs (array-get in i)))
+    (if (> temp max) (set max temp)))
+  (return max))
+
 (sc-comment "samples")
 (sc-no-semicolon (arrays-template sp-sample-t sample samples sp-subtract fabs))
+
+(define (sp-samples-absolute-max in count) (sp-sample-t sp-sample-t* sp-size-t)
+  "get the maximum value in samples array, disregarding sign"
+  (declare temp sp-sample-t max sp-sample-t)
+  (set max 0)
+  (sp-for-each-index i count (set temp (fabs (array-get in i))) (if (> temp max) (set max temp)))
+  (return max))
 
 (define (sp-samples-display in count) (void sp-sample-t* sp-size-t)
   "display a sample array in one line"

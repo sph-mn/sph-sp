@@ -23,13 +23,13 @@
   sph_array_declare_struct_type(name, element_type); \
   status_t name##_new(size_t size, name##_t* a) { \
     status_declare; \
+    memset(a, 0, (sizeof(name##_t))); \
     element_type* data = sph_array_alloc(size, (sizeof(element_type))); \
     if (!data) { \
       sph_array_memory_error; \
     }; \
     a->data = data; \
     a->size = size; \
-    a->used = 0; \
   exit: \
     status_return; \
   } \
@@ -52,7 +52,7 @@
   }
 #define sph_array_declare_type(name, element_type) sph_array_declare_type_custom(name, element_type, sph_array_default_alloc, sph_array_default_realloc, free, sph_array_default_declare_struct_type)
 #define sph_array_declare_type_zeroed(name, element_type) sph_array_declare_type_custom(name, element_type, sph_array_default_alloc_zero, sph_array_default_realloc_zero, free, sph_array_default_declare_struct_type)
-#define sph_array_declare(a, type) type a = { 0, 0, 0 }
+#define sph_array_declare(a, type) type a = { 0 }
 #define sph_array_add(a, value) \
   (a.data)[a.used] = value; \
   a.used += 1

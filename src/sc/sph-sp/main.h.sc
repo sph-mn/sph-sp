@@ -1,6 +1,4 @@
 (pre-define
-  f128 (sc-insert "long double")
-  f64 double
   sp-bool-t uint8-t
   sp-memory-error (status-set-goto sp-s-group-sp sp-s-id-memory)
   sp-noise sp-samples-random
@@ -83,7 +81,7 @@
   (local-memory-add address) (local-memory-add2 address free)
   (sp-time-odd? a) (bit-and a 1)
   (sp-local-alloc-srq allocator size pointer-address)
-  (begin (srq (allocator size pointer-address)) (local-memory-add (pointer-get pointer-address)))
+  (begin (srq (allocator size pointer-address)) (local-memory-add *pointer-address))
   (sp-local-units-srq size pointer-address) (sp-local-alloc-srq sp-units-new size pointer-address)
   (sp-local-times-srq size pointer-address) (sp-local-alloc-srq sp-times-new size pointer-address)
   (sp-local-samples-srq size pointer-address)
@@ -128,8 +126,8 @@
   (sp-convolve-one a a-len b b-len result-samples)
   (void sp-sample-t* sp-time-t sp-sample-t* sp-time-t sp-sample-t*)
   (sp-deinitialize) void
-  (sp-ffti input-len input/output-real input/output-imag) (int sp-time-t double* double*)
-  (sp-fft input-len input/output-real input/output-imag) (int sp-time-t double* double*)
+  (sp-ffti n real imaginary) (int sp-time-t double* double*)
+  (sp-fft n real imaginary) (int sp-time-t double* double*)
   (sp-file-close-read file) (void sp-file-t)
   (sp-file-close-write file) (void sp-file-t*)
   (sp-file-open-read path file) (status-t char* sp-file-t*)
@@ -161,8 +159,7 @@
   (sp-time-min a b) (sp-time-t sp-time-t sp-time-t)
   (sp-wave size wvf wvf-size amp amod frq fmod phs-state out)
   (void sp-time-t sp-sample-t*
-    sp-time-t sp-sample-t sp-sample-t* sp-time-t sp-time-t* sp-time-t* sp-sample-t*)
-  (sp-window-blackman a width) (sp-sample-t sp-sample-t sp-time-t))
+    sp-time-t sp-sample-t sp-sample-t* sp-time-t sp-time-t* sp-time-t* sp-sample-t*))
 
 (sc-comment "extra")
 
@@ -184,4 +181,6 @@
   (sp-scale-rotate scale steps divisions) (sp-scale-t sp-scale-t sp-time-t sp-time-t)
   (sp-scale-divisions scale) (sp-time-t sp-scale-t)
   (sp-scale-first-index scale) (sp-time-t sp-scale-t)
-  (sp-scale-canonical scale divisions) (sp-scale-t sp-scale-t sp-time-t))
+  (sp-scale-canonical scale divisions) (sp-scale-t sp-scale-t sp-time-t)
+  (sp-moving-average in in-size prev next radius out)
+  (void sp-sample-t* sp-time-t sp-sample-t* sp-sample-t* sp-time-t sp-sample-t*))

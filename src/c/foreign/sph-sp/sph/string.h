@@ -1,7 +1,11 @@
 
+#ifndef sph_string_h_included
+#define sph_string_h_included
+
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <inttypes.h>
 
 /** set result to a new string with a trailing slash added, or the given string if it already has a trailing slash.
    returns 0 if result is the given string, 1 if new memory could not be allocated, 2 if result is a new string */
@@ -116,3 +120,4 @@ char* sph_helper_uint_to_string(uintmax_t a, size_t* result_len) {
   *result_len = digits;
   return (result);
 }
+#endif

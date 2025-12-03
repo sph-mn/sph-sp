@@ -26,14 +26,6 @@
       (for ((define i sp-size-t 1) (< i count) (set+ i 1))
         (if (> (array-get in i) out) (set out (array-get in i))))
       (return out))
-    (define ((pre-concat sp_ type-name _absolute-max) in count) (value-t value-t* sp-size-t)
-      "get the maximum value in samples array, disregarding sign"
-      (declare temp sp-time-t max sp-time-t)
-      (set max 0)
-      (sp-for-each-index i count
-        (set temp (sp-inline-abs (array-get in i)))
-        (if (> temp max) (set max temp)))
-      (return max))
     (define ((pre-concat sp_ type-name _reverse) in count out) (void value-t* sp-size-t value-t*)
       (sp-for-each-index i count (set (array-get out (- count i)) (array-get in i))))
     (define ((pre-concat sp_ type-name _equal) in count value)

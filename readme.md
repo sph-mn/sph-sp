@@ -10,7 +10,6 @@ c code and shared library for sound synthesis and sequencing. the sound processo
   * plotting of samples and sound spectra using gnuplot
   * fast fourier transform (fft) and inverse fast fourier transform (ifft)
 * processors that work seamlessly on blocks of continuous data streams
-  * windowed-sinc low-pass, high-pass, band-pass and band-reject filters
   * convolution
   * moving average filter
 * synthesis
@@ -19,7 +18,7 @@ c code and shared library for sound synthesis and sequencing. the sound processo
   * white noise generator
 * sequencing
   * event renderer for parallel block processing with custom routines
-  * events for sines and filtered noise
+  * event for a sine and noise resonator
   * composable event groups for instruments, riffs and songs
   * per channel configuration and channel delay
 * array processing

@@ -1,16 +1,10 @@
 
 #include <sph-sp/sph-sp.h>
 #include <sph-sp/sph/filesystem.h>
+#include <sph-sp/sph/test.h>
+#include <math.h>
 
-#define test_helper_test_one(func) \
-  printf("%s\n", #func); \
-  status_require((func()))
-#define test_helper_assert(description, expression) \
-  if (!expression) { \
-    printf("%s failed\n", description); \
-    status_set_goto("sph-sp", 1); \
-  }
-#define test_helper_display_summary() \
+#define sp_test_helper_display_summary \
   if (status_is_success) { \
     printf(("--\ntests finished successfully.\n")); \
   } else { \
@@ -19,21 +13,32 @@
 #define feq(a, b) sp_sample_nearly_equal(a, b, (0.01))
 #define _sp_rate 960
 #define sp_seq_event_count 2
-
-/* previous segfault when noise-event duration was unequal sp-rate */
-#define test_noise_duration (_sp_rate + 20)
+#define test_resonator_event_duration 100
+#define test_stats_a_size 8
+sp_sample_t error_margin = 0.1;
+char* test_file_path = "/tmp/test-sph-sp-file";
 status_t test_helper_event_generate(sp_time_t start, sp_time_t end, void* out, sp_event_t* event) {
   status_declare;
-  sp_time_t i;
-  sp_channel_count_t ci;
-  uint64_t value;
-  sp_block_t out_block;
-  out_block = *((sp_block_t*)(out));
-  value = ((sp_time_t)(((uint64_t)(event->config))));
-  for (i = start; (i < end); i += 1) {
-    for (ci = 0; (ci < out_block.channel_count); ci += 1) {
-      (out_block.samples)[ci][(i - start)] = value;
+  sp_time_t sample_index;
+  sp_channel_count_t channel_index;
+  uint64_t raw_value;
+  sp_sample_t base_value;
+  sp_block_t* out_block;
+  sp_time_t local_index;
+  sp_sample_t sample_value;
+  out_block = ((sp_block_t*)(out));
+  raw_value = ((uint64_t)(event->config));
+  base_value = ((sp_sample_t)(raw_value));
+  sample_index = start;
+  while ((sample_index < end)) {
+    local_index = (sample_index - start);
+    sample_value = (base_value * ((sp_sample_t)((sample_index + 1))));
+    channel_index = 0;
+    while ((channel_index < out_block->channel_count)) {
+      (out_block->samples)[channel_index][local_index] += sample_value;
+      channel_index = (channel_index + 1);
     };
+    sample_index = (sample_index + 1);
   };
   status_return;
 }
@@ -45,14 +50,10 @@ sp_event_t test_helper_event(sp_time_t start, sp_time_t end, sp_time_t number) {
   e.config = ((void*)(((uint64_t)(number))));
   return (e);
 }
-sp_sample_t error_margin = 0.1;
-char* test_file_path = "/tmp/test-sph-sp-file";
 status_t test_base(void) {
   status_declare;
   test_helper_assert(("input 0.5"), (sp_sample_nearly_equal((0.63662), (sp_sinc((0.5))), error_margin)));
   test_helper_assert("input 1", (sp_sample_nearly_equal((1.0), (sp_sinc(0)), error_margin)));
-  test_helper_assert("window-blackman 0 51", (sp_sample_nearly_equal(0, (sp_window_blackman(0, 51)), error_margin)));
-  test_helper_assert("window-blackman 25 51", (sp_sample_nearly_equal(1, (sp_window_blackman(25, 51)), error_margin)));
 exit:
   status_return;
 }
@@ -156,7 +157,7 @@ status_t test_convolve_larger(void) {
   sp_time_t in_b_length;
   sp_time_t block_size;
   sp_time_t block_count;
-  memreg_init(4);
+  memreg_init(5);
   in_a = 0;
   in_b = 0;
   out = 0;
@@ -194,6 +195,212 @@ exit:
   memreg_free;
   status_return;
 }
+status_t test_sinc_make_minimum_phase(void) {
+  status_declare;
+  sp_time_t length;
+  sp_time_t center_index;
+  sp_time_t index;
+  sp_sample_t cutoff_factor;
+  sp_sample_t impulse_linear[63];
+  sp_sample_t impulse_minimum[63];
+  sp_sample_t real_linear[63];
+  sp_sample_t imag_linear[63];
+  sp_sample_t real_minimum[63];
+  sp_sample_t imag_minimum[63];
+  sp_sample_t energy_linear;
+  sp_sample_t energy_minimum;
+  sp_sample_t cumulative_energy_linear;
+  sp_sample_t cumulative_energy_minimum;
+  sp_time_t energy_index_linear;
+  sp_time_t energy_index_minimum;
+  sp_sample_t tolerance_energy;
+  sp_sample_t tolerance_magnitude;
+  sp_sample_t magnitude_linear;
+  sp_sample_t magnitude_minimum;
+  sp_sample_t delta_index;
+  length = 63;
+  center_index = ((length - 1) / 2);
+  cutoff_factor = 0.1;
+  tolerance_energy = 1.0e-6;
+  tolerance_magnitude = 1.0e-4;
+  index = 0;
+  while ((index < length)) {
+    delta_index = (((sp_sample_t)(index)) - ((sp_sample_t)(center_index)));
+    impulse_linear[index] = (2.0 * cutoff_factor * sp_sinc((2.0 * cutoff_factor * delta_index)));
+    impulse_minimum[index] = impulse_linear[index];
+    index = (index + 1);
+  };
+  status_require((sp_sinc_make_minimum_phase(impulse_minimum, length)));
+  index = 0;
+  while ((index < length)) {
+    real_linear[index] = impulse_linear[index];
+    imag_linear[index] = 0.0;
+    real_minimum[index] = impulse_minimum[index];
+    imag_minimum[index] = 0.0;
+    index = (index + 1);
+  };
+  status_i_require((sp_fft(length, real_linear, imag_linear)));
+  status_i_require((sp_fft(length, real_minimum, imag_minimum)));
+  energy_linear = 0.0;
+  energy_minimum = 0.0;
+  index = 0;
+  while ((index < length)) {
+    energy_linear = (energy_linear + (impulse_linear[index] * impulse_linear[index]));
+    energy_minimum = (energy_minimum + (impulse_minimum[index] * impulse_minimum[index]));
+    index = (index + 1);
+  };
+  test_helper_assert("sinc_minphase_energy_preserved", (fabs((energy_linear - energy_minimum)) <= tolerance_energy));
+  index = 0;
+  while ((index < length)) {
+    magnitude_linear = sqrt(((real_linear[index] * real_linear[index]) + (imag_linear[index] * imag_linear[index])));
+    magnitude_minimum = sqrt(((real_minimum[index] * real_minimum[index]) + (imag_minimum[index] * imag_minimum[index])));
+    test_helper_assert("sinc_minphase_magnitude_equal", (fabs((magnitude_linear - magnitude_minimum)) <= tolerance_magnitude));
+    index = (index + 1);
+  };
+  cumulative_energy_linear = 0.0;
+  cumulative_energy_minimum = 0.0;
+  energy_index_linear = (length - 1);
+  energy_index_minimum = (length - 1);
+  index = 0;
+  while ((index < length)) {
+    cumulative_energy_linear = (cumulative_energy_linear + (impulse_linear[index] * impulse_linear[index]));
+    cumulative_energy_minimum = (cumulative_energy_minimum + (impulse_minimum[index] * impulse_minimum[index]));
+    if ((cumulative_energy_linear >= (0.5 * energy_linear)) && (energy_index_linear == (length - 1))) {
+      energy_index_linear = index;
+    };
+    if ((cumulative_energy_minimum >= (0.5 * energy_minimum)) && (energy_index_minimum == (length - 1))) {
+      energy_index_minimum = index;
+    };
+    index = (index + 1);
+  };
+  test_helper_assert("sinc_minphase_energy_earlier", (energy_index_minimum <= energy_index_linear));
+exit:
+  status_return;
+}
+status_t test_resonator_filter_continuity(void) {
+  status_declare;
+  sp_sample_t* in;
+  sp_sample_t* out;
+  sp_sample_t* out_control;
+  sp_convolution_filter_state_t* state;
+  sp_convolution_filter_state_t* state_control;
+  sp_time_t size;
+  sp_time_t block_size;
+  sp_time_t block_count;
+  sp_sample_t cutoff_low;
+  sp_sample_t cutoff_high;
+  sp_sample_t transition;
+  uint8_t arguments_buffer[(3 * sizeof(sp_sample_t))];
+  uint8_t arguments_length;
+  sp_size_t sample_index;
+  sp_size_t block_index;
+  sp_time_t offset;
+  memreg_init(3);
+  size = 100;
+  block_size = 10;
+  block_count = 10;
+  state = 0;
+  state_control = 0;
+  cutoff_low = 0.1;
+  cutoff_high = 0.3;
+  transition = 0.1;
+  status_require((sp_samples_new(size, (&in))));
+  memreg_add(in);
+  status_require((sp_samples_new(size, (&out))));
+  memreg_add(out);
+  status_require((sp_samples_new(size, (&out_control))));
+  memreg_add(out_control);
+  sample_index = 0;
+  while ((sample_index < size)) {
+    in[sample_index] = ((sp_sample_t)(sample_index));
+    sample_index = (sample_index + 1);
+  };
+  arguments_length = (3 * sizeof(sp_sample_t));
+  *((sp_sample_t*)(arguments_buffer)) = cutoff_low;
+  *(((sp_sample_t*)(arguments_buffer)) + 1) = cutoff_high;
+  *(((sp_sample_t*)(arguments_buffer)) + 2) = transition;
+  status_require((sp_convolution_filter(in, size, sp_resonator_ir_f, arguments_buffer, arguments_length, (&state_control), out_control)));
+  block_index = 0;
+  while ((block_index < block_count)) {
+    offset = (block_index * block_size);
+    status_require((sp_convolution_filter((in + offset), block_size, sp_resonator_ir_f, arguments_buffer, arguments_length, (&state), (out + offset))));
+    block_index = (block_index + 1);
+  };
+  test_helper_assert("resonator continuity", (sp_samples_nearly_equal(out, size, out_control, size, (0.01))));
+  memreg_free;
+  sp_convolution_filter_state_free(state);
+  sp_convolution_filter_state_free(state_control);
+exit:
+  status_return;
+}
+status_t test_resonator_ir_and_filter(void) {
+  status_declare;
+  sp_sample_t cutoff_low;
+  sp_sample_t cutoff_high;
+  sp_sample_t transition;
+  sp_sample_t* ir;
+  sp_time_t ir_len;
+  sp_convolution_filter_state_t* state;
+  sp_sample_t source[10];
+  sp_sample_t result[10];
+  uint8_t arguments_buffer[(3 * sizeof(sp_sample_t))];
+  uint8_t arguments_length;
+  state = 0;
+  source[0] = 3;
+  source[1] = 4;
+  source[2] = 5;
+  source[3] = 6;
+  source[4] = 7;
+  source[5] = 8;
+  source[6] = 9;
+  source[7] = 0;
+  source[8] = 1;
+  source[9] = 2;
+  result[0] = 0;
+  result[1] = 0;
+  result[2] = 0;
+  result[3] = 0;
+  result[4] = 0;
+  result[5] = 0;
+  result[6] = 0;
+  result[7] = 0;
+  result[8] = 0;
+  result[9] = 0;
+  /* direct IR construction: normal parameters */
+  cutoff_low = 0.1;
+  cutoff_high = 0.3;
+  transition = 0.05;
+  status_require((sp_resonator_ir(cutoff_low, cutoff_high, transition, (&ir), (&ir_len))));
+  test_helper_assert("resonator ir length positive", (ir_len > 0));
+  free(ir);
+  /* direct IR construction: clamping branches (low < 0, high > 0.5, transition <= 0) */
+  cutoff_low = -0.1;
+  cutoff_high = 0.6;
+  transition = 0.0;
+  status_require((sp_resonator_ir(cutoff_low, cutoff_high, transition, (&ir), (&ir_len))));
+  test_helper_assert("resonator ir clamped length positive", (ir_len > 0));
+  free(ir);
+  /* IR through ir_f adapter */
+  cutoff_low = 0.05;
+  cutoff_high = 0.2;
+  transition = 0.03;
+  arguments_length = (3 * sizeof(sp_sample_t));
+  *((sp_sample_t*)(arguments_buffer)) = cutoff_low;
+  *(((sp_sample_t*)(arguments_buffer)) + 1) = cutoff_high;
+  *(((sp_sample_t*)(arguments_buffer)) + 2) = transition;
+  status_require((sp_resonator_ir_f(arguments_buffer, (&ir), (&ir_len))));
+  test_helper_assert("resonator ir_f length positive", (ir_len > 0));
+  free(ir);
+  /* filter through convolution: one call to create state and IR */
+  status_require((sp_convolution_filter(source, 10, sp_resonator_ir_f, arguments_buffer, arguments_length, (&state), result)));
+  /* second call with identical arguments: exercises state reuse path */
+  status_require((sp_convolution_filter(source, 10, sp_resonator_ir_f, arguments_buffer, arguments_length, (&state), result)));
+  if (state) {
+    sp_convolution_filter_state_free(state);
+  };
+exit:
+  status_return;
+}
 status_t test_moving_average(void) {
   status_declare;
   sp_sample_t* in;
@@ -218,83 +425,6 @@ status_t test_moving_average(void) {
   test_helper_assert("with prev/next", (sp_sample_nearly_equal((2.11), (out[1]), error_margin) && sp_sample_nearly_equal((5.5), (out[5]), error_margin) && sp_sample_nearly_equal((2.11), (out[9]), error_margin)));
 exit:
   memreg_free;
-  status_return;
-}
-status_t test_windowed_sinc_continuity(void) {
-  status_declare;
-  sp_sample_t* in;
-  sp_sample_t* out;
-  sp_sample_t* out_control;
-  sp_convolution_filter_state_t* state;
-  sp_convolution_filter_state_t* state_control;
-  sp_time_t size;
-  sp_time_t block_size;
-  sp_time_t block_count;
-  sp_sample_t frql;
-  sp_sample_t frqh;
-  sp_sample_t trnl;
-  sp_sample_t trnh;
-  memreg_init(3);
-  size = 100;
-  block_size = 10;
-  block_count = 10;
-  state = 0;
-  state_control = 0;
-  frql = 0.001;
-  frqh = 0.03;
-  trnl = 0.07;
-  trnh = 0.07;
-  status_require((sp_samples_new(size, (&in))));
-  memreg_add(in);
-  status_require((sp_samples_new(size, (&out))));
-  memreg_add(out);
-  status_require((sp_samples_new(size, (&out_control))));
-  memreg_add(out_control);
-  for (sp_size_t i = 0; (i < size); i += 1) {
-    in[i] = i;
-  };
-  status_require((sp_windowed_sinc_bp_br(in, size, frql, frqh, trnl, trnh, 0, (&state_control), out_control)));
-  for (sp_size_t i = 0; (i < block_count); i += 1) {
-    status_require((sp_windowed_sinc_bp_br(((i * block_size) + in), block_size, frql, frqh, trnl, trnh, 0, (&state), ((i * block_size) + out))));
-  };
-  test_helper_assert("equal to block processing result", (sp_samples_nearly_equal(out, size, out_control, size, (0.01))));
-exit:
-  memreg_free;
-  sp_convolution_filter_state_free(state);
-  sp_convolution_filter_state_free(state_control);
-  status_return;
-}
-status_t test_windowed_sinc(void) {
-  status_declare;
-  sp_sample_t transition;
-  sp_sample_t cutoff;
-  sp_sample_t* ir;
-  sp_time_t ir_len;
-  sp_convolution_filter_state_t* state;
-  sp_sample_t source[10] = { 3, 4, 5, 6, 7, 8, 9, 0, 1, 2 };
-  sp_sample_t result[10] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
-  state = 0;
-  cutoff = 0.1;
-  transition = 0.08;
-  /* ir functions */
-  status_require((sp_windowed_sinc_lp_hp_ir(cutoff, transition, 0, (&ir), (&ir_len))));
-  test_helper_assert("ir", (sp_sample_nearly_equal((0.0952), (ir[28]), error_margin)));
-  status_require((sp_windowed_sinc_bp_br_ir((0.1), (0.4), (0.08), (0.08), 0, (&ir), (&ir_len))));
-  status_require((sp_windowed_sinc_lp_hp_ir(cutoff, transition, 1, (&ir), (&ir_len))));
-  status_require((sp_windowed_sinc_bp_br_ir(cutoff, cutoff, transition, transition, 1, (&ir), (&ir_len))));
-  /* filter functions */
-  status_require((sp_windowed_sinc_lp_hp(source, 10, (0.1), (0.08), 0, (&state), result)));
-  sp_convolution_filter_state_free(state);
-  state = 0;
-  status_require((sp_windowed_sinc_lp_hp(source, 10, (0.1), (0.08), 1, (&state), result)));
-  sp_convolution_filter_state_free(state);
-  state = 0;
-  status_require((sp_windowed_sinc_bp_br(source, 10, (0.1), (0.4), (0.08), (0.08), 0, (&state), result)));
-  sp_convolution_filter_state_free(state);
-  state = 0;
-  status_require((sp_windowed_sinc_bp_br(source, 10, (0.1), (0.4), (0.08), (0.08), 1, (&state), result)));
-  sp_convolution_filter_state_free(state);
-exit:
   status_return;
 }
 status_t test_file(void) {
@@ -336,12 +466,47 @@ exit:
 }
 status_t test_fft(void) {
   status_declare;
-  sp_sample_t a_real[6] = { -0.6, 0.1, 0.4, 0.8, 0, 0 };
-  sp_sample_t a_imag[6] = { 0, 0, 0, 0, 0, 0 };
-  sp_time_t a_len;
-  a_len = 6;
-  status_i_require((sp_fft(a_len, a_real, a_imag)));
-  status_i_require((sp_ffti(a_len, a_real, a_imag)));
+  sp_sample_t real_values[8];
+  sp_sample_t imag_values[8];
+  sp_sample_t real_values_original[8];
+  sp_sample_t imag_values_original[8];
+  sp_sample_t impulse_real[8];
+  sp_sample_t impulse_imag[8];
+  sp_time_t length;
+  sp_time_t index;
+  sp_sample_t tolerance;
+  length = 8;
+  tolerance = 1.0e-9;
+  index = 0;
+  while ((index < length)) {
+    real_values[index] = ((((sp_sample_t)(index)) * 0.1) + 0.05);
+    imag_values[index] = (((sp_sample_t)((length - index))) * 0.01);
+    real_values_original[index] = real_values[index];
+    imag_values_original[index] = imag_values[index];
+    index = (index + 1);
+  };
+  status_i_require((sp_fft(length, real_values, imag_values)));
+  status_i_require((sp_ffti(length, real_values, imag_values)));
+  index = 0;
+  while ((index < length)) {
+    test_helper_assert("fft_roundtrip_real", (fabs(((real_values[index] / ((sp_sample_t)(length))) - real_values_original[index])) <= tolerance));
+    test_helper_assert("fft_roundtrip_imag", (fabs(((imag_values[index] / ((sp_sample_t)(length))) - imag_values_original[index])) <= tolerance));
+    index = (index + 1);
+  };
+  index = 0;
+  while ((index < length)) {
+    impulse_real[index] = 0.0;
+    impulse_imag[index] = 0.0;
+    index = (index + 1);
+  };
+  impulse_real[0] = 1.0;
+  status_i_require((sp_fft(length, impulse_real, impulse_imag)));
+  index = 0;
+  while ((index < length)) {
+    test_helper_assert("fft_impulse_real", (fabs((impulse_real[index] - 1.0)) <= tolerance));
+    test_helper_assert("fft_impulse_imag", (fabs((impulse_imag[index])) <= tolerance));
+    index = (index + 1);
+  };
 exit:
   status_return;
 }
@@ -391,49 +556,6 @@ status_t test_sp_random(void) {
 exit:
   status_return;
 }
-status_t test_sp_noise_event(void) {
-  status_declare;
-  sp_block_t out;
-  sp_time_t fmod[test_noise_duration];
-  sp_time_t wmod[test_noise_duration];
-  sp_sample_t amod[test_noise_duration];
-  sp_noise_event_config_t* config;
-  sp_declare_event(event);
-  sp_declare_event_list(events);
-  error_memory_init(2);
-  status_require((sp_noise_event_config_new((&config))));
-  error_memory_add(config);
-  status_require((sp_block_new(2, test_noise_duration, (&out))));
-  error_memory_add2((&out), sp_block_free);
-  for (sp_size_t i = 0; (i < test_noise_duration); i += 1) {
-    fmod[i] = sp_factor_to_hz((0.01));
-    wmod[i] = (sp_factor_to_hz((0.3)) - fmod[i]);
-    amod[i] = 0.8;
-  };
-  config->channel_count = 2;
-  (config->channel_config)->fmod = fmod;
-  (config->channel_config)->wmod = wmod;
-  (config->channel_config)->amod = amod;
-  (config->channel_config)->amp = 1;
-  (1 + config->channel_config)->use = 1;
-  (1 + config->channel_config)->fmod = fmod;
-  (1 + config->channel_config)->wmod = wmod;
-  (1 + config->channel_config)->trnl = 4000;
-  (1 + config->channel_config)->amod = amod;
-  (1 + config->channel_config)->amp = 1;
-  event.start = 0;
-  event.end = test_noise_duration;
-  sp_noise_event((&event), config);
-  status_require((sp_event_list_add((&events), event)));
-  status_require((sp_seq(0, test_noise_duration, (&out), (&events))));
-  test_helper_assert(("in range -1..1"), (1.0 >= sp_samples_absolute_max(((out.samples)[0]), test_noise_duration)));
-  sp_block_free((&out));
-exit:
-  if (status_is_failure) {
-    error_memory_free;
-  };
-  status_return;
-}
 status_t test_sp_seq(void) {
   status_declare;
   sp_block_t out;
@@ -446,9 +568,9 @@ status_t test_sp_seq(void) {
   sp_seq(0, 50, (&out), (&events));
   shifted = sp_block_with_offset(out, 50);
   sp_seq(50, 100, (&shifted), (&events));
-  test_helper_assert("block contents 1 event 1", ((1 == (out.samples)[0][0]) && (1 == (out.samples)[0][39])));
+  test_helper_assert("block contents 1 event 1", ((1 == (out.samples)[0][0]) && (40 == (out.samples)[0][39])));
   test_helper_assert("block contents 1 gap", (0 == (out.samples)[0][40]));
-  test_helper_assert("block contents 1 event 2", ((2 == (out.samples)[0][41]) && (2 == (out.samples)[0][99])));
+  test_helper_assert("block contents 1 event 2", ((2 == (out.samples)[0][41]) && (118 == (out.samples)[0][99])));
   sp_event_list_free((&events));
   sp_block_free((&out));
 exit:
@@ -486,93 +608,12 @@ status_t test_sp_group(void) {
   shifted = sp_block_with_offset(block, 50);
   status_require(((g.generate)(50, 100, (&shifted), (&g))));
   (g.free)((&g));
-  test_helper_assert("block contents event 1", ((1 == (block.samples)[0][10]) && (1 == (block.samples)[0][29])));
-  test_helper_assert("block contents event 2", ((2 == (block.samples)[0][30]) && (2 == (block.samples)[0][39])));
-  test_helper_assert("block contents gap", ((1 > (block.samples)[0][40]) && (1 > (block.samples)[0][49])));
-  test_helper_assert("block contents event 3", ((3 == (block.samples)[0][50]) && (3 == (block.samples)[0][99])));
+  test_helper_assert("block contents event 1", ((1 == (block.samples)[0][10]) && (20 == (block.samples)[0][29])));
+  test_helper_assert("block contents event 2", ((2 == (block.samples)[0][30]) && (20 == (block.samples)[0][39])));
+  test_helper_assert("block contents gap", ((0 == (block.samples)[0][40]) && (0 == (block.samples)[0][49])));
+  test_helper_assert("block contents event 3", ((3 == (block.samples)[0][50]) && (150 == (block.samples)[0][99])));
   sp_block_free((&block));
 exit:
-  status_return;
-}
-#define test_wave_event_duration 100
-
-/** sp wave values were taken from printing index and value of the result array.
-   sp-plot-samples can plot the result */
-status_t test_sp_wave_event(void) {
-  status_declare;
-  sp_block_t out;
-  sp_block_t shifted;
-  sp_time_t fmod[test_wave_event_duration];
-  sp_sample_t amod1[test_wave_event_duration];
-  sp_sample_t amod2[test_wave_event_duration];
-  sp_wave_event_config_t* config;
-  sp_declare_event(event);
-  error_memory_init(2);
-  status_require((sp_wave_event_config_new((&config))));
-  error_memory_add(config);
-  status_require((sp_block_new(2, test_wave_event_duration, (&out))));
-  error_memory_add2((&out), sp_block_free);
-  for (sp_size_t i = 0; (i < test_wave_event_duration); i += 1) {
-    fmod[i] = 2000;
-    amod1[i] = 0.9;
-    amod2[i] = 0.8;
-  };
-  ((config->channel_config)[0]).amp = 1;
-  ((config->channel_config)[0]).amod = amod1;
-  ((config->channel_config)[0]).fmod = fmod;
-  ((config->channel_config)[1]).use = 1;
-  ((config->channel_config)[1]).amp = 0.5;
-  ((config->channel_config)[1]).amod = amod2;
-  ((config->channel_config)[1]).fmod = fmod;
-  event.end = test_wave_event_duration;
-  sp_wave_event((&event), config);
-  status_require(((event.prepare)((&event))));
-  status_require(((event.generate)(0, 30, (&out), (&event))));
-  shifted = sp_block_with_offset(out, 30);
-  status_require(((event.generate)(30, test_wave_event_duration, (&shifted), (&event))));
-  test_helper_assert("amod applied channel 0", (feq((0.9), (sp_samples_max(((out.samples)[0]), test_wave_event_duration)))));
-  test_helper_assert("amod applied channel 1", (feq((0.4), (sp_samples_max(((out.samples)[1]), test_wave_event_duration)))));
-  /* (sp-plot-samples (array-get out.samples 1) test-wave-event-duration) */
-  sp_block_free((&out));
-exit:
-  if (status_is_failure) {
-    error_memory_free;
-  };
-  status_return;
-}
-status_t test_render_range_block(void) {
-  status_declare;
-  sp_block_t out;
-  sp_time_t frq[test_wave_event_duration];
-  sp_sample_t amod[test_wave_event_duration];
-  sp_time_t i;
-  sp_render_config_t rc;
-  sp_wave_event_config_t* config;
-  sp_declare_event(event);
-  error_memory_init(2);
-  rc = sp_render_config(sp_channel_count, sp_rate, sp_rate, 0);
-  rc.block_size = 40;
-  for (i = 0; (i < test_wave_event_duration); i += 1) {
-    frq[i] = 1500;
-    amod[i] = 1;
-  };
-  status_require((sp_wave_event_config_new((&config))));
-  error_memory_add(config);
-  status_require((sp_block_new(1, test_wave_event_duration, (&out))));
-  error_memory_add2((&out), sp_block_free);
-  config->channel_count = 1;
-  ((config->channel_config)[0]).fmod = frq;
-  ((config->channel_config)[0]).amod = amod;
-  event.end = test_wave_event_duration;
-  sp_wave_event((&event), config);
-  /* (sp-render-range-file event test-wave-event-duration rc /tmp/sp-test.wav) */
-  sp_render_range_block(event, 0, test_wave_event_duration, rc, (&out));
-  /* (sp-block-plot-1 out) */
-  sp_block_free((&out));
-exit:
-  if (status_is_failure) {
-    error_memory_free;
-  };
   status_return;
 }
 status_t test_path(void) {
@@ -632,7 +673,6 @@ exit:
   free(a_temp);
   status_return;
 }
-#define test_stats_a_size 8
 status_t test_statistics(void) {
   status_declare;
   sp_time_t size;
@@ -676,6 +716,31 @@ status_t test_statistics(void) {
   test_helper_assert("inharmonicity 1", (feq((0.0), (inhar_results[0]))));
   test_helper_assert("inharmonicity 2", (feq((0.0625), (inhar_results[1]))));
   test_helper_assert("inharmonicity 3", (feq((0.125), (inhar_results[2]))));
+exit:
+  status_return;
+}
+status_t test_render_range_block(void) {
+  status_declare;
+  sp_block_t out;
+  sp_render_config_t render_config;
+  sp_declare_event(event);
+  error_memory_init(1);
+  render_config = sp_render_config(sp_channel_count, sp_rate, sp_rate, 0);
+  render_config.block_size = 40;
+  status_require((sp_block_new(1, test_resonator_event_duration, (&out))));
+  error_memory_add2((&out), sp_block_free);
+  event.start = 0;
+  event.end = test_resonator_event_duration;
+  event.config = ((void*)(1));
+  event.prepare = 0;
+  event.generate = test_helper_event_generate;
+  event.free = 0;
+  sp_render_range_block(event, 0, test_resonator_event_duration, render_config, (&out));
+  test_helper_assert("render range block nonzero", (sp_samples_max(((out.samples)[0]), test_resonator_event_duration) > 0.0));
+  sp_block_free((&out));
+  if (status_is_failure) {
+    error_memory_free;
+  };
 exit:
   status_return;
 }
@@ -764,55 +829,50 @@ status_t test_permutations(void) {
 exit:
   status_return;
 }
-
-/** sum 10 wave events */
-status_t test_sp_seq_parallel_block(void) {
+status_t test_sp_resonator_event(void) {
   status_declare;
-  sp_time_t i;
-  sp_time_t step_size;
-  sp_sample_t* amod;
-  sp_time_t* fmod;
-  sp_time_t size;
-  sp_block_t block;
-  sp_block_t shifted;
-  sp_wave_event_config_t* config;
-  sp_time_t event_count;
+  sp_block_t out;
+  sp_sample_t amod1[test_resonator_event_duration];
+  sp_sample_t amod2[test_resonator_event_duration];
+  sp_resonator_event_config_t* config;
+  sp_size_t sample_index;
+  sp_resonator_event_channel_config_t* channel_config;
   sp_declare_event(event);
-  sp_declare_event_list(events);
-  size = 10000;
-  event_count = 10;
-  error_memory_init(4);
-  status_require((sp_wave_event_config_new_n(event_count, (&config))));
+  error_memory_init(2);
+  status_require((sp_resonator_event_config_new((&config))));
   error_memory_add(config);
-  status_require((sp_path_samples2((&amod), size, (1.0), (1.0))));
-  error_memory_add(amod);
-  status_require((sp_path_times2((&fmod), size, 250, 250)));
-  error_memory_add(fmod);
+  status_require((sp_block_new(2, test_resonator_event_duration, (&out))));
+  error_memory_add2((&out), sp_block_free);
+  sample_index = 0;
+  while ((sample_index < test_resonator_event_duration)) {
+    amod1[sample_index] = 0.9;
+    amod2[sample_index] = 0.8;
+    sample_index += 1;
+  };
+  config->channel_count = 2;
+  config->bandwidth_threshold = 50.0;
+  channel_config = (config->channel_config + 0);
+  channel_config->use = 1;
+  channel_config->amp = 1.0;
+  channel_config->amod = amod1;
+  channel_config->frq = 2000.0;
+  channel_config->bandwidth = 10.0;
+  channel_config = (config->channel_config + 1);
+  channel_config->use = 1;
+  channel_config->amp = 0.5;
+  channel_config->amod = amod2;
+  channel_config->frq = 2000.0;
+  channel_config->bandwidth = 200.0;
   event.start = 0;
-  event.end = size;
-  for (i = 0; (i < event_count); i += 1) {
-    ((config + i)->channel_config)->fmod = fmod;
-    ((config + i)->channel_config)->amp = 1;
-    ((config + i)->channel_config)->amod = amod;
-    sp_wave_event((&event), (config + i));
-    status_require((sp_event_list_add((&events), event)));
-  };
-  status_require((sp_block_new(2, size, (&block))));
-  sp_seq_events_prepare((&events));
-  step_size = (size / 10);
-  for (i = 0; (i < size); i += step_size) {
-    shifted = sp_block_with_offset(block, i);
-    sp_seq_parallel_block(i, (i + step_size), shifted, (&events));
-  };
-  test_helper_assert("first 1", (sp_sample_nearly_equal(0, ((block.samples)[0][0]), (0.001)) && sp_sample_nearly_equal(0, ((block.samples)[1][0]), (0.001))));
-  test_helper_assert("last 1", (sp_sample_nearly_equal((8.314696), ((block.samples)[0][(step_size - 1)]), (0.001)) && sp_sample_nearly_equal((8.314696), ((block.samples)[1][(step_size - 1)]), (0.001))));
-  test_helper_assert("first 2", (sp_sample_nearly_equal((5.0), ((block.samples)[0][step_size]), (0.001)) && sp_sample_nearly_equal((5.0), ((block.samples)[1][step_size]), (0.001))));
-  test_helper_assert("last 2", (sp_sample_nearly_equal((-4.422887), ((block.samples)[0][((2 * step_size) - 1)]), (0.001)) && sp_sample_nearly_equal((-4.422887), ((block.samples)[1][((2 * step_size) - 1)]), (0.001))));
-  sp_event_list_free((&events));
-  free(amod);
-  free(fmod);
-  free(config);
-  sp_block_free((&block));
+  event.end = test_resonator_event_duration;
+  sp_resonator_event((&event), config);
+  status_require(((event.prepare)((&event))));
+  status_require(((event.generate)(0, 30, (&out), (&event))));
+  status_require(((event.generate)(30, test_resonator_event_duration, (&out), (&event))));
+  test_helper_assert("resonator amod applied channel 0", (feq((0.9), (sp_samples_max(((out.samples)[0]), test_resonator_event_duration)))));
+  test_helper_assert("resonator channel 1 in range", (1.0 >= sp_samples_absolute_max(((out.samples)[1]), test_resonator_event_duration)));
+  test_helper_assert("resonator channel 1 nonzero", (sp_samples_absolute_max(((out.samples)[1]), test_resonator_event_duration) > 0.0));
+  sp_block_free((&out));
 exit:
   if (status_is_failure) {
     error_memory_free;
@@ -828,26 +888,14 @@ status_t test_sp_map_event(void) {
   status_declare;
   sp_time_t size;
   sp_block_t block;
-  sp_sample_t* amod;
-  sp_wave_event_config_t* config;
   sp_map_event_config_t* map_event_config;
   sp_declare_event(parent);
   sp_declare_event(child);
-  error_memory_init(2);
-  status_require((sp_wave_event_config_new((&config))));
-  error_memory_add(config);
+  error_memory_init(1);
   status_require((sp_map_event_config_new((&map_event_config))));
   error_memory_add(map_event_config);
   size = (10 * _sp_rate);
-  status_require((sp_path_samples2((&amod), size, (1.0), (1.0))));
-  config->channel_count = 1;
-  (config->channel_config)->frq = 300;
-  (config->channel_config)->fmod = 0;
-  (config->channel_config)->amp = 1;
-  (config->channel_config)->amod = amod;
-  child.start = 0;
-  child.end = size;
-  sp_wave_event((&child), config);
+  child = test_helper_event(0, size, 3);
   status_require((sp_block_new(1, size, (&block))));
   map_event_config->event = child;
   map_event_config->map_generate = test_sp_map_event_generate;
@@ -860,11 +908,63 @@ status_t test_sp_map_event(void) {
   status_require(((parent.generate)((size / 2), size, (&block), (&parent))));
   (parent.free)((&parent));
   sp_block_free((&block));
-  free(amod);
-exit:
   if (status_is_failure) {
     error_memory_free;
   };
+exit:
+  status_return;
+}
+status_t test_sp_seq_parallel_block(void) {
+  status_declare;
+  sp_time_t size;
+  sp_time_t step_size;
+  sp_time_t event_count;
+  sp_time_t event_index;
+  sp_time_t position;
+  sp_block_t block;
+  sp_block_t shifted;
+  sp_sample_t event_sum;
+  sp_time_t sample_index;
+  sp_sample_t expected_value;
+  sp_sample_t sample_value_ch0;
+  sp_sample_t sample_value_ch1;
+  sp_declare_event(event);
+  sp_declare_event_list(events);
+  size = 1000;
+  event_count = 10;
+  step_size = (size / 10);
+  status_require((sp_block_new(2, size, (&block))));
+  event.start = 0;
+  event.end = size;
+  event.prepare = 0;
+  event.generate = test_helper_event_generate;
+  event.free = 0;
+  event_index = 0;
+  while ((event_index < event_count)) {
+    event.config = ((void*)(((uintptr_t)((event_index + 1)))));
+    status_require((sp_event_list_add((&events), event)));
+    event_index += 1;
+  };
+  sp_seq_events_prepare((&events));
+  position = 0;
+  while ((position < size)) {
+    shifted = sp_block_with_offset(block, position);
+    sp_seq_parallel_block(position, (position + step_size), shifted, (&events));
+    position = (position + step_size);
+  };
+  event_sum = ((sp_sample_t)(((event_count * (event_count + 1)) / 2)));
+  sample_index = 0;
+  while ((sample_index < size)) {
+    expected_value = (event_sum * ((sp_sample_t)((sample_index + 1))));
+    sample_value_ch0 = (block.samples)[0][sample_index];
+    sample_value_ch1 = (block.samples)[1][sample_index];
+    test_helper_assert("seq_parallel_block ch0", (sp_sample_nearly_equal(expected_value, sample_value_ch0, (0.001))));
+    test_helper_assert("seq_parallel_block ch1", (sp_sample_nearly_equal(expected_value, sample_value_ch1, (0.001))));
+    sample_index = (sample_index + 1);
+  };
+  sp_event_list_free((&events));
+  sp_block_free((&block));
+exit:
   status_return;
 }
 status_t test_sp_pan_to_amp(void) {
@@ -880,41 +980,88 @@ status_t test_sp_pan_to_amp(void) {
 exit:
   status_return;
 }
+status_t test_resonator_continuity_2(void) {
+  status_declare;
+  sp_sample_t* in;
+  sp_sample_t* out;
+  sp_sample_t* out_control;
+  sp_convolution_filter_state_t* state;
+  sp_convolution_filter_state_t* state_control;
+  sp_time_t size;
+  sp_time_t duration_a;
+  sp_time_t duration_b;
+  sp_sample_t cutoff_low;
+  sp_sample_t cutoff_high;
+  sp_sample_t transition;
+  uint8_t arguments_buffer[(3 * sizeof(sp_sample_t))];
+  uint8_t arguments_length;
+  size = 100;
+  duration_a = 30;
+  duration_b = 70;
+  state = 0;
+  state_control = 0;
+  cutoff_low = 0.1;
+  cutoff_high = 0.3;
+  transition = 0.1;
+  status_require((sp_samples_new(size, (&in))));
+  status_require((sp_samples_new(size, (&out))));
+  status_require((sp_samples_new(size, (&out_control))));
+  for (sp_size_t i = 0; (i < size); i += 1) {
+    in[i] = ((sp_sample_t)(i));
+  };
+  arguments_length = (3 * sizeof(sp_sample_t));
+  ((sp_sample_t*)(arguments_buffer))[0] = cutoff_low;
+  ((sp_sample_t*)(arguments_buffer))[1] = cutoff_high;
+  ((sp_sample_t*)(arguments_buffer))[2] = transition;
+  status_require((sp_convolution_filter(in, size, sp_resonator_ir_f, arguments_buffer, arguments_length, (&state_control), out_control)));
+  status_require((sp_convolution_filter(in, duration_a, sp_resonator_ir_f, arguments_buffer, arguments_length, (&state), out)));
+  status_require((sp_convolution_filter((in + duration_a), duration_b, sp_resonator_ir_f, arguments_buffer, arguments_length, (&state), (out + duration_a))));
+  test_helper_assert("resonator two-segment continuity", (sp_samples_nearly_equal(out, size, out_control, size, (0.01))));
+  sp_convolution_filter_state_free(state);
+  sp_convolution_filter_state_free(state_control);
+  free(in);
+  free(out);
+  free(out_control);
+exit:
+  status_return;
+}
 
 /** "goto exit" can skip events */
 int main(void) {
   status_declare;
   sp_initialize(3, 2, _sp_rate);
+  test_helper_test_one(test_fft);
+  test_helper_test_one(test_sinc_make_minimum_phase);
+  test_helper_test_one(test_sp_resonator_event);
   test_helper_test_one(test_path);
   test_helper_test_one(test_moving_average);
   test_helper_test_one(test_statistics);
   test_helper_test_one(test_sp_pan_to_amp);
-  test_helper_test_one(test_windowed_sinc_continuity);
-  test_helper_test_one(test_convolve_smaller);
-  test_helper_test_one(test_convolve_larger);
   test_helper_test_one(test_base);
   test_helper_test_one(test_sp_random);
   test_helper_test_one(test_sp_triangle_square);
-  test_helper_test_one(test_fft);
   test_helper_test_one(test_spectral_inversion_ir);
   test_helper_test_one(test_spectral_reversal_ir);
-  test_helper_test_one(test_windowed_sinc);
   test_helper_test_one(test_compositions);
   test_helper_test_one(test_times);
   test_helper_test_one(test_simple_mappings);
   test_helper_test_one(test_random_discrete);
   test_helper_test_one(test_file);
   test_helper_test_one(test_permutations);
-  /* sequencing */
-  test_helper_test_one(test_sp_wave_event);
+  test_helper_test_one(test_render_range_block);
+  /* resonator */
+  test_helper_test_one(test_convolve_smaller);
+  test_helper_test_one(test_convolve_larger);
+  test_helper_test_one(test_resonator_ir_and_filter);
+  test_helper_test_one(test_resonator_filter_continuity);
+  test_helper_test_one(test_resonator_continuity_2);
+  /* sequencer */
   test_helper_test_one(test_sp_group);
   test_helper_test_one(test_sp_seq);
-  test_helper_test_one(test_sp_map_event);
-  test_helper_test_one(test_render_range_block);
-  test_helper_test_one(test_sp_noise_event);
   test_helper_test_one(test_sp_seq_parallel_block);
+  test_helper_test_one(test_sp_map_event);
 exit:
   sp_deinitialize();
-  test_helper_display_summary();
+  sp_test_helper_display_summary;
   return ((status.id));
 }

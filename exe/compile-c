@@ -5,21 +5,10 @@ target_dir=tmp
 c=src/c
 c_sc=src/c-precompiled
 root="$PWD"
-
-if command -v musl-gcc >/dev/null; then
-  compiler=musl-gcc
-else
-  compiler=gcc
-fi
+compiler=gcc
 
 warnings="-Wall -Wfatal-errors"
 gcc_options="-std=c17 -pedantic-errors -D_POSIX_C_SOURCE=200809L -D_FILE_OFFSET_BITS=64 $warnings -fno-common -fno-math-errno -fPIC -O$optimisation -pthread -I$c/foreign -I$c_sc"
-
-debug_preprocess_sph_sp() {
-  target="$target_dir/sph-sp.c"
-  source="$c_sc/sph-sp/main.c"
-  $compiler $gcc_options -E "$source" -o "$target"
-}
 
 compile_sph_sp() {
   src="$c_sc/sph-sp/main.c"
@@ -30,7 +19,7 @@ compile_sph_sp() {
 }
 
 compile_test_sph_sp() {
-  $compiler $gcc_options -O0 "$c_sc/test/main.c" -L"$root/$target_dir" -lsph-sp -o "$target_dir/test-libsph-sp"
+  $compiler $gcc_options "$c_sc/test/sph-sp.c" -L"$root/$target_dir" -lsph-sp -o "$target_dir/test-libsph-sp"
 }
 
 mkdir -p "$target_dir"

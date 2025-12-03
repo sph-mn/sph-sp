@@ -33,20 +33,6 @@
     }; \
     return (out); \
   } \
-\
-  /** get the maximum value in samples array, disregarding sign */ \
-  value_t sp_##type_name##_absolute_max(value_t* in, sp_size_t count) { \
-    sp_time_t temp; \
-    sp_time_t max; \
-    max = 0; \
-    for (sp_size_t i = 0; (i < count); i += 1) { \
-      temp = sp_inline_abs((in[i])); \
-      if (temp > max) { \
-        max = temp; \
-      }; \
-    }; \
-    return (max); \
-  } \
   void sp_##type_name##_reverse(value_t* in, sp_size_t count, value_t* out) { \
     for (sp_size_t i = 0; (i < count); i += 1) { \
       out[(count - i)] = in[i]; \
