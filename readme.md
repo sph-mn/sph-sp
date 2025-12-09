@@ -30,8 +30,6 @@ see [other/examples/example.c](other/examples/example.c).
 these files came about during testing in development: [1](https://sph.mn/auditive_visual/sound/2022/2022-12-10.15814.flac), [2](https://sph.mn/auditive_visual/sound/2022/2022-12-10.07345.flac), [3](https://sph.mn/auditive_visual/sound/2022/2022-12-10.09439.flac), [4](https://sph.mn/auditive_visual/sound/2022/2021-04-12.05370.flac) (one stream of non-repeating patterns per channel).
 
 # documentation
-note: the wave and noise events have recently been unified by the resonator event.
-
 * [c manual](other/documentation/c-manual.md)
 * [sc manual](other/documentation/sc-manual.md)
 * [api listing](other/documentation/api.md)
@@ -101,4 +99,4 @@ gcc -lsph-sp main.c
 # similar projects
 * [clm](https://ccrma.stanford.edu/software/snd/snd/clm.html)
 * [puredata](https://puredata.info/)
-* csound, supercollider, cmix, cmusic, and arctic
+* csound, supercollider, cmix, cmusic, and arctic# functions

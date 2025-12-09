@@ -1,8 +1,4 @@
 (declare
-  (sp-sequence-max size min-size) (sp-time-t sp-time-t sp-time-t)
-  (sp-set-sequence-max set-size selection-size) (sp-time-t sp-time-t sp-time-t)
-  (sp-permutations-max set-size selection-size) (sp-time-t sp-time-t sp-time-t)
-  (sp-compositions-max sum) (sp-time-t sp-time-t)
   sp-stat-times-f-t (type (function-pointer uint8-t sp-time-t* sp-time-t sp-sample-t*))
   sp-stat-samples-f-t (type (function-pointer uint8-t sp-sample-t* sp-time-t sp-sample-t*))
   (sp-stat-times-range a size out) (uint8-t sp-time-t* sp-time-t sp-sample-t*)

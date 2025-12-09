@@ -1,7 +1,3 @@
-sp_time_t sp_sequence_max(sp_time_t size, sp_time_t min_size);
-sp_time_t sp_set_sequence_max(sp_time_t set_size, sp_time_t selection_size);
-sp_time_t sp_permutations_max(sp_time_t set_size, sp_time_t selection_size);
-sp_time_t sp_compositions_max(sp_time_t sum);
 typedef uint8_t (*sp_stat_times_f_t)(sp_time_t*, sp_time_t, sp_sample_t*);
 typedef uint8_t (*sp_stat_samples_f_t)(sp_sample_t*, sp_time_t, sp_sample_t*);
 uint8_t sp_stat_times_range(sp_time_t* a, sp_time_t size, sp_sample_t* out);
