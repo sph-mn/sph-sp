@@ -182,8 +182,8 @@ typedef struct {
   sp_convolution_filter_state_t* filter_state;
   sp_frq_t frq;
   sp_time_t* fmod;
-  sp_frq_t bandwidth;
-  sp_time_t* bwmod;
+  sp_frq_t wdt;
+  sp_time_t* wmod;
   sp_time_t phs;
   sp_time_t* pmod;
   sp_sample_t* wvf;

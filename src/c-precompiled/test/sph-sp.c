@@ -856,13 +856,13 @@ status_t test_sp_resonator_event(void) {
   channel_config->amp = 1.0;
   channel_config->amod = amod1;
   channel_config->frq = 2000.0;
-  channel_config->bandwidth = 10.0;
+  channel_config->wdt = 10.0;
   channel_config = (config->channel_config + 1);
   channel_config->use = 1;
   channel_config->amp = 0.5;
   channel_config->amod = amod2;
   channel_config->frq = 2000.0;
-  channel_config->bandwidth = 200.0;
+  channel_config->wdt = 200.0;
   event.start = 0;
   event.end = test_resonator_event_duration;
   sp_resonator_event((&event), config);

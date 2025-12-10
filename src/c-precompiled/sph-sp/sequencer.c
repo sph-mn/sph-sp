@@ -248,8 +248,8 @@ sp_resonator_event_config_t sp_resonator_event_config_defaults(void) {
     channel_config->filter_state = 0;
     channel_config->frq = 0.0;
     channel_config->fmod = 0;
-    channel_config->bandwidth = 0.0;
-    channel_config->bwmod = 0;
+    channel_config->wdt = 0.0;
+    channel_config->wmod = 0;
     channel_config->phs = 0;
     channel_config->pmod = 0;
     channel_config->wvf = sp_sine_table;
@@ -349,8 +349,8 @@ status_t sp_resonator_event_prepare(sp_event_t* event) {
       if (!channel_config->fmod) {
         channel_config->fmod = base_channel->fmod;
       };
-      if (!channel_config->bwmod) {
-        channel_config->bwmod = base_channel->bwmod;
+      if (!channel_config->wmod) {
+        channel_config->wmod = base_channel->wmod;
       };
       if (!channel_config->pmod) {
         channel_config->pmod = base_channel->pmod;
@@ -396,7 +396,7 @@ status_t sp_resonator_event_generate_block(sp_time_t duration, sp_time_t block_i
       continue;
     };
     frq_value = sp_optional_array_get((channel_value.fmod), (channel_value.frq), event_i);
-    bandwidth_value = sp_optional_array_get((channel_value.bwmod), (channel_value.bandwidth), event_i);
+    bandwidth_value = sp_optional_array_get((channel_value.wmod), (channel_value.wdt), event_i);
     if (bandwidth_value < config->bandwidth_threshold) {
       sample_index = 0;
       while ((sample_index < duration)) {

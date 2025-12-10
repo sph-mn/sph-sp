@@ -580,8 +580,8 @@ sp_resonator_event_channel_config_t: struct
   filter_state: sp_convolution_filter_state_t*
   frq: sp_frq_t
   fmod: sp_time_t*
-  bandwidth: sp_frq_t
-  bwmod: sp_time_t*
+  wdt: sp_frq_t
+  wmod: sp_time_t*
   phs: sp_time_t
   pmod: sp_time_t*
   wvf: sp_sample_t*

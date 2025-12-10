@@ -831,13 +831,13 @@
     channel-config:amp 1.0
     channel-config:amod amod1
     channel-config:frq 2000.0
-    channel-config:bandwidth 10.0
+    channel-config:wdt 10.0
     channel-config (+ config:channel-config 1)
     channel-config:use 1
     channel-config:amp 0.5
     channel-config:amod amod2
     channel-config:frq 2000.0
-    channel-config:bandwidth 200.0
+    channel-config:wdt 200.0
     event.start 0
     event.end test-resonator-event-duration)
   (sp-resonator-event &event config)

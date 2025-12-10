@@ -155,8 +155,8 @@ status_t sp_group_append(sp_event_t* a, sp_event_t event);
   - amod: amplitude modulation array
   - frq: base frequency in hertz (sp_frq_t)
   - fmod: frequency modulation array
-  - bandwidth: base bandwidth in hertz (sp_frq_t)
-  - bwmod: bandwidth modulation array
+  - wdt: base bandwidth in hertz (sp_frq_t)
+  - wmod: bandwidth modulation array
   - pmod: phase modulation array
   - phs: phase state in samples
   - wvf / wvf_size: optional custom waveform table and its length

@@ -205,8 +205,8 @@
       channel-config:filter-state 0
       channel-config:frq 0.0
       channel-config:fmod 0
-      channel-config:bandwidth 0.0
-      channel-config:bwmod 0
+      channel-config:wdt 0.0
+      channel-config:wmod 0
       channel-config:phs 0
       channel-config:pmod 0
       channel-config:wvf sp-sine-table
@@ -280,7 +280,7 @@
         (if (<= channel-config:wvf-size 0)
           (set channel-config:wvf base-channel:wvf channel-config:wvf-size base-channel:wvf-size))
         (if (not channel-config:fmod) (set channel-config:fmod base-channel:fmod))
-        (if (not channel-config:bwmod) (set channel-config:bwmod base-channel:bwmod))
+        (if (not channel-config:wmod) (set channel-config:wmod base-channel:wmod))
         (if (not channel-config:pmod) (set channel-config:pmod base-channel:pmod))))
     (set channel-config:filter-state 0 channel-index (+ channel-index 1)))
   (label exit status-return))
@@ -316,7 +316,7 @@
     (if (not channel-value.use) (begin (set+ channel-index 1) continue))
     (set
       frq-value (sp-optional-array-get channel-value.fmod channel-value.frq event-i)
-      bandwidth-value (sp-optional-array-get channel-value.bwmod channel-value.bandwidth event-i))
+      bandwidth-value (sp-optional-array-get channel-value.wmod channel-value.wdt event-i))
     (if (< bandwidth-value config:bandwidth-threshold)
       (begin
         (set sample-index 0)
