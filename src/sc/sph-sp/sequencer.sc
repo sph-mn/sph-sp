@@ -208,9 +208,9 @@
       channel-config:wdt 0.0
       channel-config:wmod 0
       channel-config:phs 0
-      channel-config:pmod 0
       channel-config:wvf sp-sine-table
       channel-config:wvf-size sp-rate
+      channel-config:reject 0
       channel-config:use (= channel-index 0)
       channel-index (+ channel-index 1)))
   (return out))
@@ -280,8 +280,7 @@
         (if (<= channel-config:wvf-size 0)
           (set channel-config:wvf base-channel:wvf channel-config:wvf-size base-channel:wvf-size))
         (if (not channel-config:fmod) (set channel-config:fmod base-channel:fmod))
-        (if (not channel-config:wmod) (set channel-config:wmod base-channel:wmod))
-        (if (not channel-config:pmod) (set channel-config:pmod base-channel:pmod))))
+        (if (not channel-config:wmod) (set channel-config:wmod base-channel:wmod))))
     (set channel-config:filter-state 0 channel-index (+ channel-index 1)))
   (label exit status-return))
 
@@ -303,7 +302,7 @@
     arguments-buffer (array uint8-t ((* 3 (sizeof sp-sample-t))))
     arguments-length uint8-t
     sample-index sp-time-t
-    phase-value sp-time-t
+    phase-value sp-frq-t
     amplitude-value sp-sample-t
     sine-value sp-sample-t
     noise-value sp-sample-t
@@ -321,23 +320,17 @@
       (begin
         (set sample-index 0)
         (while (< sample-index duration)
-          (set phase-value channel-value.phs)
-          (if channel-value.pmod
-            (begin
-              (set+ phase-value (array-get channel-value.pmod (+ event-i sample-index)))
-              (if (>= phase-value channel-value.wvf-size)
-                (set- phase-value
-                  (* channel-value.wvf-size (floor (/ phase-value channel-value.wvf-size)))))))
           (set
+            phase-value channel-value.phs
             amplitude-value
             (* channel-value.amp (array-get channel-value.amod (+ event-i sample-index)))
-            sine-value (array-get channel-value.wvf (convert-type phase-value sp-time-t))
+            sine-value (array-get channel-value.wvf phase-value)
             out-value (* amplitude-value sine-value))
           (set+
             (array-get (struct-pointer-get (convert-type out sp-block-t*) samples)
               channel-value.channel (+ block-i sample-index))
             (sp-inline-limit out-value -1 1))
-          (set channel-value.phs (+ channel-value.phs frq-value))
+          (set+ channel-value.phs frq-value)
           (if (>= channel-value.phs channel-value.wvf-size)
             (set- channel-value.phs
               (* channel-value.wvf-size (floor (/ channel-value.phs channel-value.wvf-size)))))

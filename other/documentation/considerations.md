@@ -1,3 +1,16 @@
+# should reject and phs be collapsed into the wdt field
+"reject" could be incorporated into wdt to save one struct field, but lose numerical range (still just so encoding 32767 frequencies with uint16\_t).
+wdt (width) doesnt really have to be an integer, but i guess it would make sense for it to be, to be consistent? -1, 0, and 1 would basically all lead the resonator to generate a sine (with 0 just meaning "ignore the width field". as integer, there'd be no useful range between -1 and 1.
+wdt were made of reals, the phase (as -1 > .. < 1) and reject parameter (as > -1) could be combined into the wdt field. but then we are dealing with floating point numbers vs integers (usually double for us, very long 64 bit double wmod arrays vs 16 bit uint16\_t arrays).
+Given the stated priorities:
+FM is secondary
+bandpass vs bandreject is not an important modulation target
+you sometimes want very long-period LFOs
+the clean and practical choice is:
+keep sp\_frq\_t unsigned
+add a reject boolean to the resonator config
+perform FM math in a wider signed type and map back to sp\_frq\_t, with "proper" negative-frequency handling by adding a half-cycle phase offset when the sign of the instantaneous frequency goes negative
+
 # negative frequencies
 * negative frequencies are possible when sph-sp is compiled with sp_time_t set to a signed type, either integer or floating point
 * frequency modulation commonly uses negative frequencies to specify phase inverted frequencies

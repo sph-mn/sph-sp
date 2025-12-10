@@ -181,13 +181,13 @@ typedef struct {
   sp_channel_count_t channel;
   sp_convolution_filter_state_t* filter_state;
   sp_frq_t frq;
-  sp_time_t* fmod;
+  sp_frq_t* fmod;
   sp_frq_t wdt;
-  sp_time_t* wmod;
-  sp_time_t phs;
-  sp_time_t* pmod;
+  sp_frq_t* wmod;
+  sp_frq_t phs;
   sp_sample_t* wvf;
   sp_time_t wvf_size;
+  sp_bool_t reject;
   sp_bool_t use;
 } sp_resonator_event_channel_config_t;
 typedef struct {

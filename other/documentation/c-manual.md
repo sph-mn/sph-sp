@@ -157,7 +157,7 @@ status_t sp_group_append(sp_event_t* a, sp_event_t event);
   - fmod: frequency modulation array
   - wdt: base bandwidth in hertz (sp_frq_t)
   - wmod: bandwidth modulation array
-  - pmod: phase modulation array
+  - reject: band rejection for noise
   - phs: phase state in samples
   - wvf / wvf_size: optional custom waveform table and its length
   - channel: output channel index

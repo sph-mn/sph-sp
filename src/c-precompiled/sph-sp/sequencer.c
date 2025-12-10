@@ -251,9 +251,9 @@ sp_resonator_event_config_t sp_resonator_event_config_defaults(void) {
     channel_config->wdt = 0.0;
     channel_config->wmod = 0;
     channel_config->phs = 0;
-    channel_config->pmod = 0;
     channel_config->wvf = sp_sine_table;
     channel_config->wvf_size = sp_rate;
+    channel_config->reject = 0;
     channel_config->use = (channel_index == 0);
     channel_index = (channel_index + 1);
   };
@@ -352,9 +352,6 @@ status_t sp_resonator_event_prepare(sp_event_t* event) {
       if (!channel_config->wmod) {
         channel_config->wmod = base_channel->wmod;
       };
-      if (!channel_config->pmod) {
-        channel_config->pmod = base_channel->pmod;
-      };
     };
     channel_config->filter_state = 0;
     channel_index = (channel_index + 1);
@@ -378,7 +375,7 @@ status_t sp_resonator_event_generate_block(sp_time_t duration, sp_time_t block_i
   uint8_t arguments_buffer[(3 * sizeof(sp_sample_t))];
   uint8_t arguments_length;
   sp_time_t sample_index;
-  sp_time_t phase_value;
+  sp_frq_t phase_value;
   sp_sample_t amplitude_value;
   sp_sample_t sine_value;
   sp_sample_t noise_value;
@@ -401,17 +398,11 @@ status_t sp_resonator_event_generate_block(sp_time_t duration, sp_time_t block_i
       sample_index = 0;
       while ((sample_index < duration)) {
         phase_value = channel_value.phs;
-        if (channel_value.pmod) {
-          phase_value += (channel_value.pmod)[(event_i + sample_index)];
-          if (phase_value >= channel_value.wvf_size) {
-            phase_value -= (channel_value.wvf_size * floor((phase_value / channel_value.wvf_size)));
-          };
-        };
         amplitude_value = (channel_value.amp * (channel_value.amod)[(event_i + sample_index)]);
-        sine_value = (channel_value.wvf)[((sp_time_t)(phase_value))];
+        sine_value = (channel_value.wvf)[phase_value];
         out_value = (amplitude_value * sine_value);
         (((sp_block_t*)(out))->samples)[channel_value.channel][(block_i + sample_index)] += sp_inline_limit(out_value, -1, 1);
-        channel_value.phs = (channel_value.phs + frq_value);
+        channel_value.phs += frq_value;
         if (channel_value.phs >= channel_value.wvf_size) {
           channel_value.phs -= (channel_value.wvf_size * floor((channel_value.phs / channel_value.wvf_size)));
         };

@@ -583,9 +583,9 @@ sp_resonator_event_channel_config_t: struct
   wdt: sp_frq_t
   wmod: sp_time_t*
   phs: sp_time_t
-  pmod: sp_time_t*
   wvf: sp_sample_t*
   wvf_size: sp_time_t
+  reject: sp_bool_t
   use: sp_bool_t
 sp_resonator_event_config_t: struct
   random_state: sp_random_state_t

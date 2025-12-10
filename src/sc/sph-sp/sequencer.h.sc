@@ -220,13 +220,13 @@
       (channel sp-channel-count-t)
       (filter-state sp-convolution-filter-state-t*)
       (frq sp-frq-t)
-      (fmod sp-time-t*)
+      (fmod sp-frq-t*)
       (wdt sp-frq-t)
-      (wmod sp-time-t*)
-      (phs sp-time-t)
-      (pmod sp-time-t*)
+      (wmod sp-frq-t*)
+      (phs sp-frq-t)
       (wvf sp-sample-t*)
       (wvf-size sp-time-t)
+      (reject sp-bool-t)
       (use sp-bool-t)))
   sp-resonator-event-config-t
   (type
