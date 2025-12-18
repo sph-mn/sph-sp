@@ -1,15 +1,15 @@
 
-/** discrete linear convolution for sample arrays, possibly of a continuous stream. maps segments (a, a-len) to out
-   using (b, b-len) as the impulse response. b-len must be greater than zero.
+/** discrete linear convolution for sample arrays, possibly of a continuous stream. maps segments (a, a_len) to out
+   using (b, b_len) as the impulse response. b_len must be greater than zero.
    all heap memory is owned and allocated by the caller.
-   out length is a-len.
+   out length is a_len.
    carryover is previous carryover or an empty array.
-   carryover length must at least b-len - 1.
-   carryover-len should be zero for the first call or its content should be zeros.
-   carryover-len for subsequent calls should be b-len - 1.
-   if b-len changed it should be b-len - 1 from the previous call for the first call with the changed b-len.
-   if b-len is one then there is no carryover.
-   if a-len is smaller than b-len then, with the current implementation, additional performance costs ensue from shifting the carryover array each call.
+   carryover length must at least b_len - 1.
+   carryover_len should be zero for the first call or its content should be zeros.
+   carryover_len for subsequent calls should be b_len - 1.
+   if b_len changed it should be b_len - 1 from the previous call for the first call with the changed b_len.
+   if b_len is one then there is no carryover.
+   if a_len is smaller than b_len then, with the current implementation, additional performance costs ensue from shifting the carryover array each call.
    carryover is the extension of out for generated values that dont fit into out,
    as a and b are always fully convolved */
 void sp_convolve(sp_sample_t* a, sp_time_t a_len, sp_sample_t* b, sp_time_t b_len, sp_time_t carryover_len, sp_sample_t* carryover, sp_sample_t* out) {
@@ -62,11 +62,11 @@ void sp_convolution_filter_state_free(sp_convolution_filter_state_t* state) {
 }
 
 /** create or update a previously created state object.
-   impulse response array properties are calculated with ir-f using ir-f-arguments.
+   impulse response array properties are calculated with ir_f using ir_f_arguments.
    eventually frees state.ir.
    the state object is used to store the impulse response, the parameters that where used to create it and
    overlapping data that has to be carried over between calls.
-   ir-f-arguments can be stack allocated and will be copied to state on change */
+   ir_f_arguments can be stack allocated and will be copied to state on change */
 status_t sp_convolution_filter_state_set(sp_convolution_filter_ir_f_t ir_f, void* ir_f_arguments, uint8_t ir_f_arguments_len, sp_convolution_filter_state_t** out_state) {
   status_declare;
   sp_sample_t* carryover;
@@ -106,8 +106,8 @@ status_t sp_convolution_filter_state_set(sp_convolution_filter_ir_f_t ir_f, void
   /* assumes that ir-len is always greater zero */
   status_require((ir_f(ir_f_arguments, (&ir), (&ir_len))));
   /* eventually extend carryover array. the array is never shrunk.
-  carryover-len is at least ir-len - 1.
-  carryover-alloc-len is the length of the whole array.
+  carryover_len is at least ir_len - 1.
+  carryover_alloc_len is the length of the whole array.
   new and extended areas must be set to zero */
   carryover_alloc_len = (ir_len - 1);
   if (state->carryover) {
@@ -141,11 +141,11 @@ exit:
 }
 
 /** convolute samples "in", which can be a segment of a continuous stream, with an impulse response
-   kernel created by ir-f with ir-f-arguments. can be used for many types of convolution with dynamic impulse response.
-   ir-f is only used when ir-f-arguments changed.
-   values that need to be carried over with calls are kept in out-state.
-   * out-state: if zero then state will be allocated. owned by caller
-   * out-samples: owned by the caller. length must be at least in-len and the number of output samples will be in-len */
+   kernel created by ir_f with ir_f_arguments. can be used for many types of convolution with dynamic impulse response.
+   ir_f is only used when ir_f_arguments changed.
+   values that need to be carried over with calls are kept in out_state.
+   * out_state: if zero then state will be allocated. owned by caller
+   * out_samples: owned by the caller. length must be at least in_len and the number of output samples will be in_len */
 status_t sp_convolution_filter(sp_sample_t* in, sp_time_t in_len, sp_convolution_filter_ir_f_t ir_f, void* ir_f_arguments, uint8_t ir_f_arguments_len, sp_convolution_filter_state_t** out_state, sp_sample_t* out_samples) {
   status_declare;
   sp_time_t carryover_len = (*out_state ? (*out_state)->carryover_len : 0);
