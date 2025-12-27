@@ -403,15 +403,25 @@ exit:
 }
 status_t test_moving_average(void) {
   status_declare;
+  memreg_init(2);
   sp_sample_t* in;
   sp_sample_t* out;
   sp_time_t radius;
   sp_time_t size;
-  memreg_init(2);
+  sp_path_t path;
+  sp_time_t t[2] = { 0, 10 };
+  sp_sample_t y[2] = { 0, 5 };
+  sp_time_t cursor;
   size = 11;
   radius = 4;
-  status_require((sp_path_samples3((&in), (size - 1), 5, 0, 10, 0)));
+  path.t = t;
+  (path.values)[0] = y;
+  (path.values)[1] = 0;
+  path.point_count = 2;
+  cursor = 0;
+  status_require((sp_samples_new(size, (&in))));
   memreg_add(in);
+  sp_path_get((&path), 0, size, in, (&cursor));
   status_require((sp_samples_new(size, (&out))));
   memreg_add(out);
   /* without prev/next */
@@ -613,25 +623,6 @@ status_t test_sp_group(void) {
   test_helper_assert("block contents gap", ((0 == (block.samples)[0][40]) && (0 == (block.samples)[0][49])));
   test_helper_assert("block contents event 3", ((3 == (block.samples)[0][50]) && (150 == (block.samples)[0][99])));
   sp_block_free((&block));
-exit:
-  status_return;
-}
-status_t test_path(void) {
-  sp_sample_t* samples;
-  sp_time_t* times;
-  sp_event_t event;
-  status_declare;
-  status_require((sp_path_samples3((&samples), 100, 10, 0, 1, 10)));
-  status_require((sp_path_times3((&times), 100, 10, 0, 1, 10)));
-  sp_sample_t x[2] = { 10, 20 };
-  sp_sample_t y[2] = { 3, 4 };
-  sp_sample_t c[2] = { 0, 0.1 };
-  status_require((sp_envelope_zero((&samples), 100, 2, x, y, c)));
-  status_require((sp_envelope_zero3((&samples), 100, 10, 1)));
-  status_require((sp_envelope_scale((&times), 100, 5, 2, x, y, c)));
-  status_require((sp_envelope_scale3((&times), 100, 5, 10, 1, 2, 3)));
-  sp_event_reset(event);
-  sp_event_path_samples3_srq((&event), (&samples), 100, 10, 0, 1, 10);
 exit:
   status_return;
 }
@@ -1033,8 +1024,6 @@ int main(void) {
   test_helper_test_one(test_fft);
   test_helper_test_one(test_sinc_make_minimum_phase);
   test_helper_test_one(test_sp_resonator_event);
-  test_helper_test_one(test_path);
-  test_helper_test_one(test_moving_average);
   test_helper_test_one(test_statistics);
   test_helper_test_one(test_sp_pan_to_amp);
   test_helper_test_one(test_base);

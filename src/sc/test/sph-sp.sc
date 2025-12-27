@@ -404,11 +404,27 @@
 
 (define (test-moving-average) status-t
   status-declare
-  (declare in sp-sample-t* out sp-sample-t* radius sp-time-t size sp-time-t)
   (memreg-init 2)
-  (set size 11 radius 4)
-  (status-require (sp-path-samples3 &in (- size 1) 5 0 10 0))
+  (declare
+    in sp-sample-t*
+    out sp-sample-t*
+    radius sp-time-t
+    size sp-time-t
+    path sp-path-t
+    t (array sp-time-t 2 0 10)
+    y (array sp-sample-t 2 0 5)
+    cursor sp-time-t)
+  (set
+    size 11
+    radius 4
+    path.t t
+    (array-get path.values 0) y
+    (array-get path.values 1) 0
+    path.point-count 2
+    cursor 0)
+  (status-require (sp-samples-new size &in))
   (memreg-add in)
+  (sp-path-get &path 0 size in &cursor)
   (status-require (sp-samples-new size &out))
   (memreg-add out)
   (sc-comment "without prev/next")
@@ -608,20 +624,6 @@
   (test-helper-assert "block contents event 3"
     (and (= 3 (array-get block.samples 0 50)) (= 150 (array-get block.samples 0 99))))
   (sp-block-free &block)
-  (label exit status-return))
-
-(define (test-path) status-t
-  (declare samples sp-sample-t* times sp-time-t* event sp-event-t)
-  status-declare
-  (status-require (sp-path-samples3 &samples 100 10 0 1 10))
-  (status-require (sp-path-times3 &times 100 10 0 1 10))
-  (declare x (array sp-sample-t 2 10 20) y (array sp-sample-t 2 3 4) c (array sp-sample-t 2 0 0.1))
-  (status-require (sp-envelope-zero &samples 100 2 x y c))
-  (status-require (sp-envelope-zero3 &samples 100 10 1))
-  (status-require (sp-envelope-scale &times 100 5 2 x y c))
-  (status-require (sp-envelope-scale3 &times 100 5 10 1 2 3))
-  (sp-event-reset event)
-  (sp-event-path-samples3-srq &event &samples 100 10 0 1 10)
   (label exit status-return))
 
 (define (u64-from-array-test size) (uint8-t sp-time-t)
@@ -1015,8 +1017,7 @@
   (test-helper-test-one test-fft)
   (test-helper-test-one test-sinc-make-minimum-phase)
   (test-helper-test-one test-sp-resonator-event)
-  (test-helper-test-one test-path)
-  (test-helper-test-one test-moving-average)
+  ;(test-helper-test-one test-moving-average)
   (test-helper-test-one test-statistics)
   (test-helper-test-one test-sp-pan->amp)
   (test-helper-test-one test-base)

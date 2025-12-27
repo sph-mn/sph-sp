@@ -36,8 +36,6 @@
   sp-pow pow
   sp-exp exp)
 
-(pre-define spline-path-value-t sp-sample-t)
-
 (pre-include "string.h" "stdio.h"
   "stdlib.h" "sph-sp/sph/memory.h" "sph-sp/sph/list.h"
   "sph-sp/main.h" "sph-sp/arrays.h" "sph-sp/distributions.h"

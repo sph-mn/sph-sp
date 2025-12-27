@@ -8,7 +8,6 @@ extern double j0(double);
 #include <arpa/inet.h>
 #include <nayuki-fft/fft.c>
 #include <sph-sp/sph-sp.h>
-#include <sph-sp/sph/spline-path.c>
 #include <sph-sp/sph/quicksort.h>
 #include <sph-sp/sph/random.c>
 #include <sph-sp/sph/float.c>

@@ -106,7 +106,6 @@
 #ifndef sp_exp
 #define sp_exp exp
 #endif
-#define spline_path_value_t sp_sample_t
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
