@@ -69,8 +69,8 @@ exit:
 /** event memory addition with automatic array expansion */
 status_t sph_memory_add_with_handler(sph_memory_t* a, void* address, void (*handler)(void*)) {
   status_declare;
-  status_require((sph_memory_ensure(4, a)));
-  sph_memory_add_directly(a, address, handler);
+  status_require((sph_memory_ensure(a, 4)));
+  sph_memory_add_directly((*a), address, handler);
 exit:
   status_return;
 }
@@ -85,7 +85,7 @@ void sph_memory_destroy(sph_memory_t* a) {
     m = sph_array_get((*a), i);
     (m.handler)((m.address));
   };
-  sph_memory_free(a);
+  sph_memory_uninit(a);
   a->data = 0;
 }
 #endif

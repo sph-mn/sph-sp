@@ -44,12 +44,12 @@
           (if config:make
             (status-require (config:make (- relative-end relative-start) out &future:out))
             (set future:out out))
-          (sph-future-new sp-seq-parallel-future-entry future &future:future)
+          (sph-future-start sp-seq-parallel-future-entry future &future:future)
           (set+ index 1)
           (set current current:next)))))
   (sp-for-each-index k index
     (set future (+ futures k))
-    (sph-future-touch &future:future)
+    (sph-future-get &future:future)
     (status-require future:status))
   (if config:merge (status-require (config:merge start end out futures index config:context)))
   (label exit
@@ -60,7 +60,7 @@
             (set future (+ futures k))
             (if (and config:make (!= future:out out)) (config:free future:out))))
         (free futures)))
-    (if status-is-failure (sp-event-list-free events))
+    (if status-is-failure (sp-event-list-uninit events))
     status-return))
 
 (define (sp-block-future-make count parent-out product-out) (status-t sp-time-t void* void**)
@@ -68,15 +68,15 @@
   (declare parent-block sp-block-t* bp sp-block-t*)
   (set parent-block parent-out bp 0)
   (status-require (sp-malloc-type 1 sp-block-t &bp))
-  (status-require (sp-block-new parent-block:channel-count count bp))
+  (status-require (sp-block-init parent-block:channel-count count bp))
   (set *product-out bp)
   (label exit (if (and status-is-failure bp) (free bp)) status-return))
 
-(define (sp-block-future-free product) (void void*)
+(define (sp-block-future-uninit product) (void void*)
   (if (not product) return)
   (declare bp sp-block-t*)
   (set bp product)
-  (sp-block-free bp)
+  (sp-block-uninit bp)
   (free bp))
 
 (define (sp-block-future-run future) (status-t sp-seq-future-t*)
@@ -137,7 +137,7 @@
   (declare c sp-seq-parallel-generic-config-t)
   (set
     c.make sp-block-future-make
-    c.free sp-block-future-free
+    c.free sp-block-future-uninit
     c.merge sp-block-merge-all
     c.run sp-block-future-run
     c.context 0)

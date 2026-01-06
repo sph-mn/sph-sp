@@ -18,7 +18,7 @@
   void sp_##type_name##_cusum(value_t* in, value_t count, value_t* out); \
   void sp_##type_name##_swap(sp_time_t* in_out, sp_ssize_t index_1, sp_ssize_t index_2); \
   void sp_##type_name##_shuffle(value_t* in, sp_size_t count); \
-  void sp_##type_name##_array_free(value_t** in, sp_size_t count); \
+  void sp_##type_name##_array_uninit(value_t** in, sp_size_t count); \
   status_t sp_##type_name##_duplicate(value_t* a, sp_size_t count, value_t** out); \
   void sp_##type_name##_and_##type_name(value_t* a, value_t* b, sp_size_t count, value_t limit, value_t* out); \
   void sp_##type_name##_or_##type_name(value_t* a, value_t* b, sp_size_t count, value_t limit, value_t* out); \

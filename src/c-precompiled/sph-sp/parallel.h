@@ -7,7 +7,7 @@
 struct sp_seq_future_t;
 typedef struct sp_seq_future_t sp_seq_future_t;
 typedef status_t (*sp_seq_future_make)(sp_time_t, void*, void**);
-typedef void (*sp_seq_future_free)(void*);
+typedef void (*sp_seq_future_uninit)(void*);
 typedef status_t (*sp_seq_future_merge)(sp_time_t, sp_time_t, void*, sp_seq_future_t*, sp_size_t, void*);
 typedef status_t (*sp_seq_future_run)(sp_seq_future_t*);
 struct sp_seq_future_t {
@@ -22,7 +22,7 @@ struct sp_seq_future_t {
 };
 typedef struct {
   sp_seq_future_make make;
-  sp_seq_future_free free;
+  sp_seq_future_uninit free;
   sp_seq_future_merge merge;
   sp_seq_future_run run;
   void* context;

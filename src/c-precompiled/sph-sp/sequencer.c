@@ -45,7 +45,7 @@ status_t sp_event_list_add(sp_event_list_t** head_pointer, sp_event_t event) {
 exit:
   status_return;
 }
-void sp_event_list_free(sp_event_list_t** head_pointer) {
+void sp_event_list_uninit(sp_event_list_t** head_pointer) {
   sp_event_list_t* current;
   sp_event_list_t* next;
   current = *head_pointer;
@@ -137,14 +137,14 @@ status_t sp_seq(sp_time_t start, sp_time_t end, void* out, sp_event_list_t** eve
   };
 exit:
   if (status_is_failure) {
-    sp_event_list_free(events);
+    sp_event_list_uninit(events);
   };
   status_return;
 }
-void sp_group_free(sp_event_t* group) {
+void sp_group_uninit(sp_event_t* group) {
   group->free = 0;
-  sp_event_list_free((sp_group_event_list(group)));
-  sp_event_memory_free(group);
+  sp_event_list_uninit((sp_group_event_list(group)));
+  sp_event_memory_uninit(group);
 }
 status_t sp_group_generate(sp_time_t start, sp_time_t end, void* out, sp_event_t* group) { return ((sp_seq(start, end, out, ((sp_event_list_t**)(&(group->config)))))); }
 status_t sp_group_prepare(sp_event_t* group) {
@@ -152,7 +152,7 @@ status_t sp_group_prepare(sp_event_t* group) {
   if (group->config) {
     sp_seq_events_prepare(((sp_event_list_t**)(&(group->config))));
   };
-  group->free = sp_group_free;
+  group->free = sp_group_uninit;
   status_return;
 }
 
@@ -181,7 +181,7 @@ status_t sp_group_append(sp_event_t* group, sp_event_t event) {
 exit:
   status_return;
 }
-status_t sp_map_event_config_new_n(sp_time_t count, sp_map_event_config_t** out) { return ((sp_calloc_type(count, sp_map_event_config_t, out))); }
+status_t sp_map_event_config_init_n(sp_time_t count, sp_map_event_config_t** out) { return ((sp_calloc_type(count, sp_map_event_config_t, out))); }
 
 /** the wrapped event will be freed with the map-event.
    use cases: filter chains, post processing.
@@ -196,16 +196,16 @@ status_t sp_map_event_prepare(sp_event_t* event) {
   sp_map_event_config_t* c;
   c = event->config;
   sp_event_prepare_optional_srq((c->event));
-  event->free = sp_map_event_free;
+  event->free = sp_map_event_uninit;
 exit:
   status_return;
 }
-void sp_map_event_free(sp_event_t* event) {
+void sp_map_event_uninit(sp_event_t* event) {
   sp_map_event_config_t* c;
   event->free = 0;
   c = event->config;
-  sp_event_free((c->event));
-  sp_event_memory_free(event);
+  sp_event_uninit((c->event));
+  sp_event_memory_uninit(event);
 }
 status_t sp_map_event_generate(sp_time_t start, sp_time_t end, void* out, sp_event_t* event) {
   status_declare;
@@ -222,11 +222,11 @@ status_t sp_map_event_isolated_generate(sp_time_t start, sp_time_t end, void* ou
   sp_declare_block(temp_out);
   sp_map_event_config_t* c;
   c = event->config;
-  status_require((sp_block_new((((sp_block_t*)(out))->channel_count), (((sp_block_t*)(out))->size), (&temp_out))));
+  status_require((sp_block_init((((sp_block_t*)(out))->channel_count), (((sp_block_t*)(out))->size), (&temp_out))));
   status_require(((c->event.generate)(start, end, (&temp_out), (&(c->event)))));
   status_require(((c->map_generate)(start, end, (&temp_out), out, (c->config))));
 exit:
-  sp_block_free((&temp_out));
+  sp_block_uninit((&temp_out));
   status_return;
 }
 sp_resonator_event_config_t sp_resonator_event_config_defaults(void) {
@@ -259,7 +259,7 @@ sp_resonator_event_config_t sp_resonator_event_config_defaults(void) {
   };
   return (out);
 }
-status_t sp_resonator_event_config_new_n(sp_time_t count, sp_resonator_event_config_t** out) {
+status_t sp_resonator_event_config_init_n(sp_time_t count, sp_resonator_event_config_t** out) {
   status_declare;
   sp_resonator_event_config_t defaults_value;
   sp_time_t index;
@@ -273,7 +273,7 @@ status_t sp_resonator_event_config_new_n(sp_time_t count, sp_resonator_event_con
 exit:
   status_return;
 }
-void sp_resonator_event_free(sp_event_t* event) {
+void sp_resonator_event_uninit(sp_event_t* event) {
   sp_resonator_event_config_t* config;
   sp_resonator_event_channel_config_t* channel_config;
   sp_channel_count_t channel_index;
@@ -285,7 +285,7 @@ void sp_resonator_event_free(sp_event_t* event) {
   while ((channel_index < config->channel_count)) {
     channel_config = (config->channel_config + channel_index);
     if (channel_config->filter_state) {
-      sp_convolution_filter_state_free((channel_config->filter_state));
+      sp_convolution_filter_state_uninit((channel_config->filter_state));
       channel_config->filter_state = 0;
     };
     channel_index = (channel_index + 1);

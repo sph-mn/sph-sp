@@ -18,7 +18,7 @@
     ((pre-concat sp_ type-name _cusum) in count out) (void value-t* value-t value-t*)
     ((pre-concat sp_ type-name _swap) in-out index-1 index-2) (void sp-time-t* sp-ssize-t sp-ssize-t)
     ((pre-concat sp_ type-name _shuffle) in count) (void value-t* sp-size-t)
-    ((pre-concat sp_ type-name _array-free) in count) (void value-t** sp-size-t)
+    ((pre-concat sp_ type-name _array-uninit) in count) (void value-t** sp-size-t)
     ((pre-concat sp_ type-name _duplicate) a count out) (status-t value-t* sp-size-t value-t**)
     ((pre-concat sp_ type-name _and_ type-name) a b count limit out)
     (void value-t* value-t* sp-size-t value-t value-t*)

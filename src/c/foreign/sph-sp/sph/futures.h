@@ -19,9 +19,9 @@ typedef struct {
   _Atomic uint8_t finished;
   sph_future_f_t f;
 } sph_future_t;
-int sph_future_init(sph_thread_pool_size_t thread_count);
+int sph_futures_init(sph_thread_pool_size_t thread_count);
 void sph_future_eval(sph_thread_pool_task_t* task);
-void sph_future_new(sph_future_f_t f, void* data, sph_future_t* out);
-void sph_future_deinit(void);
-void* sph_future_touch(sph_future_t* a);
+void sph_future_start(sph_future_f_t f, void* data, sph_future_t* out);
+void sph_futures_deinit(void);
+void* sph_future_get(sph_future_t* a);
 #endif

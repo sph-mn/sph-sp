@@ -16,7 +16,7 @@
   (sp-convolution-filter in in-len ir-f ir-f-arguments ir-f-arguments-len out-state out-samples)
   (status-t sp-sample-t* sp-time-t
     sp-convolution-filter-ir-f-t void* uint8-t sp-convolution-filter-state-t** sp-sample-t*)
-  (sp-convolution-filter-state-free state) (void sp-convolution-filter-state-t*)
+  (sp-convolution-filter-state-uninit state) (void sp-convolution-filter-state-t*)
   (sp-bessel-i0 value) (sp-sample-t sp-sample-t)
   (sp-kaiser-window sample-index window-length beta-value)
   (sp-sample-t sp-time-t sp-time-t sp-sample-t)

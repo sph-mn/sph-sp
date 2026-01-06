@@ -80,7 +80,7 @@
 #define error_memory_init(register_size) memreg2_init_named(error, register_size)
 #define local_memory_init(register_size) memreg2_init_named(exit, register_size)
 #define error_memory_free memreg2_free_named(error)
-#define local_memory_free memreg2_free_named(exit)
+#define local_memory_uninit memreg2_free_named(exit)
 #define error_memory_add2(address, handler) memreg2_add_named(error, address, handler)
 #define local_memory_add2(address, handler) memreg2_add_named(exit, address, handler)
 #define error_memory_add(address) error_memory_add2(address, free)
@@ -89,7 +89,7 @@
 #define sp_local_alloc_srq(allocator, size, pointer_address) \
   srq((allocator(size, pointer_address))); \
   local_memory_add((*pointer_address))
-#define sp_local_units_srq(size, pointer_address) sp_local_alloc_srq(sp_units_new, size, pointer_address)
+#define sp_local_units_srq(size, pointer_address) sp_local_alloc_srq(sp_units_init, size, pointer_address)
 #define sp_local_times_srq(size, pointer_address) sp_local_alloc_srq(sp_times_new, size, pointer_address)
 #define sp_local_samples_srq(size, pointer_address) sp_local_alloc_srq(sp_samples_new, size, pointer_address)
 
@@ -121,8 +121,8 @@ sp_sample_t* sp_sine_table_lfo;
 sp_sample_t* sp_sine_table;
 void sp_block_copy(sp_block_t a, sp_block_t b);
 status_t sp_block_to_file(sp_block_t block, char* path, sp_time_t rate);
-void sp_block_free(sp_block_t* a);
-status_t sp_block_new(sp_channel_count_t channel_count, sp_time_t sample_count, sp_block_t* out_block);
+void sp_block_uninit(sp_block_t* a);
+status_t sp_block_init(sp_channel_count_t channel_count, sp_time_t sample_count, sp_block_t* out_block);
 sp_block_t sp_block_with_offset(sp_block_t a, sp_time_t offset);
 void sp_block_zero(sp_block_t a);
 void sp_convolve(sp_sample_t* a, sp_time_t a_len, sp_sample_t* b, sp_time_t b_len, sp_time_t result_carryover_len, sp_sample_t* result_carryover, sp_sample_t* result_samples);

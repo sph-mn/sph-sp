@@ -101,7 +101,7 @@
   void sp_##type_name##_shuffle(value_t* in, sp_size_t count) { sp_shuffle(((void (*)(void*, sp_size_t, sp_size_t))(sp_##type_name##_swap)), in, count); } \
 \
   /** free every element array and the container array */ \
-  void sp_##type_name##_array_free(value_t** in, sp_size_t count) { \
+  void sp_##type_name##_array_uninit(value_t** in, sp_size_t count) { \
     for (sp_size_t i = 0; (i < count); i += 1) { \
       free((in[i])); \
     }; \

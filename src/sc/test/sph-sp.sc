@@ -330,8 +330,8 @@
   (test-helper-assert "resonator continuity"
     (sp-samples-nearly-equal out size out-control size 0.01))
   memreg-free
-  (sp-convolution-filter-state-free state)
-  (sp-convolution-filter-state-free state-control)
+  (sp-convolution-filter-state-uninit state)
+  (sp-convolution-filter-state-uninit state-control)
   (label exit status-return))
 
 (define (test-resonator-ir-and-filter) (status-t void)
@@ -399,7 +399,7 @@
   (status-require
     (sp-convolution-filter source 10
       sp-resonator-ir-f arguments-buffer arguments-length &state result))
-  (if state (sp-convolution-filter-state-free state))
+  (if state (sp-convolution-filter-state-uninit state))
   (label exit status-return))
 
 (define (test-moving-average) status-t
@@ -456,7 +456,7 @@
   (sp-block-declare block-read)
   (if (file-exists test-file-path) (unlink test-file-path))
   (set channel-count 2 sample-rate 8000 sample-count 5)
-  (status-require (sp-block-new channel-count sample-count &block-write))
+  (status-require (sp-block-init channel-count sample-count &block-write))
   (for-each-index j sp-channel-count-t
     channel-count
     (for-each-index i sp-time-t
@@ -466,7 +466,7 @@
   (status-require (sp-file-write &file block-write.samples sample-count))
   (sp-file-close-write &file)
   (sc-comment "test read")
-  (status-require (sp-block-new channel-count sample-count &block-read))
+  (status-require (sp-block-init channel-count sample-count &block-read))
   (status-require (sp-file-open-read test-file-path &file))
   (status-require (sp-file-read file sample-count block-read.samples))
   (for-each-index j sp-channel-count-t
@@ -475,7 +475,7 @@
       (sp-samples-nearly-equal (array-get block-write.samples j) sample-count
         (array-get block-read.samples j) sample-count error-margin)))
   (sp-file-close-read file)
-  (label exit (sp-block-free &block-write) (sp-block-free &block-read) status-return))
+  (label exit (sp-block-uninit &block-write) (sp-block-uninit &block-read) status-return))
 
 (define (test-fft) (status-t)
   status-declare
@@ -574,7 +574,7 @@
   (sp-declare-event-list events)
   (status-require (sp-event-list-add &events (test-helper-event 0 40 1)))
   (status-require (sp-event-list-add &events (test-helper-event 41 100 2)))
-  (status-require (sp-block-new 2 100 &out))
+  (status-require (sp-block-init 2 100 &out))
   (sp-seq-events-prepare &events)
   (sp-seq 0 50 &out &events)
   (set shifted (sp-block-with-offset out 50))
@@ -584,8 +584,8 @@
   (test-helper-assert "block contents 1 gap" (= 0 (array-get out.samples 0 40)))
   (test-helper-assert "block contents 1 event 2"
     (and (= 2 (array-get out.samples 0 41)) (= 118 (array-get out.samples 0 99))))
-  (sp-event-list-free &events)
-  (sp-block-free &out)
+  (sp-event-list-uninit &events)
+  (sp-block-uninit &out)
   (label exit status-return))
 
 (define (test-sp-group) status-t
@@ -601,7 +601,7 @@
   (sp-group-event &g)
   (sp-group-event &g1)
   (set g1.start 10)
-  (status-require (sp-block-new 2 100 &block))
+  (status-require (sp-block-init 2 100 &block))
   (set e1 (test-helper-event 0 20 1) e2 (test-helper-event 20 40 2) e3 (test-helper-event 50 100 3))
   (status-require (sp-group-add &g1 e1))
   (status-require (sp-group-add &g1 e2))
@@ -623,7 +623,7 @@
     (and (= 0 (array-get block.samples 0 40)) (= 0 (array-get block.samples 0 49))))
   (test-helper-assert "block contents event 3"
     (and (= 3 (array-get block.samples 0 50)) (= 150 (array-get block.samples 0 99))))
-  (sp-block-free &block)
+  (sp-block-uninit &block)
   (label exit status-return))
 
 (define (u64-from-array-test size) (uint8-t sp-time-t)
@@ -720,8 +720,8 @@
   (set
     render-config (sp-render-config sp-channel-count sp-rate sp-rate 0)
     render-config.block-size 40)
-  (status-require (sp-block-new 1 test-resonator-event-duration &out))
-  (error-memory-add2 &out sp-block-free)
+  (status-require (sp-block-init 1 test-resonator-event-duration &out))
+  (error-memory-add2 &out sp-block-uninit)
   (set
     event.start 0
     event.end test-resonator-event-duration
@@ -732,7 +732,7 @@
   (sp-render-range-block event 0 test-resonator-event-duration render-config &out)
   (test-helper-assert "render range block nonzero"
     (> (sp-samples-max (array-get out.samples 0) test-resonator-event-duration) 0.0))
-  (sp-block-free &out)
+  (sp-block-uninit &out)
   (if status-is-failure error-memory-free)
   (label exit status-return))
 
@@ -817,10 +817,10 @@
     channel-config sp-resonator-event-channel-config-t*)
   (sp-declare-event event)
   (error-memory-init 2)
-  (status-require (sp-resonator-event-config-new &config))
+  (status-require (sp-resonator-event-config-init &config))
   (error-memory-add config)
-  (status-require (sp-block-new 2 test-resonator-event-duration &out))
-  (error-memory-add2 &out sp-block-free)
+  (status-require (sp-block-init 2 test-resonator-event-duration &out))
+  (error-memory-add2 &out sp-block-uninit)
   (set sample-index 0)
   (while (< sample-index test-resonator-event-duration)
     (set (array-get amod1 sample-index) 0.9 (array-get amod2 sample-index) 0.8)
@@ -852,7 +852,7 @@
     (>= 1.0 (sp-samples-absolute-max (array-get out.samples 1) test-resonator-event-duration)))
   (test-helper-assert "resonator channel 1 nonzero"
     (> (sp-samples-absolute-max (array-get out.samples 1) test-resonator-event-duration) 0.0))
-  (sp-block-free &out)
+  (sp-block-uninit &out)
   (label exit (if status-is-failure error-memory-free) status-return))
 
 (define (test-sp-map-event-generate start end in out state)
@@ -868,10 +868,10 @@
   (sp-declare-event parent)
   (sp-declare-event child)
   (error-memory-init 1)
-  (status-require (sp-map-event-config-new &map-event-config))
+  (status-require (sp-map-event-config-init &map-event-config))
   (error-memory-add map-event-config)
   (set size (* 10 _sp-rate) child (test-helper-event 0 size 3))
-  (status-require (sp-block-new 1 size &block))
+  (status-require (sp-block-init 1 size &block))
   (set
     map-event-config:event child
     map-event-config:map-generate test-sp-map-event-generate
@@ -883,7 +883,7 @@
   (status-require (parent.generate 0 (/ size 2) &block &parent))
   (status-require (parent.generate (/ size 2) size &block &parent))
   (parent.free &parent)
-  (sp-block-free &block)
+  (sp-block-uninit &block)
   (if status-is-failure error-memory-free)
   (label exit status-return))
 
@@ -905,7 +905,7 @@
   (sp-declare-event event)
   (sp-declare-event-list events)
   (set size 1000 event-count 10 step-size (/ size 10))
-  (status-require (sp-block-new 2 size &block))
+  (status-require (sp-block-init 2 size &block))
   (set
     event.start 0
     event.end size
@@ -934,8 +934,8 @@
     (test-helper-assert "seq_parallel_block ch1"
       (sp-sample-nearly-equal expected-value sample-value-ch1 0.001))
     (set sample-index (+ sample-index 1)))
-  (sp-event-list-free &events)
-  (sp-block-free &block)
+  (sp-event-list-uninit &events)
+  (sp-block-uninit &block)
   (label exit status-return))
 
 (define (test-sp-pan->amp) status-t
@@ -1003,8 +1003,8 @@
       sp-resonator-ir-f arguments-buffer arguments-length &state (+ out duration-a)))
   (test-helper-assert "resonator two-segment continuity"
     (sp-samples-nearly-equal out size out-control size 0.01))
-  (sp-convolution-filter-state-free state)
-  (sp-convolution-filter-state-free state-control)
+  (sp-convolution-filter-state-uninit state)
+  (sp-convolution-filter-state-uninit state-control)
   (free in)
   (free out)
   (free out-control)

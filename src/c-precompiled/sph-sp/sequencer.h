@@ -9,7 +9,7 @@
 #define sp_declare_event_list(id) sp_event_list_t* id = 0
 #define sp_event_duration(a) (a.end - a.start)
 #define sp_group_event_list(event) ((sp_event_list_t**)(&(event->config)))
-#define sp_event_free(a) \
+#define sp_event_uninit(a) \
   if (a.free) { \
     (a.free)((&a)); \
   }
@@ -20,11 +20,11 @@
   if (a.prepare) { \
     sp_event_prepare_srq(a); \
   }
-#define sp_event_memory_ensure(event_pointer, needed) sph_memory_ensure(needed, (&(event_pointer->memory)))
+#define sp_event_memory_ensure(event_pointer, needed) sph_memory_ensure((&(event_pointer->memory)), needed)
 #define sp_event_memory_add(event_pointer, address) sph_memory_add_with_handler((&(event_pointer->memory)), address, free)
-#define sp_event_memory_free(event_pointer) sph_memory_destroy((&(event_pointer->memory)))
-#define sp_map_event_config_new(out) sp_map_event_config_new_n(1, out)
-#define sp_resonator_event_config_new(out) sp_resonator_event_config_new_n(1, out)
+#define sp_event_memory_uninit(event_pointer) sph_memory_destroy((&(event_pointer->memory)))
+#define sp_map_event_config_init(out) sp_map_event_config_init_n(1, out)
+#define sp_resonator_event_config_init(out) sp_resonator_event_config_init_n(1, out)
 
 /** use case: event variables defined at the top-level */
 #define sp_define_event(name, _prepare, duration) sp_event_t name = { .prepare = _prepare, .start = 0, .end = duration, .config = 0, .memory = { 0 } }
@@ -50,7 +50,7 @@
 #define sp_event_malloc_type_srq(event_pointer, type, pointer_address) sp_event_malloc_type_n_srq(event_pointer, 1, type, pointer_address)
 #define sp_event_samples_srq(event_pointer, size, pointer_address) sp_event_alloc_srq(event_pointer, sp_samples_new, size, pointer_address)
 #define sp_event_times_srq(event_pointer, size, pointer_address) sp_event_alloc_srq(event_pointer, sp_times_new, size, pointer_address)
-#define sp_event_units_srq(event_pointer, size, pointer_address) sp_event_alloc_srq(event_pointer, sp_units_new, size, pointer_address)
+#define sp_event_units_srq(event_pointer, size, pointer_address) sp_event_alloc_srq(event_pointer, sp_units_init, size, pointer_address)
 #define sp_event_config_get(a, type) *((type*)(a.config))
 struct sp_event_t;
 typedef struct sp_event_t {
@@ -76,16 +76,16 @@ sp_event_t sp_null_event = { 0 };
 sph_dlist_declare_type(sp_event_list, sp_event_t) void sp_event_list_display_element(sp_event_list_t* list);
 void sp_event_list_remove(sp_event_list_t** head_pointer, sp_event_list_t* list);
 status_t sp_event_list_add(sp_event_list_t** head_pointer, sp_event_t event_value);
-void sp_event_list_free(sp_event_list_t** head_pointer);
+void sp_event_list_uninit(sp_event_list_t** head_pointer);
 status_t sp_group_add(sp_event_t* a, sp_event_t event);
 status_t sp_group_append(sp_event_t* a, sp_event_t event);
-void sp_group_event_free(sp_event_t* a);
+void sp_group_event_uninit(sp_event_t* a);
 void sp_group_event_f(sp_time_t start, sp_time_t end, void* out, sp_event_t* event);
-void sp_group_free(sp_event_t* group);
+void sp_group_uninit(sp_event_t* group);
 status_t sp_group_generate(sp_time_t start, sp_time_t end, void* out, sp_event_t* a);
 status_t sp_group_prepare(sp_event_t* event);
-status_t sp_map_event_config_new_n(sp_time_t count, sp_map_event_config_t** out);
-void sp_map_event_free(sp_event_t* event);
+status_t sp_map_event_config_init_n(sp_time_t count, sp_map_event_config_t** out);
+void sp_map_event_uninit(sp_event_t* event);
 status_t sp_map_event_generate(sp_time_t start, sp_time_t end, void* out, sp_event_t* event);
 status_t sp_map_event_isolated_generate(sp_time_t start, sp_time_t end, void* out, sp_event_t* event);
 status_t sp_map_event_prepare(sp_event_t* event);
@@ -116,8 +116,8 @@ typedef struct {
   sp_resonator_event_channel_config_t channel_config[sp_channel_count_limit];
 } sp_resonator_event_config_t;
 sp_resonator_event_config_t sp_resonator_event_config_defaults(void);
-status_t sp_resonator_event_config_new_n(sp_time_t count, sp_resonator_event_config_t** out);
+status_t sp_resonator_event_config_init_n(sp_time_t count, sp_resonator_event_config_t** out);
 status_t sp_resonator_event_prepare(sp_event_t* event);
 status_t sp_resonator_event_generate_block(sp_time_t duration, sp_time_t block_i, sp_time_t event_i, void* out, sp_event_t* event);
 status_t sp_resonator_event_generate(sp_time_t start, sp_time_t end, void* out, sp_event_t* event);
-void sp_resonator_event_free(sp_event_t* event);
+void sp_resonator_event_uninit(sp_event_t* event);

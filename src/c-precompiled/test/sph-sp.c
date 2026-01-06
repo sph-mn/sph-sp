@@ -328,8 +328,8 @@ status_t test_resonator_filter_continuity(void) {
   };
   test_helper_assert("resonator continuity", (sp_samples_nearly_equal(out, size, out_control, size, (0.01))));
   memreg_free;
-  sp_convolution_filter_state_free(state);
-  sp_convolution_filter_state_free(state_control);
+  sp_convolution_filter_state_uninit(state);
+  sp_convolution_filter_state_uninit(state_control);
 exit:
   status_return;
 }
@@ -396,7 +396,7 @@ status_t test_resonator_ir_and_filter(void) {
   /* second call with identical arguments: exercises state reuse path */
   status_require((sp_convolution_filter(source, 10, sp_resonator_ir_f, arguments_buffer, arguments_length, (&state), result)));
   if (state) {
-    sp_convolution_filter_state_free(state);
+    sp_convolution_filter_state_uninit(state);
   };
 exit:
   status_return;
@@ -451,7 +451,7 @@ status_t test_file(void) {
   channel_count = 2;
   sample_rate = 8000;
   sample_count = 5;
-  status_require((sp_block_new(channel_count, sample_count, (&block_write))));
+  status_require((sp_block_init(channel_count, sample_count, (&block_write))));
   for (sp_channel_count_t j = 0; (j < channel_count); j += 1) {
     for (sp_time_t i = 0; (i < sample_count); i += 1) {
       ((block_write.samples)[j])[i] = (sample_count - i);
@@ -462,7 +462,7 @@ status_t test_file(void) {
   status_require((sp_file_write((&file), (block_write.samples), sample_count)));
   sp_file_close_write((&file));
   /* test read */
-  status_require((sp_block_new(channel_count, sample_count, (&block_read))));
+  status_require((sp_block_init(channel_count, sample_count, (&block_read))));
   status_require((sp_file_open_read(test_file_path, (&file))));
   status_require((sp_file_read(file, sample_count, (block_read.samples))));
   for (sp_channel_count_t j = 0; (j < channel_count); j += 1) {
@@ -470,8 +470,8 @@ status_t test_file(void) {
   };
   sp_file_close_read(file);
 exit:
-  sp_block_free((&block_write));
-  sp_block_free((&block_read));
+  sp_block_uninit((&block_write));
+  sp_block_uninit((&block_read));
   status_return;
 }
 status_t test_fft(void) {
@@ -573,7 +573,7 @@ status_t test_sp_seq(void) {
   sp_declare_event_list(events);
   status_require((sp_event_list_add((&events), (test_helper_event(0, 40, 1)))));
   status_require((sp_event_list_add((&events), (test_helper_event(41, 100, 2)))));
-  status_require((sp_block_new(2, 100, (&out))));
+  status_require((sp_block_init(2, 100, (&out))));
   sp_seq_events_prepare((&events));
   sp_seq(0, 50, (&out), (&events));
   shifted = sp_block_with_offset(out, 50);
@@ -581,8 +581,8 @@ status_t test_sp_seq(void) {
   test_helper_assert("block contents 1 event 1", ((1 == (out.samples)[0][0]) && (40 == (out.samples)[0][39])));
   test_helper_assert("block contents 1 gap", (0 == (out.samples)[0][40]));
   test_helper_assert("block contents 1 event 2", ((2 == (out.samples)[0][41]) && (118 == (out.samples)[0][99])));
-  sp_event_list_free((&events));
-  sp_block_free((&out));
+  sp_event_list_uninit((&events));
+  sp_block_uninit((&out));
 exit:
   status_return;
 }
@@ -602,7 +602,7 @@ status_t test_sp_group(void) {
   sp_group_event((&g));
   sp_group_event((&g1));
   g1.start = 10;
-  status_require((sp_block_new(2, 100, (&block))));
+  status_require((sp_block_init(2, 100, (&block))));
   e1 = test_helper_event(0, 20, 1);
   e2 = test_helper_event(20, 40, 2);
   e3 = test_helper_event(50, 100, 3);
@@ -622,7 +622,7 @@ status_t test_sp_group(void) {
   test_helper_assert("block contents event 2", ((2 == (block.samples)[0][30]) && (20 == (block.samples)[0][39])));
   test_helper_assert("block contents gap", ((0 == (block.samples)[0][40]) && (0 == (block.samples)[0][49])));
   test_helper_assert("block contents event 3", ((3 == (block.samples)[0][50]) && (150 == (block.samples)[0][99])));
-  sp_block_free((&block));
+  sp_block_uninit((&block));
 exit:
   status_return;
 }
@@ -718,8 +718,8 @@ status_t test_render_range_block(void) {
   error_memory_init(1);
   render_config = sp_render_config(sp_channel_count, sp_rate, sp_rate, 0);
   render_config.block_size = 40;
-  status_require((sp_block_new(1, test_resonator_event_duration, (&out))));
-  error_memory_add2((&out), sp_block_free);
+  status_require((sp_block_init(1, test_resonator_event_duration, (&out))));
+  error_memory_add2((&out), sp_block_uninit);
   event.start = 0;
   event.end = test_resonator_event_duration;
   event.config = ((void*)(1));
@@ -728,7 +728,7 @@ status_t test_render_range_block(void) {
   event.free = 0;
   sp_render_range_block(event, 0, test_resonator_event_duration, render_config, (&out));
   test_helper_assert("render range block nonzero", (sp_samples_max(((out.samples)[0]), test_resonator_event_duration) > 0.0));
-  sp_block_free((&out));
+  sp_block_uninit((&out));
   if (status_is_failure) {
     error_memory_free;
   };
@@ -830,10 +830,10 @@ status_t test_sp_resonator_event(void) {
   sp_resonator_event_channel_config_t* channel_config;
   sp_declare_event(event);
   error_memory_init(2);
-  status_require((sp_resonator_event_config_new((&config))));
+  status_require((sp_resonator_event_config_init((&config))));
   error_memory_add(config);
-  status_require((sp_block_new(2, test_resonator_event_duration, (&out))));
-  error_memory_add2((&out), sp_block_free);
+  status_require((sp_block_init(2, test_resonator_event_duration, (&out))));
+  error_memory_add2((&out), sp_block_uninit);
   sample_index = 0;
   while ((sample_index < test_resonator_event_duration)) {
     amod1[sample_index] = 0.9;
@@ -863,7 +863,7 @@ status_t test_sp_resonator_event(void) {
   test_helper_assert("resonator amod applied channel 0", (feq((0.9), (sp_samples_max(((out.samples)[0]), test_resonator_event_duration)))));
   test_helper_assert("resonator channel 1 in range", (1.0 >= sp_samples_absolute_max(((out.samples)[1]), test_resonator_event_duration)));
   test_helper_assert("resonator channel 1 nonzero", (sp_samples_absolute_max(((out.samples)[1]), test_resonator_event_duration) > 0.0));
-  sp_block_free((&out));
+  sp_block_uninit((&out));
 exit:
   if (status_is_failure) {
     error_memory_free;
@@ -883,11 +883,11 @@ status_t test_sp_map_event(void) {
   sp_declare_event(parent);
   sp_declare_event(child);
   error_memory_init(1);
-  status_require((sp_map_event_config_new((&map_event_config))));
+  status_require((sp_map_event_config_init((&map_event_config))));
   error_memory_add(map_event_config);
   size = (10 * _sp_rate);
   child = test_helper_event(0, size, 3);
-  status_require((sp_block_new(1, size, (&block))));
+  status_require((sp_block_init(1, size, (&block))));
   map_event_config->event = child;
   map_event_config->map_generate = test_sp_map_event_generate;
   map_event_config->isolate = 1;
@@ -898,7 +898,7 @@ status_t test_sp_map_event(void) {
   status_require(((parent.generate)(0, (size / 2), (&block), (&parent))));
   status_require(((parent.generate)((size / 2), size, (&block), (&parent))));
   (parent.free)((&parent));
-  sp_block_free((&block));
+  sp_block_uninit((&block));
   if (status_is_failure) {
     error_memory_free;
   };
@@ -924,7 +924,7 @@ status_t test_sp_seq_parallel_block(void) {
   size = 1000;
   event_count = 10;
   step_size = (size / 10);
-  status_require((sp_block_new(2, size, (&block))));
+  status_require((sp_block_init(2, size, (&block))));
   event.start = 0;
   event.end = size;
   event.prepare = 0;
@@ -953,8 +953,8 @@ status_t test_sp_seq_parallel_block(void) {
     test_helper_assert("seq_parallel_block ch1", (sp_sample_nearly_equal(expected_value, sample_value_ch1, (0.001))));
     sample_index = (sample_index + 1);
   };
-  sp_event_list_free((&events));
-  sp_block_free((&block));
+  sp_event_list_uninit((&events));
+  sp_block_uninit((&block));
 exit:
   status_return;
 }
@@ -1008,8 +1008,8 @@ status_t test_resonator_continuity_2(void) {
   status_require((sp_convolution_filter(in, duration_a, sp_resonator_ir_f, arguments_buffer, arguments_length, (&state), out)));
   status_require((sp_convolution_filter((in + duration_a), duration_b, sp_resonator_ir_f, arguments_buffer, arguments_length, (&state), (out + duration_a))));
   test_helper_assert("resonator two-segment continuity", (sp_samples_nearly_equal(out, size, out_control, size, (0.01))));
-  sp_convolution_filter_state_free(state);
-  sp_convolution_filter_state_free(state_control);
+  sp_convolution_filter_state_uninit(state);
+  sp_convolution_filter_state_uninit(state_control);
   free(in);
   free(out);
   free(out_control);

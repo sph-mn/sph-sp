@@ -80,7 +80,7 @@
     (else (set b "unknown")))
   (return b))
 
-(define (sp-block-new channel-count size out) (status-t sp-channel-count-t sp-time-t sp-block-t*)
+(define (sp-block-init channel-count size out) (status-t sp-channel-count-t sp-time-t sp-block-t*)
   "return a newly allocated array for channel-count with data arrays for each channel"
   status-declare
   (memreg-init channel-count)
@@ -92,7 +92,7 @@
   (set out:size size out:channel-count channel-count)
   (label exit (if status-is-failure memreg-free) status-return))
 
-(define (sp-block-free a) (void sp-block-t*)
+(define (sp-block-uninit a) (void sp-block-t*)
   (if a:size (sp-for-each-index i a:channel-count (free (array-get a:samples i)))))
 
 (define (sp-block-with-offset a offset) (sp-block-t sp-block-t sp-time-t)
@@ -208,7 +208,7 @@
   (sp-block-declare block)
   (sp-declare-event-list events)
   (status-require (sp-event-list-add &events event))
-  (status-require (sp-block-new config.channel-count config.block-size &block))
+  (status-require (sp-block-init config.channel-count config.block-size &block))
   (status-require (sp-file-open-write path config.channel-count config.rate &file))
   (set
     remainder (modulo (- end start) config.block-size)
@@ -223,8 +223,8 @@
     (begin
       (status-require (sp-seq i (+ i remainder) &block &events))
       (status-require (sp-file-write &file block.samples remainder))))
-  (sp-event-list-free &events)
-  (label exit (sp-block-free &block) (sp-file-close-write &file) status-return))
+  (sp-event-list-uninit &events)
+  (label exit (sp-block-uninit &block) (sp-file-close-write &file) status-return))
 
 (define (sp-render-range-block event start end config out)
   (status-t sp-event-t sp-time-t sp-time-t sp-render-config-t sp-block-t*)
@@ -235,9 +235,9 @@
   (declare block sp-block-t)
   (sp-declare-event-list events)
   (status-require (sp-event-list-add &events event))
-  (status-require (sp-block-new config.channel-count (- end start) &block))
+  (status-require (sp-block-init config.channel-count (- end start) &block))
   (status-require (sp-seq start end &block &events))
-  (sp-event-list-free &events)
+  (sp-event-list-uninit &events)
   (set *out block)
   (label exit status-return))
 
@@ -285,7 +285,7 @@
    rate and channel-count are used to set sp_rate and sp_channel-count,
    which are used as defaults in a few cases"
   status-declare
-  (if cpu-count (begin (set status.id (sph-future-init cpu-count)) (if status.id status-return)))
+  (if cpu-count (begin (set status.id (sph-futures-init cpu-count)) (if status.id status-return)))
   (set
     sp-sine-table 0
     sp-sine-table-lfo 0
@@ -301,7 +301,7 @@
   (label exit (if status-is-failure (sp-deinitialize)) status-return))
 
 (define (sp-deinitialize) void
-  (if sp-cpu-count (sph-future-deinit))
+  (if sp-cpu-count (sph-futures-deinit))
   (free sp-sine-table)
   (free sp-sine-table-lfo))
 

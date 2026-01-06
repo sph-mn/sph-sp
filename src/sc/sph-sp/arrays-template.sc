@@ -68,7 +68,7 @@
         (convert-type (pre-concat sp_ type-name _swap)
           (function-pointer void void* sp-size-t sp-size-t))
         in count))
-    (define ((pre-concat sp_ type-name _array-free) in count) (void value-t** sp-size-t)
+    (define ((pre-concat sp_ type-name _array-uninit) in count) (void value-t** sp-size-t)
       "free every element array and the container array"
       (sp-for-each-index i count (free (array-get in i)))
       (free in))

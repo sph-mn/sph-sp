@@ -42,7 +42,7 @@ typedef void (*sph_thread_pool_task_f_t)(struct sph_thread_pool_task_t*);
 void* sph_thread_pool_worker(void* a);
 /* returns zero when successful and a non-zero pthread error code otherwise.
    on nonzero return the pool may be only partially initialized. The caller must invoke finish with no_wait set to true to release all resources */
-int sph_thread_pool_new(sph_thread_pool_size_t size, sph_thread_pool_t* a);
+int sph_thread_pool_init(sph_thread_pool_size_t size, sph_thread_pool_t* a);
 /* this is a special task that exits the thread it is being executed in */
 void sph_thread_finish(sph_thread_pool_task_t* task);
 /* completes all enqueued tasks, closes worker threads, and frees resources unless no_wait is true.

@@ -10,7 +10,7 @@
   sp-seq-future-t struct
   sp-seq-future-t (type (sc-insert "struct sp_seq_future_t"))
   sp-seq-future-make (type (function-pointer status-t sp-time-t void* void**))
-  sp-seq-future-free (type (function-pointer void void*))
+  sp-seq-future-uninit (type (function-pointer void void*))
   sp-seq-future-merge
   (type (function-pointer status-t sp-time-t sp-time-t void* sp-seq-future-t* sp-size-t void*))
   sp-seq-future-run (type (function-pointer status-t sp-seq-future-t*))
@@ -28,7 +28,7 @@
   (type
     (struct
       (make sp-seq-future-make)
-      (free sp-seq-future-free)
+      (free sp-seq-future-uninit)
       (merge sp-seq-future-merge)
       (run sp-seq-future-run)
       (context void*)))

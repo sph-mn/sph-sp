@@ -10,11 +10,10 @@
 #define sph_memory_status_group "sph"
 #define sph_memory_error status_set_goto(sph_memory_status_group, sph_memory_status_id_memory)
 #define sph_memory_growth_factor 2
-#define sph_memory_init(a) a.data = 0
 #define sph_memory_add_directly(a, address, handler) \
-  (sph_array_first_unused((*a))).address = address; \
-  (sph_array_first_unused((*a))).handler = handler; \
-  a->used += 1
+  (sph_array_unused(a)).address = address; \
+  (sph_array_unused(a)).handler = handler; \
+  a.used += 1
 #define sph_malloc(size, result) sph_memory_malloc(size, ((void**)(result)))
 #define sph_malloc_string(size, result) sph_memory_malloc_string(size, result)
 #define sph_calloc(size, result) sph_memory_calloc(size, ((void**)(result)))

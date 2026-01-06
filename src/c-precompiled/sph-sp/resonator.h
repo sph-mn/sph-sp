@@ -11,7 +11,7 @@ typedef struct {
 } sp_convolution_filter_state_t;
 status_t sp_convolution_filter_state_set(sp_convolution_filter_ir_f_t ir_f, void* ir_f_arguments, uint8_t ir_f_arguments_len, sp_convolution_filter_state_t** out_state);
 status_t sp_convolution_filter(sp_sample_t* in, sp_time_t in_len, sp_convolution_filter_ir_f_t ir_f, void* ir_f_arguments, uint8_t ir_f_arguments_len, sp_convolution_filter_state_t** out_state, sp_sample_t* out_samples);
-void sp_convolution_filter_state_free(sp_convolution_filter_state_t* state);
+void sp_convolution_filter_state_uninit(sp_convolution_filter_state_t* state);
 sp_sample_t sp_bessel_i0(sp_sample_t value);
 sp_sample_t sp_kaiser_window(sp_time_t sample_index, sp_time_t window_length, sp_sample_t beta_value);
 sp_time_t sp_kaiser_window_length(sp_sample_t transition_width, sp_sample_t beta_value);

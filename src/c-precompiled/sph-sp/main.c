@@ -120,7 +120,7 @@ char* sp_status_name(status_t a) {
 }
 
 /** return a newly allocated array for channel-count with data arrays for each channel */
-status_t sp_block_new(sp_channel_count_t channel_count, sp_time_t size, sp_block_t* out) {
+status_t sp_block_init(sp_channel_count_t channel_count, sp_time_t size, sp_block_t* out) {
   status_declare;
   memreg_init(channel_count);
   sp_sample_t* channel;
@@ -137,7 +137,7 @@ exit:
   };
   status_return;
 }
-void sp_block_free(sp_block_t* a) {
+void sp_block_uninit(sp_block_t* a) {
   if (a->size) {
     for (sp_size_t i = 0; (i < a->channel_count); i += 1) {
       free(((a->samples)[i]));
@@ -281,7 +281,7 @@ status_t sp_render_range_file(sp_event_t event, sp_time_t start, sp_time_t end, 
   sp_block_declare(block);
   sp_declare_event_list(events);
   status_require((sp_event_list_add((&events), event)));
-  status_require((sp_block_new((config.channel_count), (config.block_size), (&block))));
+  status_require((sp_block_init((config.channel_count), (config.block_size), (&block))));
   status_require((sp_file_open_write(path, (config.channel_count), (config.rate), (&file))));
   remainder = ((end - start) % config.block_size);
   block_end = (config.block_size * ((end - start) / config.block_size));
@@ -297,9 +297,9 @@ status_t sp_render_range_file(sp_event_t event, sp_time_t start, sp_time_t end, 
     status_require((sp_seq(i, (i + remainder), (&block), (&events))));
     status_require((sp_file_write((&file), (block.samples), remainder)));
   };
-  sp_event_list_free((&events));
+  sp_event_list_uninit((&events));
 exit:
-  sp_block_free((&block));
+  sp_block_uninit((&block));
   sp_file_close_write((&file));
   status_return;
 }
@@ -312,9 +312,9 @@ status_t sp_render_range_block(sp_event_t event, sp_time_t start, sp_time_t end,
   sp_block_t block;
   sp_declare_event_list(events);
   status_require((sp_event_list_add((&events), event)));
-  status_require((sp_block_new((config.channel_count), (end - start), (&block))));
+  status_require((sp_block_init((config.channel_count), (end - start), (&block))));
   status_require((sp_seq(start, end, (&block), (&events))));
-  sp_event_list_free((&events));
+  sp_event_list_uninit((&events));
   *out = block;
 exit:
   status_return;
@@ -367,7 +367,7 @@ sp_random_state_t sp_random_state_new(sp_time_t seed) {
 status_t sp_initialize(uint16_t cpu_count, sp_channel_count_t channel_count, sp_time_t rate) {
   status_declare;
   if (cpu_count) {
-    status.id = sph_future_init(cpu_count);
+    status.id = sph_futures_init(cpu_count);
     if (status.id) {
       status_return;
     };
@@ -391,7 +391,7 @@ exit:
 }
 void sp_deinitialize(void) {
   if (sp_cpu_count) {
-    sph_future_deinit();
+    sph_futures_deinit();
   };
   free(sp_sine_table);
   free(sp_sine_table_lfo);

@@ -58,7 +58,7 @@ status_t sp_seq_parallel_generic(sp_time_t start, sp_time_t end, void* out, sp_e
         } else {
           future->out = out;
         };
-        sph_future_new(sp_seq_parallel_future_entry, future, (&(future->future)));
+        sph_future_start(sp_seq_parallel_future_entry, future, (&(future->future)));
         index += 1;
         current = current->next;
       };
@@ -66,7 +66,7 @@ status_t sp_seq_parallel_generic(sp_time_t start, sp_time_t end, void* out, sp_e
   };
   for (sp_size_t k = 0; (k < index); k += 1) {
     future = (futures + k);
-    sph_future_touch((&(future->future)));
+    sph_future_get((&(future->future)));
     status_require((future->status));
   };
   if (config->merge) {
@@ -85,7 +85,7 @@ exit:
     free(futures);
   };
   if (status_is_failure) {
-    sp_event_list_free(events);
+    sp_event_list_uninit(events);
   };
   status_return;
 }
@@ -96,7 +96,7 @@ status_t sp_block_future_make(sp_time_t count, void* parent_out, void** product_
   parent_block = parent_out;
   bp = 0;
   status_require((sp_malloc_type(1, sp_block_t, (&bp))));
-  status_require((sp_block_new((parent_block->channel_count), count, bp)));
+  status_require((sp_block_init((parent_block->channel_count), count, bp)));
   *product_out = bp;
 exit:
   if (status_is_failure && bp) {
@@ -104,13 +104,13 @@ exit:
   };
   status_return;
 }
-void sp_block_future_free(void* product) {
+void sp_block_future_uninit(void* product) {
   if (!product) {
     return;
   };
   sp_block_t* bp;
   bp = product;
-  sp_block_free(bp);
+  sp_block_uninit(bp);
   free(bp);
 }
 status_t sp_block_future_run(sp_seq_future_t* future) {
@@ -185,7 +185,7 @@ status_t sp_seq_parallel_block(sp_time_t start, sp_time_t end, sp_block_t out, s
   status_declare;
   sp_seq_parallel_generic_config_t c;
   c.make = sp_block_future_make;
-  c.free = sp_block_future_free;
+  c.free = sp_block_future_uninit;
   c.merge = sp_block_merge_all;
   c.run = sp_block_future_run;
   c.context = 0;

@@ -51,7 +51,7 @@ void sp_convolve(sp_sample_t* a, sp_time_t a_len, sp_sample_t* b, sp_time_t b_le
     };
   };
 }
-void sp_convolution_filter_state_free(sp_convolution_filter_state_t* state) {
+void sp_convolution_filter_state_uninit(sp_convolution_filter_state_t* state) {
   if (!state) {
     return;
   };

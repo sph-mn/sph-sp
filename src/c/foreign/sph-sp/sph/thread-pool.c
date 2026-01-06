@@ -67,7 +67,7 @@ void sph_thread_finish(sph_thread_pool_task_t* task) {
   pthread_exit(0);
 }
 int sph_thread_pool_finish(sph_thread_pool_t* a, uint8_t no_wait, uint8_t discard_queue) { return ((sph_thread_pool_resize(a, 0, no_wait, discard_queue))); }
-int sph_thread_pool_new(sph_thread_pool_size_t size, sph_thread_pool_t* a) {
+int sph_thread_pool_init(sph_thread_pool_size_t size, sph_thread_pool_t* a) {
   sph_thread_pool_size_t i;
   pthread_attr_t attr;
   int error;

@@ -14,7 +14,7 @@
         (if (or local-memory-used error-memory-used)
           (list
             (pairs (q if) (q status-is-failure)
-              (append (if local-memory-used (list (q local-memory-free)) null)
+              (append (if local-memory-used (list (q local-memory-uninit)) null)
                 (if error-memory-used (list (q error-memory-free)) null))))
           null))
       (body

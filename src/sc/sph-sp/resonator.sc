@@ -41,7 +41,7 @@
           (set c-index (- c-index a-len))
           (set+ (array-get carryover c-index) (* (array-get a a-index) (array-get b b-index))))))))
 
-(define (sp-convolution-filter-state-free state) (void sp-convolution-filter-state-t*)
+(define (sp-convolution-filter-state-uninit state) (void sp-convolution-filter-state-t*)
   (if (not state) return)
   (free state:ir)
   (free state:carryover)

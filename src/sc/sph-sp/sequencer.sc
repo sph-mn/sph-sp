@@ -31,7 +31,7 @@
     (set new:previous 0 new:next 0 *head-pointer new))
   (label exit status-return))
 
-(define (sp-event-list-free head-pointer) (void sp-event-list-t**)
+(define (sp-event-list-uninit head-pointer) (void sp-event-list-t**)
   (declare current sp-event-list-t* next sp-event-list-t*)
   (set current *head-pointer)
   (while current
@@ -104,12 +104,12 @@
           shifted (sp-block-with-offset (pointer-get (convert-type out sp-block-t*)) offset))
         (status-require (e.generate relative-start relative-end &shifted ep))))
     (set current current:next))
-  (label exit (if status-is-failure (sp-event-list-free events)) status-return))
+  (label exit (if status-is-failure (sp-event-list-uninit events)) status-return))
 
-(define (sp-group-free group) (void sp-event-t*)
+(define (sp-group-uninit group) (void sp-event-t*)
   (set group:free 0)
-  (sp-event-list-free (sp-group-event-list group))
-  (sp-event-memory-free group))
+  (sp-event-list-uninit (sp-group-event-list group))
+  (sp-event-memory-uninit group))
 
 (define (sp-group-generate start end out group) (status-t sp-time-t sp-time-t void* sp-event-t*)
   (return (sp-seq start end out (convert-type &group:config sp-event-list-t**))))
@@ -117,7 +117,7 @@
 (define (sp-group-prepare group) (status-t sp-event-t*)
   status-declare
   (if group:config (sp-seq-events-prepare (convert-type &group:config sp-event-list-t**)))
-  (set group:free sp-group-free)
+  (set group:free sp-group-uninit)
   status-return)
 
 (define (sp-group-add group event) (status-t sp-event-t* sp-event-t)
@@ -136,7 +136,7 @@
   (status-require (sp-event-list-add (convert-type &group:config sp-event-list-t**) event))
   (label exit status-return))
 
-(define (sp-map-event-config-new-n count out) (status-t sp-time-t sp-map-event-config-t**)
+(define (sp-map-event-config-init-n count out) (status-t sp-time-t sp-map-event-config-t**)
   (return (sp-calloc-type count sp-map-event-config-t out)))
 
 (define (sp-map-event-prepare event) (status-t sp-event-t*)
@@ -152,14 +152,14 @@
   (declare c sp-map-event-config-t*)
   (set c event:config)
   (sp-event-prepare-optional-srq c:event)
-  (set event:free sp-map-event-free)
+  (set event:free sp-map-event-uninit)
   (label exit status-return))
 
-(define (sp-map-event-free event) (void sp-event-t*)
+(define (sp-map-event-uninit event) (void sp-event-t*)
   (declare c sp-map-event-config-t*)
   (set event:free 0 c event:config)
-  (sp-event-free c:event)
-  (sp-event-memory-free event))
+  (sp-event-uninit c:event)
+  (sp-event-memory-uninit event))
 
 (define (sp-map-event-generate start end out event)
   (status-t sp-time-t sp-time-t void* sp-event-t*)
@@ -177,11 +177,11 @@
   (declare c sp-map-event-config-t*)
   (set c event:config)
   (status-require
-    (sp-block-new (struct-pointer-get (convert-type out sp-block-t*) channel-count)
+    (sp-block-init (struct-pointer-get (convert-type out sp-block-t*) channel-count)
       (struct-pointer-get (convert-type out sp-block-t*) size) &temp-out))
   (status-require (c:event.generate start end &temp-out &c:event))
   (status-require (c:map-generate start end &temp-out out c:config))
-  (label exit (sp-block-free &temp-out) status-return))
+  (label exit (sp-block-uninit &temp-out) status-return))
 
 (define (sp-resonator-event-config-defaults) sp-resonator-event-config-t
   (declare
@@ -215,7 +215,7 @@
       channel-index (+ channel-index 1)))
   (return out))
 
-(define (sp-resonator-event-config-new-n count out)
+(define (sp-resonator-event-config-init-n count out)
   (status-t sp-time-t sp-resonator-event-config-t**)
   status-declare
   (declare defaults-value sp-resonator-event-config-t index sp-time-t)
@@ -225,7 +225,7 @@
   (while (< index count) (set (array-get *out index) defaults-value index (+ index 1)))
   (label exit status-return))
 
-(define (sp-resonator-event-free event) (void sp-event-t*)
+(define (sp-resonator-event-uninit event) (void sp-event-t*)
   (declare
     config sp-resonator-event-config-t*
     channel-config sp-resonator-event-channel-config-t*
@@ -237,7 +237,7 @@
     (set channel-config (+ config:channel-config channel-index))
     (if channel-config:filter-state
       (begin
-        (sp-convolution-filter-state-free channel-config:filter-state)
+        (sp-convolution-filter-state-uninit channel-config:filter-state)
         (set channel-config:filter-state 0)))
     (set channel-index (+ channel-index 1)))
   (if config:noise-in (begin (free config:noise-in) (set config:noise-in 0)))
